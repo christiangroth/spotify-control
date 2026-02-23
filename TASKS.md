@@ -2,10 +2,13 @@
 - try github copilot issue ai agent
 - split domain (api/impl)
 - add adapter-out-mongodb
-- add openapi to adapter-in.web
-- add adr & arc42
+- add openapi to adapter-in-web
+- add adr tenolate & arc42 skeleton
 - create outbox
 - add adapter-out-spotify
 - add spotify login
 - create mongodb atlas instances
 - deploy to vps
+- serve docs
+- maintain and also serve release notes
+- add adapter-out-slack
