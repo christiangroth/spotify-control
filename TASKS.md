@@ -1,0 +1,11 @@
+- create ai agent configs
+- try github copilot issue ai agent
+- split domain (api/impl)
+- add adapter-out-mongodb
+- add openapi to adapter-in.web
+- add adr & arc42
+- create outbox
+- add adapter-out-spotify
+- add spotify login
+- create mongodb atlas instances
+- deploy to vps
