@@ -1,7 +1,13 @@
 # Initial deployment
 
-- maintain and also serve release notes
 - deploy to vps
+  - basic VPS setup (use the new server)
+  - clarify deployment workflow, user, SSH keys, permissions, secrets
+  - gradle release plugin
+  - publish docker container or copy to VPS
+  - create/update swarm deployment
+  - configure subdomain/DNS
+  - extract template repository
 
 # Spotify connect
 
@@ -9,6 +15,7 @@
 - add Spotify login
 - add empty dashboard
 - serve docs
+- serve releasenotes (maybe add JSON/YAML output?)
 
 # Playback data gathering
 

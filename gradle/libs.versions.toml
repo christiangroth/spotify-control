@@ -2,6 +2,7 @@
 assertJ = "3.27.7"
 buildTimeTracker = "5.0.1"
 detekt = "1.23.8"
+grgit = "5.3.3"
 junit = "6.0.3"
 kotlin = "2.3.10"
 kotlinLogging = "3.0.5"
@@ -15,6 +16,7 @@ versionCatalogUpdate = "1.1.0"
 [libraries]
 assertJ = { module = "org.assertj:assertj-core", version.ref = "assertJ" }
 detekt = { module = "io.gitlab.arturbosch.detekt:detekt-gradle-plugin", version.ref = "detekt" }
+grgit = { module = "org.ajoberstar.grgit:grgit-core", version.ref = "grgit" }
 junit = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
 kotlinGradlePlugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 kotlinLogging = { module = "io.github.microutils:kotlin-logging", version.ref = "kotlinLogging" }

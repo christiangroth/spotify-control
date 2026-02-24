@@ -1,9 +1,12 @@
+import de.chrgroth.gradle.plugins.releasenotes.ReleasenotesConfiguration
 import java.time.Duration
 
 plugins {
   id("kotlin-project")
   alias(libs.plugins.buildTimeTracker)
   alias(libs.plugins.versionCatalogUpdate)
+
+  id("de.chrgroth.gradle.plugins.releasenotes")
   id("dev.iurysouza.modulegraph") version "0.13.0"
 }
 
@@ -16,7 +19,33 @@ koverMerged {
   enable()
 }
 
+private val releasenotesBasePath = "docs/releasenotes/"
+
+releasenotes {
+  mainBranch = "main"
+  skipReleaseNotesOnBranchPrefixes = listOf("main", "dependabot/")
+
+  configure {
+    ReleasenotesConfiguration(
+      name = "repo-markdown",
+      outputPath = "$releasenotesBasePath/RELEASENOTES.md",
+      snippetsPath = "$releasenotesBasePath/releasenotes-snippets",
+      templatesPath = "$releasenotesBasePath/releasenotes-templates",
+      bugfixesHeader = "## Bugfixes / Chore",
+      bugfixesFooter = "",
+      featuresHeader = "## New Features",
+      featuresFooter = "",
+      highlightsHeader = "",
+      highlightsFooter = "",
+      updateNoticesHeader = "## Breaking Changes",
+      updateNoticesFooter = "",
+      preserveWhitespace = true,
+      dateFormat = "yyyy.MM.dd",
+    )
+  }
+}
+
 moduleGraphConfig {
   includeIsolatedModules = true
-  readmePath = "${project.buildDir}/modules.md"
+  readmePath = layout.buildDirectory.file("reports/modulegraph/modules.md").get().asFile.path
 }
