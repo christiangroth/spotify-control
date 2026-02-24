@@ -1,8 +1,8 @@
 # Using AI Coding Agents
 
 * Status: accepted
-* Deciders: Christian Groth
-* Date: 2025-07-01
+* Deciders: Chris
+* Date: 2026-02-24
 
 ## Context and Problem Statement
 
