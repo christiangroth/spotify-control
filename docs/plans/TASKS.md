@@ -1,7 +1,6 @@
 # Initial deployment
 
 - maintain and also serve release notes
-- add OpenAPI to adapter-in-web
 - deploy to vps
 
 # Spotify connect
