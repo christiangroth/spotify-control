@@ -1,12 +1,11 @@
 # Initial deployment
 
+- maintain and also serve release notes
+- add OpenAPI to adapter-in-web
 - add adapter-out-mongodb
-- add openapi to adapter-in-web
-- add adr tenolate & arc42 skeleton
 - create minimal outbox
 - create mongodb atlas instances
 - deploy to vps
-- maintain and also serve release notes
 
 # Spotify connect
 
