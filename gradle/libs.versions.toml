@@ -11,6 +11,7 @@ kover = "0.6.1"
 mockk = "1.14.9"
 openapiGenerator = "7.20.0"
 quarkus = "3.31.4"
+release = "3.1.0"
 versionCatalogUpdate = "1.1.0"
 
 [libraries]
@@ -31,4 +32,5 @@ allopen = { id = "org.jetbrains.kotlin.plugin.allopen", version.ref = "kotlin" }
 buildTimeTracker = { id = "com.asarkar.gradle.build-time-tracker", version.ref = "buildTimeTracker" }
 openapiGenerator = { id = "org.openapi.generator", version.ref = "openapiGenerator" }
 quarkus = { id = "io.quarkus", version.ref = "quarkus" }
+release = { id = "net.researchgate.release", version.ref = "release" }
 versionCatalogUpdate = { id = "nl.littlerobots.version-catalog-update", version.ref = "versionCatalogUpdate" }

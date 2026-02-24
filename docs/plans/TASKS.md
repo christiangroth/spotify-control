@@ -1,13 +1,9 @@
 # Initial deployment
 
 - deploy to vps
-  - basic VPS setup (use the new server)
-  - clarify deployment workflow, user, SSH keys, permissions, secrets
-  - gradle release plugin
-  - publish docker container or copy to VPS
-  - create/update swarm deployment
   - configure subdomain/DNS
-  - extract template repository
+  - adapt SSH host
+- extract template repository
 
 # Spotify connect
 

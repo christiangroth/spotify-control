@@ -1,4 +1,4 @@
-# 0.1.0-SNAPSHOT - 2026.02.24
+# 0.1.0 - 2026.02.24
 
 The basic project skeleton was developed and deployed.
 

@@ -13,3 +13,79 @@ jobs:
           distribution: 'temurin'
       - uses: gradle/actions/setup-gradle@v5
       - run: ./gradlew --info --stacktrace build
+
+  release:
+    runs-on: ubuntu-latest
+    if: ${{ github.ref == 'refs/heads/main' }}
+    needs: build
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+      - uses: gradle/actions/setup-gradle@v5
+      - run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "<>"
+      - name: Log into registry ghcr.io
+        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - run: ./gradlew -info --stacktrace release -x test -x testNative -x koverHtmlReport -x koverVerify
+      - run: |
+          export DOCKER_TAG=$(docker images ghcr.io/christiangroth/spotify-control/quarkus --format "{{.Tag}} {{.CreatedAt}}" | sort -rk 2 | awk 'NR==1{print $1}')
+          echo "DOCKER_TAG=$DOCKER_TAG" >> $GITHUB_ENV
+          echo "Computed docker tag for next deployment $DOCKER_TAG"
+      - uses: appleboy/ssh-action@v1.0.3
+        env:
+          GIT_PROJECT: "spotify-control"
+          DOCKER_STACK: "spotify-control"
+          DOCKER_TAG: ${{ env.DOCKER_TAG }}
+          HTTP_AUTH_ENCRYPTION_KEY: ${{ secrets.HTTP_AUTH_ENCRYPTION_KEY }}
+          TRAEFIK_HTTP_ROUTERS_SPOTIFYCONTROL_RULE: ${{ secrets.TRAEFIK_HTTP_ROUTERS_SPOTIFYCONTROL_RULE }}
+          GHCR_PAT: ${{ secrets.GHCR_PAT }}
+        with:
+          host: ${{ secrets.CONTABO_SSH_HOST }}
+          username: ${{ secrets.CONTABO_SSH_USER }}
+          key: ${{ secrets.CONTABO_SSH_PRIVATE_KEY }}
+          port: 22
+          envs: GIT_PROJECT,DOCKER_STACK,DOCKER_TAG,HTTP_AUTH_ENCRYPTION_KEY,TRAEFIK_HTTP_ROUTERS_SPOTIFYCONTROL_RULE,GHCR_PAT
+          script_stop: true
+          script: |
+            echo "removing old git repo clone"
+            rm -rf $GIT_PROJECT
+            
+            echo "login to ghcr.io"
+            echo $GHCR_PAT | docker login ghcr.io -u christiangroth --password-stdin
+            
+            echo "cloning git repo"
+            GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no" git clone --depth 1 git@github.com:christiangroth/$GIT_PROJECT.git $GIT_PROJECT
+            cd $GIT_PROJECT
+            
+            echo "deploying docker stack"
+            DOCKER_TAG=DOCKER_TAG HTTP_AUTH_ENCRYPTION_KEY=HTTP_AUTH_ENCRYPTION_KEY \
+              TRAEFIK_HTTP_ROUTERS_SPOTIFYCONTROL_RULE=TRAEFIK_HTTP_ROUTERS_SPOTIFYCONTROL_RULE \
+              docker stack deploy --detach=false --prune --with-registry-auth --resolve-image changed -c deploy/docker-stack.yml $DOCKER_STACK
+            sleep 5
+            
+            echo
+            echo "----- ----- -----"
+            echo "----- ----- -----"
+            echo "----- ----- -----"
+            echo
+            
+            docker stack ls
+            echo
+            docker stack services $DOCKER_STACK
+            echo
+            docker stack ps $DOCKER_STACK
+            
+            echo "removing git repo clone"
+            cd ..
+            rm -rf $GIT_PROJECT

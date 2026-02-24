@@ -6,13 +6,20 @@ plugins {
   alias(libs.plugins.buildTimeTracker)
   alias(libs.plugins.versionCatalogUpdate)
 
+  alias(libs.plugins.release)
   id("de.chrgroth.gradle.plugins.releasenotes")
+
   id("dev.iurysouza.modulegraph") version "0.13.0"
 }
 
 buildTimeTracker {
   maxWidth = 120
   minTaskDuration = Duration.ofMillis(50)
+}
+
+moduleGraphConfig {
+  includeIsolatedModules = true
+  readmePath = layout.buildDirectory.file("reports/modulegraph/modules.md").get().asFile.path
 }
 
 koverMerged {
@@ -45,7 +52,12 @@ releasenotes {
   }
 }
 
-moduleGraphConfig {
-  includeIsolatedModules = true
-  readmePath = layout.buildDirectory.file("reports/modulegraph/modules.md").get().asFile.path
+tasks.afterReleaseBuild {
+  dependsOn(":application-quarkus:imageBuild", ":application-quarkus:imagePush")
+}
+
+release {
+  git {
+    requireBranch = "main"
+  }
 }
