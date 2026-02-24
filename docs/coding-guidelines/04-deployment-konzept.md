@@ -1,34 +1,17 @@
 # Deployment Konzept
 
-> Konfigurationswerte & Umgebungsvariablen: siehe `02-technisches-konzept-backend.md`
-
 ## Infrastruktur
 
-- **VPS** mit Docker Swarm
-- **Traefik** bereits als Swarm Service vorhanden – übernimmt Routing, TLS, HTTPS
+- **VPS** mit Docker Swarm (bereits vorhanden)
+- **Traefik** übernimmt Routing, TLS, HTTPS (bereits vorhanden)
 - **MongoDB** extern via Atlas (kein lokaler MongoDB-Container)
-- **Quarkus** als Docker Container im Swarm
+- **Quarkus** als native Docker Container im Swarm
 
 ## Docker Image
 
-Quarkus Fast-JAR als Container:
+Quarkus native bauen
 
-```dockerfile
-FROM eclipse-temurin:21-jre
-WORKDIR /app
-COPY build/quarkus-app/lib/ ./lib/
-COPY build/quarkus-app/quarkus-run.jar ./
-EXPOSE 8080
-CMD ["java", "-jar", "quarkus-run.jar"]
-```
-
-Build via Gradle:
-```bash
-./gradlew build -Dquarkus.package.type=fast-jar
-docker build -t spotifymanager:latest .
-```
-
-## Docker Swarm Stack
+## Docker Swarm Stack (work in progress)
 
 ```yaml
 version: '3.8'
@@ -65,20 +48,12 @@ Secrets nie in der Stack-Datei – immer via Umgebungsvariablen aus einer `.env`
 
 ## Zugriffsbeschränkung
 
-Zwei Ebenen:
-
-1. **Traefik IP-Whitelist** (Netzwerkebene) – härteste Absicherung:
-```yaml
-labels:
-  - "traefik.http.middlewares.spotifymanager-ipwhitelist.ipwhitelist.sourcerange=YOUR.IP.HERE/32"
-  - "traefik.http.routers.spotifymanager.middlewares=spotifymanager-ipwhitelist"
-```
-
-2. **Quarkus Spotify-User-ID-Check** (Applikationsebene) – im OAuth-Callback via `APP_ALLOWED_SPOTIFY_USER_ID`
+**Quarkus Spotify-User-ID-Check** (Applikationsebene) – im OAuth-Callback via `APP_ALLOWED_SPOTIFY_USER_ID`
 
 ## Spotify OAuth Redirect URI
 
 In der Spotify Developer App müssen beide URIs registriert sein:
+
 ```
 https://spotify.yourdomain.com/oauth/callback   ← Produktion
 http://localhost:8080/oauth/callback             ← Lokale Entwicklung
@@ -86,19 +61,20 @@ http://localhost:8080/oauth/callback             ← Lokale Entwicklung
 
 ## Lokale Entwicklung vs. Produktion
 
-| | Lokal | Produktion |
-|---|---|---|
-| MongoDB | Atlas Dev-Cluster | Atlas Prod-Cluster |
-| Quarkus Profil | `dev` | `prod` |
-| Spotify Redirect | `localhost:8080` | `spotify.yourdomain.com` |
-| Container | nein (direkter Quarkus-Start) | Docker Swarm |
+|                  | Lokal                         | Produktion               |
+|------------------|-------------------------------|--------------------------|
+| MongoDB          | Atlas Dev-Cluster             | Atlas Prod-Cluster       |
+| Quarkus Profil   | `dev`                         | `prod`                   |
+| Spotify Redirect | `localhost:8080`              | `spotify.yourdomain.com` |
+| Container        | nein (direkter Quarkus-Start) | Docker Swarm             |
 
 Quarkus-Profil wird via Umgebungsvariable gesteuert:
+
 ```bash
 QUARKUS_PROFILE=prod
 ```
 
-## Deployment-Workflow
+## Deployment-Workflow (work in progress)
 
 ```bash
 # Build

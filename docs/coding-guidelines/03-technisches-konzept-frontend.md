@@ -1,9 +1,5 @@
 # Technisches Konzept: Frontend
 
-> Fachlicher Kontext: siehe `01-fachlicher-kontext.md`
-> Backend-Endpoints & SSE: siehe `02-technisches-konzept-backend.md`
-> Rollen & Design-Stil: siehe `roles/role-frontend-developer.md`
-
 ## Stack
 
 - **Templates:** Qute (Quarkus SSR) – kein separates Frontend-Projekt
@@ -16,6 +12,8 @@
 
 ## WebJar Dependencies (Gradle)
 
+Jeweils aktuellste Version verwenden.
+
 ```kotlin
 implementation("org.webjars:bootstrap:5.3.2")
 implementation("org.webjars.npm:htmx.org:1.9.10")
@@ -26,18 +24,18 @@ Alle Includes ausschließlich in `layout.html`.
 
 ## Routen
 
-| Route | Beschreibung |
-|---|---|
-| `/` | Redirect: Session → `/dashboard`, sonst → `/login` |
-| `/login` | Spotify Login |
-| `/oauth/callback` | OAuth Callback (kein Template) |
-| `/dashboard` | Hauptseite |
-| `/charts` | MongoDB Charts Vollansicht |
-| `/admin/playlists` | Playlist-Sync-Konfiguration + Typ-Zuweisung |
-| `/admin/genres` | Genre-Override-Verwaltung |
-| `/actions/{action}/{token}` | Approve/Reject → Redirect `/dashboard` |
-| `/live/outbox` | SSE Endpoint |
-| `/live/playback` | SSE Endpoint |
+| Route                          | Beschreibung                                       |
+|--------------------------------|----------------------------------------------------|
+| `/`                            | Redirect: Session → `/dashboard`, sonst → `/login` |
+| `/ui/login`                    | Spotify Login                                      |
+| `/oauth/callback`              | OAuth Callback (kein Template)                     |
+| `/ui/dashboard`                | Hauptseite                                         |
+| `/ui/charts`                   | MongoDB Charts Vollansicht                         |
+| `/ui/admin/playlists`          | Playlist-Sync-Konfiguration + Typ-Zuweisung        |
+| `/ui/admin/genres`             | Genre-Override-Verwaltung                          |
+| `/ui/actions/{action}/{token}` | Approve/Reject → Redirect `/dashboard`             |
+| `/ui/sse/outbox`               | SSE Endpoint                                       |
+| `/ui/sse/playback`             | SSE Endpoint                                       |
 
 Erster Login → `setup_complete: false` in Session → Redirect auf `/admin/playlists`.
 

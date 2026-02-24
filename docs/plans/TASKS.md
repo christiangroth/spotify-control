@@ -1,8 +1,5 @@
 # Initial deployment
 
-- create ai agent configs
-- try github copilot issue ai agent
-- split domain (api/impl)
 - add adapter-out-mongodb
 - add openapi to adapter-in-web
 - add adr tenolate & arc42 skeleton
@@ -25,7 +22,7 @@
 - duplicate habdling
 - simple dashboard stats (outbox, playback events)
 
-# Spotify API 
+# Spotify API
 
 - metrics about sporify requests on dashboard
 - maybe grafana dashboard
