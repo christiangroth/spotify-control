@@ -2,31 +2,31 @@
 
 - maintain and also serve release notes
 - add OpenAPI to adapter-in-web
-- add adapter-out-mongodb
-- create minimal outbox
-- create mongodb atlas instances
 - deploy to vps
 
 # Spotify connect
 
 - add adapter-out-spotify
-- add spotify login
-- add dashboard
+- add Spotify login
+- add empty dashboard
 - serve docs
 
 # Playback data gathering
 
-- refresh token habdling
+- add adapter-out-mongodb
+- create minimal outbox
+- create mongodb atlas instances
+- refresh token handling
 - cronjob to fetch recently played
-- duplicate habdling
+- duplicate handling
 - simple dashboard stats (outbox, playback events)
 
 # Spotify API
 
-- metrics about sporify requests on dashboard
-- maybe grafana dashboard
+- metrics about Spotify requests on dashboard
+- maybe Grafana dashboard
 - cronjob to sync artists, releases and tracks
-- dashboard stats on synced spotify data
+- dashboard stats on synced Spotify data
 
 # Playlist connect
 
@@ -38,7 +38,7 @@
 # Metrics / Monitoring
 
 - metrics about MongoDB on dashboard
-- maybe grafana dashboard
+- maybe Grafana dashboard
 - Make logs accessible
 
 # Future
