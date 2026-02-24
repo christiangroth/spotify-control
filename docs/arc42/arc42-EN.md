@@ -184,40 +184,7 @@ The application is deployed on an existing VPS running Docker Swarm. Traefik han
 
 ## Infrastructure Level 2
 
-### Docker Swarm Stack (work in progress)
-
-```yaml
-version: '3.8'
-
-services:
-  app:
-    image: spotifymanager:latest
-    networks:
-      - traefik-public
-    environment:
-      APP_ALLOWED_SPOTIFY_USER_ID: ${APP_ALLOWED_SPOTIFY_USER_ID}
-      SPOTIFY_CLIENT_ID: ${SPOTIFY_CLIENT_ID}
-      SPOTIFY_CLIENT_SECRET: ${SPOTIFY_CLIENT_SECRET}
-      MONGODB_CONNECTION_STRING: ${MONGODB_CONNECTION_STRING}
-      APP_TOKEN_ENCRYPTION_KEY: ${APP_TOKEN_ENCRYPTION_KEY}
-      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL}
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
-      labels:
-        - "traefik.enable=true"
-        - "traefik.http.routers.spotifymanager.rule=Host(`spotify.yourdomain.com`)"
-        - "traefik.http.routers.spotifymanager.entrypoints=websecure"
-        - "traefik.http.routers.spotifymanager.tls.certresolver=letsencrypt"
-        - "traefik.http.services.spotifymanager.loadbalancer.server.port=8080"
-
-networks:
-  traefik-public:
-    external: true
-```
-
-Secrets are never stored in the stack file – always provided via environment variables from a `.env` file that is not checked into Git.
+Secrets are never stored in deployment configuration – always provided via environment variables from a `.env` file that is not checked into Git.
 
 ### Environments
 
@@ -234,20 +201,9 @@ Quarkus profile is controlled via environment variable:
 QUARKUS_PROFILE=prod
 ```
 
-### Deployment Workflow (work in progress)
+### Deployment Workflow
 
-```bash
-# Build
-./gradlew build -Dquarkus.package.type=fast-jar
-
-# Build and tag image
-docker build -t spotifymanager:latest .
-docker save spotifymanager:latest | gzip > spotifymanager.tar.gz
-
-# Transfer to VPS and deploy
-scp spotifymanager.tar.gz user@vps:~/
-ssh user@vps "docker load < spotifymanager.tar.gz && docker stack deploy -c stack.yml spotifymanager"
-```
+Build the application as a Quarkus native Docker image, transfer to the VPS, and deploy via Docker Swarm stack.
 
 ### Spotify OAuth Redirect URIs
 
@@ -283,18 +239,7 @@ Successfully processed events are moved to `outbox_archive` (audit log). Interna
 
 ## Server-Sent Events (SSE) and Live Updates
 
-CDI events act as a bridge between backend services and SSE streams:
-
-```kotlin
-@ApplicationScoped
-class LiveUpdateService {
-  private val outboxProcessor = BroadcastProcessor.create<OutboxChangedEvent>()
-  fun onOutboxChanged(@Observes event: OutboxChangedEvent) = outboxProcessor.onNext(event)
-  fun outboxStream(): Multi<OutboxChangedEvent> = outboxProcessor.toHotStream()
-}
-```
-
-The SSE endpoint delivers the initial state on connect, then pushes updates.
+CDI events act as a bridge between backend services and SSE streams. The SSE endpoint delivers the initial state on connect, then pushes updates via a hot stream backed by a `BroadcastProcessor`.
 
 ## Genre Management
 
@@ -339,7 +284,14 @@ SLACK_WEBHOOK_URL
 
 # Architecture Decisions
 
-*work in progress*
+Architecture decisions are documented as Architecture Decision Records (ADRs) in the [`/docs/adr`](../adr/) folder.
+
+| ADR | Title |
+|-----|-------|
+| [0001](../adr/0001-using-arc42-as-project-documentation.md) | Using arc42 as Project Documentation |
+| [0002](../adr/0002-backend-hexagonal-architecture.md) | Backend: Hexagonal Architecture |
+| [0003](../adr/0003-no-separate-frontend-project.md) | No Separate Frontend Project |
+| [0004](../adr/0004-using-ai-coding-agents.md) | Using AI Coding Agents |
 
 # Quality Requirements
 
