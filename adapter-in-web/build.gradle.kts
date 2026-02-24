@@ -4,7 +4,7 @@ plugins {
 }
 
 dependencies {
-  implementation(project(":domain"))
+  implementation(project(":domain-api"))
 
   api(enforcedPlatform(libs.quarkusBom))
   api("io.quarkus:quarkus-rest-jackson")

@@ -6,7 +6,7 @@ plugins {
 
 dependencies {
   implementation(project(":adapter-in-web"))
-  implementation(project(":domain"))
+  implementation(project(":domain-impl"))
 
   implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
 
