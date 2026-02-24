@@ -17,7 +17,8 @@
 adapter-in-rest/        → REST Endpoints, OAuth Callback, SSE, Action-Endpoints
 adapter-in-outbox/      → Outbox-Poller, Event-Router zu Domain-Ports
 adapter-in-slack/       → Slack Interaction Endpoint (Phase 2), Signatur-Validierung
-domain/                 → Ports (Interfaces), fachliche Services, Domain-Objekte, CDI Events
+domain-api/                 → Ports (Interfaces)
+domain-impl/                → fachliche Services, Domain-Objekte, CDI Events
 adapter-out-spotify/    → SpotifyApiClient, TokenRefresh, Token Bucket, Backoff
 adapter-out-mongodb/    → Repository-Implementierungen
 adapter-out-slack/      → SlackApiClient, Block Kit Message Builder
