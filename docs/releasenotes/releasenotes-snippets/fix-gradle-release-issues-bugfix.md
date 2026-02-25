@@ -1,1 +1,0 @@
-* fix-gradle-release-issues: Fixed ConcurrentModificationException when running Gradle release with the Quarkus plugin by disabling configuration-on-demand.
