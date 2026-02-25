@@ -6,7 +6,6 @@ import io.quarkus.qute.TemplateInstance
 import jakarta.annotation.security.PermitAll
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
-import jakarta.ws.rs.BadRequestException
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.NotFoundException
 import jakarta.ws.rs.Path
@@ -53,7 +52,7 @@ class DocsResource {
   @Produces(MediaType.TEXT_HTML)
   fun adr(@PathParam("filename") filename: String): TemplateInstance {
     if (!filename.endsWith(".md") || filename.contains("/") || filename.contains("..")) {
-      throw BadRequestException("Invalid filename: $filename")
+      throw NotFoundException("ADR not found: $filename")
     }
     val content = readMarkdown("docs/adr/$filename") ?: throw NotFoundException("ADR not found: $filename")
     return docsTemplate.instance()

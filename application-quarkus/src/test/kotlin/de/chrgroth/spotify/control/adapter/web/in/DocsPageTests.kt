@@ -44,12 +44,12 @@ class DocsPageTests {
   }
 
   @Test
-  fun `docs adr detail page returns bad request for invalid filename`() {
+  fun `docs adr detail page returns not found for invalid filename`() {
     given()
       .`when`()
       .get("/ui/docs/adr/not-an-md-file.txt")
       .then()
-      .statusCode(400)
+      .statusCode(404)
   }
 
   @Test
