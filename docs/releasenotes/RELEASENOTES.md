@@ -1,3 +1,6 @@
+# 0.1.3 - 2026.02.25
+## New Features
+* add-docker-image-cleanup-workflow: Added scheduled GitHub Actions workflow to automatically clean up old Docker images from GHCR, keeping only the 3 newest versions.
 # 0.1.2 - 2026.02.25
 ## New Features
 * update-deployment-process: Deployment via SCP instead of git clone on VPS; optimized GitHub Actions release workflow.
