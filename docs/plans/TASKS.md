@@ -1,20 +1,17 @@
 # Initial deployment
 
-- deploy to vps
-  - configure subdomain/DNS
-  - adapt SSH host
 - extract template repository
 
 # Spotify connect
 
-- add adapter-out-spotify
+- add adapter-out-mongodb
 - add Spotify login
 - review
 - maintenance tasks
 
 # Playback data gathering
 
-- add adapter-out-mongodb
+- add adapter-out-spotify
 - create minimal outbox
 - create mongodb atlas instances
 - refresh token handling
