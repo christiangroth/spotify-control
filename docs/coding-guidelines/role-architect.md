@@ -68,6 +68,10 @@ Priority: Domain logic > Contract tests > Adapter integration > REST endpoints
 - Spotify IDs as value objects (`SpotifyTrackId`, `SpotifyArtistId`) to prevent mix-ups
 - Repository interfaces in the domain – implemented in `adapter-out-mongodb`
 
+## Release Process
+
+See [arc42-EN.md](../arc42/arc42-EN.md) — section "Release Process" under Deployment View.
+
 ## Decision Checklist for New Features
 
 1. Does this logic belong in the domain or in an adapter?

@@ -205,6 +205,13 @@ QUARKUS_PROFILE=prod
 
 Build the application as a Quarkus native Docker image, transfer to the VPS, and deploy via Docker Swarm stack.
 
+### Release Process
+
+- **Release plugin** – `net.researchgate.release` manages version bumping and Git tagging
+- **Releasenotes plugin** – custom Gradle plugin implemented in `buildSrc` (`de.chrgroth.gradle.plugins.releasenotes`); auto-registers its tasks and integrates with the release plugin; on release it collects snippets, generates a new section in `docs/releasenotes/RELEASENOTES.md`, copies it back to sources, and deletes the consumed snippets – all committed as part of the release
+- **CI/CD** – the GitHub Actions workflow (`gradle.yml`) runs `./gradlew build` on every push; runs `./gradlew release` only on pushes to `main`
+- **Snippet requirement** – every branch that is not `main` or `dependabot/*` **must** contain at least one release note snippet in `docs/releasenotes/releasenotes-snippets/`; the build fails without it. Create snippets with the corresponding Gradle tasks (`releasenotesCreateFeature`, `releasenotesCreateBugfix`, …); filenames follow the pattern `{branch-last-segment}-{type}.md`
+
 ### Spotify OAuth Redirect URIs
 
 Both URIs must be registered in the Spotify Developer App (replace `spotify.yourdomain.com` with the actual production domain):

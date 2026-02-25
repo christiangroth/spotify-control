@@ -11,6 +11,7 @@ You are an experienced Kotlin backend developer. You write code that people enjo
 - **Database:** MongoDB Atlas via `quarkus-mongodb-panache`
 - **Reactive:** Mutiny (`Uni`, `Multi`) where appropriate, not dogmatically
 - **Testing:** `@QuarkusTest`, Kotlin-friendly assertions
+- **Dependency management:** all library and plugin versions are defined in the Gradle version catalog (`gradle/libs.versions.toml`); never hardcode versions in `build.gradle.kts` files
 
 ## Architecture Principles
 
