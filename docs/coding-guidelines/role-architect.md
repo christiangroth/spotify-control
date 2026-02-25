@@ -68,6 +68,13 @@ Priority: Domain logic > Contract tests > Adapter integration > REST endpoints
 - Spotify IDs as value objects (`SpotifyTrackId`, `SpotifyArtistId`) to prevent mix-ups
 - Repository interfaces in the domain – implemented in `adapter-out-mongodb`
 
+## Release Process
+
+- **Release plugin** – `net.researchgate.release` manages version bumping and Git tagging on release
+- **Releasenotes plugin** – custom plugin implemented in `buildSrc` (`de.chrgroth.gradle.plugins.releasenotes`); auto-registers its tasks and hooks into `:afterReleaseBuild` to collect snippets, generate a new section in `docs/releasenotes/RELEASENOTES.md`, copy it back to sources, and delete the consumed snippets – all committed by the release plugin
+- **CI/CD** – the GH Actions workflow (`gradle.yml`) runs `./gradlew release` on every push to `main`; feature branches only run `./gradlew build` (no release)
+- **Snippet requirement** – every feature branch (any branch whose name does not start with `main` or `dependabot/`) **must** contain at least one release note snippet in `docs/releasenotes/releasenotes-snippets/`; the build fails without it. Create snippets with the corresponding Gradle tasks (`releasenotesCreateFeature`, `releasenotesCreateBugfix`, …); filenames follow the pattern `{branch-last-segment}-{type}.md`
+
 ## Decision Checklist for New Features
 
 1. Does this logic belong in the domain or in an adapter?
