@@ -57,7 +57,12 @@ tasks.afterReleaseBuild {
 }
 
 release {
+  failOnSnapshotDependencies = false
   git {
     requireBranch = "main"
   }
+}
+
+tasks.named("checkSnapshotDependencies") {
+  enabled = false
 }

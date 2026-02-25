@@ -1,0 +1,1 @@
+* fix-gradle-release-issue: Fix Gradle release by disabling checkSnapshotDependencies task to prevent ConcurrentModificationException with Quarkus plugin.
