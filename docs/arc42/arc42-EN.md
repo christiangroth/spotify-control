@@ -275,6 +275,17 @@ No separate frontend project. The UI is rendered server-side using Quarkus Qute 
 - Icons: Font Awesome via WebJar
 - Charts: MongoDB Charts Embedding SDK
 - Live Updates: Server-Sent Events via htmx `hx-ext="sse"`
+- Markdown rendering: marked via WebJar (docs and release notes pages)
+
+## Documentation and Release Notes Serving
+
+Architecture documentation (`docs/arc42`), ADRs (`docs/adr`), and release notes (`docs/releasenotes`) are served to the logged-in user directly from the application. A Gradle copy task bundles the Markdown files into the `adapter-in-web` classpath at build time. A `DocsResource` endpoint reads and passes the raw Markdown to Qute templates; the `marked` WebJar renders it in the browser.
+
+Navigation entry points:
+- **"Docs"** menu bar link (authenticated users only) → `/docs` → arc42 and ADR pages
+- **Application version** in the menu bar → `/docs/releasenotes`
+
+See [serve-markdown.md](../plans/serve-markdown.md) for the full concept and [ADR-0005](../adr/0005-markdown-rendering-library.md) for the Markdown library decision.
 
 ## Configuration
 
@@ -299,6 +310,7 @@ Architecture decisions are documented as Architecture Decision Records (ADRs) in
 | [0002](../adr/0002-backend-hexagonal-architecture.md) | Backend: Hexagonal Architecture |
 | [0003](../adr/0003-no-separate-frontend-project.md) | No Separate Frontend Project |
 | [0004](../adr/0004-using-ai-coding-agents.md) | Using AI Coding Agents |
+| [0005](../adr/0005-markdown-rendering-library.md) | Markdown Rendering Library: marked |
 
 # Quality Requirements
 
