@@ -1,5 +1,6 @@
 [versions]
 assertJ = "3.27.7"
+bootstrap = "5.3.3"
 buildTimeTracker = "5.0.1"
 detekt = "1.23.8"
 grgit = "5.3.3"
@@ -16,6 +17,7 @@ versionCatalogUpdate = "1.1.0"
 
 [libraries]
 assertJ = { module = "org.assertj:assertj-core", version.ref = "assertJ" }
+bootstrap = { module = "org.webjars:bootstrap", version.ref = "bootstrap" }
 detekt = { module = "io.gitlab.arturbosch.detekt:detekt-gradle-plugin", version.ref = "detekt" }
 grgit = { module = "org.ajoberstar.grgit:grgit-core", version.ref = "grgit" }
 junit = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }

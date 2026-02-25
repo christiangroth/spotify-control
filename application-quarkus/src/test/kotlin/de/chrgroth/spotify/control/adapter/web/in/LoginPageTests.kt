@@ -15,6 +15,7 @@ class LoginPageTests {
       .get("/")
       .then()
       .statusCode(200)
-      .body(containsString("Log in with Spotify"))
+      .contentType(containsString("text/html"))
+      .body(containsString("""data-testid="login-button""""))
   }
 }

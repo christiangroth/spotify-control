@@ -21,7 +21,7 @@ class LoginResource {
   private lateinit var loginTemplate: Template
 
   @GET
-  @Produces(MediaType.TEXT_HTML)
   @PermitAll
+  @Produces(MediaType.TEXT_HTML)
   fun index(): TemplateInstance = loginTemplate.instance()
 }

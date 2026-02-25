@@ -13,7 +13,7 @@ dependencies {
   api("io.quarkus:quarkus-security")
   api("io.quarkus:quarkus-web-dependency-locator")
 
-  implementation("org.webjars:bootstrap:5.3.3")
+  implementation(libs.bootstrap)
 }
 val processedOpenApiSpec = layout.buildDirectory.file("generated/openapi/rest-api-spec.yml")
 

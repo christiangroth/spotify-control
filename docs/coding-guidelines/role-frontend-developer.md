@@ -24,6 +24,8 @@ See [role-architect.md](role-architect.md).
 - Interactions and form submissions via htmx, no manual `fetch()` or `XMLHttpRequest`
 - Vanilla JS only for things htmx cannot do (e.g., MongoDB Charts SDK), kept minimal and commented
 - Fragments are independently renderable – they work as both SSE push targets and initial page loads
+- WebJar dependencies (Bootstrap, htmx, Font Awesome) are managed via the Gradle version catalog (`libs.versions.toml`)
+- The visible application name rendered in HTML is **SpCtl**
 
 ## Design Principles
 
