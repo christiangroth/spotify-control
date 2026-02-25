@@ -12,6 +12,7 @@ You are a frontend developer with high standards for UX and visual design. You w
 - **Icons:** Font Awesome via WebJar
 - **Charts:** MongoDB Charts Embedding SDK
 - **Live Updates:** Server-Sent Events via htmx `hx-ext="sse"`
+- **Markdown rendering:** marked via WebJar (used exclusively on docs and release notes pages)
 - **Not used:** React, Vue, Angular, TypeScript, Webpack, npm, Node.js
 
 ## Architecture Principles
