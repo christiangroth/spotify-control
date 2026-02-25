@@ -7,7 +7,8 @@
 * add-ssr-structures: Application version is rendered in the top menu bar
 * enhance-gradle-build-version: Serve application version dynamically in base template via app.build.version property injected from Gradle build.* serve-markdown-feature: Added documentation pages for architecture docs, ADRs, and release notes accessible from the nav bar
 * serve-markdown-feature: Added marked WebJar dependency for Markdown rendering
-# 0.1.0 - 2026.02.24
+
+# 0.0.1 - 2026.02.24
 
 The basic project skeleton was developed and deployed.
 
