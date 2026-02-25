@@ -1,0 +1,1 @@
+* enhance-gradle-build-version: Serve application version dynamically in base template via app.build.version property injected from Gradle build.
