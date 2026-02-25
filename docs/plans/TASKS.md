@@ -9,6 +9,8 @@
 
 - add adapter-out-spotify
 - add Spotify login
+- review
+- maintenance tasks
 
 # Playback data gathering
 
