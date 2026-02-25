@@ -1,3 +1,6 @@
+# 0.1.5 - 2026.02.25
+## Bugfixes / Chore
+* fix-build-version-display: Fixed build version not being shown in the UI in dev mode.
 # 0.1.3 - 2026.02.25
 ## New Features
 * add-docker-image-cleanup-workflow: Added scheduled GitHub Actions workflow to automatically clean up old Docker images from GHCR, keeping only the 3 newest versions.
