@@ -69,8 +69,8 @@ jobs:
             cd $GIT_PROJECT
             
             echo "deploying docker stack"
-            DOCKER_TAG=DOCKER_TAG HTTP_AUTH_ENCRYPTION_KEY=HTTP_AUTH_ENCRYPTION_KEY \
-              TRAEFIK_HTTP_ROUTERS_SPOTIFYCONTROL_RULE=TRAEFIK_HTTP_ROUTERS_SPOTIFYCONTROL_RULE \
+            DOCKER_TAG=$DOCKER_TAG HTTP_AUTH_ENCRYPTION_KEY=$HTTP_AUTH_ENCRYPTION_KEY \
+              TRAEFIK_HTTP_ROUTERS_SPOTIFYCONTROL_RULE=$TRAEFIK_HTTP_ROUTERS_SPOTIFYCONTROL_RULE \
               docker stack deploy --detach=false --prune --with-registry-auth --resolve-image changed -c deploy/docker-stack.yml $DOCKER_STACK
             sleep 5
             
