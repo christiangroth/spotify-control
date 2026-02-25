@@ -48,4 +48,6 @@ Every branch (except `main` and `dependabot/*` branches) **must** contain at lea
 
 **Snippet content:** Edit the generated snippet file to briefly describe what was changed or added on the branch. Each line should follow the pattern `* {branch-last-segment}: Description of the change.`
 
+Only include **user-facing or dependency changes** in release notes. Do not add implementation details, refactoring notes, or internal structural changes (e.g. package renames, build task additions).
+
 See [docs/arc42/arc42-EN.md](../docs/arc42/arc42-EN.md) — section "Release Process" — for full details.

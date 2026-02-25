@@ -3,9 +3,10 @@ package de.chrgroth.spotify.control.adapter.`in`.web.ui
 import io.quarkus.qute.Location
 import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
-import jakarta.annotation.security.RolesAllowed
+import jakarta.annotation.security.PermitAll
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
+import jakarta.ws.rs.BadRequestException
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.NotFoundException
 import jakarta.ws.rs.Path
@@ -16,7 +17,7 @@ import jakarta.ws.rs.core.Response
 
 @Path("/ui/docs")
 @ApplicationScoped
-@RolesAllowed("user")
+@PermitAll
 @Suppress("Unused")
 class DocsResource {
 
@@ -51,8 +52,8 @@ class DocsResource {
   @Path("/adr/{filename}")
   @Produces(MediaType.TEXT_HTML)
   fun adr(@PathParam("filename") filename: String): TemplateInstance {
-    require(filename.endsWith(".md") && !filename.contains("/") && !filename.contains("..")) {
-      "Invalid filename: $filename"
+    if (!filename.endsWith(".md") || filename.contains("/") || filename.contains("..")) {
+      throw BadRequestException("Invalid filename: $filename")
     }
     val content = readMarkdown("docs/adr/$filename") ?: throw NotFoundException("ADR not found: $filename")
     return docsTemplate.instance()
