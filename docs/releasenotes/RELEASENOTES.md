@@ -1,3 +1,12 @@
+# 0.1.0 - 2026.02.25
+## New Features
+* add-ssr-structures: Added server side rendering infrastructure using Qute templates and Bootstrap WebJar
+* add-ssr-structures: Added login page with Spotify branding and a login button
+* add-ssr-structures: Added slim black navigation bar showing application name and version
+* add-ssr-structures: Added dashboard page as main entry point after login
+* add-ssr-structures: Application version is rendered in the top menu bar
+* enhance-gradle-build-version: Serve application version dynamically in base template via app.build.version property injected from Gradle build.* serve-markdown-feature: Added documentation pages for architecture docs, ADRs, and release notes accessible from the nav bar
+* serve-markdown-feature: Added marked WebJar dependency for Markdown rendering
 # 0.1.0 - 2026.02.24
 
 The basic project skeleton was developed and deployed.

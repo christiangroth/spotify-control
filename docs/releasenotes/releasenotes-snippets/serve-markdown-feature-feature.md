@@ -1,2 +1,0 @@
-* serve-markdown-feature: Added documentation pages for architecture docs, ADRs, and release notes accessible from the nav bar
-* serve-markdown-feature: Added marked WebJar dependency for Markdown rendering
