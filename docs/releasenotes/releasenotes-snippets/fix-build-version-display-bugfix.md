@@ -1,0 +1,1 @@
+* fix-build-version-display: Fixed build version not being shown in the UI in dev mode.

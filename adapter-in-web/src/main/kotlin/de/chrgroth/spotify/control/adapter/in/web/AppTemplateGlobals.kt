@@ -9,7 +9,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty
 @Suppress("Unused")
 class AppTemplateGlobals {
 
-  @field:ConfigProperty(name = "app.build.version")
+  @field:ConfigProperty(name = "quarkus.application.version")
   lateinit var version: String
 
   @PostConstruct
