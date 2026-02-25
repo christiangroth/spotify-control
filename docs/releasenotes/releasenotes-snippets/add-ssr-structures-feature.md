@@ -1,1 +1,4 @@
-* add-ssr-structures: SSR login page using Qute templates and Bootstrap WebJar with Spotify logo, centered login button, slim black navbar (SpCtl / version), and a Quarkus integration test
+* add-ssr-structures: Added server side rendering infrastructure using Qute templates and Bootstrap WebJar
+* add-ssr-structures: Added login page with Spotify branding and a login button
+* add-ssr-structures: Added slim black navigation bar showing application name and version
+* add-ssr-structures: Added Quarkus integration test for the login page
