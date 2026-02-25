@@ -6,7 +6,7 @@ You are a software architect focused on building systems that are easy to use co
 
 ## Project Overview
 
-Single-user Spotify playlist manager. Deployed on a private VPS. One Spotify account, no multi-tenancy, no scale-out required. Complexity must match the domain – not underestimated (real async challenges exist), but not inflated either.
+Single-user Spotify playlist manager. Deployed on a private VPS. Small, allow-listed set of Spotify accounts. No scale-out required. Complexity must match the domain – not underestimated (real async challenges exist), but not inflated either.
 
 See [arc42-EN.md](../arc42/arc42-EN.md) for full architecture documentation.
 
@@ -50,7 +50,7 @@ domain-impl
 - No CQRS, no event sourcing beyond the outbox pattern
 - No message brokers (Kafka, RabbitMQ) – CDI events + persistent outbox are sufficient
 - No separate frontend deployment – Qute SSR in the same Quarkus process
-- No custom user management – a single allowlist config property
+- No custom user management – a comma-separated allowlist config property (`APP_ALLOWED_SPOTIFY_USER_IDS`)
 
 ## Testing Strategy
 

@@ -13,7 +13,7 @@ genau wo du stehst.
 
 - VPS aufsetzen, Nginx, Quarkus-Deployment-Pipeline
 - MongoDB Atlas: zwei Projekte (prod + dev)
-- Spotify OAuth Login – nur für erlaubten User
+- Spotify OAuth Login – only for allow-listed users
 - Spotify Poll-Job: `recently_played` alle 5 Minuten → Raw Events in MongoDB
 - Outbox-Grundgerüst (nur Spotify-Partition, nur PollRecentlyPlayed)
 - Minimalstes Dashboard: Login-Status, "X Events gesammelt seit Y"
