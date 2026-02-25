@@ -11,6 +11,7 @@ services:
         - "traefik.http.routers.spotifycontrol.rule=${TRAEFIK_HTTP_ROUTERS_SPOTIFYCONTROL_RULE:?please export TRAEFIK_HTTP_ROUTERS_SPOTIFYCONTROL_RULE}"
         - "traefik.http.routers.spotifycontrol.entryPoints=websecure"
         - "traefik.http.routers.spotifycontrol.tls=true"
+        - "traefik.http.routers.spotifycontrol.tls.certresolver=le"
         - "traefik.http.services.spotifycontrol-svc.loadbalancer.server.port=8080"
         - "traefik.swarm.network=global_router"
     volumes:
