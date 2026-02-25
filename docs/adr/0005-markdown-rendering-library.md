@@ -65,6 +65,5 @@ Chosen option: **`marked`** (`org.webjars.npm:marked`), because it is the most l
 
 ## Links
 
-* [serve-markdown.md](../plans/serve-markdown.md)
 * [marked.js GitHub](https://github.com/markedjs/marked)
 * [org.webjars.npm:marked on Maven Central](https://mvnrepository.com/artifact/org.webjars.npm/marked)

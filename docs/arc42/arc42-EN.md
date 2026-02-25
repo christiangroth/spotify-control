@@ -281,12 +281,6 @@ No separate frontend project. The UI is rendered server-side using Quarkus Qute 
 
 Architecture documentation (`docs/arc42`), ADRs (`docs/adr`), and release notes (`docs/releasenotes`) are served to the logged-in user directly from the application. A Gradle copy task bundles the Markdown files into the `adapter-in-web` classpath at build time. A `DocsResource` endpoint reads and passes the raw Markdown to Qute templates; the `marked` WebJar renders it in the browser.
 
-Navigation entry points:
-- **"Docs"** menu bar link (authenticated users only) → `/docs` → arc42 and ADR pages
-- **Application version** in the menu bar → `/docs/releasenotes`
-
-See [serve-markdown.md](../plans/serve-markdown.md) for the full concept and [ADR-0005](../adr/0005-markdown-rendering-library.md) for the Markdown library decision.
-
 ## Configuration
 
 All sensitive configuration is provided via environment variables:
