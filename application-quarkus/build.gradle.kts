@@ -6,6 +6,7 @@ plugins {
 
 dependencies {
   implementation(project(":adapter-in-web"))
+  implementation(project(":adapter-out-mongodb"))
   implementation(project(":domain-impl"))
 
   implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
@@ -19,7 +20,6 @@ dependencies {
 
   testImplementation("io.quarkus:quarkus-junit5")
   testImplementation("io.quarkus:quarkus-junit5-mockito")
-  testImplementation("io.quarkus:quarkus-jdbc-postgresql")
   testImplementation("io.quarkus:quarkus-test-security")
   testImplementation("io.rest-assured:rest-assured")
 }
