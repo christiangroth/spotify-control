@@ -1,1 +1,0 @@
-* create-spotify-login-concept: Document Spotify OAuth login concept including allow-listed multi-user support, token persistence in MongoDB, and Spotify OAuth app setup instructions.

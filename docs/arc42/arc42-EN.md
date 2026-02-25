@@ -232,7 +232,6 @@ http://localhost:8080/oauth/callback             ← Local development
 - `return_to` parameter stored in the session for redirect after login.
 - A CSRF `state` parameter is generated per authorization request and validated in the callback.
 - Token refresh is handled by `adapter-out-spotify` before each Spotify API call; the refreshed token is persisted back to MongoDB.
-- See [spotifylogin.md](../plans/spotifylogin.md) for the full login concept and setup instructions.
 
 ## Outbox Pattern
 
