@@ -1,3 +1,7 @@
+# 0.1.6 - 2026.02.25
+## New Features
+* implement-user-persistence: Implement Spotify user persistence.
+
 # 0.1.5 - 2026.02.25
 ## Bugfixes / Chore
 * fix-build-version-display: Fixed build version not being shown in the UI in dev mode.
