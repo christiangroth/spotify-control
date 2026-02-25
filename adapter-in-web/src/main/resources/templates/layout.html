@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{#insert title}spotify-control{/insert}</title>
+    <link rel="stylesheet" href="/webjars/bootstrap/css/bootstrap.min.css">
+    <style>
+        :root {
+            --spotify-green: #1db954;
+        }
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+        }
+        .app-navbar {
+            background-color: #000000;
+        }
+        .app-navbar .app-name {
+            color: #ffffff;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+        }
+        .app-navbar .app-version {
+            color: #888888;
+            font-size: 0.8rem;
+        }
+        .btn-spotify {
+            background-color: var(--spotify-green);
+            color: #000000;
+            font-weight: 600;
+            border: none;
+            border-radius: 500px;
+        }
+        .btn-spotify:hover {
+            background-color: #1ed760;
+            color: #000000;
+        }
+    </style>
+</head>
+<body>
+    <nav class="app-navbar d-flex align-items-center px-3 py-2">
+        <span class="app-name me-auto">spotify-control</span>
+        <span class="app-version">0.1.0-SNAPSHOT</span>
+    </nav>
+    {#insert content /}
+    <script src="/webjars/bootstrap/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

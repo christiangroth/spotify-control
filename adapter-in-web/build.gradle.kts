@@ -9,8 +9,11 @@ dependencies {
 
   api(enforcedPlatform(libs.quarkusBom))
   api("io.quarkus:quarkus-rest-jackson")
+  api("io.quarkus:quarkus-rest-qute")
   api("io.quarkus:quarkus-security")
   api("io.quarkus:quarkus-web-dependency-locator")
+
+  implementation("org.webjars:bootstrap:5.3.3")
 }
 val processedOpenApiSpec = layout.buildDirectory.file("generated/openapi/rest-api-spec.yml")
 
