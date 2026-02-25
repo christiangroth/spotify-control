@@ -9,9 +9,6 @@
 
 - add adapter-out-spotify
 - add Spotify login
-- add empty dashboard
-- serve docs
-- serve releasenotes (maybe add JSON/YAML output?)
 
 # Playback data gathering
 
