@@ -1,36 +1,31 @@
-package de.chrgroth.spotify.control.adapter.mongodb.out
+package de.chrgroth.spotify.control.adapter.out.mongodb
 
 import de.chrgroth.spotify.control.domain.model.User
-import de.chrgroth.spotify.control.domain.port.out.UserRepository
+import de.chrgroth.spotify.control.domain.model.UserId
+import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
 import io.quarkus.test.junit.QuarkusTest
 import jakarta.inject.Inject
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.hours
 import kotlin.time.Instant
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import kotlin.time.Duration.Companion.hours
+import java.util.UUID
 
 @QuarkusTest
 class UserRepositoryTests {
 
     @Inject
-    lateinit var userRepository: UserRepository
-
-    private val userId = "test-user-123"
-
-    @BeforeEach
-    fun cleanup() {
-        de.chrgroth.spotify.control.adapter.out.mongodb.UserDocument.deleteAll()
-    }
+    lateinit var userRepository: UserRepositoryPort
 
     @Test
     fun `findById returns null when user does not exist`() {
-        assertThat(userRepository.findById(userId)).isNull()
+        assertThat(userRepository.findById(UserId("unknown-user"))).isNull()
     }
 
     @Test
     fun `upsert creates user on first login and findById retrieves it`() {
+        val userId = UserId("test-${UUID.randomUUID()}")
         val now = Clock.System.now().let { Instant.fromEpochMilliseconds(it.toEpochMilliseconds()) }
         val user = User(
             spotifyUserId = userId,
@@ -38,7 +33,6 @@ class UserRepositoryTests {
             encryptedAccessToken = "encrypted-access",
             encryptedRefreshToken = "encrypted-refresh",
             tokenExpiresAt = now + 1.hours,
-            createdAt = now,
             lastLoginAt = now,
         )
 
@@ -53,7 +47,8 @@ class UserRepositoryTests {
     }
 
     @Test
-    fun `upsert updates tokens on subsequent login but preserves createdAt`() {
+    fun `upsert updates tokens on subsequent login`() {
+        val userId = UserId("test-${UUID.randomUUID()}")
         val now = Clock.System.now().let { Instant.fromEpochMilliseconds(it.toEpochMilliseconds()) }
         val firstLogin = User(
             spotifyUserId = userId,
@@ -61,7 +56,6 @@ class UserRepositoryTests {
             encryptedAccessToken = "first-access",
             encryptedRefreshToken = "first-refresh",
             tokenExpiresAt = now + 1.hours,
-            createdAt = now,
             lastLoginAt = now,
         )
         userRepository.upsert(firstLogin)
@@ -78,7 +72,6 @@ class UserRepositoryTests {
         val found = userRepository.findById(userId)!!
         assertThat(found.encryptedAccessToken).isEqualTo("second-access")
         assertThat(found.encryptedRefreshToken).isEqualTo("second-refresh")
-        assertThat(found.createdAt).isEqualTo(now)
         assertThat(found.lastLoginAt).isEqualTo(laterLogin)
     }
 }

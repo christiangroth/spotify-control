@@ -1,8 +1,9 @@
 package de.chrgroth.spotify.control.domain.port.out
 
 import de.chrgroth.spotify.control.domain.model.User
+import de.chrgroth.spotify.control.domain.model.UserId
 
-interface UserRepository {
-    fun findById(spotifyUserId: String): User?
+interface UserRepositoryPort {
+    fun findById(spotifyUserId: UserId): User?
     fun upsert(user: User)
 }
