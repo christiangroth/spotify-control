@@ -1,1 +1,0 @@
-* fix-release-process: Fix Docker tag not being expanded correctly in release workflow deploy step.
