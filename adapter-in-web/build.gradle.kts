@@ -14,6 +14,7 @@ dependencies {
   api("io.quarkus:quarkus-web-dependency-locator")
 
   implementation(libs.bootstrap)
+  implementation(libs.marked)
 }
 val processedOpenApiSpec = layout.buildDirectory.file("generated/openapi/rest-api-spec.yml")
 
@@ -68,6 +69,36 @@ tasks {
 
   compileKotlin {
     dependsOn(openApiGenerate)
+  }
+
+  val syncDocsMd by registering(Sync::class) {
+    from(rootProject.layout.projectDirectory.dir("docs/arc42")) {
+      include("arc42-EN.md")
+      into("arc42")
+    }
+    from(rootProject.layout.projectDirectory.dir("docs/adr")) {
+      include("*.md")
+      exclude("0000-template.md")
+      into("adr")
+    }
+    from(rootProject.layout.projectDirectory.dir("docs/releasenotes")) {
+      include("RELEASENOTES.md")
+      into("releasenotes")
+    }
+    into(layout.projectDirectory.dir("src/main/resources/docs"))
+
+    doLast {
+      val adrDir = layout.projectDirectory.dir("src/main/resources/docs/adr").asFile
+      val adrFiles = adrDir.listFiles { f -> f.name.endsWith(".md") }
+        ?.sortedBy { it.name }
+        ?.map { it.name }
+        ?: emptyList()
+      File(adrDir, "index.txt").writeText(adrFiles.joinToString("\n"))
+    }
+  }
+
+  named("processResources") {
+    dependsOn(syncDocsMd)
   }
 }
 

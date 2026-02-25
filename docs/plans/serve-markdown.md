@@ -11,7 +11,7 @@ Specific requirements:
 1. A **"Docs"** entry in the menu bar for logged-in users that opens an arc42 documentation page.
 2. Individual **ADR pages** accessible from the docs area (logged-in users only).
 3. **Release notes** accessible by clicking the application version in the menu bar, and also
-   reachable via a dedicated `/docs/releasenotes` page (logged-in users only).
+   reachable via a dedicated `/ui/docs/releasenotes` page (logged-in users only).
 4. Markdown rendered in a GitHub-like style using a lightweight WebJar dependency.
 5. No extra build toolchain – consistent with the existing no-npm, no-Node.js constraint.
 
@@ -78,13 +78,13 @@ All new routes require an authenticated session (logged-in user). Routes follow 
 security pattern (annotated with `@RolesAllowed("user")` or the equivalent Quarkus security
 annotation used for the rest of the application).
 
-| Route                      | Description |
-|----------------------------|-------------|
-| `GET /docs`                | Redirects to `/docs/arc42` |
-| `GET /docs/arc42`          | Renders `arc42-EN.md` |
-| `GET /docs/adr`            | Index page listing all ADRs with links |
-| `GET /docs/adr/{filename}` | Renders a single ADR Markdown file |
-| `GET /docs/releasenotes`   | Renders `RELEASENOTES.md` |
+| Route                         | Description |
+|-------------------------------|-------------|
+| `GET /ui/docs`                | Redirects to `/ui/docs/arc42` |
+| `GET /ui/docs/arc42`          | Renders `arc42-EN.md` |
+| `GET /ui/docs/adr`            | Index page listing all ADRs with links |
+| `GET /ui/docs/adr/{filename}` | Renders a single ADR Markdown file |
+| `GET /ui/docs/releasenotes`   | Renders `RELEASENOTES.md` |
 
 A single `DocsResource.kt` in `adapter-in-web` handles all routes. The resource reads the
 requested Markdown file from the classpath and passes the raw string to a Qute template.
@@ -130,7 +130,7 @@ by Qute. No JavaScript is required for this page.
 ### Menu bar – "Docs" entry
 
 A new **Docs** link is added to the `<nav>` in `layout.html`, visible only for logged-in users.
-It points to `/docs` (which redirects to `/docs/arc42`).
+It points to `/ui/docs` (which redirects to `/ui/docs/arc42`).
 
 The menu bar uses Bootstrap's navbar component and the existing dark styling. The Docs link
 follows the same styling as any future nav links.
@@ -138,13 +138,13 @@ follows the same styling as any future nav links.
 ### Version as release-notes link
 
 The application version displayed in the top-right of the navbar (`0.1.0-SNAPSHOT`) is turned
-into an anchor tag pointing to `/docs/releasenotes`. For logged-in users the link is active; for
+into an anchor tag pointing to `/ui/docs/releasenotes`. For logged-in users the link is active; for
 unauthenticated users the version remains plain text (no release notes page is accessible without
 login anyway).
 
 ```html
 <!-- logged in -->
-<a href="/docs/releasenotes" class="app-version text-decoration-none">0.1.0-SNAPSHOT</a>
+<a href="/ui/docs/releasenotes" class="app-version text-decoration-none">0.1.0-SNAPSHOT</a>
 
 <!-- not logged in -->
 <span class="app-version">0.1.0-SNAPSHOT</span>
@@ -157,7 +157,7 @@ used to conditionally render the two variants.
 
 ## Security
 
-All `/docs/**` routes must be protected. The Quarkus Security extension already guards the
+All `/ui/docs/**` routes must be protected. The Quarkus Security extension already guards the
 application. Applying `@RolesAllowed` (or a `@Authenticated` equivalent) to `DocsResource` is
 sufficient. The existing OAuth session mechanism handles authentication transparently – unauthenticated
 requests are redirected to the login page.
@@ -186,11 +186,12 @@ requests are redirected to the login page.
 
 ## Implementation Checklist
 
-- [ ] Add `marked` to `gradle/libs.versions.toml` (new entry under `[versions]` and `[libraries]`)
-- [ ] Add `marked` WebJar dependency to `adapter-in-web/build.gradle.kts`
-- [ ] Add Gradle `Sync` task to copy docs Markdown files into classpath resources
-- [ ] Add `docs/` to `adapter-in-web/.gitignore` (generated, not committed)
-- [ ] Implement `DocsResource.kt` in `adapter-in-web`
-- [ ] Create Qute templates: `docs.html`, `docs-adr-index.html`
-- [ ] Update `layout.html`: add marked script tag, Docs nav link, version link
-- [ ] Write `@QuarkusTest` integration tests for the new endpoints (auth required, 200 OK when logged in, 401/redirect when not)
+- [x] Add `marked` to `gradle/libs.versions.toml` (new entry under `[versions]` and `[libraries]`)
+- [x] Add `marked` WebJar dependency to `adapter-in-web/build.gradle.kts`
+- [x] Add Gradle `Sync` task to copy docs Markdown files into classpath resources (with ADR index.txt generation)
+- [x] Add `src/main/resources/docs/` to `adapter-in-web/.gitignore` (generated, not committed)
+- [x] Move `DashboardResource.kt` and `dashboard.html` to `ui` sub-package/subdirectory with `/ui/dashboard` route
+- [x] Implement `DocsResource.kt` in `adapter-in-web/ui` sub-package with `/ui/docs/**` routes
+- [x] Create Qute templates: `ui/docs.html`, `ui/docs-adr-index.html`
+- [x] Update `layout.html`: add marked script tag, `{#insert appVersion}` block, Docs nav link, version link
+- [x] Write `@QuarkusTest` integration tests for the new endpoints (401 when not authenticated)

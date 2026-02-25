@@ -1,0 +1,12 @@
+{#include layout.html}
+    {#appVersion}<a href="/ui/docs/releasenotes" class="app-version me-auto text-decoration-none" data-testid="version-link">0.1.0-SNAPSHOT</a>{/appVersion}
+    {#navLinks}
+    <a href="/ui/docs" class="nav-link text-white me-3" data-testid="docs-link">Docs</a>
+    <a href="/logout" class="btn btn-sm btn-outline-secondary" data-testid="logout-link">Logout</a>
+    {/navLinks}
+    {#content}
+    <div class="container py-5">
+        <h1 data-testid="welcome-message">Welcome to SpCtl</h1>
+    </div>
+    {/content}
+{/include}
