@@ -28,7 +28,7 @@ class HealthCheckTests {
     assertThat(response.extract().path<String>("status")).isEqualTo("UP")
     val checks = response.extract().path<List<Map<String, Any>>>("checks")
     assertThat(checks).hasSize(1)
-    assertThat(checks[0]["name"]).isEqualTo("Database connections health check")
+    assertThat(checks[0]["name"]).isEqualTo("MongoDB connection health check")
     assertThat(checks[0]["status"]).isEqualTo("UP")
   }
 

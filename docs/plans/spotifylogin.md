@@ -159,59 +159,14 @@ The Spotify user ID can be found:
 
 ---
 
-## MongoDB Collection: `users`
-
-| Field            | Type     | Description                                            |
-|------------------|----------|--------------------------------------------------------|
-| `_id`            | String   | Spotify user ID (primary key)                          |
-| `displayName`    | String   | Display name from Spotify profile                      |
-| `accessToken`    | String   | Encrypted access token                                 |
-| `refreshToken`   | String   | Encrypted refresh token                                |
-| `tokenExpiresAt` | DateTime | UTC expiry timestamp of the current access token       |
-| `createdAt`      | DateTime | Timestamp of first successful login                    |
-| `lastLoginAt`    | DateTime | Timestamp of most recent successful login              |
-
-**Index:** `_id` is already the primary key; no additional indexes are needed for this collection.
-
-**Upsert behavior on login:**
-- `createdAt` is set only on insert
-- `lastLoginAt`, `accessToken`, `refreshToken`, `tokenExpiresAt` are always updated on successful login
-
----
-
 ## Module Responsibilities
 
 | Module              | Responsibility                                                                        |
 |---------------------|---------------------------------------------------------------------------------------|
 | `adapter-in-web`    | `/oauth/authorize` redirect, `/oauth/callback` handler, session management            |
 | `adapter-out-spotify` | Token refresh logic, `GET /v1/me` call                                              |
-| `adapter-out-mongodb` | `UserRepository` implementation, `users` collection upsert/read                    |
-| `domain-api`        | `UserRepository` port interface, `User` domain model                                  |
 | `domain-impl`       | Allow-list check service, login domain service (orchestrates callback handling)       |
 | `application-quarkus` | Security configuration, session configuration, route protection                   |
-
-### Port Interface (domain-api)
-
-```kotlin
-interface UserRepository {
-    fun findById(spotifyUserId: String): User?
-    fun upsert(user: User)
-}
-```
-
-### Domain Model (domain-api)
-
-```kotlin
-data class User(
-    val spotifyUserId: String,
-    val displayName: String,
-    val encryptedAccessToken: String,
-    val encryptedRefreshToken: String,
-    val tokenExpiresAt: Instant,
-    val createdAt: Instant,
-    val lastLoginAt: Instant,
-)
-```
 
 ---
 
@@ -292,7 +247,6 @@ MONGODB_CONNECTION_STRING=mongodb+srv://...
 |-------------------|--------------------|-------------------------------------------------------------------------------|
 | Domain            | Unit test          | Allow-list check (positive + negative), token expiry logic                    |
 | OAuth callback    | `@QuarkusTest`     | Happy path (mock Spotify endpoints), state mismatch, user not allowed         |
-| UserRepository    | `@QuarkusTest`     | Upsert creates on first login, updates on subsequent login, `createdAt` stable|
 | Token encryption  | Unit test          | Encrypt → store → retrieve → decrypt round-trip                               |
 | Token refresh     | Unit test          | Refresh triggered within 5-minute window, 401 also triggers refresh           |
 | Route protection  | `@QuarkusTest`     | Unauthenticated requests redirected to `/login`                               |
