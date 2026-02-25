@@ -1,0 +1,20 @@
+{#include layout.html}
+    {#title}SpCtl – {title}{/title}
+    {#navLinks}
+    <a href="/ui/docs" class="nav-link text-white me-3" data-testid="docs-link">Docs</a>
+    <a href="/ui/dashboard" class="nav-link text-white me-3" data-testid="dashboard-link">Dashboard</a>
+    <a href="/logout" class="btn btn-sm btn-outline-secondary" data-testid="logout-link">Logout</a>
+    {/navLinks}
+    {#content}
+    <div class="container py-4">
+        <h5 class="text-muted mb-3">{title}</h5>
+        <ul class="list-unstyled" data-testid="adr-list">
+            {#for adr in adrs}
+            <li class="mb-2">
+                <a href="/ui/docs/adr/{adr.filename}" class="text-decoration-none" data-testid="adr-link">{adr.title}</a>
+            </li>
+            {/for}
+        </ul>
+    </div>
+    {/content}
+{/include}

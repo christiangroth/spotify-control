@@ -1,0 +1,19 @@
+{#include layout.html}
+    {#title}SpCtl – {title}{/title}
+    {#navLinks}
+    <a href="/ui/docs" class="nav-link text-white me-3" data-testid="docs-link">Docs</a>
+    <a href="/ui/dashboard" class="nav-link text-white me-3" data-testid="dashboard-link">Dashboard</a>
+    <a href="/logout" class="btn btn-sm btn-outline-secondary" data-testid="logout-link">Logout</a>
+    {/navLinks}
+    {#content}
+    <div class="container py-4">
+        <h5 class="text-muted mb-3">{title}</h5>
+        <div id="docs-rendered" class="docs-content"></div>
+        <textarea id="docs-raw" class="d-none">{markdownContent}</textarea>
+    </div>
+    <script>
+        document.getElementById('docs-rendered').innerHTML =
+            marked.parse(document.getElementById('docs-raw').value);
+    </script>
+    {/content}
+{/include}

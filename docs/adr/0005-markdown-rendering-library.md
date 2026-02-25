@@ -6,7 +6,7 @@
 
 ## Context and Problem Statement
 
-The application will serve documentation and release notes written in Markdown to the logged-in user (see [serve-markdown.md](../plans/serve-markdown.md)). The Markdown must be rendered in a GitHub-like style inside the existing Qute SSR pages without introducing a build step, npm, or Node.js.
+The application will serve documentation and release notes written in Markdown to the logged-in user. The Markdown must be rendered in a GitHub-like style inside the existing Qute SSR pages without introducing a build step, npm, or Node.js.
 
 ## Decision Drivers
 

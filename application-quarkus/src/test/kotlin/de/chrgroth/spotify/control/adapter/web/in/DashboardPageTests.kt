@@ -12,7 +12,7 @@ class DashboardPageTests {
   fun `dashboard page is available and displays logout link and welcome message`() {
     given()
       .`when`()
-      .get("/dashboard")
+      .get("/ui/dashboard")
       .then()
       .statusCode(200)
       .contentType(containsString("text/html"))
