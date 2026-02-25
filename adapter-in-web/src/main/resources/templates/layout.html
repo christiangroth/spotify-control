@@ -40,8 +40,9 @@
 </head>
 <body>
     <nav class="app-navbar d-flex align-items-center px-3 py-2">
-        <span class="app-name me-auto">SpCtl</span>
-        <span class="app-version">{appBuildVersion}</span>
+        <span class="app-name me-2">SpCtl</span>
+        <span class="app-version me-auto">{appBuildVersion}</span>
+        {#insert navLinks}{/insert}
     </nav>
     {#insert content /}
     <script src="/webjars/bootstrap/js/bootstrap.bundle.min.js"></script>
