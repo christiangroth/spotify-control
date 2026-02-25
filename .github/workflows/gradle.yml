@@ -42,9 +42,18 @@ jobs:
           export DOCKER_TAG=$(docker images ghcr.io/christiangroth/spotify-control/quarkus --format "{{.Tag}} {{.CreatedAt}}" | sort -rk 2 | awk 'NR==1{print $1}')
           echo "DOCKER_TAG=$DOCKER_TAG" >> $GITHUB_ENV
           echo "Computed docker tag for next deployment $DOCKER_TAG"
+      - name: Copy docker stack file to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.CONTABO_SSH_HOST }}
+          username: ${{ secrets.CONTABO_SSH_USER }}
+          key: ${{ secrets.CONTABO_SSH_PRIVATE_KEY }}
+          port: 22
+          source: "deploy/docker-stack.yml"
+          target: "~/spotify-control/"
+          strip_components: 1
       - uses: appleboy/ssh-action@v1.0.3
         env:
-          GIT_PROJECT: "spotify-control"
           DOCKER_STACK: "spotify-control"
           DOCKER_TAG: ${{ env.DOCKER_TAG }}
           HTTP_AUTH_ENCRYPTION_KEY: ${{ secrets.HTTP_AUTH_ENCRYPTION_KEY }}
@@ -55,37 +64,26 @@ jobs:
           username: ${{ secrets.CONTABO_SSH_USER }}
           key: ${{ secrets.CONTABO_SSH_PRIVATE_KEY }}
           port: 22
-          envs: GIT_PROJECT,DOCKER_STACK,DOCKER_TAG,HTTP_AUTH_ENCRYPTION_KEY,TRAEFIK_HTTP_ROUTERS_SPOTIFYCONTROL_RULE,GHCR_PAT
+          envs: DOCKER_STACK,DOCKER_TAG,HTTP_AUTH_ENCRYPTION_KEY,TRAEFIK_HTTP_ROUTERS_SPOTIFYCONTROL_RULE,GHCR_PAT
           script_stop: true
           script: |
-            echo "removing old git repo clone"
-            rm -rf $GIT_PROJECT
-            
             echo "login to ghcr.io"
             echo $GHCR_PAT | docker login ghcr.io -u christiangroth --password-stdin
-            
-            echo "cloning git repo"
-            GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no" git clone --depth 1 git@github.com:christiangroth/$GIT_PROJECT.git $GIT_PROJECT
-            cd $GIT_PROJECT
-            
+
             echo "deploying docker stack"
             DOCKER_TAG=$DOCKER_TAG HTTP_AUTH_ENCRYPTION_KEY=$HTTP_AUTH_ENCRYPTION_KEY \
               TRAEFIK_HTTP_ROUTERS_SPOTIFYCONTROL_RULE=$TRAEFIK_HTTP_ROUTERS_SPOTIFYCONTROL_RULE \
-              docker stack deploy --detach=false --prune --with-registry-auth --resolve-image changed -c deploy/docker-stack.yml $DOCKER_STACK
+              docker stack deploy --detach=false --prune --with-registry-auth --resolve-image changed -c ~/$DOCKER_STACK/docker-stack.yml $DOCKER_STACK
             sleep 5
-            
+
             echo
             echo "----- ----- -----"
             echo "----- ----- -----"
             echo "----- ----- -----"
             echo
-            
+
             docker stack ls
             echo
             docker stack services $DOCKER_STACK
             echo
             docker stack ps $DOCKER_STACK
-            
-            echo "removing git repo clone"
-            cd ..
-            rm -rf $GIT_PROJECT
