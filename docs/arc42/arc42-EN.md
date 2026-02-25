@@ -19,7 +19,7 @@ contributors. See <https://arc42.org>.
 
 ## Requirements Overview
 
-spotify-control is a private Spotify playlist manager for a single user.
+spotify-control is a private Spotify playlist manager for a small, allow-listed set of users.
 It provides smarter playlist management than Spotify itself, personal listening statistics, and automatic playlist maintenance based on fixed rules.
 
 **Core features (by priority):**
@@ -45,11 +45,11 @@ It provides smarter playlist management than Spotify itself, personal listening 
 
 | Role/Name         | Contact     | Expectations                                                              |
 |-------------------|-------------|---------------------------------------------------------------------------|
-| Developer / User  | (private)   | Single authorized user; operates and uses the application for themselves  |
+| Developer / User  | (private)   | Allow-listed user(s); operates and uses the application for personal use  |
 
 # Architecture Constraints
 
-- **Single user only** – Exactly one user (developer = user). No multi-tenancy, no registration, no user management.
+- **Allow-listed users** – Multiple users are supported, but access is restricted to a configured allow list of Spotify user IDs. No registration, no user-management UI.
 - **Login exclusively via Spotify OAuth** – No other authentication mechanism.
 - **External MongoDB** – Data is stored in MongoDB Atlas (two projects: prod + dev). No self-hosted database.
 - **VPS with Docker Swarm** – Deployment target is an existing VPS running Docker Swarm with Traefik for routing and TLS.
@@ -86,7 +86,7 @@ spotify-control interacts with the following external systems:
 - **Hexagonal Architecture** – The application is structured using hexagonal (ports and adapters) architecture to cleanly separate domain logic from infrastructure concerns.
 - **Outbox Pattern** – All Spotify API operations are routed through a persistent outbox to ensure reliability and rate limit handling. No direct Spotify calls are made outside `adapter-out-spotify`.
 - **Server-Side Rendering** – The frontend uses Quarkus Qute templates with htmx for dynamic interactions, eliminating the need for a separate frontend project, build toolchain, or JavaScript framework.
-- **Single-User System** – The system is designed for exactly one authorized user, which simplifies authentication, session management, and data modeling significantly.
+- **Allow-listed User System** – Access is restricted to users whose Spotify user IDs appear in a configured allow list. Multiple users may be allowed, but no self-service registration exists. This keeps the system private while supporting a small group.
 - **Incremental Phases** – The system is built in deployable increments (phases), each providing a complete and useful feature set before moving to the next.
 
 # Building Block View
@@ -113,7 +113,7 @@ Handles all inbound HTTP interactions: the web UI (Qute templates), OAuth callba
 
 ### `adapter-out-mongodb`
 
-Implements all repository interfaces defined in `domain-api`. Manages the MongoDB collections for tracks, artists, playlists, playback events, aggregations, pending upgrades, and the outbox.
+Implements all repository interfaces defined in `domain-api`. Manages the MongoDB collections for users (including encrypted token storage), tracks, artists, playlists, playback events, aggregations, pending upgrades, and the outbox.
 
 ### `adapter-out-spotify`
 
@@ -226,10 +226,12 @@ http://localhost:8080/oauth/callback             ← Local development
 ## Authentication and Access Control
 
 - Spotify OAuth 2.0 Authorization Code Flow.
-- In the OAuth callback: the Spotify user ID is checked against `APP_ALLOWED_SPOTIFY_USER_ID` (environment variable). If the IDs do not match, the session is invalidated and nothing is persisted.
-- Session-based authentication for all endpoints, including action endpoints.
+- In the OAuth callback: the Spotify user ID is checked against `APP_ALLOWED_SPOTIFY_USER_IDS` (environment variable, comma-separated list). If the ID is not present in the list, the session is invalidated and nothing is persisted.
+- A `User` document is upserted in the `users` MongoDB collection only after a successful allow-list check. Both access and refresh tokens are stored encrypted (AES-256-GCM) using `APP_TOKEN_ENCRYPTION_KEY`.
+- Session-based authentication for all endpoints, including action endpoints. The session stores only the Spotify user ID – never tokens.
 - `return_to` parameter stored in the session for redirect after login.
-- Refresh tokens are stored encrypted in MongoDB.
+- A CSRF `state` parameter is generated per authorization request and validated in the callback.
+- Token refresh is handled by `adapter-out-spotify` before each Spotify API call; the refreshed token is persisted back to MongoDB.
 
 ## Outbox Pattern
 
@@ -286,7 +288,7 @@ Architecture documentation (`docs/arc42`), ADRs (`docs/adr`), and release notes 
 All sensitive configuration is provided via environment variables:
 
 ```
-APP_ALLOWED_SPOTIFY_USER_ID
+APP_ALLOWED_SPOTIFY_USER_IDS
 SPOTIFY_CLIENT_ID
 SPOTIFY_CLIENT_SECRET
 MONGODB_CONNECTION_STRING
