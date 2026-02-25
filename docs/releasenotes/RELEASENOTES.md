@@ -1,3 +1,7 @@
+# 0.1.2 - 2026.02.25
+## New Features
+* update-deployment-process: Deployment via SCP instead of git clone on VPS; optimized GitHub Actions release workflow.
+
 # 0.1.0 - 2026.02.25
 ## New Features
 * add-ssr-structures: Added server side rendering infrastructure using Qute templates and Bootstrap WebJar
