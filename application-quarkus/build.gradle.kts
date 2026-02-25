@@ -28,12 +28,6 @@ tasks.withType<Test> {
   systemProperty("java.util.logging.manager", "org.jboss.logmanager.LogManager")
 }
 
-tasks.processResources {
-  filesMatching("application.properties") {
-    filter { line -> line.replace("@projectVersion@", project.version.toString()) }
-  }
-}
-
 allOpen {
   annotation("jakarta.ws.rs.Path")
   annotation("jakarta.enterprise.context.ApplicationScoped")
