@@ -13,6 +13,34 @@ jobs:
           distribution: 'temurin'
       - uses: gradle/actions/setup-gradle@v5
       - run: ./gradlew --info --stacktrace build
+      - run: ./gradlew createModuleGraph
+      - run: ./generate-cloc-report.sh
+      - run: ./generate-lizard-report.sh
+      - name: Upload Kover reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kover-reports
+          path: |
+            **/build/reports/kover/
+      - name: Upload module dependency reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: modulegraph-reports
+          path: build/reports/modulegraph/
+      - name: Upload CLOC reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloc-reports
+          path: build/reports/cloc/
+      - name: Upload Lizard reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lizard-reports
+          path: build/reports/lizard/
 
   release:
     runs-on: ubuntu-latest
