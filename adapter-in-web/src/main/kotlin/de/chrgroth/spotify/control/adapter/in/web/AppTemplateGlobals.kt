@@ -1,8 +1,8 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
-import io.quarkus.qute.TemplateGlobal
-import jakarta.annotation.PostConstruct
+import io.quarkus.qute.EngineBuilder
 import jakarta.enterprise.context.ApplicationScoped
+import jakarta.enterprise.event.Observes
 import org.eclipse.microprofile.config.inject.ConfigProperty
 
 @ApplicationScoped
@@ -12,14 +12,9 @@ class AppTemplateGlobals {
   @field:ConfigProperty(name = "quarkus.application.version")
   lateinit var version: String
 
-  @PostConstruct
-  fun init() {
-    appBuildVersion = version
-  }
-
-  companion object {
-    @TemplateGlobal
-    @JvmField
-    var appBuildVersion: String = ""
+  fun onEngineBuilder(@Observes builder: EngineBuilder) {
+    builder.addTemplateInstanceInitializer { instance ->
+      instance.data("appBuildVersion", version)
+    }
   }
 }
