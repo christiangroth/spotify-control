@@ -14,8 +14,13 @@ class UserServiceTests {
     lateinit var userService: UserServicePort
 
     @Test
-    fun `allowed user is accepted`() {
-        assertThat(userService.isAllowed(UserId("test-user"))).isTrue()
+    fun `first allowed user is accepted`() {
+        assertThat(userService.isAllowed(UserId("test-user-a"))).isTrue()
+    }
+
+    @Test
+    fun `second allowed user is accepted`() {
+        assertThat(userService.isAllowed(UserId("test-user-b"))).isTrue()
     }
 
     @Test
