@@ -1,3 +1,7 @@
+# 0.1.9 - 2026.02.26
+## New Features
+* implement-spotify-authentication: Implement Spotify OAuth 2.0 login with allow-listed users.
+
 # 0.1.8 - 2026.02.26
 ## Bugfixes / Chore
 * fix-build-version-ui: Fixed build version not being shown in UI in dev mode by passing version via template data map instead of @TemplateGlobal.
