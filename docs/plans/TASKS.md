@@ -12,12 +12,10 @@
 
 # Playback data gathering
 
-- add adapter-out-spotify
 - create minimal outbox
-- create mongodb atlas instances
-- refresh token handling
 - cronjob to fetch recently played
-- duplicate handling
+- cronjob to update user profiles
+- playback duplicate/skip handling
 - simple dashboard stats (outbox, playback events)
 
 # Spotify API
