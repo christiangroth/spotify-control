@@ -16,7 +16,7 @@ class AuthFilter : ContainerRequestFilter {
     @Inject
     private lateinit var sessionStore: SessionStore
 
-    private val protectedPrefixes = setOf("/ui/")
+    private val protectedPrefixes = setOf("/ui/", "/api/")
 
     override fun filter(ctx: ContainerRequestContext) {
         val path = "/" + ctx.uriInfo.path.trimStart('/')
