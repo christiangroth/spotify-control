@@ -6,6 +6,7 @@ import de.chrgroth.spotify.control.domain.model.AccessToken
 import de.chrgroth.spotify.control.domain.model.RefreshToken
 import de.chrgroth.spotify.control.domain.model.SpotifyProfile
 import de.chrgroth.spotify.control.domain.model.SpotifyProfileId
+import de.chrgroth.spotify.control.domain.model.SpotifyRefreshedTokens
 import de.chrgroth.spotify.control.domain.model.SpotifyTokens
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAuthPort
 import jakarta.enterprise.context.ApplicationScoped
@@ -68,6 +69,26 @@ class SpotifyAuthAdapter(
         return SpotifyProfile(
             id = SpotifyProfileId(json.get("id").asText()),
             displayName = json.get("display_name").asText(),
+        )
+    }
+
+    override fun refreshToken(refreshToken: String): SpotifyRefreshedTokens {
+        val body = "grant_type=refresh_token" +
+            "&refresh_token=${URLEncoder.encode(refreshToken, "UTF-8")}"
+        val credentials = Base64.getEncoder().encodeToString("$clientId:$clientSecret".toByteArray())
+        val request = HttpRequest.newBuilder()
+            .uri(URI.create("$accountsBaseUrl/api/token"))
+            .header("Authorization", "Basic $credentials")
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .POST(HttpRequest.BodyPublishers.ofString(body))
+            .build()
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        check(response.statusCode() == HTTP_OK) { "Spotify token refresh failed: ${response.statusCode()}" }
+        val json: JsonNode = objectMapper.readTree(response.body())
+        return SpotifyRefreshedTokens(
+            accessToken = AccessToken(json.get("access_token").asText()),
+            refreshToken = json.get("refresh_token")?.takeIf { !it.isNull }?.asText()?.let { RefreshToken(it) },
+            expiresInSeconds = json.get("expires_in").asInt(),
         )
     }
 
