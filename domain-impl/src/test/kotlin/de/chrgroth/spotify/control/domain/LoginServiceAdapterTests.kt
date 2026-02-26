@@ -34,7 +34,7 @@ class LoginServiceAdapterTests {
     @Test
     fun `allowed user succeeds and user is upserted`() {
         every { spotifyAuth.exchangeCode("code") } returns tokens
-        every { spotifyAuth.getUserProfile("access") } returns profile
+        every { spotifyAuth.getUserProfile(AccessToken("access")) } returns profile
         every { userService.isAllowed(UserId("user-1")) } returns true
         every { tokenEncryption.encrypt(any()) } returns "encrypted"
         every { userRepository.upsert(any()) } just runs
@@ -49,7 +49,7 @@ class LoginServiceAdapterTests {
     @Test
     fun `not-allowed user returns failure and user is not upserted`() {
         every { spotifyAuth.exchangeCode("code") } returns tokens
-        every { spotifyAuth.getUserProfile("access") } returns profile
+        every { spotifyAuth.getUserProfile(AccessToken("access")) } returns profile
         every { userService.isAllowed(UserId("user-1")) } returns false
 
         val result = adapter.handleCallback("code")

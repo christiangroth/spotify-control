@@ -25,7 +25,11 @@ class SpotifyMockResource {
     @PermitAll
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     @Produces(MediaType.APPLICATION_JSON)
-    fun token(): String = TOKEN_RESPONSE
+    fun token(@jakarta.ws.rs.FormParam("grant_type") grantType: String?): String =
+        when (grantType) {
+            "refresh_token" -> REFRESH_RESPONSE
+            else -> TOKEN_RESPONSE
+        }
 
     @GET
     @Path("/v1/me")
@@ -37,5 +41,7 @@ class SpotifyMockResource {
     companion object {
         private const val TOKEN_RESPONSE =
             """{"access_token":"mock-access-token","refresh_token":"mock-refresh-token","expires_in":3600,"token_type":"Bearer"}"""
+        private const val REFRESH_RESPONSE =
+            """{"access_token":"mock-refreshed-access-token","expires_in":3600,"token_type":"Bearer"}"""
     }
 }

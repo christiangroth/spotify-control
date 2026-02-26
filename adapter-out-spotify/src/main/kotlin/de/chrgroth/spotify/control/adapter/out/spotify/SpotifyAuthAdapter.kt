@@ -6,6 +6,7 @@ import de.chrgroth.spotify.control.domain.model.AccessToken
 import de.chrgroth.spotify.control.domain.model.RefreshToken
 import de.chrgroth.spotify.control.domain.model.SpotifyProfile
 import de.chrgroth.spotify.control.domain.model.SpotifyProfileId
+import de.chrgroth.spotify.control.domain.model.SpotifyRefreshedTokens
 import de.chrgroth.spotify.control.domain.model.SpotifyTokens
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAuthPort
 import jakarta.enterprise.context.ApplicationScoped
@@ -39,16 +40,7 @@ class SpotifyAuthAdapter(
         val body = "grant_type=authorization_code" +
             "&code=${URLEncoder.encode(code, "UTF-8")}" +
             "&redirect_uri=${URLEncoder.encode(redirectUri, "UTF-8")}"
-        val credentials = Base64.getEncoder().encodeToString("$clientId:$clientSecret".toByteArray())
-        val request = HttpRequest.newBuilder()
-            .uri(URI.create("$accountsBaseUrl/api/token"))
-            .header("Authorization", "Basic $credentials")
-            .header("Content-Type", "application/x-www-form-urlencoded")
-            .POST(HttpRequest.BodyPublishers.ofString(body))
-            .build()
-        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
-        check(response.statusCode() == HTTP_OK) { "Spotify token exchange failed: ${response.statusCode()}" }
-        val json: JsonNode = objectMapper.readTree(response.body())
+        val json = postTokenEndpoint(body)
         return SpotifyTokens(
             accessToken = AccessToken(json.get("access_token").asText()),
             refreshToken = RefreshToken(json.get("refresh_token").asText()),
@@ -56,10 +48,10 @@ class SpotifyAuthAdapter(
         )
     }
 
-    override fun getUserProfile(accessToken: String): SpotifyProfile {
+    override fun getUserProfile(accessToken: AccessToken): SpotifyProfile {
         val request = HttpRequest.newBuilder()
             .uri(URI.create("$apiBaseUrl/v1/me"))
-            .header("Authorization", "Bearer $accessToken")
+            .header("Authorization", "Bearer ${accessToken.value}")
             .GET()
             .build()
         val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
@@ -69,6 +61,30 @@ class SpotifyAuthAdapter(
             id = SpotifyProfileId(json.get("id").asText()),
             displayName = json.get("display_name").asText(),
         )
+    }
+
+    override fun refreshToken(refreshToken: RefreshToken): SpotifyRefreshedTokens {
+        val body = "grant_type=refresh_token" +
+            "&refresh_token=${URLEncoder.encode(refreshToken.value, "UTF-8")}"
+        val json = postTokenEndpoint(body)
+        return SpotifyRefreshedTokens(
+            accessToken = AccessToken(json.get("access_token").asText()),
+            refreshToken = json.get("refresh_token")?.takeIf { !it.isNull }?.asText()?.let { RefreshToken(it) },
+            expiresInSeconds = json.get("expires_in").asInt(),
+        )
+    }
+
+    private fun postTokenEndpoint(body: String): JsonNode {
+        val credentials = Base64.getEncoder().encodeToString("$clientId:$clientSecret".toByteArray())
+        val request = HttpRequest.newBuilder()
+            .uri(URI.create("$accountsBaseUrl/api/token"))
+            .header("Authorization", "Basic $credentials")
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .POST(HttpRequest.BodyPublishers.ofString(body))
+            .build()
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        check(response.statusCode() == HTTP_OK) { "Spotify token endpoint request failed: ${response.statusCode()}" }
+        return objectMapper.readTree(response.body())
     }
 
     companion object {
