@@ -13,7 +13,7 @@ jobs:
           distribution: 'temurin'
       - uses: gradle/actions/setup-gradle@v5
       - run: ./gradlew --info --stacktrace build
-      - run: ./gradlew createModuleGraph
+      - run: ./visualize-module-dependencies.sh
       - run: ./generate-cloc-report.sh
       - run: ./generate-lizard-report.sh
       - name: Upload Kover reports
