@@ -1,1 +1,0 @@
-* update-copilot-instructions: Updated Copilot instructions to clarify that the Gradle release note tasks also handle version bumps for non-Bugfix changes.
