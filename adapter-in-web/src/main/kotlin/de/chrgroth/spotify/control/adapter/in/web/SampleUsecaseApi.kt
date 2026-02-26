@@ -8,13 +8,13 @@ import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 
 @ApplicationScoped
-@Authenticated
 @Suppress("Unused")
 class SampleUsecaseApi : SampleApi {
 
   @Inject
   private lateinit var domain: SampleUsecasePort
 
+  @Authenticated
   override fun getHello(): HelloResponse =
     HelloResponse(
       message = domain.sayHello(),
