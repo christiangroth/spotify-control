@@ -4,6 +4,7 @@
 - Code and architecture review
 - Update coding guidelines
 - Dependency updates and other maintenance tasks
+- local development?
 
 # Spotify Connect
 
