@@ -23,8 +23,8 @@ class LoginServiceAdapter(
 
     override fun handleCallback(code: String): LoginResult {
         val tokens = spotifyAuth.exchangeCode(code)
-        val profile = spotifyAuth.getUserProfile(tokens.accessToken)
-        val userId = UserId(profile.id)
+        val profile = spotifyAuth.getUserProfile(tokens.accessToken.value)
+        val userId = UserId(profile.id.value)
 
         if (!userService.isAllowed(userId)) {
             return LoginResult.Failure("not_allowed")
@@ -35,8 +35,8 @@ class LoginServiceAdapter(
             User(
                 spotifyUserId = userId,
                 displayName = profile.displayName,
-                encryptedAccessToken = tokenEncryption.encrypt(tokens.accessToken),
-                encryptedRefreshToken = tokenEncryption.encrypt(tokens.refreshToken),
+                encryptedAccessToken = tokenEncryption.encrypt(tokens.accessToken.value),
+                encryptedRefreshToken = tokenEncryption.encrypt(tokens.refreshToken.value),
                 tokenExpiresAt = now + tokens.expiresInSeconds.seconds,
                 lastLoginAt = now,
             )

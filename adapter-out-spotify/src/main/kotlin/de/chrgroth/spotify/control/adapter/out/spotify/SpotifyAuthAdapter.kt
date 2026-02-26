@@ -2,7 +2,10 @@ package de.chrgroth.spotify.control.adapter.out.spotify
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
+import de.chrgroth.spotify.control.domain.model.AccessToken
+import de.chrgroth.spotify.control.domain.model.RefreshToken
 import de.chrgroth.spotify.control.domain.model.SpotifyProfile
+import de.chrgroth.spotify.control.domain.model.SpotifyProfileId
 import de.chrgroth.spotify.control.domain.model.SpotifyTokens
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAuthPort
 import jakarta.enterprise.context.ApplicationScoped
@@ -47,8 +50,8 @@ class SpotifyAuthAdapter(
         check(response.statusCode() == HTTP_OK) { "Spotify token exchange failed: ${response.statusCode()}" }
         val json: JsonNode = objectMapper.readTree(response.body())
         return SpotifyTokens(
-            accessToken = json.get("access_token").asText(),
-            refreshToken = json.get("refresh_token").asText(),
+            accessToken = AccessToken(json.get("access_token").asText()),
+            refreshToken = RefreshToken(json.get("refresh_token").asText()),
             expiresInSeconds = json.get("expires_in").asInt(),
         )
     }
@@ -63,7 +66,7 @@ class SpotifyAuthAdapter(
         check(response.statusCode() == HTTP_OK) { "Spotify profile fetch failed: ${response.statusCode()}" }
         val json: JsonNode = objectMapper.readTree(response.body())
         return SpotifyProfile(
-            id = json.get("id").asText(),
+            id = SpotifyProfileId(json.get("id").asText()),
             displayName = json.get("display_name").asText(),
         )
     }

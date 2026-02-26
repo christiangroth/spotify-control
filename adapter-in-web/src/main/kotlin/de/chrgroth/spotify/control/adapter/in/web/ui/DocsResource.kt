@@ -3,7 +3,7 @@ package de.chrgroth.spotify.control.adapter.`in`.web.ui
 import io.quarkus.qute.Location
 import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
-import jakarta.annotation.security.PermitAll
+import io.quarkus.security.Authenticated
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import jakarta.ws.rs.GET
@@ -16,7 +16,7 @@ import jakarta.ws.rs.core.Response
 
 @Path("/ui/docs")
 @ApplicationScoped
-@PermitAll
+@Authenticated
 @Suppress("Unused")
 class DocsResource {
 

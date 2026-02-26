@@ -1,1 +1,1 @@
-* implement-spotify-authentication: Implement Spotify OAuth 2.0 login with allow-list enforcement, encrypted token storage, session-based auth, and embedded mock server for dev/test profiles.
+* implement-spotify-authentication: Implement Spotify OAuth 2.0 login with allow-listed users.

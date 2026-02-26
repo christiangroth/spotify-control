@@ -3,7 +3,7 @@ package de.chrgroth.spotify.control.adapter.`in`.web.ui
 import io.quarkus.qute.Location
 import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
-import jakarta.annotation.security.PermitAll
+import io.quarkus.security.Authenticated
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import jakarta.ws.rs.GET
@@ -21,7 +21,7 @@ class DashboardResource {
   private lateinit var dashboardTemplate: Template
 
   @GET
-  @PermitAll
+  @Authenticated
   @Produces(MediaType.TEXT_HTML)
   fun dashboard(): TemplateInstance = dashboardTemplate.instance()
 }

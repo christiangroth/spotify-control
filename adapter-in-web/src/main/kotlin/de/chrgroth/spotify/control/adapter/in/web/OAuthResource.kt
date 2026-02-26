@@ -2,10 +2,10 @@ package de.chrgroth.spotify.control.adapter.`in`.web
 
 import de.chrgroth.spotify.control.domain.port.`in`.LoginResult
 import de.chrgroth.spotify.control.domain.port.`in`.LoginServicePort
+import de.chrgroth.spotify.control.domain.port.out.TokenEncryptionPort
 import jakarta.annotation.security.PermitAll
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
-import jakarta.ws.rs.CookieParam
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.QueryParam
@@ -26,7 +26,7 @@ class OAuthResource {
     private lateinit var loginService: LoginServicePort
 
     @Inject
-    private lateinit var sessionStore: SessionStore
+    private lateinit var tokenEncryption: TokenEncryptionPort
 
     @ConfigProperty(name = "spotify.client-id")
     private lateinit var clientId: String
@@ -71,11 +71,11 @@ class OAuthResource {
 
         return when (val result = loginService.handleCallback(code!!)) {
             is LoginResult.Success -> {
-                val sessionId = sessionStore.createSession(result.userId)
+                val cookieValue = tokenEncryption.encrypt(result.userId.value)
                 Response.temporaryRedirect(URI.create("/ui/dashboard"))
                     .cookie(
-                        NewCookie.Builder("spotify-session")
-                            .value(sessionId)
+                        NewCookie.Builder(SpotifyCookieAuthMechanism.COOKIE_NAME)
+                            .value(cookieValue)
                             .path("/")
                             .httpOnly(true)
                             .sameSite(NewCookie.SameSite.LAX)
@@ -97,18 +97,16 @@ class OAuthResource {
     @GET
     @PermitAll
     @Path("/logout")
-    fun logout(@CookieParam("spotify-session") sessionId: String?): Response {
-        sessionId?.let { sessionStore.removeSession(it) }
-        return Response.temporaryRedirect(URI.create("/"))
+    fun logout(): Response =
+        Response.temporaryRedirect(URI.create("/"))
             .cookie(
-                NewCookie.Builder("spotify-session")
+                NewCookie.Builder(SpotifyCookieAuthMechanism.COOKIE_NAME)
                     .value("")
                     .path("/")
                     .maxAge(0)
                     .build()
             )
             .build()
-    }
 
     private fun cleanExpiredStates() {
         val expiry = System.currentTimeMillis() - STATE_TTL_MS
@@ -119,3 +117,4 @@ class OAuthResource {
         private const val STATE_TTL_MS = 600_000L
     }
 }
+

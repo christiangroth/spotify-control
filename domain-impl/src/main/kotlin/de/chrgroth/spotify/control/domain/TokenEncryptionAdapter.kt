@@ -21,7 +21,7 @@ class TokenEncryptionAdapter(
 
     override fun encrypt(plaintext: String): String {
         val iv = ByteArray(GCM_IV_LENGTH).also { random.nextBytes(it) }
-        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        val cipher = Cipher.getInstance(AES_GCM_NO_PADDING)
         cipher.init(Cipher.ENCRYPT_MODE, secretKey, GCMParameterSpec(GCM_TAG_LENGTH, iv))
         val ciphertext = cipher.doFinal(plaintext.toByteArray(Charsets.UTF_8))
         val encoder = Base64.getEncoder()
@@ -34,12 +34,13 @@ class TokenEncryptionAdapter(
         val decoder = Base64.getDecoder()
         val iv = decoder.decode(parts[0])
         val encrypted = decoder.decode(parts[1])
-        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        val cipher = Cipher.getInstance(AES_GCM_NO_PADDING)
         cipher.init(Cipher.DECRYPT_MODE, secretKey, GCMParameterSpec(GCM_TAG_LENGTH, iv))
         return String(cipher.doFinal(encrypted), Charsets.UTF_8)
     }
 
     companion object {
+        private const val AES_GCM_NO_PADDING = "AES/GCM/NoPadding"
         private const val GCM_IV_LENGTH = 12
         private const val GCM_TAG_LENGTH = 128
     }

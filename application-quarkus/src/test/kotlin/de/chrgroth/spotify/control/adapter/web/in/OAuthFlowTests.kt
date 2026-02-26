@@ -1,17 +1,16 @@
 package de.chrgroth.spotify.control.adapter.web.`in`
 
-import de.chrgroth.spotify.control.adapter.`in`.web.SessionStore
+import de.chrgroth.spotify.control.domain.port.out.TokenEncryptionPort
 import io.quarkus.test.junit.QuarkusTest
 import io.restassured.RestAssured.given
 import jakarta.inject.Inject
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertDoesNotThrow
 
 @QuarkusTest
 class OAuthFlowTests {
 
     @Inject
-    private lateinit var sessionStore: SessionStore
+    private lateinit var tokenEncryption: TokenEncryptionPort
 
     @Test
     fun `authorize endpoint redirects to spotify mock`() {
@@ -90,25 +89,20 @@ class OAuthFlowTests {
         // Session cookie should be set
         val sessionCookie = callbackResponse.cookie("spotify-session")
         assert(sessionCookie != null && sessionCookie.isNotEmpty())
-
-        // Clean up
-        assertDoesNotThrow { sessionStore.removeSession(sessionCookie) }
     }
 
     @Test
-    fun `logout clears session and redirects to login`() {
-        val sessionId = sessionStore.createSession(de.chrgroth.spotify.control.domain.model.UserId("test-user-a"))
+    fun `logout clears session and redirects to root`() {
+        val cookieValue = tokenEncryption.encrypt("test-user-a")
 
         given()
-            .cookie("spotify-session", sessionId)
+            .cookie("spotify-session", cookieValue)
             .redirects().follow(false)
             .`when`()
             .get("/logout")
             .then()
             .statusCode(307)
             .header("Location", org.hamcrest.CoreMatchers.endsWith("/"))
-
-        assert(sessionStore.getUser(sessionId) == null)
     }
 
     @Test
@@ -122,3 +116,4 @@ class OAuthFlowTests {
             .header("Location", org.hamcrest.CoreMatchers.endsWith("/"))
     }
 }
+

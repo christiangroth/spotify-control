@@ -1,3 +1,6 @@
 package de.chrgroth.spotify.control.domain.model
 
-data class SpotifyProfile(val id: String, val displayName: String)
+@JvmInline
+value class SpotifyProfileId(val value: String)
+
+data class SpotifyProfile(val id: SpotifyProfileId, val displayName: String)
