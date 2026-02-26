@@ -11,6 +11,7 @@ import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
+import mu.KLogging
 
 @ApplicationScoped
 @Suppress("Unused")
@@ -27,6 +28,7 @@ class LoginServiceAdapter(
         val userId = UserId(profile.id.value)
 
         if (!userService.isAllowed(userId)) {
+            logger.warn { "Login denied for user: ${userId.value}" }
             return LoginResult.Failure("not_allowed")
         }
 
@@ -42,6 +44,9 @@ class LoginServiceAdapter(
             )
         )
 
+        logger.info { "User logged in successfully: ${userId.value}" }
         return LoginResult.Success(userId)
     }
+
+    companion object : KLogging()
 }

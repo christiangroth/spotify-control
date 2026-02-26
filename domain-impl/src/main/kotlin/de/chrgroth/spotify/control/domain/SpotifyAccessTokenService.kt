@@ -12,6 +12,7 @@ import jakarta.enterprise.context.ApplicationScoped
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
+import mu.KLogging
 
 @ApplicationScoped
 @Suppress("Unused")
@@ -22,8 +23,10 @@ class SpotifyAccessTokenService(
 ) : SpotifyAccessTokenPort {
 
     override fun getValidAccessToken(userId: UserId): AccessToken {
+        logger.info { "Retrieving valid access token for user: ${userId.value}" }
         val user = requireNotNull(userRepository.findById(userId)) { "User not found: ${userId.value}" }
         return if (isTokenExpiringSoon(user)) {
+            logger.info { "Token expiring soon, refreshing for user: ${userId.value}" }
             refreshAndPersist(user)
         } else {
             AccessToken(tokenEncryption.decrypt(user.encryptedAccessToken))
@@ -46,10 +49,11 @@ class SpotifyAccessTokenService(
                 tokenExpiresAt = now + refreshed.expiresInSeconds.seconds,
             )
         )
+        logger.info { "Access token refreshed successfully for user: ${user.spotifyUserId.value}" }
         return refreshed.accessToken
     }
 
-    companion object {
+    companion object : KLogging() {
         private val TOKEN_REFRESH_BUFFER = 5.minutes
     }
 }

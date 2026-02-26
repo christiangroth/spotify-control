@@ -11,6 +11,7 @@ import jakarta.ws.rs.Path
 import jakarta.ws.rs.QueryParam
 import jakarta.ws.rs.core.NewCookie
 import jakarta.ws.rs.core.Response
+import mu.KLogging
 import org.eclipse.microprofile.config.inject.ConfigProperty
 import java.net.URI
 import java.net.URLEncoder
@@ -48,6 +49,7 @@ class OAuthResource {
         val state = UUID.randomUUID().toString()
         stateStore[state] = System.currentTimeMillis()
         cleanExpiredStates()
+        logger.info { "Starting OAuth authorization, state: $state" }
         val authUrl = "$accountsBaseUrl/authorize" +
             "?client_id=${URLEncoder.encode(clientId, "UTF-8")}" +
             "&response_type=code" +
@@ -66,11 +68,15 @@ class OAuthResource {
         @QueryParam("error") error: String?,
     ): Response {
         val validationError = validateCallbackParams(code, state, error)
-        if (validationError != null) return Response.temporaryRedirect(URI.create("/?error=$validationError")).build()
+        if (validationError != null) {
+            logger.warn { "OAuth callback validation failed: $validationError" }
+            return Response.temporaryRedirect(URI.create("/?error=$validationError")).build()
+        }
         stateStore.remove(state!!)
 
         return when (val result = loginService.handleCallback(code!!)) {
             is LoginResult.Success -> {
+                logger.info { "OAuth login successful for user: ${result.userId.value}" }
                 val cookieValue = tokenEncryption.encrypt(result.userId.value)
                 Response.temporaryRedirect(URI.create("/ui/dashboard"))
                     .cookie(
@@ -83,7 +89,10 @@ class OAuthResource {
                     )
                     .build()
             }
-            is LoginResult.Failure -> Response.temporaryRedirect(URI.create("/?error=${result.error}")).build()
+            is LoginResult.Failure -> {
+                logger.warn { "OAuth login failed: ${result.error}" }
+                Response.temporaryRedirect(URI.create("/?error=${result.error}")).build()
+            }
         }
     }
 
@@ -97,8 +106,9 @@ class OAuthResource {
     @GET
     @PermitAll
     @Path("/logout")
-    fun logout(): Response =
-        Response.temporaryRedirect(URI.create("/"))
+    fun logout(): Response {
+        logger.info { "User logged out" }
+        return Response.temporaryRedirect(URI.create("/"))
             .cookie(
                 NewCookie.Builder(SpotifyCookieAuthMechanism.COOKIE_NAME)
                     .value("")
@@ -107,13 +117,14 @@ class OAuthResource {
                     .build()
             )
             .build()
+    }
 
     private fun cleanExpiredStates() {
         val expiry = System.currentTimeMillis() - STATE_TTL_MS
         stateStore.entries.removeIf { it.value < expiry }
     }
 
-    companion object {
+    companion object : KLogging() {
         private const val STATE_TTL_MS = 600_000L
     }
 }

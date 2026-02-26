@@ -10,6 +10,7 @@ import de.chrgroth.spotify.control.domain.model.SpotifyRefreshedTokens
 import de.chrgroth.spotify.control.domain.model.SpotifyTokens
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAuthPort
 import jakarta.enterprise.context.ApplicationScoped
+import mu.KLogging
 import org.eclipse.microprofile.config.inject.ConfigProperty
 import java.net.URI
 import java.net.URLEncoder
@@ -37,6 +38,7 @@ class SpotifyAuthAdapter(
     private val objectMapper = ObjectMapper()
 
     override fun exchangeCode(code: String): SpotifyTokens {
+        logger.info { "Exchanging authorization code for tokens" }
         val body = "grant_type=authorization_code" +
             "&code=${URLEncoder.encode(code, "UTF-8")}" +
             "&redirect_uri=${URLEncoder.encode(redirectUri, "UTF-8")}"
@@ -49,6 +51,7 @@ class SpotifyAuthAdapter(
     }
 
     override fun getUserProfile(accessToken: AccessToken): SpotifyProfile {
+        logger.info { "Fetching Spotify user profile" }
         val request = HttpRequest.newBuilder()
             .uri(URI.create("$apiBaseUrl/v1/me"))
             .header("Authorization", "Bearer ${accessToken.value}")
@@ -64,6 +67,7 @@ class SpotifyAuthAdapter(
     }
 
     override fun refreshToken(refreshToken: RefreshToken): SpotifyRefreshedTokens {
+        logger.info { "Refreshing Spotify access token" }
         val body = "grant_type=refresh_token" +
             "&refresh_token=${URLEncoder.encode(refreshToken.value, "UTF-8")}"
         val json = postTokenEndpoint(body)
@@ -87,7 +91,7 @@ class SpotifyAuthAdapter(
         return objectMapper.readTree(response.body())
     }
 
-    companion object {
+    companion object : KLogging() {
         private const val HTTP_OK = 200
     }
 }

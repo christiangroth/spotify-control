@@ -13,6 +13,7 @@ import jakarta.ws.rs.PathParam
 import jakarta.ws.rs.Produces
 import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
+import mu.KLogging
 
 @Path("/ui/docs")
 @ApplicationScoped
@@ -55,6 +56,7 @@ class DocsResource {
   @Produces(MediaType.TEXT_HTML)
   fun adr(@PathParam("filename") filename: String): TemplateInstance {
     if (!filename.endsWith(".md") || filename.contains("/") || filename.contains("..")) {
+      logger.warn { "Invalid ADR filename requested: $filename" }
       throw NotFoundException("ADR not found: $filename")
     }
     val content = readMarkdown("docs/adr/$filename") ?: throw NotFoundException("ADR not found: $filename")
@@ -96,4 +98,6 @@ class DocsResource {
       ?: fallback
 
   data class AdrEntry(val filename: String, val title: String)
+
+  companion object : KLogging()
 }
