@@ -12,7 +12,6 @@ genau wo du stehst.
 *Ziel: So schnell wie möglich Daten sammeln. Alles andere ist sekundär.*
 
 - Lokale Entwicklung klären
-- Spotify OAuth Login – only for allow-listed users
 - Spotify Poll-Job: `recently_played` alle 5 Minuten → Raw Events in MongoDB
 - Outbox-Grundgerüst (nur Spotify-Partition, nur PollRecentlyPlayed)
 - Minimalstes Dashboard: Login-Status, "X Events gesammelt seit Y"
