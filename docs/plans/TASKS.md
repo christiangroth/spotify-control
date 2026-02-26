@@ -1,13 +1,14 @@
-# Initial deployment
+# Side quests
 
 - extract template repository
+- Code and architecture review
+- Update coding guidelines
+- Dependency updates and other maintenance tasks
 
-# Spotify connect
+# Spotify Connect
 
-- add adapter-out-mongodb
-- add Spotify login
-- review
-- maintenance tasks
+- Define Spotify OAuth App
+- Add missing deployment params as GitHub Actions secrets
 
 # Playback data gathering
 
