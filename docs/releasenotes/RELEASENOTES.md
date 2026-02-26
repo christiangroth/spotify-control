@@ -1,3 +1,6 @@
+# 0.1.8 - 2026.02.26
+## Bugfixes / Chore
+* fix-build-version-ui: Fixed build version not being shown in UI in dev mode by passing version via template data map instead of @TemplateGlobal.
 # 0.1.7 - 2026.02.26
 ## New Features
 * implement-user-allow-list: Added user allow list support via APP_ALLOWED_SPOTIFY_USER_IDS environment variable (comma-separated Spotify user IDs).
