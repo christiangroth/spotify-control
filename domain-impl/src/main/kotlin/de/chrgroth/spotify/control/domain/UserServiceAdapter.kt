@@ -9,7 +9,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty
 @Suppress("Unused")
 class UserServiceAdapter(
     @ConfigProperty(name = "app.allowed-spotify-user-ids")
-    private val allowedUserIdStrings: List<String>,
+    allowedUserIdStrings: List<String>,
 ) : UserServicePort {
 
     private val allowedUserIds: Set<UserId> = allowedUserIdStrings.map { UserId(it) }.toSet()
