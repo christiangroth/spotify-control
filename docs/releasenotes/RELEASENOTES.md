@@ -1,3 +1,6 @@
+# 0.1.10 - 2026.02.26
+## New Features
+* enhance-error-handling-concept: Added error handling concept document and ADR covering DomainError enum pattern and Arrow library evaluation.* implement-token-refresh: Implement Spotify OAuth 2.0 token refresh so access tokens are automatically renewed before expiry for all Spotify API calls.
 # 0.1.9 - 2026.02.26
 ## New Features
 * implement-spotify-authentication: Implement Spotify OAuth 2.0 login with allow-listed users.
