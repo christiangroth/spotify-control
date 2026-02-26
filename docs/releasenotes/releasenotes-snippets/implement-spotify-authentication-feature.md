@@ -1,0 +1,1 @@
+* implement-spotify-authentication: Implement Spotify OAuth 2.0 login with allow-list enforcement, encrypted token storage, session-based auth, and WireMock-based mock server for dev/test profiles.
