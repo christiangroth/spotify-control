@@ -48,7 +48,7 @@ class SpotifyAccessTokenServiceTests {
 
         val result = service.getValidAccessToken(userId)
 
-        assertThat(result).isEqualTo("plain-access")
+        assertThat(result).isEqualTo(AccessToken("plain-access"))
         verify(exactly = 0) { spotifyAuth.refreshToken(any()) }
     }
 
@@ -57,7 +57,7 @@ class SpotifyAccessTokenServiceTests {
         val user = buildUser(Clock.System.now() + 3.minutes)
         every { userRepository.findById(userId) } returns user
         every { tokenEncryption.decrypt("enc-refresh") } returns "plain-refresh"
-        every { spotifyAuth.refreshToken("plain-refresh") } returns SpotifyRefreshedTokens(
+        every { spotifyAuth.refreshToken(RefreshToken("plain-refresh")) } returns SpotifyRefreshedTokens(
             accessToken = AccessToken("new-access"),
             refreshToken = null,
             expiresInSeconds = 3600,
@@ -67,8 +67,8 @@ class SpotifyAccessTokenServiceTests {
 
         val result = service.getValidAccessToken(userId)
 
-        assertThat(result).isEqualTo("new-access")
-        verify { spotifyAuth.refreshToken("plain-refresh") }
+        assertThat(result).isEqualTo(AccessToken("new-access"))
+        verify { spotifyAuth.refreshToken(RefreshToken("plain-refresh")) }
         val upsertedSlot = slot<User>()
         verify { userRepository.upsert(capture(upsertedSlot)) }
         assertThat(upsertedSlot.captured.encryptedAccessToken).isEqualTo("enc-new-access")
@@ -80,7 +80,7 @@ class SpotifyAccessTokenServiceTests {
         val user = buildUser(Clock.System.now() + 1.minutes)
         every { userRepository.findById(userId) } returns user
         every { tokenEncryption.decrypt("enc-refresh") } returns "plain-refresh"
-        every { spotifyAuth.refreshToken("plain-refresh") } returns SpotifyRefreshedTokens(
+        every { spotifyAuth.refreshToken(RefreshToken("plain-refresh")) } returns SpotifyRefreshedTokens(
             accessToken = AccessToken("new-access"),
             refreshToken = RefreshToken("new-refresh"),
             expiresInSeconds = 3600,

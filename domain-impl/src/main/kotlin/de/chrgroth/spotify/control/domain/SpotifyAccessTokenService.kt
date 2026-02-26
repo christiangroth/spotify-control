@@ -1,5 +1,7 @@
 package de.chrgroth.spotify.control.domain
 
+import de.chrgroth.spotify.control.domain.model.AccessToken
+import de.chrgroth.spotify.control.domain.model.RefreshToken
 import de.chrgroth.spotify.control.domain.model.User
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
@@ -19,20 +21,20 @@ class SpotifyAccessTokenService(
     private val tokenEncryption: TokenEncryptionPort,
 ) : SpotifyAccessTokenPort {
 
-    override fun getValidAccessToken(userId: UserId): String {
+    override fun getValidAccessToken(userId: UserId): AccessToken {
         val user = requireNotNull(userRepository.findById(userId)) { "User not found: ${userId.value}" }
         return if (isTokenExpiringSoon(user)) {
             refreshAndPersist(user)
         } else {
-            tokenEncryption.decrypt(user.encryptedAccessToken)
+            AccessToken(tokenEncryption.decrypt(user.encryptedAccessToken))
         }
     }
 
     private fun isTokenExpiringSoon(user: User): Boolean =
         user.tokenExpiresAt <= Clock.System.now() + TOKEN_REFRESH_BUFFER
 
-    private fun refreshAndPersist(user: User): String {
-        val refreshToken = tokenEncryption.decrypt(user.encryptedRefreshToken)
+    private fun refreshAndPersist(user: User): AccessToken {
+        val refreshToken = RefreshToken(tokenEncryption.decrypt(user.encryptedRefreshToken))
         val refreshed = spotifyAuth.refreshToken(refreshToken)
         val now = Clock.System.now()
         userRepository.upsert(
@@ -44,7 +46,7 @@ class SpotifyAccessTokenService(
                 tokenExpiresAt = now + refreshed.expiresInSeconds.seconds,
             )
         )
-        return refreshed.accessToken.value
+        return refreshed.accessToken
     }
 
     companion object {
