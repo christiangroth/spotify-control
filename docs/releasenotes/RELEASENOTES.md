@@ -1,3 +1,6 @@
+# 0.1.7 - 2026.02.26
+## New Features
+* implement-user-allow-list: Added user allow list support via APP_ALLOWED_SPOTIFY_USER_IDS environment variable (comma-separated Spotify user IDs).
 # 0.1.6 - 2026.02.25
 ## New Features
 * implement-user-persistence: Implement Spotify user persistence.
