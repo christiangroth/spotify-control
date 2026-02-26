@@ -137,35 +137,13 @@ All active sessions have their tokens stored independently per Spotify user ID. 
 
 ---
 
-## Allow-List Configuration
-
-### Environment Variable
-
-```
-APP_ALLOWED_SPOTIFY_USER_IDS=alice123,bob456
-```
-
-- Comma-separated list of Spotify user IDs.
-- At least one value must be present for login to work.
-- A user whose ID is not in the list is rejected at the OAuth callback, before any data is written.
-
-### Finding Your Spotify User ID
-
-The Spotify user ID can be found:
-
-- In the Spotify Web Player URL when viewing your own profile (the path segment after `/user/`)
-- Via the Spotify API: `GET /v1/me` → field `id`
-- Via the Spotify Developer Dashboard when testing the API
-
----
-
 ## Module Responsibilities
 
 | Module              | Responsibility                                                                        |
 |---------------------|---------------------------------------------------------------------------------------|
 | `adapter-in-web`    | `/oauth/authorize` redirect, `/oauth/callback` handler, session management            |
 | `adapter-out-spotify` | Token refresh logic, `GET /v1/me` call                                              |
-| `domain-impl`       | Allow-list check service, login domain service (orchestrates callback handling)       |
+| `domain-impl`       | Login domain service (orchestrates callback handling)                                 |
 | `application-quarkus` | Security configuration, session configuration, route protection                   |
 
 ---
@@ -245,7 +223,7 @@ MONGODB_CONNECTION_STRING=mongodb+srv://...
 
 | Layer             | Test Type          | What to test                                                                  |
 |-------------------|--------------------|-------------------------------------------------------------------------------|
-| Domain            | Unit test          | Allow-list check (positive + negative), token expiry logic                    |
+| Domain            | Unit test          | Token expiry logic                                                            |
 | OAuth callback    | `@QuarkusTest`     | Happy path (mock Spotify endpoints), state mismatch, user not allowed         |
 | Token encryption  | Unit test          | Encrypt → store → retrieve → decrypt round-trip                               |
 | Token refresh     | Unit test          | Refresh triggered within 5-minute window, 401 also triggers refresh           |
