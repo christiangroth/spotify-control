@@ -20,6 +20,7 @@ class OAuthFlowTests {
             .get("/oauth/authorize")
             .then()
             .statusCode(307)
+            .header("Location", org.hamcrest.CoreMatchers.containsString("http://localhost:8081/mock/spotify/authorize"))
     }
 
     @Test
