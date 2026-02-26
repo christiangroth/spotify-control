@@ -3,7 +3,7 @@ package de.chrgroth.spotify.control.adapter.`in`.web.ui
 import io.quarkus.qute.Location
 import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
-import jakarta.annotation.security.PermitAll
+import io.quarkus.security.Authenticated
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import jakarta.ws.rs.GET
@@ -16,7 +16,6 @@ import jakarta.ws.rs.core.Response
 
 @Path("/ui/docs")
 @ApplicationScoped
-@PermitAll
 @Suppress("Unused")
 class DocsResource {
 
@@ -29,9 +28,11 @@ class DocsResource {
   private lateinit var docsAdrIndexTemplate: Template
 
   @GET
+  @Authenticated
   fun redirectToDocs(): Response = Response.seeOther(java.net.URI.create("/ui/docs/arc42")).build()
 
   @GET
+  @Authenticated
   @Path("/arc42")
   @Produces(MediaType.TEXT_HTML)
   fun arc42(): TemplateInstance =
@@ -40,6 +41,7 @@ class DocsResource {
       .data("markdownContent", readMarkdown("docs/arc42/arc42-EN.md"))
 
   @GET
+  @Authenticated
   @Path("/adr")
   @Produces(MediaType.TEXT_HTML)
   fun adrIndex(): TemplateInstance =
@@ -48,6 +50,7 @@ class DocsResource {
       .data("adrs", listAdrFiles())
 
   @GET
+  @Authenticated
   @Path("/adr/{filename}")
   @Produces(MediaType.TEXT_HTML)
   fun adr(@PathParam("filename") filename: String): TemplateInstance {
@@ -61,6 +64,7 @@ class DocsResource {
   }
 
   @GET
+  @Authenticated
   @Path("/releasenotes")
   @Produces(MediaType.TEXT_HTML)
   fun releasenotes(): TemplateInstance =
