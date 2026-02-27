@@ -26,3 +26,8 @@ enum class TokenError(override val code: String) : DomainError {
     INVALID_FORMAT("TOKEN-003"),
     ;
 }
+
+enum class PlaybackError(override val code: String) : DomainError {
+    RECENTLY_PLAYED_FETCH_FAILED("PLAY-001"),
+    ;
+}
