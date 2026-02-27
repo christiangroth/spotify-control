@@ -25,20 +25,18 @@ class SpotifyCookieAuthMechanism(
     override fun authenticate(context: RoutingContext, identityProviderManager: IdentityProviderManager): Uni<SecurityIdentity> {
         val cookieValue = context.request().getCookie(COOKIE_NAME)?.value
             ?: return Uni.createFrom().optional(Optional.empty())
-        return try {
-            val userId = UserId(tokenEncryption.decrypt(cookieValue))
-            if (userRepository.findById(userId) == null) {
-                logger.error { "Authentication failed: user not found: ${userId.value}" }
-                return Uni.createFrom().optional(Optional.empty())
-            }
-            val identity = QuarkusSecurityIdentity.builder()
-                .setPrincipal(Principal { userId.value })
-                .setAnonymous(false)
-                .build()
-            Uni.createFrom().item(identity)
-        } catch (_: Exception) {
-            Uni.createFrom().optional(Optional.empty())
+        val decrypted = tokenEncryption.decrypt(cookieValue).getOrNull()
+            ?: return Uni.createFrom().optional(Optional.empty())
+        val userId = UserId(decrypted)
+        if (userRepository.findById(userId) == null) {
+            logger.error { "Authentication failed: user not found: ${userId.value}" }
+            return Uni.createFrom().optional(Optional.empty())
         }
+        val identity = QuarkusSecurityIdentity.builder()
+            .setPrincipal(Principal { userId.value })
+            .setAnonymous(false)
+            .build()
+        return Uni.createFrom().item(identity)
     }
 
     override fun getChallenge(context: RoutingContext): Uni<ChallengeData> =

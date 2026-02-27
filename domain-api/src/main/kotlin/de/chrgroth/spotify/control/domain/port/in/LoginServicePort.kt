@@ -1,12 +1,9 @@
 package de.chrgroth.spotify.control.domain.port.`in`
 
+import arrow.core.Either
+import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.model.UserId
 
-sealed class LoginResult {
-    data class Success(val userId: UserId) : LoginResult()
-    data class Failure(val error: String) : LoginResult()
-}
-
 interface LoginServicePort {
-    fun handleCallback(code: String): LoginResult
+    fun handleCallback(code: String): Either<DomainError, UserId>
 }

@@ -233,9 +233,26 @@ http://localhost:8080/oauth/callback             ← Local development
 - A CSRF `state` parameter is generated per authorization request and validated in the callback.
 - Token refresh is handled by `adapter-out-spotify` before each Spotify API call; the refreshed token is persisted back to MongoDB.
 
-## Outbox Pattern
+## Error Handling
 
-All Spotify API operations and domain-level async tasks are routed through a persistent outbox. This ensures reliability and decouples producers from consumers.
+All domain failures are represented as typed `DomainError` values wrapped in Arrow's `Either<DomainError, T>`. This replaces ad-hoc sealed result classes and uncaught exceptions.
+
+- Port interfaces return `Either<DomainError, T>` instead of raw domain objects or throwing exceptions.
+- Infrastructure adapters (`adapter-out-*`) catch all exceptions at the adapter boundary and convert them to typed `Either.Left<DomainError>` values – no exceptions cross port boundaries.
+- Domain services compose multiple fallible operations using the Arrow `either { }` DSL with `bind()`.
+- Web adapters translate `Either.Left<DomainError>` to HTTP error responses (redirect with `?error=<code>`).
+- Error codes follow the convention `<AREA>-<NNN>` (e.g. `AUTH-001`). Codes are stable once published.
+
+**Error code registry:**
+
+| Prefix  | Domain Area            | Example codes                          |
+|---------|------------------------|----------------------------------------|
+| `AUTH`  | Authentication / login | AUTH-001, AUTH-002, AUTH-003, AUTH-004 |
+| `TOKEN` | Token en/decryption    | TOKEN-001, TOKEN-002, TOKEN-003        |
+
+See [ADR-0006](../adr/0006-error-handling-concept.md) for the full design rationale.
+
+ This ensures reliability and decouples producers from consumers.
 
 **Partitions and event types:**
 

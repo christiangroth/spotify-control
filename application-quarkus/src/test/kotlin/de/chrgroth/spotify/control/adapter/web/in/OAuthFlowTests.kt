@@ -94,7 +94,7 @@ class OAuthFlowTests {
 
     @Test
     fun `logout clears session and redirects to root`() {
-        val cookieValue = tokenEncryption.encrypt("test-user-a")
+        val cookieValue = (tokenEncryption.encrypt("test-user-a") as arrow.core.Either.Right).value
 
         given()
             .cookie("spotify-session", cookieValue)

@@ -9,6 +9,7 @@ import jakarta.inject.Inject
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.Produces
+import jakarta.ws.rs.QueryParam
 import jakarta.ws.rs.core.MediaType
 
 @Path("/")
@@ -23,5 +24,20 @@ class LoginResource {
   @GET
   @PermitAll
   @Produces(MediaType.TEXT_HTML)
-  fun index(): TemplateInstance = loginTemplate.instance()
+  fun index(@QueryParam("error") error: String?): TemplateInstance =
+      loginTemplate.data("errorMessage", error?.let { errorMessage(it) })
+
+  private fun errorMessage(code: String): String = when (code) {
+      "AUTH-001" -> "You are not allowed to log in with this Spotify account."
+      "AUTH-002" -> "Could not exchange the authorisation code with Spotify. Please try again."
+      "AUTH-003" -> "Could not retrieve your Spotify profile. Please try again."
+      "AUTH-004" -> "Could not refresh your access token. Please log in again."
+      "TOKEN-001" -> "An internal error occurred (encryption). Please contact support."
+      "TOKEN-002" -> "Your session could not be verified. Please log in again."
+      "TOKEN-003" -> "Your session is invalid. Please log in again."
+      "spotify_denied" -> "Spotify login was denied. Please try again."
+      "invalid_request" -> "The login request was invalid. Please try again."
+      "state_mismatch" -> "Login state validation failed. Please try again."
+      else -> "An unexpected error occurred. Please try again."
+  }
 }

@@ -38,6 +38,30 @@ Dark, technical appearance – fitting a developer tool. No generic Bootstrap de
 - Live indicators (●) in green with subtle CSS pulse animation
 - No clutter – whitespace is a design element
 
+## Error Code Mapping
+
+The backend passes domain error codes to the frontend as URL query parameters (e.g. `/?error=AUTH-001`). The frontend is responsible for mapping these stable codes to user-facing messages.
+
+**Error code registry:**
+
+| Code       | User-facing message (example)                              |
+|------------|------------------------------------------------------------|
+| `AUTH-001` | You are not allowed to log in with this Spotify account.   |
+| `AUTH-002` | Could not exchange the authorisation code. Please retry.   |
+| `AUTH-003` | Could not retrieve your Spotify profile. Please retry.     |
+| `AUTH-004` | Could not refresh your access token. Please log in again.  |
+| `TOKEN-001`| Internal error: token encryption failed. Contact support.  |
+| `TOKEN-002`| Internal error: token decryption failed. Please log in again. |
+| `TOKEN-003`| Internal error: invalid token format. Please log in again. |
+
+**Display pattern:**
+
+- Read the `error` query parameter on the login page template.
+- Map the code to a human-readable message using the registry above.
+- Display the message as a Bootstrap alert (`.alert-danger`) at the top of the login form.
+- If the code is unknown (e.g. `spotify_denied`, `invalid_request`, `state_mismatch`), show a generic fallback message.
+- Do **not** expose the raw error code to the user.
+
 ## Quality Standards
 
 - Responsive – desktop and tablet; mobile is nice-to-have

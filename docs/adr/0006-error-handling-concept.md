@@ -1,10 +1,10 @@
-# Error Handling: DomainResult and DomainError
+# Error Handling: Arrow Either<DomainError, T>
 
 * Status: accepted
 * Deciders: Chris
-* Date: 2026-02-26
+* Date: 2026-02-27
 
-Technical Story: https://github.com/christiangroth/spotify-control/issues/47
+Technical Story: https://github.com/christiangroth/spotify-control/issues/59
 
 ## Context and Problem Statement
 
@@ -23,7 +23,7 @@ adapters?
 * Error codes must be stable and unique so the frontend can map them to localised messages.
 * Technical exceptions from infrastructure adapters must not cross port boundaries.
 * The pattern must be simple and consistent with the existing hexagonal architecture.
-* Minimal external dependencies for a solo-developer project.
+* Rich combinator API for composing multiple fallible operations.
 
 ## Considered Options
 
@@ -33,26 +33,27 @@ adapters?
 
 ## Decision Outcome
 
-Chosen option: **"Custom `DomainResult<T>` + `DomainError` enums"**, because it satisfies all
-decision drivers without adding an external dependency, is consistent with the existing Kotlin
-idioms in the codebase, and is simple enough for an AI-assisted solo-developer workflow.
+Chosen option: **"Arrow `Either<DomainError, T>`"**, because it provides a widely understood
+functional abstraction with a rich combinator API (`map`, `flatMap`, `fold`, `raise`), minimal
+dependency footprint (only `arrow-core`), and the `either { }` DSL enables readable sequential
+error handling that is idiomatic for Kotlin.
 
 ### Positive Consequences
 
-* Single, consistent result type across all ports: `DomainResult<T>`.
-* Errors are compile-time typed; the exhaustive `when` in Kotlin enforces handling of both
-  `Success` and `Failure`.
+* Single, consistent result type across all ports: `Either<DomainError, T>`.
+* Errors are compile-time typed; the exhaustive `fold` in Kotlin enforces handling of both
+  `Left` (failure) and `Right` (success).
 * Each `DomainError` code (e.g. `AUTH-001`) is stable and unique – the frontend can map codes to
   messages without coupling to backend internals.
-* No new runtime dependency; the implementation is a handful of lines in `domain-api`.
+* Rich combinator API (`map`, `flatMap`, `fold`, `bind`) is provided out of the box.
 * Exceptions from infrastructure adapters are caught at the adapter boundary and converted to
-  typed `DomainResult.Failure` values before crossing the port.
+  typed `Either.Left` values before crossing the port.
+* The `either { }` / `raise` DSL enables sequential, readable error handling in domain services.
 
 ### Negative Consequences
 
-* `DomainResult` lacks the rich combinator API (`flatMap`, `recover`, `zip`) that Arrow provides
-  out of the box; helpers must be added incrementally as needed.
-* Developers accustomed to Arrow's `raise` DSL will need to use `when` pattern matching instead.
+* Adds Arrow as an external dependency (`arrow-core`, ~1 MB added to classpath).
+* Developers unfamiliar with functional programming must learn `Either` and the `raise` DSL.
 
 ## Pros and Cons of the Options
 
@@ -60,20 +61,15 @@ idioms in the codebase, and is simple enough for an AI-assisted solo-developer w
 
 * Good, because no external dependency is added.
 * Good, because consistent with existing Kotlin sealed class patterns in the codebase.
-* Good, because simple to understand and maintain for a solo developer and AI coding agents.
-* Good, because `DomainError` enum members enforce unique error codes via the prefix convention.
 * Bad, because combinators (`flatMap`, `zip`, `recover`) must be added manually if needed.
 
 ### Arrow `Either<DomainError, T>`
 
 * Good, because `Either` is a widely understood functional abstraction.
-* Good, because Arrow provides a rich combinator API and coroutine integration out of the box.
-* Good, because the `either { }` / `raise` DSL enables readable sequential error handling.
-* Bad, because adds Arrow as an external dependency (multiple artifacts, ~1 MB added to classpath).
-* Bad, because Arrow's functional patterns have a steeper learning curve and produce less
-  predictable output from AI coding agents.
-* Bad, because mixing `Either` with Jakarta EE CDI and JAX-RS responses requires additional
-  adapter glue.
+* Good, because Arrow provides a rich combinator API and the `either { }` DSL out of the box.
+* Good, because `bind()` enables sequential, exception-style code that is still type-safe.
+* Good, because only `arrow-core` is required; no heavyweight transitive dependencies.
+* Bad, because adds Arrow as an external dependency (~1 MB added to classpath).
 
 ### Kotlin stdlib `Result<T>` with typed exceptions
 
@@ -82,11 +78,8 @@ idioms in the codebase, and is simple enough for an AI-assisted solo-developer w
   require an exception hierarchy rather than plain enums.
 * Bad, because exception hierarchies for domain errors conflict with the principle that
   domain failures are expected outcomes, not exceptional conditions.
-* Bad, because `Result<T>` is designed for coroutine and async use cases; its API (`.getOrThrow()`,
-  `.exceptionOrNull()`) encourages exception-oriented thinking.
 
 ## Links
 
-* [Error handling concept](../plans/errorhandling.md)
 * [Hexagonal architecture ADR](0002-backend-hexagonal-architecture.md)
 * [Arrow documentation](https://arrow-kt.io)

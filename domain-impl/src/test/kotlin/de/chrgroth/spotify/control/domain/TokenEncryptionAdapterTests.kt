@@ -1,7 +1,8 @@
 package de.chrgroth.spotify.control.domain
 
+import arrow.core.Either
+import de.chrgroth.spotify.control.domain.error.TokenError
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 
 class TokenEncryptionAdapterTests {
@@ -13,8 +14,11 @@ class TokenEncryptionAdapterTests {
     @Test
     fun `encrypt and decrypt round-trip succeeds`() {
         val plaintext = "hello-world"
-        val ciphertext = adapter.encrypt(plaintext)
-        assertThat(adapter.decrypt(ciphertext)).isEqualTo(plaintext)
+        val encryptResult = adapter.encrypt(plaintext)
+        assertThat(encryptResult.isRight()).isTrue()
+        val decryptResult = adapter.decrypt((encryptResult as Either.Right).value)
+        assertThat(decryptResult.isRight()).isTrue()
+        assertThat((decryptResult as Either.Right).value).isEqualTo(plaintext)
     }
 
     @Test
@@ -26,16 +30,18 @@ class TokenEncryptionAdapterTests {
     }
 
     @Test
-    fun `decrypt throws for invalid format`() {
-        assertThatThrownBy { adapter.decrypt("not-a-valid-ciphertext") }
-            .isInstanceOf(IllegalArgumentException::class.java)
+    fun `decrypt returns invalid format error for missing dot separator`() {
+        val result = adapter.decrypt("not-a-valid-ciphertext")
+        assertThat(result.isLeft()).isTrue()
+        assertThat((result as Either.Left).value).isEqualTo(TokenError.INVALID_FORMAT)
     }
 
     @Test
-    fun `decrypt throws for tampered ciphertext`() {
-        val ciphertext = adapter.encrypt("sensitive")
+    fun `decrypt returns decryption failed error for tampered ciphertext`() {
+        val ciphertext = (adapter.encrypt("sensitive") as Either.Right).value
         val tampered = ciphertext.dropLast(4) + "XXXX"
-        assertThatThrownBy { adapter.decrypt(tampered) }
-            .isInstanceOf(javax.crypto.AEADBadTagException::class.java)
+        val result = adapter.decrypt(tampered)
+        assertThat(result.isLeft()).isTrue()
+        assertThat((result as Either.Left).value).isEqualTo(TokenError.DECRYPTION_FAILED)
     }
 }
