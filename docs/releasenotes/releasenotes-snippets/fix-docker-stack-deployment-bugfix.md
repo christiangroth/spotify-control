@@ -1,1 +1,0 @@
-* fix-docker-stack-deployment: Fixed docker stack deployment failing due to unsupported variable interpolation syntax.
