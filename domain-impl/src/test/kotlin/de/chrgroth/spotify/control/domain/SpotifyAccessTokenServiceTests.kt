@@ -5,8 +5,6 @@ import arrow.core.right
 import de.chrgroth.spotify.control.domain.error.AuthError
 import de.chrgroth.spotify.control.domain.model.AccessToken
 import de.chrgroth.spotify.control.domain.model.RefreshToken
-import de.chrgroth.spotify.control.domain.model.SpotifyProfile
-import de.chrgroth.spotify.control.domain.model.SpotifyProfileId
 import de.chrgroth.spotify.control.domain.model.SpotifyRefreshedTokens
 import de.chrgroth.spotify.control.domain.model.User
 import de.chrgroth.spotify.control.domain.model.UserId
@@ -68,10 +66,6 @@ class SpotifyAccessTokenServiceTests {
             expiresInSeconds = 3600,
         ).right()
         every { tokenEncryption.encrypt("new-access") } returns "enc-new-access".right()
-        every { spotifyAuth.getUserProfile(AccessToken("new-access")) } returns SpotifyProfile(
-            id = SpotifyProfileId("user-1"),
-            displayName = "Updated User",
-        ).right()
         every { userRepository.upsert(any()) } just runs
 
         val result = service.getValidAccessToken(userId)
@@ -82,7 +76,6 @@ class SpotifyAccessTokenServiceTests {
         verify { userRepository.upsert(capture(upsertedSlot)) }
         assertThat(upsertedSlot.captured.encryptedAccessToken).isEqualTo("enc-new-access")
         assertThat(upsertedSlot.captured.encryptedRefreshToken).isEqualTo("enc-refresh")
-        assertThat(upsertedSlot.captured.displayName).isEqualTo("Updated User")
     }
 
     @Test
@@ -97,10 +90,6 @@ class SpotifyAccessTokenServiceTests {
         ).right()
         every { tokenEncryption.encrypt("new-access") } returns "enc-new-access".right()
         every { tokenEncryption.encrypt("new-refresh") } returns "enc-new-refresh".right()
-        every { spotifyAuth.getUserProfile(AccessToken("new-access")) } returns SpotifyProfile(
-            id = SpotifyProfileId("user-1"),
-            displayName = "Test User",
-        ).right()
         every { userRepository.upsert(any()) } just runs
 
         service.getValidAccessToken(userId)
@@ -108,28 +97,6 @@ class SpotifyAccessTokenServiceTests {
         val upsertedSlot = slot<User>()
         verify { userRepository.upsert(capture(upsertedSlot)) }
         assertThat(upsertedSlot.captured.encryptedRefreshToken).isEqualTo("enc-new-refresh")
-    }
-
-    @Test
-    fun `keeps existing displayName when profile fetch fails during token refresh`() {
-        val user = buildUser(Clock.System.now() + 3.minutes)
-        every { userRepository.findById(userId) } returns user
-        every { tokenEncryption.decrypt("enc-refresh") } returns "plain-refresh".right()
-        every { spotifyAuth.refreshToken(RefreshToken("plain-refresh")) } returns SpotifyRefreshedTokens(
-            accessToken = AccessToken("new-access"),
-            refreshToken = null,
-            expiresInSeconds = 3600,
-        ).right()
-        every { tokenEncryption.encrypt("new-access") } returns "enc-new-access".right()
-        every { spotifyAuth.getUserProfile(AccessToken("new-access")) } returns AuthError.PROFILE_FETCH_FAILED.left()
-        every { userRepository.upsert(any()) } just runs
-
-        val result = service.getValidAccessToken(userId)
-
-        assertThat(result).isEqualTo(AccessToken("new-access"))
-        val upsertedSlot = slot<User>()
-        verify { userRepository.upsert(capture(upsertedSlot)) }
-        assertThat(upsertedSlot.captured.displayName).isEqualTo("Test User")
     }
 
     @Test
