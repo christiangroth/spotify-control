@@ -1,1 +1,1 @@
-* implement-error-handling-arrow: Replaced ad-hoc LoginResult sealed class with Arrow Either-based error handling; all domain port failures are now typed DomainError values propagated via Either<DomainError, T>.
+* implement-error-handling-arrow: Implemented error handling using Arrow.

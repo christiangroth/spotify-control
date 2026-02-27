@@ -243,15 +243,6 @@ All domain failures are represented as typed `DomainError` values wrapped in Arr
 - Web adapters translate `Either.Left<DomainError>` to HTTP error responses (redirect with `?error=<code>`).
 - Error codes follow the convention `<AREA>-<NNN>` (e.g. `AUTH-001`). Codes are stable once published.
 
-**Error code registry:**
-
-| Prefix  | Domain Area            | Example codes                          |
-|---------|------------------------|----------------------------------------|
-| `AUTH`  | Authentication / login | AUTH-001, AUTH-002, AUTH-003, AUTH-004 |
-| `TOKEN` | Token en/decryption    | TOKEN-001, TOKEN-002, TOKEN-003        |
-
-See [ADR-0006](../adr/0006-error-handling-concept.md) for the full design rationale.
-
 ## Outbox Pattern
 
 All Spotify API operations and domain-level async tasks are routed through a persistent outbox. This ensures reliability and decouples producers from consumers.

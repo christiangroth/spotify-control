@@ -23,25 +23,6 @@ All domain failures use Arrow's `Either<DomainError, T>`:
 - Web adapters use `.fold(ifLeft = { ... }, ifRight = { ... })` to translate domain failures to HTTP responses.
 - Error codes follow the convention `<AREA>-<NNN>` (e.g. `AUTH-001`). Codes are stable once published; deprecated codes are kept as `DEPRECATED_<NAME>`.
 
-```kotlin
-// Good: infrastructure adapter with proper error boundary
-override fun exchangeCode(code: String): Either<DomainError, SpotifyTokens> = try {
-    val json = postTokenEndpoint(body) ?: return AuthError.TOKEN_EXCHANGE_FAILED.left()
-    SpotifyTokens(...).right()
-} catch (e: Exception) {
-    logger.error(e) { "Unexpected error during token exchange" }
-    AuthError.TOKEN_EXCHANGE_FAILED.left()
-}
-
-// Good: domain service using either DSL
-override fun handleCallback(code: String): Either<DomainError, UserId> = either {
-    val tokens = spotifyAuth.exchangeCode(code).bind()
-    val profile = spotifyAuth.getUserProfile(tokens.accessToken).bind()
-    // ...
-    userId
-}
-```
-
 ## Architecture Principles
 
 Follow the hexagonal structure. See [role-architect.md](role-architect.md).

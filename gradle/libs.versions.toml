@@ -18,8 +18,8 @@ release = "3.1.0"
 versionCatalogUpdate = "1.1.0"
 
 [libraries]
-assertJ = { module = "org.assertj:assertj-core", version.ref = "assertJ" }
 arrowCore = { module = "io.arrow-kt:arrow-core", version.ref = "arrow" }
+assertJ = { module = "org.assertj:assertj-core", version.ref = "assertJ" }
 bootstrap = { module = "org.webjars:bootstrap", version.ref = "bootstrap" }
 marked = { module = "org.webjars.npm:marked", version.ref = "marked" }
 detekt = { module = "io.gitlab.arturbosch.detekt:detekt-gradle-plugin", version.ref = "detekt" }

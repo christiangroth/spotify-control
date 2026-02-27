@@ -4,8 +4,6 @@
 * Deciders: Chris
 * Date: 2026-02-27
 
-Technical Story: https://github.com/christiangroth/spotify-control/issues/59
-
 ## Context and Problem Statement
 
 The application mixes two incompatible error-signalling approaches: ad-hoc sealed result classes

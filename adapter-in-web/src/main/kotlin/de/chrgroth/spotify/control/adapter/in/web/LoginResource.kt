@@ -1,5 +1,6 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
+import de.chrgroth.spotify.control.domain.error.OAuthError
 import io.quarkus.qute.Location
 import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
@@ -35,9 +36,9 @@ class LoginResource {
       "TOKEN-001" -> "An internal error occurred (encryption). Please contact support."
       "TOKEN-002" -> "Your session could not be verified. Please log in again."
       "TOKEN-003" -> "Your session is invalid. Please log in again."
-      "spotify_denied" -> "Spotify login was denied. Please try again."
-      "invalid_request" -> "The login request was invalid. Please try again."
-      "state_mismatch" -> "Login state validation failed. Please try again."
+      OAuthError.SPOTIFY_DENIED.code -> "Spotify login was denied. Please try again."
+      OAuthError.INVALID_REQUEST.code -> "The login request was invalid. Please try again."
+      OAuthError.STATE_MISMATCH.code -> "Login state validation failed. Please try again."
       else -> "An unexpected error occurred. Please try again."
   }
 }

@@ -32,7 +32,7 @@ class OAuthFlowTests {
             .get("/oauth/callback")
             .then()
             .statusCode(307)
-            .header("Location", org.hamcrest.CoreMatchers.containsString("error=spotify_denied"))
+            .header("Location", org.hamcrest.CoreMatchers.containsString("error=OAUTH-001"))
     }
 
     @Test
@@ -43,7 +43,7 @@ class OAuthFlowTests {
             .get("/oauth/callback")
             .then()
             .statusCode(307)
-            .header("Location", org.hamcrest.CoreMatchers.containsString("error=invalid_request"))
+            .header("Location", org.hamcrest.CoreMatchers.containsString("error=OAUTH-002"))
     }
 
     @Test
@@ -56,7 +56,7 @@ class OAuthFlowTests {
             .get("/oauth/callback")
             .then()
             .statusCode(307)
-            .header("Location", org.hamcrest.CoreMatchers.containsString("error=state_mismatch"))
+            .header("Location", org.hamcrest.CoreMatchers.containsString("error=OAUTH-003"))
     }
 
     @Test
