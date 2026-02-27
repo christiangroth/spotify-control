@@ -32,6 +32,29 @@ class LoginServiceAdapterTests {
     private val profile = SpotifyProfile(SpotifyProfileId("user-1"), "Test User")
 
     @Test
+    fun `spotify error during code exchange returns failure`() {
+        every { spotifyAuth.exchangeCode("code") } throws IllegalStateException("Spotify token endpoint request failed: 400")
+
+        val result = adapter.handleCallback("code")
+
+        assertThat(result).isInstanceOf(LoginResult.Failure::class.java)
+        assertThat((result as LoginResult.Failure).error).isEqualTo("spotify_error")
+        verify(exactly = 0) { userRepository.upsert(any()) }
+    }
+
+    @Test
+    fun `spotify error during profile fetch returns failure`() {
+        every { spotifyAuth.exchangeCode("code") } returns tokens
+        every { spotifyAuth.getUserProfile(AccessToken("access")) } throws IllegalStateException("Spotify profile fetch failed: 401")
+
+        val result = adapter.handleCallback("code")
+
+        assertThat(result).isInstanceOf(LoginResult.Failure::class.java)
+        assertThat((result as LoginResult.Failure).error).isEqualTo("spotify_error")
+        verify(exactly = 0) { userRepository.upsert(any()) }
+    }
+
+    @Test
     fun `allowed user succeeds and user is upserted`() {
         every { spotifyAuth.exchangeCode("code") } returns tokens
         every { spotifyAuth.getUserProfile(AccessToken("access")) } returns profile

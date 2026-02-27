@@ -23,8 +23,18 @@ class LoginServiceAdapter(
 ) : LoginServicePort {
 
     override fun handleCallback(code: String): LoginResult {
-        val tokens = spotifyAuth.exchangeCode(code)
-        val profile = spotifyAuth.getUserProfile(tokens.accessToken)
+        val tokens = try {
+            spotifyAuth.exchangeCode(code)
+        } catch (e: Exception) {
+            logger.error(e) { "Failed to exchange OAuth code with Spotify" }
+            return LoginResult.Failure("spotify_error")
+        }
+        val profile = try {
+            spotifyAuth.getUserProfile(tokens.accessToken)
+        } catch (e: Exception) {
+            logger.error(e) { "Failed to fetch Spotify user profile" }
+            return LoginResult.Failure("spotify_error")
+        }
         val userId = UserId(profile.id.value)
 
         if (!userService.isAllowed(userId)) {

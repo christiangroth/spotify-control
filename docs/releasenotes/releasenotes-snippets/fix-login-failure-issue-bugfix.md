@@ -1,0 +1,1 @@
+* fix-login-failure-issue: Handle Spotify API errors during login gracefully instead of returning an internal server error.
