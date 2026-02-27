@@ -1,5 +1,6 @@
 rootProject.name = "spotify-control"
 
+include("adapter-in-scheduler")
 include("adapter-in-web")
 include("adapter-out-mongodb")
 include("adapter-out-spotify")

@@ -5,6 +5,7 @@ plugins {
 }
 
 dependencies {
+  implementation(project(":adapter-in-scheduler"))
   implementation(project(":adapter-in-web"))
   implementation(project(":adapter-out-mongodb"))
   implementation(project(":adapter-out-spotify"))

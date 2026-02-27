@@ -1,0 +1,1 @@
+* update-user-profile: User display names are now refreshed nightly from Spotify via a scheduled job running at 4am.
