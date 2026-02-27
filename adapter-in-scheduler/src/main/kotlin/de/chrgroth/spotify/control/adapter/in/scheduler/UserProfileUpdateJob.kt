@@ -11,7 +11,7 @@ class UserProfileUpdateJob(
     private val userProfileUpdate: UserProfileUpdatePort,
 ) {
 
-    @Scheduled(cron = "0 0 4 * * ?") // every day at 4am
+    @Scheduled(cron = "0 0 4 * * ?")
     fun run() {
         logger.info { "Running scheduled user profile update" }
         userProfileUpdate.updateUserProfiles()
