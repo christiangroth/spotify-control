@@ -38,6 +38,37 @@ Dark, technical appearance – fitting a developer tool. No generic Bootstrap de
 - Live indicators (●) in green with subtle CSS pulse animation
 - No clutter – whitespace is a design element
 
+## Error Code Mapping
+
+When the backend redirects to a page with an `?error=<code>` query parameter, the Qute template must display a user-friendly message for each known error code.
+
+Pass the `error` parameter to the template via the resource endpoint:
+
+```kotlin
+@GET
+fun index(@QueryParam("error") error: String?): TemplateInstance =
+    loginTemplate.data("error", error)
+```
+
+In the Qute template, map each error code to a human-readable message using `{#when error}`:
+
+```html
+{#if error}
+<div class="alert alert-danger" role="alert" data-testid="login-error">
+    {#when error}
+    {#is AUTH-001}Your account is not allowed to access this application.{/is}
+    {#is AUTH-002}Could not complete authentication with Spotify. Please try again.{/is}
+    {#else}Login failed (code: {error}). Please try again.{/else}
+    {/when}
+</div>
+{/if}
+```
+
+**Rules:**
+- Always provide an `{#else}` fallback that shows the raw error code, so unknown future codes degrade gracefully.
+- Error codes are defined in `domain-api` (`AuthError`, `TokenError`, etc.). See [arc42-EN.md](../arc42/arc42-EN.md) for the full registry.
+- Do not hard-code error messages in the backend – all human-readable text belongs in the template.
+
 ## Quality Standards
 
 - Responsive – desktop and tablet; mobile is nice-to-have

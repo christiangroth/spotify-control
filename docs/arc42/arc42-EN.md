@@ -266,6 +266,24 @@ Spotify provides genres only at the artist level. Genres are derived from the ar
 
 Charts work exclusively on `aggregations_*` collections. Field names are stable (public API) – breaking changes require contract test updates. `@QuarkusTest` contract tests validate the schema on every build. Additive changes (new fields) are non-breaking.
 
+## Error Handling
+
+All domain failures are represented as typed `DomainResult<T>` values (see [ADR-0006](../adr/0006-error-handling-concept.md)):
+
+- `DomainResult.Success<T>` – the operation succeeded; contains the result value.
+- `DomainResult.Failure` – the operation failed; contains a `DomainError` with a stable error code.
+
+**Error codes** follow the pattern `<AREA>-<NNN>` (e.g. `AUTH-001`). Each domain area owns a prefix:
+
+| Prefix   | Domain Area           | Codes                                          |
+|----------|-----------------------|------------------------------------------------|
+| `AUTH`   | Authentication/login  | AUTH-001, AUTH-002, AUTH-003, AUTH-999         |
+| `TOKEN`  | Token en/decryption   | TOKEN-001, TOKEN-002, TOKEN-003, TOKEN-999     |
+| `SPOTIFY`| Spotify API calls     | SPOTIFY-001, SPOTIFY-999                       |
+| `USER`   | User management       | USER-001, USER-999                             |
+
+**Adapter boundary rule:** outbound adapters (`adapter-out-*`) catch all exceptions internally and convert them to `DomainResult.Failure`. No unchecked exceptions cross port boundaries.
+
 ## Frontend Approach
 
 No separate frontend project. The UI is rendered server-side using Quarkus Qute templates. Dynamic interactions are handled by htmx. No React, Vue, npm, Node.js, or build steps are required.
@@ -307,6 +325,7 @@ Architecture decisions are documented as Architecture Decision Records (ADRs) in
 | [0003](../adr/0003-no-separate-frontend-project.md) | No Separate Frontend Project |
 | [0004](../adr/0004-using-ai-coding-agents.md) | Using AI Coding Agents |
 | [0005](../adr/0005-markdown-rendering-library.md) | Markdown Rendering Library: marked |
+| [0006](../adr/0006-error-handling-concept.md) | Error Handling: DomainResult and DomainError |
 
 # Quality Requirements
 

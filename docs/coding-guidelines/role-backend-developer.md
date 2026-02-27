@@ -25,6 +25,44 @@ Outbox partitions: `spotify` and `domain`. See [arc42-EN.md](../arc42/arc42-EN.m
 
 CDI events (`jakarta.enterprise.event.Event`) serve as the internal bus between domain services and the `LiveUpdateService` (SSE).
 
+## Error Handling
+
+Domain failures use `DomainResult<T>` (see [ADR-0006](../adr/0006-error-handling-concept.md)).
+
+```kotlin
+// Port interface returns DomainResult<T>
+interface SpotifyAuthPort {
+    fun exchangeCode(code: String): DomainResult<SpotifyTokens>
+}
+
+// Adapter implementation catches all exceptions at the boundary
+@Suppress("TooGenericExceptionCaught")
+override fun exchangeCode(code: String): DomainResult<SpotifyTokens> {
+    return try {
+        // ... call external system ...
+        DomainResult.Success(tokens)
+    } catch (e: Exception) {
+        logger.error(e) { "Unexpected error during token exchange" }
+        DomainResult.Failure(AuthError.TOKEN_EXCHANGE_FAILED)
+    }
+}
+
+// Domain service chains results with flatMap / map
+fun handleCallback(code: String): LoginResult =
+    spotifyAuth.exchangeCode(code).flatMap { tokens ->
+        // ...
+        DomainResult.Success(userId)
+    }
+```
+
+**Rules:**
+- Port interfaces return `DomainResult<T>`.
+- Outbound adapters (`adapter-out-*`) catch all exceptions and return `DomainResult.Failure`. Always add `@Suppress("TooGenericExceptionCaught")` to the class.
+- Each domain area defines an `enum class : DomainError` in `domain-api`. Codes follow `<AREA>-<NNN>` (e.g. `AUTH-001`). The `-999` variant is the catch-all for unexpected errors.
+- Never add new prefixes without registering them in the error code table in [arc42-EN.md](../arc42/arc42-EN.md).
+- Error codes are stable once published. Deprecated codes are kept as `DEPRECATED_<NAME>`.
+- `DomainResult` helpers: `map`, `flatMap`, `getOrNull`, `errorOrNull`.
+
 ## Code Style
 
 ```kotlin

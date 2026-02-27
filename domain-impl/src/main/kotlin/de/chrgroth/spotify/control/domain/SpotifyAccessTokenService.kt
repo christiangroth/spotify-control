@@ -40,6 +40,7 @@ class SpotifyAccessTokenService(
         tokenEncryption.decrypt(user.encryptedRefreshToken).flatMap { plainRefresh ->
             spotifyAuth.refreshToken(RefreshToken(plainRefresh)).flatMap { refreshed ->
                 tokenEncryption.encrypt(refreshed.accessToken.value).flatMap { encAccess ->
+                    // Spotify may not rotate the refresh token; fall back to the existing encrypted value
                     val encRefreshResult = refreshed.refreshToken
                         ?.let { tokenEncryption.encrypt(it.value) }
                         ?: DomainResult.Success(user.encryptedRefreshToken)

@@ -21,7 +21,7 @@ class DomainErrorUniquenessTest {
     @Test
     fun `all DomainError codes follow prefix convention`() {
         allErrors.forEach { error ->
-            assertThat(error.code).matches(Regex("[A-Z]+-\\d{3}").toPattern())
+            assertThat(error.code).matches(Regex("^[A-Z]+-\\d{3}$").toPattern())
         }
     }
 }
