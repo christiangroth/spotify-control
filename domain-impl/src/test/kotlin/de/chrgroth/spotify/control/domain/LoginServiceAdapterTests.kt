@@ -84,4 +84,18 @@ class LoginServiceAdapterTests {
         assertThat((result as Either.Left).value).isEqualTo(AuthError.PROFILE_FETCH_FAILED)
         verify(exactly = 0) { userRepository.upsert(any()) }
     }
+
+    @Test
+    fun `unexpected exception during upsert returns UNEXPECTED error`() {
+        every { spotifyAuth.exchangeCode("code") } returns tokens.right()
+        every { spotifyAuth.getUserProfile(AccessToken("access")) } returns profile.right()
+        every { userService.isAllowed(UserId("user-1")) } returns true
+        every { tokenEncryption.encrypt(any()) } returns "encrypted".right()
+        every { userRepository.upsert(any()) } throws RuntimeException("DB connection failed")
+
+        val result = adapter.handleCallback("code")
+
+        assertThat(result.isLeft()).isTrue()
+        assertThat((result as Either.Left).value).isEqualTo(AuthError.UNEXPECTED)
+    }
 }
