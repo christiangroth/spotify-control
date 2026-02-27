@@ -1,1 +1,0 @@
-* implement-logging-system: Added logging across all relevant classes (info, warn, error) using KLogging.

@@ -1,3 +1,6 @@
+# 0.1.11 - 2026.02.27
+## New Features
+* implement-logging-system: Added logging across all relevant classes (info, warn, error) using KLogging.
 # 0.1.10 - 2026.02.26
 ## New Features
 * enhance-error-handling-concept: Added error handling concept document and ADR covering DomainError enum pattern and Arrow library evaluation.* implement-token-refresh: Implement Spotify OAuth 2.0 token refresh so access tokens are automatically renewed before expiry for all Spotify API calls.
