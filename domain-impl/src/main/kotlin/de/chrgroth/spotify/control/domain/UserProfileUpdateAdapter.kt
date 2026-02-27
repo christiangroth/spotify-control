@@ -8,7 +8,7 @@ import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
 
 @ApplicationScoped
-@Suppress("Unused")
+@Suppress("Unused", "TooGenericExceptionCaught")
 class UserProfileUpdateAdapter(
     private val userRepository: UserRepositoryPort,
     private val spotifyAccessToken: SpotifyAccessTokenPort,
