@@ -1,3 +1,6 @@
+# 0.2.2 - 2026.02.27
+## Bugfixes / Chore
+* fix-login-failure-error: Fix OAuth login callback returning 500 Internal Server Error on unexpected exceptions by catching them and redirecting to the error page.
 # 0.2.0 - 2026.02.27
 ## New Features
 * implement-error-handling-arrow: Implemented error handling using Arrow.
