@@ -6,12 +6,9 @@ plugins {
 
 dependencies {
   implementation(project(":adapter-in-web"))
-  implementation(project(":adapter-in-outbox"))
   implementation(project(":adapter-out-mongodb"))
-  implementation(project(":adapter-out-outbox"))
   implementation(project(":adapter-out-spotify"))
   implementation(project(":domain-impl"))
-  implementation(project(":util-outbox"))
 
   implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
 

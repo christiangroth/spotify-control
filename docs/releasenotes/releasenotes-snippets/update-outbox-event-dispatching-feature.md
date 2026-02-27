@@ -1,1 +1,1 @@
-* update-outbox-event-dispatching: Implement minimal outbox pattern using Kotlin Channel for wakeup signaling with Spotify partition and PollRecentlyPlayed event type.
+* update-outbox-event-dispatching: Update outbox concept design to use Kotlin Channel-based wakeup signalling instead of Semaphore, eliminating the 30s polling fallback.
