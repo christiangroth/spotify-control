@@ -1,1 +1,0 @@
-* implement-error-handling-arrow: Implemented error handling using Arrow.

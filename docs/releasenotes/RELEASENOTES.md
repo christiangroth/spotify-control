@@ -1,3 +1,6 @@
+# 0.2.0 - 2026.02.27
+## New Features
+* implement-error-handling-arrow: Implemented error handling using Arrow.
 # 0.1.11 - 2026.02.27
 ## New Features
 * implement-logging-system: Added logging across all relevant classes (info, warn, error) using KLogging.
