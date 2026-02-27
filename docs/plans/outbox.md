@@ -30,10 +30,11 @@ A full outbox can be built on top of the libraries and frameworks already presen
 |-----------------------------|-------------------------------------------------------------|
 | Persistent durable store    | MongoDB Atlas via `quarkus-mongodb-panache-kotlin`          |
 | Atomic claim / lock-free    | MongoDB `findOneAndUpdate` with status field                |
-| Scheduled polling           | Quarkus `@Scheduled` (MicroProfile)                        |
+| Event-driven wakeup         | `java.util.concurrent.Semaphore` (JDK standard library)    |
+| Background thread           | Quarkus `@Startup` + managed `ExecutorService`             |
 | Serialisation               | BSON / Jackson (already on classpath via Quarkus)           |
 | Result type for handlers    | Arrow `Either` (already in `domain-api`)                   |
-| CDI wiring for handlers     | Quarkus Arc / CDI                                           |
+| CDI wiring                  | Quarkus Arc / CDI                                           |
 
 **Conclusion: No additional dependencies are needed.**  
 Kafka, RabbitMQ, Debezium, and dedicated outbox libraries are all out of scope.
@@ -44,11 +45,11 @@ Kafka, RabbitMQ, Debezium, and dedicated outbox libraries are all out of scope.
 
 ```
 util-outbox          – Core logic and MongoDB persistence. Quarkus dependency only.
-adapter-in-outbox    – Drives domain processing: @Scheduled polling, startup recovery.
+adapter-in-outbox    – Drives domain processing: event-driven wakeup, exhaustive dispatch, startup recovery.
 adapter-out-outbox   – Write side: implements OutboxPort so domain services can enqueue tasks.
 adapter-out-spotify  – Spotify API client (no outbox handler responsibility).
-domain-impl          – Registers handlers for ALL partitions (spotify and domain).
-domain-api           – Defines OutboxPort (enqueue only) and the project's sealed event types.
+domain-impl          – Implements OutboxHandlerPort with one method per event type (all partitions).
+domain-api           – Defines OutboxPort, OutboxHandlerPort, and the project's sealed event types.
 ```
 
 ### `util-outbox`
@@ -65,10 +66,9 @@ Kotlin module with a Quarkus dependency for MongoDB Panache access (both already
 * `OutboxArchiveDocument` – Panache entity mapped to the `outbox_archive` collection.
 * `MongoOutboxRepository` – `@ApplicationScoped` implements `OutboxRepository` using
   `OutboxDocument` and `OutboxArchiveDocument`.
-* `OutboxTaskHandler<P>` – interface; each handler declares the partition and event type it
-  handles and receives a typed payload.
-* `OutboxProcessor` – orchestrates claim → deserialise → dispatch → complete/fail/retry for
-  one partition per `processBatch(partition, batchSize)` call.
+* `OutboxProcessor` – orchestrates claim → dispatch → complete/fail/retry for one partition.
+  Receives a `dispatch: (OutboxTask) -> Either<OutboxError, Unit>` function; has no knowledge
+  of specific event types or payload classes.
 * `RetryPolicy` – data class (maxAttempts, backoff list of Durations); injected into
   `OutboxProcessor`.
 
@@ -81,11 +81,20 @@ point.
 Inbound adapter – drives the domain by consuming the outbox. Depends on `util-outbox` and
 `domain-api`. Contains:
 
-* `OutboxScheduler` – `@ApplicationScoped` bean with `@Scheduled` methods, one per partition,
-  at different intervals. Each method calls `OutboxProcessor.processBatch(partition, ...)`.
+* `OutboxPartitionWorker` – one per partition; runs on a dedicated background thread started at
+  `@Startup`. The thread loops: call `OutboxProcessor.processNext(partition, dispatch)` →
+  if the outbox was empty (no task claimed), wait on a `Semaphore` with a safety-net timeout
+  (e.g. 30 s); otherwise continue immediately without sleeping.
 * `OutboxStartupRecovery` – `@Startup` bean that resets tasks stuck in `PROCESSING` status
   back to `PENDING` on application start (handles the previous-crash scenario).
-* CDI producer that wires all registered `OutboxTaskHandler` beans into the `OutboxProcessor`.
+* Exhaustive `when` dispatch: the `dispatch` function passed to `OutboxProcessor` deserialises
+  the raw JSON payload and calls the appropriate method on `OutboxHandlerPort` (from
+  `domain-api`) using a Kotlin exhaustive `when` on the sealed `AppOutboxEventType`. The
+  compiler enforces that every event type has a handler.
+
+The semaphore per partition is signalled by `OutboxPortAdapter` immediately after a task is
+enqueued, so processing begins without any fixed delay. The safety-net timeout ensures tasks
+added concurrently (or recovered on startup) are never silently missed.
 
 This module is an inbound adapter because it is the entry point that triggers domain work –
 analogous to a web request handler or a Kafka consumer.
@@ -95,7 +104,9 @@ analogous to a web request handler or a Kafka consumer.
 Outbound adapter – the write side. Depends on `domain-api` and `util-outbox`. Contains:
 
 * `OutboxPortAdapter` – `@ApplicationScoped` bean; implements `OutboxPort` by delegating to
-  `OutboxRepository.enqueue`. This is what domain services call to enqueue a task.
+  `OutboxRepository.enqueue`. After the insert it signals the per-partition semaphore held by
+  `adapter-in-outbox` so processing begins immediately. This is what domain services call to
+  enqueue a task.
 
 ### `adapter-out-spotify`
 
@@ -104,22 +115,37 @@ responsibility — it exposes ports that `domain-impl` handlers call to execute 
 
 ### `domain-impl`
 
-Implements `OutboxTaskHandler<P>` for **all** event types across both partitions:
+Implements `OutboxHandlerPort` (from `domain-api`) with one method per event type across both
+partitions:
 
-* Handlers for `AppOutboxPartition.Spotify` event types call `adapter-out-spotify` ports to
+* Methods for `AppOutboxPartition.Spotify` event types call `adapter-out-spotify` ports to
   perform the actual Spotify API operations (sync playlists, push edits, etc.).
-* Handlers for `AppOutboxPartition.Domain` event types execute enrichment, aggregation, and
+* Methods for `AppOutboxPartition.Domain` event types execute enrichment, aggregation, and
   invariant logic entirely within the domain layer.
-
-All handlers are CDI beans discovered automatically by `adapter-in-outbox`.
 
 ### `domain-api`
 
-Defines `OutboxPort` and the project-specific sealed event types:
+Defines `OutboxPort`, `OutboxHandlerPort`, and the project-specific sealed event types:
 
 ```kotlin
 interface OutboxPort {
     fun enqueue(partition: AppOutboxPartition, eventType: AppOutboxEventType, payload: Any)
+}
+
+// One method per AppOutboxEventType; exhaustive when in adapter-in-outbox guarantees
+// every event type is covered at compile time.
+interface OutboxHandlerPort {
+    fun handleSyncPlaylist(payload: SyncPlaylistPayload): Either<OutboxError, Unit>
+    fun handleSyncTrack(payload: SyncTrackPayload): Either<OutboxError, Unit>
+    fun handleSyncArtist(payload: SyncArtistPayload): Either<OutboxError, Unit>
+    fun handlePushPlaylistEdit(payload: PushPlaylistEditPayload): Either<OutboxError, Unit>
+    fun handlePollRecentlyPlayed(payload: PollRecentlyPlayedPayload): Either<OutboxError, Unit>
+    fun handleEnrichPlaybackEvents(payload: EnrichPlaybackEventsPayload): Either<OutboxError, Unit>
+    fun handleRecomputeAggregations(payload: RecomputeAggregationsPayload): Either<OutboxError, Unit>
+    fun handleApplyGenreOverride(payload: ApplyGenreOverridePayload): Either<OutboxError, Unit>
+    fun handleSyncPlaylistInvariant(payload: SyncPlaylistInvariantPayload): Either<OutboxError, Unit>
+    fun handleCheckAlbumUpgrades(payload: CheckAlbumUpgradesPayload): Either<OutboxError, Unit>
+    fun handleApplyAlbumUpgrade(payload: ApplyAlbumUpgradePayload): Either<OutboxError, Unit>
 }
 ```
 
@@ -205,14 +231,35 @@ Each handler is typed against a specific payload class and uses the base interfa
 live in `util-outbox`:
 
 ```kotlin
-// util-outbox
-interface OutboxTaskHandler<P : Any> {
-    val partition: OutboxPartition
-    val eventType: OutboxEventType
-    val payloadClass: KClass<P>
-    // Synchronous blocking call; Quarkus runs handlers on managed thread pool workers,
-    // so coroutines/suspend are not needed and would add a Kotlin coroutines dependency.
-    fun handle(payload: P): Either<OutboxError, Unit>
+// util-outbox – dispatch function received from adapter-in-outbox
+// OutboxProcessor.processNext calls it without knowing the concrete type
+fun processNext(
+    partition: OutboxPartition,
+    dispatch: (OutboxTask) -> Either<OutboxError, Unit>,
+): Boolean
+```
+
+`adapter-in-outbox` builds the `dispatch` lambda using an exhaustive `when` on the sealed
+`AppOutboxEventType`, ensuring at compile time that every event type has a handler:
+
+```kotlin
+// adapter-in-outbox
+val dispatch: (OutboxTask) -> Either<OutboxError, Unit> = { task ->
+    val payload = task.payload  // raw JSON String
+    when (AppOutboxEventType.fromKey(task.eventType)) {
+        AppOutboxEventType.SyncPlaylist          -> handlerPort.handleSyncPlaylist(deserialise(payload))
+        AppOutboxEventType.SyncTrack             -> handlerPort.handleSyncTrack(deserialise(payload))
+        AppOutboxEventType.SyncArtist            -> handlerPort.handleSyncArtist(deserialise(payload))
+        AppOutboxEventType.PushPlaylistEdit      -> handlerPort.handlePushPlaylistEdit(deserialise(payload))
+        AppOutboxEventType.PollRecentlyPlayed    -> handlerPort.handlePollRecentlyPlayed(deserialise(payload))
+        AppOutboxEventType.EnrichPlaybackEvents  -> handlerPort.handleEnrichPlaybackEvents(deserialise(payload))
+        AppOutboxEventType.RecomputeAggregations -> handlerPort.handleRecomputeAggregations(deserialise(payload))
+        AppOutboxEventType.ApplyGenreOverride    -> handlerPort.handleApplyGenreOverride(deserialise(payload))
+        AppOutboxEventType.SyncPlaylistInvariant -> handlerPort.handleSyncPlaylistInvariant(deserialise(payload))
+        AppOutboxEventType.CheckAlbumUpgrades    -> handlerPort.handleCheckAlbumUpgrades(deserialise(payload))
+        AppOutboxEventType.ApplyAlbumUpgrade     -> handlerPort.handleApplyAlbumUpgrade(deserialise(payload))
+        // Sealed when – compiler error if a new AppOutboxEventType is added without a branch
+    }
 }
 ```
 
@@ -233,7 +280,9 @@ transaction because the outbox is append-only at write time.
 
 ## Processing Tasks (Read/Execute Path)
 
-Processing is driven by `@Scheduled` jobs in `OutboxScheduler` (`adapter-in-outbox`).
+Processing is driven by `OutboxPartitionWorker` threads in `adapter-in-outbox` (one per
+partition). Each worker loops continuously on a background thread, sleeping only when the
+outbox is empty (see Partition Semantics and Scheduling).
 
 ### Claim
 
@@ -249,14 +298,15 @@ instance is ever added (because `findOneAndUpdate` is atomic at the document lev
 
 ### Dispatch
 
-`OutboxProcessor.processBatch(partition, batchSize)` (in `util-outbox`):
+`OutboxProcessor.processNext(partition, dispatch)` (in `util-outbox`):
 
-1. Claims up to `batchSize` tasks for the given partition in a loop.
-2. For each claimed task: finds the matching handler by `eventType`, deserialises the payload,
-   calls `handler.handle(payload)`.
-3. On `Either.Right` (success): calls `OutboxRepository.complete(task)` which inserts into
+1. Claims one task for the given partition.
+2. If no task is available, returns `false` (caller will park the thread).
+3. If a task was claimed: calls `dispatch(task)` – the function provided by `adapter-in-outbox`.
+4. On `Either.Right` (success): calls `OutboxRepository.complete(task)` which inserts into
    `outbox_archive` and deletes from `outbox`.
-4. On `Either.Left` (failure): calls `OutboxRepository.fail(task, error, nextRetryAt)`.
+5. On `Either.Left` (failure): calls `OutboxRepository.fail(task, error, nextRetryAt)`.
+6. Returns `true` so the caller loops immediately for the next task.
 
 ### Stale task recovery
 
@@ -272,12 +322,13 @@ Configured via `RetryPolicy` (injected, overridable per partition):
 
 | Attempt | Delay before next retry                                 |
 |---------|---------------------------------------------------------|
-| 1 → 2   | 1 minute                                               |
-| 2 → 3   | 5 minutes                                              |
-| 3 → 4   | 30 minutes                                             |
-| ≥ 4     | task status set to `FAILED` (no more automatic retries) |
+| 1 → 2   | 5 seconds                                              |
+| 2 → 3   | 10 seconds                                             |
+| 3 → 4   | 30 seconds                                             |
+| 4 → 5   | 60 seconds                                             |
+| ≥ 5     | task status set to `FAILED` (no more automatic retries) |
 
-Default `maxAttempts = 4` (one initial attempt plus three retries). On reaching `maxAttempts`, the task remains in the `outbox` collection
+Default `maxAttempts = 5` (one initial attempt plus four retries). On reaching `maxAttempts`, the task remains in the `outbox` collection
 with `status = FAILED`. It is visible in the dashboard and can be retried manually by resetting its
 status to `PENDING` via an admin action (future work) or direct MongoDB operation.
 
@@ -285,13 +336,35 @@ status to `PENDING` via an admin action (future work) or direct MongoDB operatio
 
 ## Partition Semantics and Scheduling
 
-| Partition | Poll interval | Batch size | Rationale                                              |
-|-----------|--------------|------------|--------------------------------------------------------|
-| `spotify` | 2 seconds    | 1          | One Spotify call at a time; token bucket enforces ~50 req/30 s |
-| `domain`  | 5 seconds    | 5          | CPU-bound enrichment; batching reduces scheduler overhead |
+Partitions are processed by independent `OutboxPartitionWorker` background threads. Each
+worker uses an event-driven approach instead of fixed-interval polling:
 
-Partitions are processed in independent `@Scheduled` methods with independent error handling.
-A handler failure in the `spotify` partition does not affect `domain` processing.
+```
+while (running) {
+    val processed = processor.processNext(partition, dispatch)
+    if (!processed) {
+        // Outbox empty – park until signalled or safety-net timeout expires
+        semaphore.tryAcquire(30, TimeUnit.SECONDS)
+    }
+    // If processed==true, loop immediately to drain the queue without sleeping
+}
+```
+
+The `Semaphore` is signalled by `OutboxPortAdapter.enqueue()` immediately after inserting a
+new task. This means:
+
+* **Zero idle CPU** – the thread parks when there is nothing to do.
+* **Zero extra latency** – processing starts as soon as a task is enqueued.
+* **Safety net** – the 30 s timeout wakes the thread even if a signal is missed (e.g. after
+  startup recovery resets stale tasks, or in a concurrent edge case).
+
+| Partition | Safety-net timeout | Batch approach | Rationale                                              |
+|-----------|-------------------|----------------|--------------------------------------------------------|
+| `spotify` | 30 seconds        | One at a time  | One Spotify call at a time; token bucket enforces ~50 req/30 s |
+| `domain`  | 30 seconds        | One at a time, loop drains queue | CPU-bound enrichment; no artificial delay needed |
+
+A handler failure in the `spotify` partition does not affect `domain` processing because each
+partition has its own worker thread and semaphore.
 
 ---
 
@@ -313,6 +386,7 @@ A handler failure in the `spotify` partition does not affect `domain` processing
 ```
 domain-api
     ├── OutboxPort (enqueue interface for domain services)
+    ├── OutboxHandlerPort (one method per AppOutboxEventType; implemented by domain-impl)
     ├── OutboxMetricsPort (read-only metrics interface for the dashboard)
     ├── AppOutboxPartition (sealed, extends OutboxPartition from util-outbox)
     └── AppOutboxEventType (sealed, extends OutboxEventType from util-outbox)
@@ -324,26 +398,26 @@ util-outbox
     ├── OutboxRepository (interface)
     ├── MongoOutboxRepository (implements OutboxRepository)
     ├── OutboxDocument, OutboxArchiveDocument (Panache entities)
-    ├── OutboxTaskHandler<P> (interface)
-    ├── OutboxProcessor (core dispatch logic)
+    ├── OutboxProcessor (claim/complete/fail lifecycle; dispatch is a passed-in function)
     └── RetryPolicy
 
 adapter-in-outbox
     ├── depends on: domain-api, util-outbox
-    ├── OutboxScheduler        (@Scheduled → calls OutboxProcessor per partition)
-    └── OutboxStartupRecovery  (@Startup → resets stale PROCESSING tasks)
+    ├── OutboxPartitionWorker  (background thread per partition; event-driven wakeup via Semaphore)
+    ├── OutboxStartupRecovery  (@Startup → resets stale PROCESSING tasks)
+    └── exhaustive when dispatch (AppOutboxEventType → OutboxHandlerPort method)
 
 adapter-out-outbox
     ├── depends on: domain-api, util-outbox
-    └── OutboxPortAdapter      (implements OutboxPort → delegates to OutboxRepository.enqueue)
+    └── OutboxPortAdapter      (implements OutboxPort → delegates to OutboxRepository.enqueue + signals Semaphore)
 
 adapter-out-spotify
     ├── depends on: domain-api
-    └── Spotify API client ports (called by domain-impl handlers, no outbox handler impl)
+    └── Spotify API client ports (called by domain-impl handler methods, no outbox responsibility)
 
 domain-impl
-    ├── depends on: domain-api, util-outbox, adapter-out-spotify
-    └── Handlers for ALL AppOutboxEventType values (both Spotify and Domain partitions)
+    ├── depends on: domain-api, adapter-out-spotify
+    └── OutboxHandlerImpl      (implements OutboxHandlerPort; all methods for all event types)
 ```
 
 `adapter-out-mongodb` has no outbox-specific content; it remains exclusively for application
@@ -368,9 +442,10 @@ display to the user. This is a read-only query exposed via a dedicated `OutboxMe
 | Test type              | Location              | Scope                                                                          |
 |------------------------|-----------------------|--------------------------------------------------------------------------------|
 | Unit – processor logic | `util-outbox`         | Retry policy application, claim → dispatch → complete/fail cycle with in-memory `OutboxRepository` stub |
-| Unit – handler logic   | `domain-impl` | Each handler in isolation with a mock Spotify/domain port |
+| Unit – handler logic   | `domain-impl`         | Each `OutboxHandlerPort` method in isolation with a mock Spotify/domain port   |
+| Unit – dispatch wiring | `adapter-in-outbox`   | Exhaustive `when` routes each `AppOutboxEventType` to the correct `OutboxHandlerPort` method |
 | Integration – MongoDB  | `application-quarkus` | `MongoOutboxRepository` against embedded MongoDB; verifies claim atomicity, archive insertion |
-| Contract – event types | `application-quarkus` | Asserts that each `AppOutboxEventType` has a registered handler; fails the build if a handler is missing |
+| Contract – event types | `application-quarkus` | Asserts that each `AppOutboxEventType` has a corresponding method in `OutboxHandlerPort`; fails the build if a new event type is added without updating the port |
 | Contract – payload schema | `application-quarkus` | Round-trip serialise/deserialise each payload class; detects breaking schema changes |
 
 ---
