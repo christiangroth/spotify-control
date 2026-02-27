@@ -42,20 +42,13 @@ jobs:
           export DOCKER_TAG=$(docker images ghcr.io/christiangroth/spotify-control/quarkus --format "{{.Tag}} {{.CreatedAt}}" | sort -rk 2 | awk 'NR==1{print $1}')
           echo "DOCKER_TAG=$DOCKER_TAG" >> $GITHUB_ENV
           echo "Computed docker tag for next deployment $DOCKER_TAG"
-      - name: Copy docker stack file to VPS
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.CONTABO_SSH_HOST }}
-          username: ${{ secrets.CONTABO_SSH_USER }}
-          key: ${{ secrets.CONTABO_SSH_PRIVATE_KEY }}
-          port: 22
-          source: "deploy/docker-stack.yml"
-          target: "~/spotify-control/"
-          strip_components: 1
+      - name: Encode docker stack file
+        run: echo "DOCKER_STACK_FILE=$(base64 -w 0 deploy/docker-stack.yml)" >> $GITHUB_ENV
       - uses: appleboy/ssh-action@v1.0.3
         env:
           DOCKER_STACK: "spotify-control"
           DOCKER_TAG: ${{ env.DOCKER_TAG }}
+          DOCKER_STACK_FILE: ${{ env.DOCKER_STACK_FILE }}
           MONGODB_CONNECTION_STRING: ${{ secrets.MONGODB_CONNECTION_STRING }}
           SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
           SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
@@ -70,9 +63,13 @@ jobs:
           username: ${{ secrets.CONTABO_SSH_USER }}
           key: ${{ secrets.CONTABO_SSH_PRIVATE_KEY }}
           port: 22
-          envs: DOCKER_STACK,DOCKER_TAG,MONGODB_CONNECTION_STRING,SPOTIFY_CLIENT_ID,SPOTIFY_CLIENT_SECRET,APP_OAUTH_REDIRECT_URI,APP_ALLOWED_SPOTIFY_USER_IDS,APP_TOKEN_ENCRYPTION_KEY,HTTP_AUTH_ENCRYPTION_KEY,TRAEFIK_HTTP_ROUTERS_SPOTIFYCONTROL_RULE,GHCR_PAT
+          envs: DOCKER_STACK,DOCKER_TAG,DOCKER_STACK_FILE,MONGODB_CONNECTION_STRING,SPOTIFY_CLIENT_ID,SPOTIFY_CLIENT_SECRET,APP_OAUTH_REDIRECT_URI,APP_ALLOWED_SPOTIFY_USER_IDS,APP_TOKEN_ENCRYPTION_KEY,HTTP_AUTH_ENCRYPTION_KEY,TRAEFIK_HTTP_ROUTERS_SPOTIFYCONTROL_RULE,GHCR_PAT
           script_stop: true
           script: |
+            echo "writing docker stack file"
+            mkdir -p ~/$DOCKER_STACK
+            echo "$DOCKER_STACK_FILE" | base64 -d > ~/$DOCKER_STACK/docker-stack.yml
+
             echo "login to ghcr.io"
             echo $GHCR_PAT | docker login ghcr.io -u christiangroth --password-stdin
 
