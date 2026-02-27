@@ -14,6 +14,9 @@ class UserRepositoryAdapter : UserRepositoryPort {
     override fun findById(spotifyUserId: UserId): User? =
         UserDocument.findById(spotifyUserId.value)?.toDomain()
 
+    override fun findAll(): List<User> =
+        UserDocument.listAll().map { it.toDomain() }
+
     override fun upsert(user: User) {
         val existing = UserDocument.findById(user.spotifyUserId.value)
         if (existing == null) {

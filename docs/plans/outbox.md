@@ -30,13 +30,13 @@ A full outbox can be built on top of the libraries and frameworks already presen
 |-----------------------------|-------------------------------------------------------------|
 | Persistent durable store    | MongoDB Atlas via `quarkus-mongodb-panache-kotlin`          |
 | Atomic claim / lock-free    | MongoDB `findOneAndUpdate` with status field                |
-| Event-driven wakeup         | `java.util.concurrent.Semaphore` (JDK standard library)    |
-| Background thread           | Quarkus `@Startup` + managed `ExecutorService`             |
+| Event-driven wakeup         | `kotlinx.coroutines.channels.Channel` (Kotlin coroutines)  |
+| Background coroutine        | Quarkus `StartupEvent` + `CoroutineScope(Dispatchers.IO)`  |
 | Serialisation               | BSON / Jackson (already on classpath via Quarkus)           |
 | Result type for handlers    | Arrow `Either` (already in `domain-api`)                   |
 | CDI wiring                  | Quarkus Arc / CDI                                           |
 
-**Conclusion: No additional dependencies are needed.**  
+**Conclusion: `kotlinx-coroutines-core` is the only additional dependency needed.**  
 Kafka, RabbitMQ, Debezium, and dedicated outbox libraries are all out of scope.
 
 ---
@@ -81,20 +81,22 @@ point.
 Inbound adapter – drives the domain by consuming the outbox. Depends on `util-outbox` and
 `domain-api`. Contains:
 
-* `OutboxPartitionWorker` – one per partition; runs on a dedicated background thread started at
-  `@Startup`. The thread loops: call `OutboxProcessor.processNext(partition, dispatch)` →
-  if the outbox was empty (no task claimed), wait on a `Semaphore` with a safety-net timeout
-  (e.g. 30 s); otherwise continue immediately without sleeping.
-* `OutboxStartupRecovery` – `@Startup` bean that resets tasks stuck in `PROCESSING` status
-  back to `PENDING` on application start (handles the previous-crash scenario).
+* `OutboxPartitionWorker` – one per partition; runs as a coroutine launched at `StartupEvent`.
+  The coroutine loops: `channel.receive()` to wait for a wakeup signal, then calls
+  `OutboxProcessor.processNext(partition, dispatch)` in a loop until the queue is drained.
+  No fixed polling timeout is needed – the `Channel` provides reliable signal delivery.
+* `OutboxStartupRecovery` – bean that resets tasks stuck in `PROCESSING` status back to
+  `PENDING` on application start (handles the previous-crash scenario), then signals each
+  partition channel so workers wake up and process any recovered tasks.
 * Exhaustive `when` dispatch: the `dispatch` function passed to `OutboxProcessor` deserialises
   the raw JSON payload and calls the appropriate method on `OutboxHandlerPort` (from
   `domain-api`) using a Kotlin exhaustive `when` on the sealed `AppOutboxEventType`. The
   compiler enforces that every event type has a handler.
 
-The semaphore per partition is signalled by `OutboxPortAdapter` immediately after a task is
-enqueued, so processing begins without any fixed delay. The safety-net timeout ensures tasks
-added concurrently (or recovered on startup) are never silently missed.
+The `Channel<Unit>(Channel.CONFLATED)` per partition is signalled by `OutboxPortAdapter`
+immediately after a task is enqueued, so processing begins without any fixed delay. Using
+`Channel.CONFLATED` means multiple rapid enqueues coalesce into a single wakeup, and the
+worker drains the full queue before returning to `receive()`.
 
 This module is an inbound adapter because it is the entry point that triggers domain work –
 analogous to a web request handler or a Kafka consumer.
@@ -104,9 +106,9 @@ analogous to a web request handler or a Kafka consumer.
 Outbound adapter – the write side. Depends on `domain-api` and `util-outbox`. Contains:
 
 * `OutboxPortAdapter` – `@ApplicationScoped` bean; implements `OutboxPort` by delegating to
-  `OutboxRepository.enqueue`. After the insert it signals the per-partition semaphore held by
-  `adapter-in-outbox` so processing begins immediately. This is what domain services call to
-  enqueue a task.
+  `OutboxRepository.enqueue`. After the insert it signals the per-partition `Channel<Unit>` in
+  `OutboxWakeupService` so the coroutine worker wakes up immediately. This is what domain
+  services call to enqueue a task.
 
 ### `adapter-out-spotify`
 
@@ -336,35 +338,42 @@ status to `PENDING` via an admin action (future work) or direct MongoDB operatio
 
 ## Partition Semantics and Scheduling
 
-Partitions are processed by independent `OutboxPartitionWorker` background threads. Each
-worker uses an event-driven approach instead of fixed-interval polling:
+Partitions are processed by independent `OutboxPartitionWorker` coroutines, one per partition.
+Each worker uses a `Channel<Unit>(Channel.CONFLATED)` for event-driven wakeup:
 
-```
-while (running) {
-    val processed = processor.processNext(partition, dispatch)
-    if (!processed) {
-        // Outbox empty – park until signalled or safety-net timeout expires
-        semaphore.tryAcquire(30, TimeUnit.SECONDS)
-    }
-    // If processed==true, loop immediately to drain the queue without sleeping
+```kotlin
+while (isActive) {
+    channel.receive()           // suspend until signalled
+    do {
+        val processed = processor.processNext(partition, dispatch)
+    } while (processed && isActive)
+    // Queue drained – return to receive() and suspend
 }
 ```
 
-The `Semaphore` is signalled by `OutboxPortAdapter.enqueue()` immediately after inserting a
-new task. This means:
+`isActive` is a standard Kotlin coroutines property that reflects the liveness of the coroutine's
+`Job`. It becomes `false` when the `CoroutineScope` owning the worker is cancelled, which is how
+graceful shutdown is achieved: cancelling the scope (e.g. in a Quarkus `@PreDestroy` lifecycle
+callback) propagates cancellation to all partition worker coroutines, causing the `while (isActive)`
+guard and any in-progress `channel.receive()` suspension to exit cleanly.
 
-* **Zero idle CPU** – the thread parks when there is nothing to do.
+The channel is signalled by `OutboxPortAdapter.enqueue()` immediately after inserting a new
+task, and by `OutboxStartupRecovery` once on startup after resetting stale tasks. Using
+`Channel.CONFLATED` means multiple rapid enqueues coalesce into a single wakeup signal, and the
+worker drains the full queue in a tight loop before suspending again. This means:
+
+* **Zero idle CPU** – the coroutine suspends when there is nothing to do.
 * **Zero extra latency** – processing starts as soon as a task is enqueued.
-* **Safety net** – the 30 s timeout wakes the thread even if a signal is missed (e.g. after
-  startup recovery resets stale tasks, or in a concurrent edge case).
+* **No polling fallback needed** – `Channel` delivers signals reliably; the startup signal
+  covers the stale-task recovery case without a 30-second timeout.
 
-| Partition | Safety-net timeout | Batch approach | Rationale                                              |
-|-----------|-------------------|----------------|--------------------------------------------------------|
-| `spotify` | 30 seconds        | One at a time  | One Spotify call at a time; token bucket enforces ~50 req/30 s |
-| `domain`  | 30 seconds        | One at a time, loop drains queue | CPU-bound enrichment; no artificial delay needed |
+| Partition | Wakeup mechanism            | Batch approach               | Rationale                                              |
+|-----------|------------------------------|------------------------------|--------------------------------------------------------|
+| `spotify` | `Channel<Unit>(CONFLATED)`   | One at a time                | One Spotify call at a time; token bucket enforces ~50 req/30 s |
+| `domain`  | `Channel<Unit>(CONFLATED)`   | Loop drains queue            | CPU-bound enrichment; no artificial delay needed |
 
 A handler failure in the `spotify` partition does not affect `domain` processing because each
-partition has its own worker thread and semaphore.
+partition has its own coroutine and channel.
 
 ---
 
@@ -398,18 +407,19 @@ util-outbox
     ├── OutboxRepository (interface)
     ├── MongoOutboxRepository (implements OutboxRepository)
     ├── OutboxDocument, OutboxArchiveDocument (Panache entities)
-    ├── OutboxProcessor (claim/complete/fail lifecycle; dispatch is a passed-in function)
-    └── RetryPolicy
+    ├── OutboxProcessor (claim/complete/fail lifecycle; dispatch is a passed-in function using Result<Unit>)
+    ├── RetryPolicy
+    └── OutboxWakeupService (Channel<Unit>(CONFLATED) per partition; signal() called by adapter-out-outbox)
 
 adapter-in-outbox
     ├── depends on: domain-api, util-outbox
-    ├── OutboxPartitionWorker  (background thread per partition; event-driven wakeup via Semaphore)
-    ├── OutboxStartupRecovery  (@Startup → resets stale PROCESSING tasks)
+    ├── OutboxPartitionWorker  (coroutine per partition; wakeup via Channel.receive() – no polling)
+    ├── OutboxStartupRecovery  (StartupEvent → resets stale PROCESSING tasks + signals each channel)
     └── exhaustive when dispatch (AppOutboxEventType → OutboxHandlerPort method)
 
 adapter-out-outbox
     ├── depends on: domain-api, util-outbox
-    └── OutboxPortAdapter      (implements OutboxPort → delegates to OutboxRepository.enqueue + signals Semaphore)
+    └── OutboxPortAdapter      (implements OutboxPort → delegates to OutboxRepository.enqueue + signals Channel)
 
 adapter-out-spotify
     ├── depends on: domain-api
