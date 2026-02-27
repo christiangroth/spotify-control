@@ -8,8 +8,7 @@
 
 # Spotify Connect
 
-- Define Spotify OAuth App
-- Add missing deployment params as GitHub Actions secrets
+- Fix login
 
 # Playback data gathering
 
