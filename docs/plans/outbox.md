@@ -46,8 +46,8 @@ Kafka, RabbitMQ, Debezium, and dedicated outbox libraries are all out of scope.
 util-outbox          – Core logic and MongoDB persistence. Quarkus dependency only.
 adapter-in-outbox    – Drives domain processing: @Scheduled polling, startup recovery.
 adapter-out-outbox   – Write side: implements OutboxPort so domain services can enqueue tasks.
-adapter-out-spotify  – Registers handlers for the spotify partition.
-domain-impl          – Registers handlers for the domain partition.
+adapter-out-spotify  – Spotify API client (no outbox handler responsibility).
+domain-impl          – Registers handlers for ALL partitions (spotify and domain).
 domain-api           – Defines OutboxPort (enqueue only) and the project's sealed event types.
 ```
 
@@ -99,12 +99,19 @@ Outbound adapter – the write side. Depends on `domain-api` and `util-outbox`. 
 
 ### `adapter-out-spotify`
 
-Implements `OutboxTaskHandler<P>` for each event type in the `spotify` partition.
-Handlers are CDI beans discovered automatically by `adapter-in-outbox`.
+Provides the Spotify API client implementation (outbound HTTP calls). It has no outbox handler
+responsibility — it exposes ports that `domain-impl` handlers call to execute Spotify operations.
 
 ### `domain-impl`
 
-Implements `OutboxTaskHandler<P>` for each event type in the `domain` partition.
+Implements `OutboxTaskHandler<P>` for **all** event types across both partitions:
+
+* Handlers for `AppOutboxPartition.Spotify` event types call `adapter-out-spotify` ports to
+  perform the actual Spotify API operations (sync playlists, push edits, etc.).
+* Handlers for `AppOutboxPartition.Domain` event types execute enrichment, aggregation, and
+  invariant logic entirely within the domain layer.
+
+All handlers are CDI beans discovered automatically by `adapter-in-outbox`.
 
 ### `domain-api`
 
@@ -331,12 +338,12 @@ adapter-out-outbox
     └── OutboxPortAdapter      (implements OutboxPort → delegates to OutboxRepository.enqueue)
 
 adapter-out-spotify
-    ├── depends on: util-outbox, domain-api
-    └── Handlers for AppOutboxPartition.Spotify event types
+    ├── depends on: domain-api
+    └── Spotify API client ports (called by domain-impl handlers, no outbox handler impl)
 
 domain-impl
-    ├── depends on: domain-api, util-outbox
-    └── Handlers for AppOutboxPartition.Domain event types
+    ├── depends on: domain-api, util-outbox, adapter-out-spotify
+    └── Handlers for ALL AppOutboxEventType values (both Spotify and Domain partitions)
 ```
 
 `adapter-out-mongodb` has no outbox-specific content; it remains exclusively for application
@@ -361,7 +368,7 @@ display to the user. This is a read-only query exposed via a dedicated `OutboxMe
 | Test type              | Location              | Scope                                                                          |
 |------------------------|-----------------------|--------------------------------------------------------------------------------|
 | Unit – processor logic | `util-outbox`         | Retry policy application, claim → dispatch → complete/fail cycle with in-memory `OutboxRepository` stub |
-| Unit – handler logic   | `adapter-out-spotify`, `domain-impl` | Each handler in isolation with a mock Spotify/domain port |
+| Unit – handler logic   | `domain-impl` | Each handler in isolation with a mock Spotify/domain port |
 | Integration – MongoDB  | `application-quarkus` | `MongoOutboxRepository` against embedded MongoDB; verifies claim atomicity, archive insertion |
 | Contract – event types | `application-quarkus` | Asserts that each `AppOutboxEventType` has a registered handler; fails the build if a handler is missing |
 | Contract – payload schema | `application-quarkus` | Round-trip serialise/deserialise each payload class; detects breaking schema changes |
