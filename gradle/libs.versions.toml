@@ -10,6 +10,7 @@ junit = "6.0.3"
 kotlin = "2.3.10"
 kotlinLogging = "3.0.5"
 kotlinxDatetime = "0.7.1"
+kotlinxCoroutines = "1.10.2"
 kover = "0.6.1"
 mockk = "1.14.9"
 openapiGenerator = "7.20.0"
@@ -28,6 +29,7 @@ junit = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
 kotlinGradlePlugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 kotlinLogging = { module = "io.github.microutils:kotlin-logging", version.ref = "kotlinLogging" }
 kotlinxDatetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime-jvm", version.ref = "kotlinxDatetime" }
+kotlinxCoroutinesCore = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
 kover = { module = "org.jetbrains.kotlinx:kover", version.ref = "kover" }
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 quarkusAgroal = { module = "io.quarkus:quarkus-agroal" }
