@@ -38,7 +38,6 @@ class SpotifyAuthAdapter(
     private val objectMapper = ObjectMapper()
 
     override fun exchangeCode(code: String): SpotifyTokens {
-        logger.info { "Exchanging authorization code for tokens" }
         val body = "grant_type=authorization_code" +
             "&code=${URLEncoder.encode(code, "UTF-8")}" +
             "&redirect_uri=${URLEncoder.encode(redirectUri, "UTF-8")}"
@@ -51,14 +50,16 @@ class SpotifyAuthAdapter(
     }
 
     override fun getUserProfile(accessToken: AccessToken): SpotifyProfile {
-        logger.info { "Fetching Spotify user profile" }
         val request = HttpRequest.newBuilder()
             .uri(URI.create("$apiBaseUrl/v1/me"))
             .header("Authorization", "Bearer ${accessToken.value}")
             .GET()
             .build()
         val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
-        check(response.statusCode() == HTTP_OK) { "Spotify profile fetch failed: ${response.statusCode()}" }
+        if (response.statusCode() != HTTP_OK) {
+            logger.error { "Spotify profile fetch failed: ${response.statusCode()}" }
+            error("Spotify profile fetch failed: ${response.statusCode()}")
+        }
         val json: JsonNode = objectMapper.readTree(response.body())
         return SpotifyProfile(
             id = SpotifyProfileId(json.get("id").asText()),
@@ -67,7 +68,6 @@ class SpotifyAuthAdapter(
     }
 
     override fun refreshToken(refreshToken: RefreshToken): SpotifyRefreshedTokens {
-        logger.info { "Refreshing Spotify access token" }
         val body = "grant_type=refresh_token" +
             "&refresh_token=${URLEncoder.encode(refreshToken.value, "UTF-8")}"
         val json = postTokenEndpoint(body)
@@ -87,7 +87,10 @@ class SpotifyAuthAdapter(
             .POST(HttpRequest.BodyPublishers.ofString(body))
             .build()
         val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
-        check(response.statusCode() == HTTP_OK) { "Spotify token endpoint request failed: ${response.statusCode()}" }
+        if (response.statusCode() != HTTP_OK) {
+            logger.error { "Spotify token endpoint request failed: ${response.statusCode()}" }
+            error("Spotify token endpoint request failed: ${response.statusCode()}")
+        }
         return objectMapper.readTree(response.body())
     }
 

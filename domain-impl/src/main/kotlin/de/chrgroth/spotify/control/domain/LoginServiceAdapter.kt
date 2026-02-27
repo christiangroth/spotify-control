@@ -44,7 +44,6 @@ class LoginServiceAdapter(
             )
         )
 
-        logger.info { "User logged in successfully: ${userId.value}" }
         return LoginResult.Success(userId)
     }
 

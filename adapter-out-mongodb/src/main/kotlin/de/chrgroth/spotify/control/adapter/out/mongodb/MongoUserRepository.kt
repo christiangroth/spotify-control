@@ -11,10 +11,8 @@ import mu.KLogging
 @ApplicationScoped
 class UserRepositoryAdapter : UserRepositoryPort {
 
-    override fun findById(spotifyUserId: UserId): User? {
-        logger.info { "Finding user by id: ${spotifyUserId.value}" }
-        return UserDocument.findById(spotifyUserId.value)?.toDomain()
-    }
+    override fun findById(spotifyUserId: UserId): User? =
+        UserDocument.findById(spotifyUserId.value)?.toDomain()
 
     override fun upsert(user: User) {
         val existing = UserDocument.findById(user.spotifyUserId.value)

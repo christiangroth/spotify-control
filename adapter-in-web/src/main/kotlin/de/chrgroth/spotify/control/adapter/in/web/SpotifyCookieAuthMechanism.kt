@@ -28,17 +28,15 @@ class SpotifyCookieAuthMechanism(
         return try {
             val userId = UserId(tokenEncryption.decrypt(cookieValue))
             if (userRepository.findById(userId) == null) {
-                logger.warn { "Authentication failed: user not found: ${userId.value}" }
+                logger.error { "Authentication failed: user not found: ${userId.value}" }
                 return Uni.createFrom().optional(Optional.empty())
             }
-            logger.info { "User authenticated: ${userId.value}" }
             val identity = QuarkusSecurityIdentity.builder()
                 .setPrincipal(Principal { userId.value })
                 .setAnonymous(false)
                 .build()
             Uni.createFrom().item(identity)
         } catch (_: Exception) {
-            logger.warn { "Authentication failed: invalid session cookie" }
             Uni.createFrom().optional(Optional.empty())
         }
     }

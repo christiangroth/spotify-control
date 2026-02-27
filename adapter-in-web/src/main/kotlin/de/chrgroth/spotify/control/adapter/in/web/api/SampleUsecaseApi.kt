@@ -1,4 +1,4 @@
-package de.chrgroth.spotify.control.adapter.`in`.web
+package de.chrgroth.spotify.control.adapter.`in`.web.api
 
 import de.chrgroth.spotify.control.adapter.incoming.web.api.SampleApi
 import de.chrgroth.spotify.control.adapter.incoming.web.api.model.HelloResponse
