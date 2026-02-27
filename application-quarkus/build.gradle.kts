@@ -5,6 +5,7 @@ plugins {
 }
 
 dependencies {
+  implementation(project(":adapter-in-scheduler"))
   implementation(project(":adapter-in-web"))
   implementation(project(":adapter-out-mongodb"))
   implementation(project(":adapter-out-spotify"))
@@ -15,7 +16,6 @@ dependencies {
   api(enforcedPlatform(libs.quarkusBom))
   implementation("io.quarkus:quarkus-arc")
   implementation("io.quarkus:quarkus-kotlin")
-  implementation("io.quarkus:quarkus-scheduler")
   implementation("io.quarkus:quarkus-smallrye-health")
   implementation("io.quarkus:quarkus-micrometer-registry-prometheus")
   implementation("io.quarkus:quarkus-container-image-docker")

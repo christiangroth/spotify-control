@@ -22,7 +22,7 @@ class UserProfileUpdateAdapter(
             try {
                 val accessToken = spotifyAccessToken.getValidAccessToken(user.spotifyUserId)
                 spotifyAuth.getUserProfile(accessToken).fold(
-                    ifLeft = { logger.warn { "Failed to fetch profile for user ${user.spotifyUserId.value}: ${it.code}" } },
+                    ifLeft = { logger.error { "Failed to fetch profile for user ${user.spotifyUserId.value}: ${it.code}" } },
                     ifRight = { profile ->
                         if (profile.displayName != user.displayName) {
                             logger.info { "Updating displayName for user ${user.spotifyUserId.value}" }

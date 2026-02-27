@@ -1,4 +1,4 @@
-package de.chrgroth.spotify.control.application.quarkus
+package de.chrgroth.spotify.control.adapter.`in`.scheduler
 
 import de.chrgroth.spotify.control.domain.port.`in`.UserProfileUpdatePort
 import io.quarkus.scheduler.Scheduled
@@ -11,7 +11,7 @@ class UserProfileUpdateJob(
     private val userProfileUpdate: UserProfileUpdatePort,
 ) {
 
-    @Scheduled(cron = "0 0 4 * * ?")
+    @Scheduled(cron = "0 0 4 * * ?") // every day at 4am
     fun run() {
         logger.info { "Running scheduled user profile update" }
         userProfileUpdate.updateUserProfiles()
