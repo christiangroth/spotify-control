@@ -57,7 +57,7 @@ class SpotifyAuthAdapter(
             .build()
         val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
         if (response.statusCode() != HTTP_OK) {
-            logger.error { "Spotify profile fetch failed: ${response.statusCode()}" }
+            logger.error { "Spotify profile fetch failed: ${response.statusCode()} - ${response.body()}" }
             error("Spotify profile fetch failed: ${response.statusCode()}")
         }
         val json: JsonNode = objectMapper.readTree(response.body())
@@ -88,7 +88,7 @@ class SpotifyAuthAdapter(
             .build()
         val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
         if (response.statusCode() != HTTP_OK) {
-            logger.error { "Spotify token endpoint request failed: ${response.statusCode()}" }
+            logger.error { "Spotify token endpoint request failed: ${response.statusCode()} - ${response.body()}" }
             error("Spotify token endpoint request failed: ${response.statusCode()}")
         }
         return objectMapper.readTree(response.body())
