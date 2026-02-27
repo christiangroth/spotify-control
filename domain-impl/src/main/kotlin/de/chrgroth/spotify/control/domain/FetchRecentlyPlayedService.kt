@@ -32,6 +32,7 @@ class FetchRecentlyPlayedService(
                     spotifyUserId = userId,
                     trackId = track.trackId,
                     trackName = track.trackName,
+                    artistIds = track.artistIds,
                     artistNames = track.artistNames,
                     playedAt = track.playedAt,
                 )
@@ -39,8 +40,6 @@ class FetchRecentlyPlayedService(
         if (newItems.isNotEmpty()) {
             logger.info { "Persisting ${newItems.size} new recently played items for user: ${userId.value}" }
             recentlyPlayedRepository.saveAll(newItems)
-        } else {
-            logger.info { "No new recently played items for user: ${userId.value}" }
         }
         newItems.size
     }

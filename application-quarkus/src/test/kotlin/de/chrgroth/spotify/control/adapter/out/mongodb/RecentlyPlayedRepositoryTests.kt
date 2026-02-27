@@ -25,6 +25,7 @@ class RecentlyPlayedRepositoryTests {
         spotifyUserId = userId,
         trackId = "track-$index",
         trackName = "Track $index",
+        artistIds = listOf("artist-id-$index"),
         artistNames = listOf("Artist $index"),
         playedAt = now - index.hours,
     )

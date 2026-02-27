@@ -22,11 +22,13 @@ class RecentlyPlayedRepositoryAdapter : RecentlyPlayedRepositoryPort {
     }
 
     override fun saveAll(items: List<RecentlyPlayedItem>) {
+        if (items.isEmpty()) return
         val documents = items.map { item ->
             RecentlyPlayedDocument().apply {
                 spotifyUserId = item.spotifyUserId.value
                 trackId = item.trackId
                 trackName = item.trackName
+                artistIds = item.artistIds
                 artistNames = item.artistNames
                 playedAt = item.playedAt.toJavaInstant()
             }

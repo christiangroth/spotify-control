@@ -48,6 +48,7 @@ class SpotifyRecentlyPlayedAdapter(
                 SpotifyRecentlyPlayedTrack(
                     trackId = track.get("id").asText(),
                     trackName = track.get("name").asText(),
+                    artistIds = track.get("artists").map { it.get("id").asText() },
                     artistNames = track.get("artists").map { it.get("name").asText() },
                     playedAt = Instant.parse(item.get("played_at").asText()),
                 )

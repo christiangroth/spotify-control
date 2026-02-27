@@ -36,6 +36,7 @@ class FetchRecentlyPlayedServiceTests {
     private fun track(index: Int) = SpotifyRecentlyPlayedTrack(
         trackId = "track-$index",
         trackName = "Track $index",
+        artistIds = listOf("artist-id-$index"),
         artistNames = listOf("Artist $index"),
         playedAt = now - index.hours,
     )

@@ -15,6 +15,7 @@ class RecentlyPlayedDocument : PanacheMongoEntityBase() {
     lateinit var spotifyUserId: String
     lateinit var trackId: String
     lateinit var trackName: String
+    lateinit var artistIds: List<String>
     lateinit var artistNames: List<String>
     lateinit var playedAt: Instant
 }
