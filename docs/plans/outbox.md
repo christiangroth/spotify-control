@@ -18,7 +18,6 @@ and ensures that no task is silently lost. In this project the outbox serves two
 * Ordering within a partition is preserved (FIFO).
 * Partitions are processed independently; a slow Spotify partition does not block the domain
   partition.
-* The core implementation must be extractable as a reusable library without code changes.
 * No additional runtime dependencies beyond what the project already uses.
 
 ---
@@ -44,24 +43,28 @@ Kafka, RabbitMQ, Debezium, and dedicated outbox libraries are all out of scope.
 ## Module Structure
 
 ```
-util-outbox          – Core logic. No Quarkus, no MongoDB. Reusable.
-adapter-out-outbox   – Quarkus integration. Implements the domain port and drives processing.
-adapter-out-mongodb  – Provides the MongoDB OutboxRepository implementation.
+util-outbox          – Core logic and MongoDB persistence. Quarkus dependency only.
+adapter-in-outbox    – Drives domain processing: @Scheduled polling, startup recovery.
+adapter-out-outbox   – Write side: implements OutboxPort so domain services can enqueue tasks.
 adapter-out-spotify  – Registers handlers for the spotify partition.
 domain-impl          – Registers handlers for the domain partition.
-domain-api           – Defines OutboxPort (enqueue only).
+domain-api           – Defines OutboxPort (enqueue only) and the project's sealed event types.
 ```
 
 ### `util-outbox`
 
-Pure Kotlin, no framework dependencies. Contains:
+Kotlin module with a Quarkus dependency for MongoDB Panache access (both already used by the project — no new dependencies introduced). Contains:
 
-* `OutboxPartition` – sealed interface with concrete objects per partition.
-* `OutboxEventType` – sealed interface with concrete objects per event type.
+* `OutboxPartition` – plain (non-sealed) interface with a `key: String` property.
+* `OutboxEventType` – plain (non-sealed) interface with a `key: String` property.
 * `OutboxTask` – data class (id, partition, eventType, payload as String, status, attempts,
   createdAt, updatedAt, nextRetryAt).
 * `OutboxTaskStatus` – enum: `PENDING`, `PROCESSING`, `DONE`, `FAILED`.
-* `OutboxRepository` – interface; provides `claim`, `complete`, `fail`, `enqueue`, `archive`.
+* `OutboxRepository` – interface; provides `claim`, `complete`, `fail`, `enqueue`.
+* `OutboxDocument` – Panache entity mapped to the `outbox` collection.
+* `OutboxArchiveDocument` – Panache entity mapped to the `outbox_archive` collection.
+* `MongoOutboxRepository` – `@ApplicationScoped` implements `OutboxRepository` using
+  `OutboxDocument` and `OutboxArchiveDocument`.
 * `OutboxTaskHandler<P>` – interface; each handler declares the partition and event type it
   handles and receives a typed payload.
 * `OutboxProcessor` – orchestrates claim → deserialise → dispatch → complete/fail/retry for
@@ -69,30 +72,35 @@ Pure Kotlin, no framework dependencies. Contains:
 * `RetryPolicy` – data class (maxAttempts, backoff list of Durations); injected into
   `OutboxProcessor`.
 
-Because `util-outbox` has no Quarkus or MongoDB dependency, it can be extracted into its own
-Gradle composite or Maven artifact in the future without any code changes.
+Persistence lives here alongside the core logic, sacrificing framework-independence for
+simplicity. Should extraction ever be needed, the persistence layer can be separated at that
+point.
+
+### `adapter-in-outbox`
+
+Inbound adapter – drives the domain by consuming the outbox. Depends on `util-outbox` and
+`domain-api`. Contains:
+
+* `OutboxScheduler` – `@ApplicationScoped` bean with `@Scheduled` methods, one per partition,
+  at different intervals. Each method calls `OutboxProcessor.processBatch(partition, ...)`.
+* `OutboxStartupRecovery` – `@Startup` bean that resets tasks stuck in `PROCESSING` status
+  back to `PENDING` on application start (handles the previous-crash scenario).
+* CDI producer that wires all registered `OutboxTaskHandler` beans into the `OutboxProcessor`.
+
+This module is an inbound adapter because it is the entry point that triggers domain work –
+analogous to a web request handler or a Kafka consumer.
 
 ### `adapter-out-outbox`
 
-Quarkus module. Depends on `util-outbox` and `domain-api`. Contains:
+Outbound adapter – the write side. Depends on `domain-api` and `util-outbox`. Contains:
 
 * `OutboxPortAdapter` – `@ApplicationScoped` bean; implements `OutboxPort` by delegating to
-  `OutboxRepository.enqueue`.
-* `OutboxScheduler` – `@ApplicationScoped` bean with `@Scheduled` methods, one per partition,
-  at different intervals. Each method calls `OutboxProcessor.processBatch(partition, ...)`.
-* CDI producer that exposes the `OutboxProcessor` bean with all registered handlers wired in.
-
-### `adapter-out-mongodb` (additions)
-
-* `OutboxDocument` – Panache entity mapped to the `outbox` collection.
-* `OutboxArchiveDocument` – Panache entity mapped to the `outbox_archive` collection.
-* `MongoOutboxRepository` – `@ApplicationScoped` implements `OutboxRepository` using
-  `OutboxDocument` and `OutboxArchiveDocument`.
+  `OutboxRepository.enqueue`. This is what domain services call to enqueue a task.
 
 ### `adapter-out-spotify`
 
 Implements `OutboxTaskHandler<P>` for each event type in the `spotify` partition.
-Handlers are registered as CDI beans; `adapter-out-outbox` collects them via `@Inject Instance<OutboxTaskHandler<*>>`.
+Handlers are CDI beans discovered automatically by `adapter-in-outbox`.
 
 ### `domain-impl`
 
@@ -100,15 +108,16 @@ Implements `OutboxTaskHandler<P>` for each event type in the `domain` partition.
 
 ### `domain-api`
 
-Defines `OutboxPort`:
+Defines `OutboxPort` and the project-specific sealed event types:
 
 ```kotlin
 interface OutboxPort {
-    fun enqueue(partition: OutboxPartition, eventType: OutboxEventType, payload: Any)
+    fun enqueue(partition: AppOutboxPartition, eventType: AppOutboxEventType, payload: Any)
 }
 ```
 
-Domain services depend only on `OutboxPort`; they never reference `util-outbox` types directly.
+Domain services depend only on `OutboxPort` and the sealed types in `domain-api`; they never
+reference `MongoOutboxRepository` or other `util-outbox` internals directly.
 
 ---
 
@@ -144,36 +153,49 @@ operation. The archive serves as a persistent audit log and a source of metrics.
 
 ## Type-Safe Event API
 
-All partitions and event types are defined as Kotlin sealed interfaces so the compiler enforces
-exhaustive handling:
+`util-outbox` defines plain (non-sealed) interfaces so the module has no knowledge of the
+concrete partitions or event types used by any specific application:
 
 ```kotlin
-// util-outbox
-sealed interface OutboxPartition {
+// util-outbox – open extension points
+interface OutboxPartition {
     val key: String
-    object Spotify : OutboxPartition { override val key = "spotify" }
-    object Domain  : OutboxPartition { override val key = "domain"  }
 }
 
-sealed interface OutboxEventType {
+interface OutboxEventType {
     val key: String
-    // Spotify partition
-    object SyncPlaylist          : OutboxEventType { override val key = "SyncPlaylist" }
-    object SyncTrack             : OutboxEventType { override val key = "SyncTrack" }
-    object SyncArtist            : OutboxEventType { override val key = "SyncArtist" }
-    object PushPlaylistEdit      : OutboxEventType { override val key = "PushPlaylistEdit" }
-    object PollRecentlyPlayed    : OutboxEventType { override val key = "PollRecentlyPlayed" }
-    // Domain partition
-    object EnrichPlaybackEvents  : OutboxEventType { override val key = "EnrichPlaybackEvents" }
-    object RecomputeAggregations : OutboxEventType { override val key = "RecomputeAggregations" }
-    object ApplyGenreOverride    : OutboxEventType { override val key = "ApplyGenreOverride" }
-    object SyncPlaylistInvariant : OutboxEventType { override val key = "SyncPlaylistInvariant" }
-    object CheckAlbumUpgrades    : OutboxEventType { override val key = "CheckAlbumUpgrades" }
-    object ApplyAlbumUpgrade     : OutboxEventType { override val key = "ApplyAlbumUpgrade" }
 }
 ```
 
-Each handler is typed against a specific payload class:
+`domain-api` extends these with project-specific sealed sub-interfaces, giving exhaustive
+`when` handling across the whole codebase:
+
+```kotlin
+// domain-api – project-specific, sealed
+sealed interface AppOutboxPartition : OutboxPartition {
+    object Spotify : AppOutboxPartition { override val key = "spotify" }
+    object Domain  : AppOutboxPartition { override val key = "domain"  }
+}
+
+sealed interface AppOutboxEventType : OutboxEventType {
+    // Spotify partition
+    object SyncPlaylist          : AppOutboxEventType { override val key = "SyncPlaylist" }
+    object SyncTrack             : AppOutboxEventType { override val key = "SyncTrack" }
+    object SyncArtist            : AppOutboxEventType { override val key = "SyncArtist" }
+    object PushPlaylistEdit      : AppOutboxEventType { override val key = "PushPlaylistEdit" }
+    object PollRecentlyPlayed    : AppOutboxEventType { override val key = "PollRecentlyPlayed" }
+    // Domain partition
+    object EnrichPlaybackEvents  : AppOutboxEventType { override val key = "EnrichPlaybackEvents" }
+    object RecomputeAggregations : AppOutboxEventType { override val key = "RecomputeAggregations" }
+    object ApplyGenreOverride    : AppOutboxEventType { override val key = "ApplyGenreOverride" }
+    object SyncPlaylistInvariant : AppOutboxEventType { override val key = "SyncPlaylistInvariant" }
+    object CheckAlbumUpgrades    : AppOutboxEventType { override val key = "CheckAlbumUpgrades" }
+    object ApplyAlbumUpgrade     : AppOutboxEventType { override val key = "ApplyAlbumUpgrade" }
+}
+```
+
+Each handler is typed against a specific payload class and uses the base interfaces so it can
+live in `util-outbox`:
 
 ```kotlin
 // util-outbox
@@ -181,7 +203,9 @@ interface OutboxTaskHandler<P : Any> {
     val partition: OutboxPartition
     val eventType: OutboxEventType
     val payloadClass: KClass<P>
-    suspend fun handle(payload: P): Either<OutboxError, Unit>
+    // Synchronous blocking call; Quarkus runs handlers on managed thread pool workers,
+    // so coroutines/suspend are not needed and would add a Kotlin coroutines dependency.
+    fun handle(payload: P): Either<OutboxError, Unit>
 }
 ```
 
@@ -189,11 +213,11 @@ interface OutboxTaskHandler<P : Any> {
 
 ## Enqueuing Tasks (Write Path)
 
-1. A domain service or scheduled job calls `OutboxPort.enqueue(partition, eventType, payload)`.
-2. `OutboxPortAdapter` serialises the payload to JSON and delegates to
+1. A domain service calls `OutboxPort.enqueue(partition, eventType, payload)`.
+2. `OutboxPortAdapter` (in `adapter-out-outbox`) serialises the payload to JSON and delegates to
    `OutboxRepository.enqueue(...)`.
-3. `MongoOutboxRepository.enqueue` inserts a new `OutboxDocument` with `status = PENDING`,
-   `attempts = 0`, `nextRetryAt = null`.
+3. `MongoOutboxRepository.enqueue` (in `util-outbox`) inserts a new `OutboxDocument` with
+   `status = PENDING`, `attempts = 0`, `nextRetryAt = null`.
 
 Enqueueing is a single MongoDB insert – it does not need to participate in a multi-document
 transaction because the outbox is append-only at write time.
@@ -202,7 +226,7 @@ transaction because the outbox is append-only at write time.
 
 ## Processing Tasks (Read/Execute Path)
 
-Processing is driven by `@Scheduled` jobs in `OutboxScheduler`.
+Processing is driven by `@Scheduled` jobs in `OutboxScheduler` (`adapter-in-outbox`).
 
 ### Claim
 
@@ -218,7 +242,7 @@ instance is ever added (because `findOneAndUpdate` is atomic at the document lev
 
 ### Dispatch
 
-`OutboxProcessor.processBatch(partition, batchSize)`:
+`OutboxProcessor.processBatch(partition, batchSize)` (in `util-outbox`):
 
 1. Claims up to `batchSize` tasks for the given partition in a loop.
 2. For each claimed task: finds the matching handler by `eventType`, deserialises the payload,
@@ -229,9 +253,9 @@ instance is ever added (because `findOneAndUpdate` is atomic at the document lev
 
 ### Stale task recovery
 
-On application startup, any task stuck in `PROCESSING` status (from a previous crashed instance)
-is reset to `PENDING` with `nextRetryAt = now`. This is handled by a CDI `@Startup` bean in
-`adapter-out-outbox`.
+On application startup, `OutboxStartupRecovery` (`adapter-in-outbox`) resets any task stuck in
+`PROCESSING` status back to `PENDING` with `nextRetryAt = now`. This handles the scenario where
+a previous instance crashed mid-processing.
 
 ---
 
@@ -281,33 +305,42 @@ A handler failure in the `spotify` partition does not affect `domain` processing
 
 ```
 domain-api
-    └── OutboxPort (interface)
+    ├── OutboxPort (enqueue interface for domain services)
+    ├── OutboxMetricsPort (read-only metrics interface for the dashboard)
+    ├── AppOutboxPartition (sealed, extends OutboxPartition from util-outbox)
+    └── AppOutboxEventType (sealed, extends OutboxEventType from util-outbox)
 
 util-outbox
-    └── OutboxRepository (interface)
-    └── OutboxTaskHandler (interface)
-    └── OutboxProcessor (logic)
+    ├── OutboxPartition (plain interface – open extension point)
+    ├── OutboxEventType (plain interface – open extension point)
+    ├── OutboxTask, OutboxTaskStatus
+    ├── OutboxRepository (interface)
+    ├── MongoOutboxRepository (implements OutboxRepository)
+    ├── OutboxDocument, OutboxArchiveDocument (Panache entities)
+    ├── OutboxTaskHandler<P> (interface)
+    ├── OutboxProcessor (core dispatch logic)
     └── RetryPolicy
+
+adapter-in-outbox
+    ├── depends on: domain-api, util-outbox
+    ├── OutboxScheduler        (@Scheduled → calls OutboxProcessor per partition)
+    └── OutboxStartupRecovery  (@Startup → resets stale PROCESSING tasks)
 
 adapter-out-outbox
     ├── depends on: domain-api, util-outbox
-    ├── OutboxPortAdapter  (implements OutboxPort → delegates to OutboxRepository)
-    └── OutboxScheduler    (@Scheduled → calls OutboxProcessor)
-
-adapter-out-mongodb
-    ├── depends on: util-outbox
-    ├── OutboxDocument        (Panache entity → outbox)
-    ├── OutboxArchiveDocument (Panache entity → outbox_archive)
-    └── MongoOutboxRepository (implements OutboxRepository)
+    └── OutboxPortAdapter      (implements OutboxPort → delegates to OutboxRepository.enqueue)
 
 adapter-out-spotify
-    ├── depends on: util-outbox
-    └── Handlers for Spotify partition events
+    ├── depends on: util-outbox, domain-api
+    └── Handlers for AppOutboxPartition.Spotify event types
 
 domain-impl
     ├── depends on: domain-api, util-outbox
-    └── Handlers for Domain partition events
+    └── Handlers for AppOutboxPartition.Domain event types
 ```
+
+`adapter-out-mongodb` has no outbox-specific content; it remains exclusively for application
+domain data (users, tracks, playlists, events, aggregations).
 
 ---
 
@@ -319,7 +352,7 @@ adapter has no knowledge of the outbox.
 
 Exception: the dashboard page reads outbox metrics (pending count per partition, recent failures) to
 display to the user. This is a read-only query exposed via a dedicated `OutboxMetricsPort` in
-`domain-api`, implemented by `adapter-out-mongodb`.
+`domain-api`, implemented by `util-outbox` (`MongoOutboxRepository`).
 
 ---
 
@@ -330,7 +363,7 @@ display to the user. This is a read-only query exposed via a dedicated `OutboxMe
 | Unit – processor logic | `util-outbox`         | Retry policy application, claim → dispatch → complete/fail cycle with in-memory `OutboxRepository` stub |
 | Unit – handler logic   | `adapter-out-spotify`, `domain-impl` | Each handler in isolation with a mock Spotify/domain port |
 | Integration – MongoDB  | `application-quarkus` | `MongoOutboxRepository` against embedded MongoDB; verifies claim atomicity, archive insertion |
-| Contract – event types | `application-quarkus` | Asserts that each `OutboxEventType` has a registered handler; fails the build if a handler is missing |
+| Contract – event types | `application-quarkus` | Asserts that each `AppOutboxEventType` has a registered handler; fails the build if a handler is missing |
 | Contract – payload schema | `application-quarkus` | Round-trip serialise/deserialise each payload class; detects breaking schema changes |
 
 ---
@@ -351,6 +384,7 @@ display to the user. This is a read-only query exposed via a dedicated `OutboxMe
    correct. The stale-task recovery on startup would need a distributed lock or a lease-based
    approach.
 
-4. **util-outbox extraction**: If extracted as an external library, the Jackson/BSON serialisation
-   should be replaced with a pluggable `PayloadSerializer` interface so callers can bring their
-   own serialisation strategy.
+4. **util-outbox extraction**: If extracted as an external library in the future, the MongoDB
+   persistence layer should be separated (e.g. via a `OutboxRepository` implementation module)
+   and the Jackson/BSON serialisation should be replaced with a pluggable `PayloadSerializer`
+   interface so callers can bring their own serialisation strategy.
