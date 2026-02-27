@@ -1,0 +1,1 @@
+* update-user-profile: User display name is now refreshed from Spotify on each token refresh.

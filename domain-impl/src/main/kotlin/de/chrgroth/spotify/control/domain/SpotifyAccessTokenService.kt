@@ -53,8 +53,16 @@ class SpotifyAccessTokenService(
         val encryptedRefresh = refreshed.refreshToken
             ?.let { tokenEncryption.encrypt(it.value).bind() }
             ?: user.encryptedRefreshToken
+        val updatedDisplayName = spotifyAuth.getUserProfile(refreshed.accessToken).fold(
+            ifLeft = {
+                logger.warn { "Failed to fetch profile during token refresh for user: ${user.spotifyUserId.value}, keeping existing displayName" }
+                user.displayName
+            },
+            ifRight = { it.displayName },
+        )
         userRepository.upsert(
             user.copy(
+                displayName = updatedDisplayName,
                 encryptedAccessToken = encryptedAccess,
                 encryptedRefreshToken = encryptedRefresh,
                 tokenExpiresAt = now + refreshed.expiresInSeconds.seconds,
