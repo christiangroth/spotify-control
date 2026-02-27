@@ -1,1 +1,0 @@
-* fix-scp-slack-notifications: Replace separate SCP step with inline file transfer in SSH action to eliminate multiple SSH connections during deployment.
