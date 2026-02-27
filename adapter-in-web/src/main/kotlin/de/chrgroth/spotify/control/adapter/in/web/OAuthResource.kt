@@ -1,6 +1,6 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
-import de.chrgroth.spotify.control.domain.port.`in`.LoginResult
+import de.chrgroth.spotify.control.domain.DomainResult
 import de.chrgroth.spotify.control.domain.port.`in`.LoginServicePort
 import de.chrgroth.spotify.control.domain.port.out.TokenEncryptionPort
 import jakarta.annotation.security.PermitAll
@@ -75,9 +75,15 @@ class OAuthResource {
         stateStore.remove(state!!)
 
         return when (val result = loginService.handleCallback(code!!)) {
-            is LoginResult.Success -> {
-                logger.info { "[$state] OAuth login successful for user: ${result.userId.value}" }
-                val cookieValue = tokenEncryption.encrypt(result.userId.value)
+            is DomainResult.Success -> {
+                logger.info { "[$state] OAuth login successful for user: ${result.value.value}" }
+                val cookieValue = when (val r = tokenEncryption.encrypt(result.value.value)) {
+                    is DomainResult.Success -> r.value
+                    is DomainResult.Failure -> {
+                        logger.error { "[$state] Failed to encrypt session cookie: ${r.error.code}" }
+                        return Response.temporaryRedirect(URI.create("/?error=${r.error.code}")).build()
+                    }
+                }
                 Response.temporaryRedirect(URI.create("/ui/dashboard"))
                     .cookie(
                         NewCookie.Builder(SpotifyCookieAuthMechanism.COOKIE_NAME)
@@ -89,9 +95,9 @@ class OAuthResource {
                     )
                     .build()
             }
-            is LoginResult.Failure -> {
-                logger.warn { "[$state] OAuth login failed: ${result.error}" }
-                Response.temporaryRedirect(URI.create("/?error=${result.error}")).build()
+            is DomainResult.Failure -> {
+                logger.warn { "[$state] OAuth login failed: ${result.error.code}" }
+                Response.temporaryRedirect(URI.create("/?error=${result.error.code}")).build()
             }
         }
     }

@@ -1,5 +1,6 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
+import de.chrgroth.spotify.control.domain.DomainResult
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.out.TokenEncryptionPort
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
@@ -25,19 +26,21 @@ class SpotifyCookieAuthMechanism(
     override fun authenticate(context: RoutingContext, identityProviderManager: IdentityProviderManager): Uni<SecurityIdentity> {
         val cookieValue = context.request().getCookie(COOKIE_NAME)?.value
             ?: return Uni.createFrom().optional(Optional.empty())
-        return try {
-            val userId = UserId(tokenEncryption.decrypt(cookieValue))
-            if (userRepository.findById(userId) == null) {
-                logger.error { "Authentication failed: user not found: ${userId.value}" }
-                return Uni.createFrom().optional(Optional.empty())
-            }
-            val identity = QuarkusSecurityIdentity.builder()
-                .setPrincipal(Principal { userId.value })
-                .setAnonymous(false)
-                .build()
-            Uni.createFrom().item(identity)
-        } catch (_: Exception) {
+        val userId = when (val r = tokenEncryption.decrypt(cookieValue)) {
+            is DomainResult.Success -> UserId(r.value)
+            is DomainResult.Failure -> return Uni.createFrom().optional(Optional.empty())
+        }
+        val user = userRepository.findById(userId)
+        return if (user == null) {
+            logger.error { "Authentication failed: user not found: ${userId.value}" }
             Uni.createFrom().optional(Optional.empty())
+        } else {
+            Uni.createFrom().item(
+                QuarkusSecurityIdentity.builder()
+                    .setPrincipal(Principal { userId.value })
+                    .setAnonymous(false)
+                    .build()
+            )
         }
     }
 

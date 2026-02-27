@@ -22,34 +22,41 @@ class SpotifyAccessTokenService(
     private val tokenEncryption: TokenEncryptionPort,
 ) : SpotifyAccessTokenPort {
 
-    override fun getValidAccessToken(userId: UserId): AccessToken {
-        val user = requireNotNull(userRepository.findById(userId)) { "User not found: ${userId.value}" }
+    override fun getValidAccessToken(userId: UserId): DomainResult<AccessToken> {
+        val user = userRepository.findById(userId)
+            ?: return DomainResult.Failure(UserError.NOT_FOUND)
         return if (isTokenExpiringSoon(user)) {
             logger.info { "Token expiring soon, refreshing for user: ${userId.value}" }
             refreshAndPersist(user)
         } else {
-            AccessToken(tokenEncryption.decrypt(user.encryptedAccessToken))
+            tokenEncryption.decrypt(user.encryptedAccessToken).map { AccessToken(it) }
         }
     }
 
     private fun isTokenExpiringSoon(user: User): Boolean =
         user.tokenExpiresAt <= Clock.System.now() + TOKEN_REFRESH_BUFFER
 
-    private fun refreshAndPersist(user: User): AccessToken {
-        val refreshToken = RefreshToken(tokenEncryption.decrypt(user.encryptedRefreshToken))
-        val refreshed = spotifyAuth.refreshToken(refreshToken)
-        val now = Clock.System.now()
-        userRepository.upsert(
-            user.copy(
-                encryptedAccessToken = tokenEncryption.encrypt(refreshed.accessToken.value),
-                encryptedRefreshToken = refreshed.refreshToken
-                    ?.let { tokenEncryption.encrypt(it.value) }
-                    ?: user.encryptedRefreshToken,
-                tokenExpiresAt = now + refreshed.expiresInSeconds.seconds,
-            )
-        )
-        return refreshed.accessToken
-    }
+    private fun refreshAndPersist(user: User): DomainResult<AccessToken> =
+        tokenEncryption.decrypt(user.encryptedRefreshToken).flatMap { plainRefresh ->
+            spotifyAuth.refreshToken(RefreshToken(plainRefresh)).flatMap { refreshed ->
+                tokenEncryption.encrypt(refreshed.accessToken.value).flatMap { encAccess ->
+                    val encRefreshResult = refreshed.refreshToken
+                        ?.let { tokenEncryption.encrypt(it.value) }
+                        ?: DomainResult.Success(user.encryptedRefreshToken)
+                    encRefreshResult.map { encRefresh ->
+                        val now = Clock.System.now()
+                        userRepository.upsert(
+                            user.copy(
+                                encryptedAccessToken = encAccess,
+                                encryptedRefreshToken = encRefresh,
+                                tokenExpiresAt = now + refreshed.expiresInSeconds.seconds,
+                            )
+                        )
+                        refreshed.accessToken
+                    }
+                }
+            }
+        }
 
     companion object : KLogging() {
         private val TOKEN_REFRESH_BUFFER = 5.minutes

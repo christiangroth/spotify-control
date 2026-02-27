@@ -22,30 +22,33 @@ class LoginServiceAdapter(
     private val tokenEncryption: TokenEncryptionPort,
 ) : LoginServicePort {
 
-    override fun handleCallback(code: String): LoginResult {
-        val tokens = spotifyAuth.exchangeCode(code)
-        val profile = spotifyAuth.getUserProfile(tokens.accessToken)
-        val userId = UserId(profile.id.value)
-
-        if (!userService.isAllowed(userId)) {
-            logger.warn { "Login denied for user: ${userId.value}" }
-            return LoginResult.Failure("not_allowed")
+    override fun handleCallback(code: String): LoginResult =
+        spotifyAuth.exchangeCode(code).flatMap { tokens ->
+            spotifyAuth.getUserProfile(tokens.accessToken).flatMap { profile ->
+                val userId = UserId(profile.id.value)
+                if (!userService.isAllowed(userId)) {
+                    logger.warn { "Login denied for user: ${userId.value}" }
+                    DomainResult.Failure(AuthError.USER_NOT_ALLOWED)
+                } else {
+                    tokenEncryption.encrypt(tokens.accessToken.value).flatMap { encAccess ->
+                        tokenEncryption.encrypt(tokens.refreshToken.value).map { encRefresh ->
+                            val now = Clock.System.now()
+                            userRepository.upsert(
+                                User(
+                                    spotifyUserId = userId,
+                                    displayName = profile.displayName,
+                                    encryptedAccessToken = encAccess,
+                                    encryptedRefreshToken = encRefresh,
+                                    tokenExpiresAt = now + tokens.expiresInSeconds.seconds,
+                                    lastLoginAt = now,
+                                )
+                            )
+                            userId
+                        }
+                    }
+                }
+            }
         }
-
-        val now = Clock.System.now()
-        userRepository.upsert(
-            User(
-                spotifyUserId = userId,
-                displayName = profile.displayName,
-                encryptedAccessToken = tokenEncryption.encrypt(tokens.accessToken.value),
-                encryptedRefreshToken = tokenEncryption.encrypt(tokens.refreshToken.value),
-                tokenExpiresAt = now + tokens.expiresInSeconds.seconds,
-                lastLoginAt = now,
-            )
-        )
-
-        return LoginResult.Success(userId)
-    }
 
     companion object : KLogging()
 }

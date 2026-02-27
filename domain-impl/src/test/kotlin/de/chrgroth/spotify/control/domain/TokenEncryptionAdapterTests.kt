@@ -1,7 +1,6 @@
 package de.chrgroth.spotify.control.domain
 
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 
 class TokenEncryptionAdapterTests {
@@ -13,8 +12,11 @@ class TokenEncryptionAdapterTests {
     @Test
     fun `encrypt and decrypt round-trip succeeds`() {
         val plaintext = "hello-world"
-        val ciphertext = adapter.encrypt(plaintext)
-        assertThat(adapter.decrypt(ciphertext)).isEqualTo(plaintext)
+        val encrypted = adapter.encrypt(plaintext)
+        assertThat(encrypted).isInstanceOf(DomainResult.Success::class.java)
+        val decrypted = adapter.decrypt((encrypted as DomainResult.Success).value)
+        assertThat(decrypted).isInstanceOf(DomainResult.Success::class.java)
+        assertThat((decrypted as DomainResult.Success).value).isEqualTo(plaintext)
     }
 
     @Test
@@ -22,20 +24,25 @@ class TokenEncryptionAdapterTests {
         val plaintext = "same-input"
         val first = adapter.encrypt(plaintext)
         val second = adapter.encrypt(plaintext)
-        assertThat(first).isNotEqualTo(second)
+        assertThat(first).isInstanceOf(DomainResult.Success::class.java)
+        assertThat(second).isInstanceOf(DomainResult.Success::class.java)
+        assertThat((first as DomainResult.Success).value).isNotEqualTo((second as DomainResult.Success).value)
     }
 
     @Test
-    fun `decrypt throws for invalid format`() {
-        assertThatThrownBy { adapter.decrypt("not-a-valid-ciphertext") }
-            .isInstanceOf(IllegalArgumentException::class.java)
+    fun `decrypt returns invalid format failure for malformed ciphertext`() {
+        val result = adapter.decrypt("not-a-valid-ciphertext")
+        assertThat(result).isInstanceOf(DomainResult.Failure::class.java)
+        assertThat((result as DomainResult.Failure).error).isEqualTo(TokenError.INVALID_FORMAT)
     }
 
     @Test
-    fun `decrypt throws for tampered ciphertext`() {
-        val ciphertext = adapter.encrypt("sensitive")
-        val tampered = ciphertext.dropLast(4) + "XXXX"
-        assertThatThrownBy { adapter.decrypt(tampered) }
-            .isInstanceOf(javax.crypto.AEADBadTagException::class.java)
+    fun `decrypt returns decryption failure for tampered ciphertext`() {
+        val encrypted = adapter.encrypt("sensitive")
+        assertThat(encrypted).isInstanceOf(DomainResult.Success::class.java)
+        val tampered = (encrypted as DomainResult.Success).value.dropLast(4) + "XXXX"
+        val result = adapter.decrypt(tampered)
+        assertThat(result).isInstanceOf(DomainResult.Failure::class.java)
+        assertThat((result as DomainResult.Failure).error).isEqualTo(TokenError.DECRYPTION_FAILED)
     }
 }
