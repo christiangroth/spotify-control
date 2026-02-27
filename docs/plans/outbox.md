@@ -351,6 +351,12 @@ while (isActive) {
 }
 ```
 
+`isActive` is a standard Kotlin coroutines property that reflects the liveness of the coroutine's
+`Job`. It becomes `false` when the `CoroutineScope` owning the worker is cancelled, which is how
+graceful shutdown is achieved: cancelling the scope (e.g. in a Quarkus `@PreDestroy` lifecycle
+callback) propagates cancellation to all partition worker coroutines, causing the `while (isActive)`
+guard and any in-progress `channel.receive()` suspension to exit cleanly.
+
 The channel is signalled by `OutboxPortAdapter.enqueue()` immediately after inserting a new
 task, and by `OutboxStartupRecovery` once on startup after resetting stale tasks. Using
 `Channel.CONFLATED` means multiple rapid enqueues coalesce into a single wakeup signal, and the
