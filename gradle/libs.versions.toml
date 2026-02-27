@@ -1,4 +1,5 @@
 [versions]
+arrow = "2.1.2"
 assertJ = "3.27.7"
 bootstrap = "5.3.3"
 marked = "15.0.12"
@@ -17,6 +18,7 @@ release = "3.1.0"
 versionCatalogUpdate = "1.1.0"
 
 [libraries]
+arrowCore = { module = "io.arrow-kt:arrow-core", version.ref = "arrow" }
 assertJ = { module = "org.assertj:assertj-core", version.ref = "assertJ" }
 bootstrap = { module = "org.webjars:bootstrap", version.ref = "bootstrap" }
 marked = { module = "org.webjars.npm:marked", version.ref = "marked" }

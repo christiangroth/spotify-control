@@ -1,8 +1,11 @@
 package de.chrgroth.spotify.control.domain
 
+import arrow.core.Either
+import arrow.core.raise.either
+import de.chrgroth.spotify.control.domain.error.AuthError
+import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.model.User
 import de.chrgroth.spotify.control.domain.model.UserId
-import de.chrgroth.spotify.control.domain.port.`in`.LoginResult
 import de.chrgroth.spotify.control.domain.port.`in`.LoginServicePort
 import de.chrgroth.spotify.control.domain.port.`in`.UserServicePort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAuthPort
@@ -22,29 +25,31 @@ class LoginServiceAdapter(
     private val tokenEncryption: TokenEncryptionPort,
 ) : LoginServicePort {
 
-    override fun handleCallback(code: String): LoginResult {
-        val tokens = spotifyAuth.exchangeCode(code)
-        val profile = spotifyAuth.getUserProfile(tokens.accessToken)
+    override fun handleCallback(code: String): Either<DomainError, UserId> = either {
+        val tokens = spotifyAuth.exchangeCode(code).bind()
+        val profile = spotifyAuth.getUserProfile(tokens.accessToken).bind()
         val userId = UserId(profile.id.value)
 
         if (!userService.isAllowed(userId)) {
             logger.warn { "Login denied for user: ${userId.value}" }
-            return LoginResult.Failure("not_allowed")
+            raise(AuthError.USER_NOT_ALLOWED)
         }
 
+        val encryptedAccess = tokenEncryption.encrypt(tokens.accessToken.value).bind()
+        val encryptedRefresh = tokenEncryption.encrypt(tokens.refreshToken.value).bind()
         val now = Clock.System.now()
         userRepository.upsert(
             User(
                 spotifyUserId = userId,
                 displayName = profile.displayName,
-                encryptedAccessToken = tokenEncryption.encrypt(tokens.accessToken.value),
-                encryptedRefreshToken = tokenEncryption.encrypt(tokens.refreshToken.value),
+                encryptedAccessToken = encryptedAccess,
+                encryptedRefreshToken = encryptedRefresh,
                 tokenExpiresAt = now + tokens.expiresInSeconds.seconds,
                 lastLoginAt = now,
             )
         )
 
-        return LoginResult.Success(userId)
+        userId
     }
 
     companion object : KLogging()

@@ -1,5 +1,8 @@
 package de.chrgroth.spotify.control.domain
 
+import arrow.core.Either
+import arrow.core.raise.either
+import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.model.AccessToken
 import de.chrgroth.spotify.control.domain.model.RefreshToken
 import de.chrgroth.spotify.control.domain.model.User
@@ -26,29 +29,38 @@ class SpotifyAccessTokenService(
         val user = requireNotNull(userRepository.findById(userId)) { "User not found: ${userId.value}" }
         return if (isTokenExpiringSoon(user)) {
             logger.info { "Token expiring soon, refreshing for user: ${userId.value}" }
-            refreshAndPersist(user)
+            refreshAndPersist(user).fold(
+                ifLeft = { error("Failed to refresh access token for user ${userId.value}: ${it.code}") },
+                ifRight = { it }
+            )
         } else {
-            AccessToken(tokenEncryption.decrypt(user.encryptedAccessToken))
+            tokenEncryption.decrypt(user.encryptedAccessToken).fold(
+                ifLeft = { error("Failed to decrypt access token for user ${userId.value}: ${it.code}") },
+                ifRight = { AccessToken(it) }
+            )
         }
     }
 
     private fun isTokenExpiringSoon(user: User): Boolean =
         user.tokenExpiresAt <= Clock.System.now() + TOKEN_REFRESH_BUFFER
 
-    private fun refreshAndPersist(user: User): AccessToken {
-        val refreshToken = RefreshToken(tokenEncryption.decrypt(user.encryptedRefreshToken))
-        val refreshed = spotifyAuth.refreshToken(refreshToken)
+    private fun refreshAndPersist(user: User): Either<DomainError, AccessToken> = either {
+        val plainRefresh = tokenEncryption.decrypt(user.encryptedRefreshToken).bind()
+        val refreshToken = RefreshToken(plainRefresh)
+        val refreshed = spotifyAuth.refreshToken(refreshToken).bind()
         val now = Clock.System.now()
+        val encryptedAccess = tokenEncryption.encrypt(refreshed.accessToken.value).bind()
+        val encryptedRefresh = refreshed.refreshToken
+            ?.let { tokenEncryption.encrypt(it.value).bind() }
+            ?: user.encryptedRefreshToken
         userRepository.upsert(
             user.copy(
-                encryptedAccessToken = tokenEncryption.encrypt(refreshed.accessToken.value),
-                encryptedRefreshToken = refreshed.refreshToken
-                    ?.let { tokenEncryption.encrypt(it.value) }
-                    ?: user.encryptedRefreshToken,
+                encryptedAccessToken = encryptedAccess,
+                encryptedRefreshToken = encryptedRefresh,
                 tokenExpiresAt = now + refreshed.expiresInSeconds.seconds,
             )
         )
-        return refreshed.accessToken
+        refreshed.accessToken
     }
 
     companion object : KLogging() {

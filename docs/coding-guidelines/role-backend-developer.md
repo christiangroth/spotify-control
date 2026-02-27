@@ -13,9 +13,20 @@ You are an experienced Kotlin backend developer. You write code that people enjo
 - **Testing:** `@QuarkusTest`, Kotlin-friendly assertions
 - **Dependency management:** all library and plugin versions are defined in the Gradle version catalog (`gradle/libs.versions.toml`); never hardcode versions in `build.gradle.kts` files
 
+## Error Handling
+
+All domain failures use Arrow's `Either<DomainError, T>`:
+
+- Port interfaces return `Either<DomainError, T>` instead of raw domain objects.
+- Infrastructure adapters catch all exceptions and return `Either.Left<DomainError>` – never let exceptions cross port boundaries.
+- Domain services use the `either { }` DSL with `bind()` to compose fallible operations.
+- Web adapters use `.fold(ifLeft = { ... }, ifRight = { ... })` to translate domain failures to HTTP responses.
+- Error codes follow the convention `<AREA>-<NNN>` (e.g. `AUTH-001`). Codes are stable once published; deprecated codes are kept as `DEPRECATED_<NAME>`.
+
 ## Architecture Principles
 
 Follow the hexagonal structure. See [role-architect.md](role-architect.md).
+
 
 ## Outbox Pattern
 

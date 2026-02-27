@@ -38,6 +38,17 @@ Dark, technical appearance – fitting a developer tool. No generic Bootstrap de
 - Live indicators (●) in green with subtle CSS pulse animation
 - No clutter – whitespace is a design element
 
+## Error Code Mapping
+
+The backend passes domain error codes to the frontend as URL query parameters (e.g. `/?error=AUTH-001`). The frontend is responsible for mapping these stable codes to user-facing messages.
+
+**Display pattern:**
+
+- Read the `error` query parameter on the login page template.
+- Map the code to a human-readable message (mapping lives in `LoginResource`).
+- Display the message as a Bootstrap alert (`.alert-danger`) at the top of the login form.
+- Do **not** expose the raw error code to the user.
+
 ## Quality Standards
 
 - Responsive – desktop and tablet; mobile is nice-to-have

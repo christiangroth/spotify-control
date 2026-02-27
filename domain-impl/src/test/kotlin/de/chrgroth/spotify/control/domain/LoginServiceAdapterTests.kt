@@ -1,12 +1,15 @@
 package de.chrgroth.spotify.control.domain
 
+import arrow.core.Either
+import arrow.core.left
+import arrow.core.right
+import de.chrgroth.spotify.control.domain.error.AuthError
 import de.chrgroth.spotify.control.domain.model.AccessToken
 import de.chrgroth.spotify.control.domain.model.RefreshToken
 import de.chrgroth.spotify.control.domain.model.SpotifyProfile
 import de.chrgroth.spotify.control.domain.model.SpotifyProfileId
 import de.chrgroth.spotify.control.domain.model.SpotifyTokens
 import de.chrgroth.spotify.control.domain.model.UserId
-import de.chrgroth.spotify.control.domain.port.`in`.LoginResult
 import de.chrgroth.spotify.control.domain.port.`in`.UserServicePort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAuthPort
 import de.chrgroth.spotify.control.domain.port.out.TokenEncryptionPort
@@ -33,29 +36,52 @@ class LoginServiceAdapterTests {
 
     @Test
     fun `allowed user succeeds and user is upserted`() {
-        every { spotifyAuth.exchangeCode("code") } returns tokens
-        every { spotifyAuth.getUserProfile(AccessToken("access")) } returns profile
+        every { spotifyAuth.exchangeCode("code") } returns tokens.right()
+        every { spotifyAuth.getUserProfile(AccessToken("access")) } returns profile.right()
         every { userService.isAllowed(UserId("user-1")) } returns true
-        every { tokenEncryption.encrypt(any()) } returns "encrypted"
+        every { tokenEncryption.encrypt(any()) } returns "encrypted".right()
         every { userRepository.upsert(any()) } just runs
 
         val result = adapter.handleCallback("code")
 
-        assertThat(result).isInstanceOf(LoginResult.Success::class.java)
-        assertThat((result as LoginResult.Success).userId).isEqualTo(UserId("user-1"))
+        assertThat(result.isRight()).isTrue()
+        assertThat((result as Either.Right).value).isEqualTo(UserId("user-1"))
         verify { userRepository.upsert(any()) }
     }
 
     @Test
     fun `not-allowed user returns failure and user is not upserted`() {
-        every { spotifyAuth.exchangeCode("code") } returns tokens
-        every { spotifyAuth.getUserProfile(AccessToken("access")) } returns profile
+        every { spotifyAuth.exchangeCode("code") } returns tokens.right()
+        every { spotifyAuth.getUserProfile(AccessToken("access")) } returns profile.right()
         every { userService.isAllowed(UserId("user-1")) } returns false
 
         val result = adapter.handleCallback("code")
 
-        assertThat(result).isInstanceOf(LoginResult.Failure::class.java)
-        assertThat((result as LoginResult.Failure).error).isEqualTo("not_allowed")
+        assertThat(result.isLeft()).isTrue()
+        assertThat((result as Either.Left).value).isEqualTo(AuthError.USER_NOT_ALLOWED)
+        verify(exactly = 0) { userRepository.upsert(any()) }
+    }
+
+    @Test
+    fun `token exchange failure is propagated`() {
+        every { spotifyAuth.exchangeCode("code") } returns AuthError.TOKEN_EXCHANGE_FAILED.left()
+
+        val result = adapter.handleCallback("code")
+
+        assertThat(result.isLeft()).isTrue()
+        assertThat((result as Either.Left).value).isEqualTo(AuthError.TOKEN_EXCHANGE_FAILED)
+        verify(exactly = 0) { userRepository.upsert(any()) }
+    }
+
+    @Test
+    fun `profile fetch failure is propagated`() {
+        every { spotifyAuth.exchangeCode("code") } returns tokens.right()
+        every { spotifyAuth.getUserProfile(AccessToken("access")) } returns AuthError.PROFILE_FETCH_FAILED.left()
+
+        val result = adapter.handleCallback("code")
+
+        assertThat(result.isLeft()).isTrue()
+        assertThat((result as Either.Left).value).isEqualTo(AuthError.PROFILE_FETCH_FAILED)
         verify(exactly = 0) { userRepository.upsert(any()) }
     }
 }

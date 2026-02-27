@@ -1,6 +1,6 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
-import de.chrgroth.spotify.control.domain.port.`in`.LoginResult
+import de.chrgroth.spotify.control.domain.error.OAuthError
 import de.chrgroth.spotify.control.domain.port.`in`.LoginServicePort
 import de.chrgroth.spotify.control.domain.port.out.TokenEncryptionPort
 import jakarta.annotation.security.PermitAll
@@ -69,37 +69,44 @@ class OAuthResource {
     ): Response {
         val validationError = validateCallbackParams(code, state, error)
         if (validationError != null) {
-            logger.warn { "[$state] OAuth callback validation failed: $validationError" }
-            return Response.temporaryRedirect(URI.create("/?error=$validationError")).build()
+            logger.warn { "[$state] OAuth callback validation failed: ${validationError.code}" }
+            return Response.temporaryRedirect(URI.create("/?error=${validationError.code}")).build()
         }
         stateStore.remove(state!!)
 
-        return when (val result = loginService.handleCallback(code!!)) {
-            is LoginResult.Success -> {
-                logger.info { "[$state] OAuth login successful for user: ${result.userId.value}" }
-                val cookieValue = tokenEncryption.encrypt(result.userId.value)
-                Response.temporaryRedirect(URI.create("/ui/dashboard"))
-                    .cookie(
-                        NewCookie.Builder(SpotifyCookieAuthMechanism.COOKIE_NAME)
-                            .value(cookieValue)
-                            .path("/")
-                            .httpOnly(true)
-                            .sameSite(NewCookie.SameSite.LAX)
+        return loginService.handleCallback(code!!).fold(
+            ifLeft = { domainError ->
+                logger.warn { "[$state] OAuth login failed: ${domainError.code}" }
+                Response.temporaryRedirect(URI.create("/?error=${domainError.code}")).build()
+            },
+            ifRight = { userId ->
+                logger.info { "[$state] OAuth login successful for user: ${userId.value}" }
+                tokenEncryption.encrypt(userId.value).fold(
+                    ifLeft = { encryptError ->
+                        logger.error { "[$state] Failed to encrypt session cookie: ${encryptError.code}" }
+                        Response.temporaryRedirect(URI.create("/?error=${encryptError.code}")).build()
+                    },
+                    ifRight = { cookieValue ->
+                        Response.temporaryRedirect(URI.create("/ui/dashboard"))
+                            .cookie(
+                                NewCookie.Builder(SpotifyCookieAuthMechanism.COOKIE_NAME)
+                                    .value(cookieValue)
+                                    .path("/")
+                                    .httpOnly(true)
+                                    .sameSite(NewCookie.SameSite.LAX)
+                                    .build()
+                            )
                             .build()
-                    )
-                    .build()
+                    }
+                )
             }
-            is LoginResult.Failure -> {
-                logger.warn { "[$state] OAuth login failed: ${result.error}" }
-                Response.temporaryRedirect(URI.create("/?error=${result.error}")).build()
-            }
-        }
+        )
     }
 
-    private fun validateCallbackParams(code: String?, state: String?, error: String?): String? = when {
-        error != null -> "spotify_denied"
-        code == null || state == null -> "invalid_request"
-        !stateStore.containsKey(state) -> "state_mismatch"
+    private fun validateCallbackParams(code: String?, state: String?, error: String?): OAuthError? = when {
+        error != null -> OAuthError.SPOTIFY_DENIED
+        code == null || state == null -> OAuthError.INVALID_REQUEST
+        !stateStore.containsKey(state) -> OAuthError.STATE_MISMATCH
         else -> null
     }
 
@@ -126,4 +133,5 @@ class OAuthResource {
         private const val STATE_TTL_MS = 600_000L
     }
 }
+
 

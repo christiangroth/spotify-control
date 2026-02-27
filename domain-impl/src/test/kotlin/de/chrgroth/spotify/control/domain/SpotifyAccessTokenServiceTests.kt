@@ -1,5 +1,8 @@
 package de.chrgroth.spotify.control.domain
 
+import arrow.core.left
+import arrow.core.right
+import de.chrgroth.spotify.control.domain.error.AuthError
 import de.chrgroth.spotify.control.domain.model.AccessToken
 import de.chrgroth.spotify.control.domain.model.RefreshToken
 import de.chrgroth.spotify.control.domain.model.SpotifyRefreshedTokens
@@ -44,7 +47,7 @@ class SpotifyAccessTokenServiceTests {
     fun `returns existing access token when not expiring soon`() {
         val user = buildUser(Clock.System.now() + 1.hours)
         every { userRepository.findById(userId) } returns user
-        every { tokenEncryption.decrypt("enc-access") } returns "plain-access"
+        every { tokenEncryption.decrypt("enc-access") } returns "plain-access".right()
 
         val result = service.getValidAccessToken(userId)
 
@@ -56,13 +59,13 @@ class SpotifyAccessTokenServiceTests {
     fun `refreshes token when expiring within 5 minutes`() {
         val user = buildUser(Clock.System.now() + 3.minutes)
         every { userRepository.findById(userId) } returns user
-        every { tokenEncryption.decrypt("enc-refresh") } returns "plain-refresh"
+        every { tokenEncryption.decrypt("enc-refresh") } returns "plain-refresh".right()
         every { spotifyAuth.refreshToken(RefreshToken("plain-refresh")) } returns SpotifyRefreshedTokens(
             accessToken = AccessToken("new-access"),
             refreshToken = null,
             expiresInSeconds = 3600,
-        )
-        every { tokenEncryption.encrypt("new-access") } returns "enc-new-access"
+        ).right()
+        every { tokenEncryption.encrypt("new-access") } returns "enc-new-access".right()
         every { userRepository.upsert(any()) } just runs
 
         val result = service.getValidAccessToken(userId)
@@ -79,14 +82,14 @@ class SpotifyAccessTokenServiceTests {
     fun `persists rotated refresh token when spotify returns a new one`() {
         val user = buildUser(Clock.System.now() + 1.minutes)
         every { userRepository.findById(userId) } returns user
-        every { tokenEncryption.decrypt("enc-refresh") } returns "plain-refresh"
+        every { tokenEncryption.decrypt("enc-refresh") } returns "plain-refresh".right()
         every { spotifyAuth.refreshToken(RefreshToken("plain-refresh")) } returns SpotifyRefreshedTokens(
             accessToken = AccessToken("new-access"),
             refreshToken = RefreshToken("new-refresh"),
             expiresInSeconds = 3600,
-        )
-        every { tokenEncryption.encrypt("new-access") } returns "enc-new-access"
-        every { tokenEncryption.encrypt("new-refresh") } returns "enc-new-refresh"
+        ).right()
+        every { tokenEncryption.encrypt("new-access") } returns "enc-new-access".right()
+        every { tokenEncryption.encrypt("new-refresh") } returns "enc-new-refresh".right()
         every { userRepository.upsert(any()) } just runs
 
         service.getValidAccessToken(userId)
@@ -102,6 +105,18 @@ class SpotifyAccessTokenServiceTests {
 
         assertThatThrownBy { service.getValidAccessToken(userId) }
             .isInstanceOf(IllegalArgumentException::class.java)
+            .hasMessageContaining("user-1")
+    }
+
+    @Test
+    fun `throws when token refresh fails`() {
+        val user = buildUser(Clock.System.now() + 1.minutes)
+        every { userRepository.findById(userId) } returns user
+        every { tokenEncryption.decrypt("enc-refresh") } returns "plain-refresh".right()
+        every { spotifyAuth.refreshToken(RefreshToken("plain-refresh")) } returns AuthError.TOKEN_REFRESH_FAILED.left()
+
+        assertThatThrownBy { service.getValidAccessToken(userId) }
+            .isInstanceOf(IllegalStateException::class.java)
             .hasMessageContaining("user-1")
     }
 }
