@@ -1,0 +1,1 @@
+* create-outbox-implementation-concept: Added technical concept for the outbox implementation (docs/plans/outbox.md).
