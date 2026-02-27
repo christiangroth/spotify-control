@@ -1,1 +1,1 @@
-* implement-recently-played-fetching: Fetch and persist recently played tracks from Spotify per user, skipping duplicates.
+* implement-recently-played-fetching: Fetch and persist recently played tracks per user with duplicate suppression.

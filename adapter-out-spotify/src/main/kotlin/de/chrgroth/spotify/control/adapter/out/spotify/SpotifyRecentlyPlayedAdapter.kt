@@ -8,7 +8,8 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.PlaybackError
 import de.chrgroth.spotify.control.domain.model.AccessToken
-import de.chrgroth.spotify.control.domain.model.SpotifyRecentlyPlayedTrack
+import de.chrgroth.spotify.control.domain.model.RecentlyPlayedItem
+import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.out.SpotifyRecentlyPlayedPort
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
@@ -29,7 +30,7 @@ class SpotifyRecentlyPlayedAdapter(
     private val httpClient = HttpClient.newHttpClient()
     private val objectMapper = ObjectMapper()
 
-    override fun getRecentlyPlayed(accessToken: AccessToken): Either<DomainError, List<SpotifyRecentlyPlayedTrack>> {
+    override fun getRecentlyPlayed(userId: UserId, accessToken: AccessToken): Either<DomainError, List<RecentlyPlayedItem>> {
         return try {
             val request = HttpRequest.newBuilder()
                 .uri(URI.create("$apiBaseUrl/v1/me/player/recently-played?limit=50"))
@@ -42,10 +43,11 @@ class SpotifyRecentlyPlayedAdapter(
                 return PlaybackError.RECENTLY_PLAYED_FETCH_FAILED.left()
             }
             val json: JsonNode = objectMapper.readTree(response.body())
-            val items = json.get("items") ?: return emptyList<SpotifyRecentlyPlayedTrack>().right()
+            val items = json.get("items") ?: return emptyList<RecentlyPlayedItem>().right()
             items.map { item ->
                 val track = item.get("track")
-                SpotifyRecentlyPlayedTrack(
+                RecentlyPlayedItem(
+                    spotifyUserId = userId,
                     trackId = track.get("id").asText(),
                     trackName = track.get("name").asText(),
                     artistIds = track.get("artists").map { it.get("id").asText() },

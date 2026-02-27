@@ -3,7 +3,6 @@ package de.chrgroth.spotify.control.domain
 import arrow.core.Either
 import arrow.core.raise.either
 import de.chrgroth.spotify.control.domain.error.DomainError
-import de.chrgroth.spotify.control.domain.model.RecentlyPlayedItem
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.FetchRecentlyPlayedPort
 import de.chrgroth.spotify.control.domain.port.out.RecentlyPlayedRepositoryPort
@@ -14,7 +13,7 @@ import mu.KLogging
 
 @ApplicationScoped
 @Suppress("Unused")
-class FetchRecentlyPlayedService(
+class FetchRecentlyPlayedAdapter(
     private val spotifyAccessToken: SpotifyAccessTokenPort,
     private val spotifyRecentlyPlayed: SpotifyRecentlyPlayedPort,
     private val recentlyPlayedRepository: RecentlyPlayedRepositoryPort,
@@ -22,21 +21,10 @@ class FetchRecentlyPlayedService(
 
     override fun fetchAndPersist(userId: UserId): Either<DomainError, Int> = either {
         val accessToken = spotifyAccessToken.getValidAccessToken(userId)
-        val tracks = spotifyRecentlyPlayed.getRecentlyPlayed(accessToken).bind()
+        val tracks = spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken).bind()
         val playedAts = tracks.map { it.playedAt }.toSet()
         val existingPlayedAts = recentlyPlayedRepository.findExistingPlayedAts(userId, playedAts)
-        val newItems = tracks
-            .filter { it.playedAt !in existingPlayedAts }
-            .map { track ->
-                RecentlyPlayedItem(
-                    spotifyUserId = userId,
-                    trackId = track.trackId,
-                    trackName = track.trackName,
-                    artistIds = track.artistIds,
-                    artistNames = track.artistNames,
-                    playedAt = track.playedAt,
-                )
-            }
+        val newItems = tracks.filter { it.playedAt !in existingPlayedAts }
         if (newItems.isNotEmpty()) {
             logger.info { "Persisting ${newItems.size} new recently played items for user: ${userId.value}" }
             recentlyPlayedRepository.saveAll(newItems)
