@@ -1,0 +1,1 @@
+* fix-deployment-missing-env-vars: Fix deployment by adding missing Spotify Auth and MongoDB Atlas ENV variables to GH workflow.
