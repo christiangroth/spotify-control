@@ -252,7 +252,9 @@ All domain failures are represented as typed `DomainError` values wrapped in Arr
 
 See [ADR-0006](../adr/0006-error-handling-concept.md) for the full design rationale.
 
- This ensures reliability and decouples producers from consumers.
+## Outbox Pattern
+
+All Spotify API operations and domain-level async tasks are routed through a persistent outbox. This ensures reliability and decouples producers from consumers.
 
 **Partitions and event types:**
 

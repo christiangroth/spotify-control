@@ -25,7 +25,7 @@ import java.net.http.HttpResponse
 import java.util.Base64
 
 @ApplicationScoped
-@Suppress("Unused")
+@Suppress("Unused", "TooGenericExceptionCaught")
 class SpotifyAuthAdapter(
     @ConfigProperty(name = "spotify.accounts.base-url", defaultValue = "https://accounts.spotify.com")
     private val accountsBaseUrl: String,

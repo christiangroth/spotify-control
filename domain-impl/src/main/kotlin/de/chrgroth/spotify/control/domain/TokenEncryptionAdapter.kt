@@ -16,7 +16,7 @@ import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
 @ApplicationScoped
-@Suppress("Unused")
+@Suppress("Unused", "TooGenericExceptionCaught")
 class TokenEncryptionAdapter(
     @ConfigProperty(name = "app.token-encryption-key")
     encryptionKeyBase64: String,
