@@ -14,5 +14,6 @@ class UserServiceAdapter(
 
     private val allowedUserIds: Set<UserId> = allowedUserIdStrings.map { UserId(it) }.toSet()
 
-    override fun isAllowed(userId: UserId): Boolean = userId in allowedUserIds
+    override fun isAllowed(userId: UserId): Boolean =
+        userId in allowedUserIds
 }

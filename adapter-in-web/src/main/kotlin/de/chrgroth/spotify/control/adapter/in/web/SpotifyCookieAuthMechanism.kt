@@ -11,6 +11,7 @@ import io.quarkus.vertx.http.runtime.security.HttpAuthenticationMechanism
 import io.smallrye.mutiny.Uni
 import io.vertx.ext.web.RoutingContext
 import jakarta.enterprise.context.ApplicationScoped
+import mu.KLogging
 import java.security.Principal
 import java.util.Optional
 
@@ -27,6 +28,7 @@ class SpotifyCookieAuthMechanism(
         return try {
             val userId = UserId(tokenEncryption.decrypt(cookieValue))
             if (userRepository.findById(userId) == null) {
+                logger.error { "Authentication failed: user not found: ${userId.value}" }
                 return Uni.createFrom().optional(Optional.empty())
             }
             val identity = QuarkusSecurityIdentity.builder()
@@ -42,7 +44,7 @@ class SpotifyCookieAuthMechanism(
     override fun getChallenge(context: RoutingContext): Uni<ChallengeData> =
         Uni.createFrom().item(ChallengeData(REDIRECT_STATUS, "Location", "/"))
 
-    companion object {
+    companion object : KLogging() {
         const val COOKIE_NAME = "spotify-session"
         private const val REDIRECT_STATUS = 307
     }

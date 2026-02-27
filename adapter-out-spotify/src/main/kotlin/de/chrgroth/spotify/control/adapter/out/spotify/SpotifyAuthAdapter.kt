@@ -10,6 +10,7 @@ import de.chrgroth.spotify.control.domain.model.SpotifyRefreshedTokens
 import de.chrgroth.spotify.control.domain.model.SpotifyTokens
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAuthPort
 import jakarta.enterprise.context.ApplicationScoped
+import mu.KLogging
 import org.eclipse.microprofile.config.inject.ConfigProperty
 import java.net.URI
 import java.net.URLEncoder
@@ -55,7 +56,10 @@ class SpotifyAuthAdapter(
             .GET()
             .build()
         val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
-        check(response.statusCode() == HTTP_OK) { "Spotify profile fetch failed: ${response.statusCode()}" }
+        if (response.statusCode() != HTTP_OK) {
+            logger.error { "Spotify profile fetch failed: ${response.statusCode()} - ${response.body()}" }
+            error("Spotify profile fetch failed: ${response.statusCode()}")
+        }
         val json: JsonNode = objectMapper.readTree(response.body())
         return SpotifyProfile(
             id = SpotifyProfileId(json.get("id").asText()),
@@ -83,11 +87,14 @@ class SpotifyAuthAdapter(
             .POST(HttpRequest.BodyPublishers.ofString(body))
             .build()
         val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
-        check(response.statusCode() == HTTP_OK) { "Spotify token endpoint request failed: ${response.statusCode()}" }
+        if (response.statusCode() != HTTP_OK) {
+            logger.error { "Spotify token endpoint request failed: ${response.statusCode()} - ${response.body()}" }
+            error("Spotify token endpoint request failed: ${response.statusCode()}")
+        }
         return objectMapper.readTree(response.body())
     }
 
-    companion object {
+    companion object : KLogging() {
         private const val HTTP_OK = 200
     }
 }

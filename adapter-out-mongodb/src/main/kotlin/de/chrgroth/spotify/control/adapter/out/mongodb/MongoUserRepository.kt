@@ -6,6 +6,7 @@ import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 import kotlin.time.toJavaInstant
 import kotlin.time.toKotlinInstant
+import mu.KLogging
 
 @ApplicationScoped
 class UserRepositoryAdapter : UserRepositoryPort {
@@ -15,6 +16,11 @@ class UserRepositoryAdapter : UserRepositoryPort {
 
     override fun upsert(user: User) {
         val existing = UserDocument.findById(user.spotifyUserId.value)
+        if (existing == null) {
+            logger.info { "Creating new user: ${user.spotifyUserId.value}" }
+        } else {
+            logger.info { "Updating existing user: ${user.spotifyUserId.value}" }
+        }
         val document = existing ?: UserDocument().apply {
             spotifyUserId = user.spotifyUserId.value
             createdAt = java.time.Instant.now()
@@ -35,4 +41,6 @@ class UserRepositoryAdapter : UserRepositoryPort {
         tokenExpiresAt = tokenExpiresAt.toKotlinInstant(),
         lastLoginAt = lastLoginAt.toKotlinInstant(),
     )
+
+    companion object : KLogging()
 }
