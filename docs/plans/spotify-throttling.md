@@ -90,25 +90,42 @@ adapter-out-spotify
 
 OutboxProcessor
   receives Either.Left(SpotifyRateLimitError)
-  records rateLimitedUntil = now + retryAfter on the partition
+  calls OutboxRepository.pausePartition(partition, reason = "rate_limited", pausedUntil = now + retryAfter)
   calls OutboxRepository.fail(task, error, nextRetryAt = now + retryAfter)
+  launches resume coroutine: delay(retryAfter) → activatePartition() → workerChannel.send(Unit)
 
 OutboxPartitionWorker
-  OutboxProcessor.processNext() returns false (partition is rate-limited)
+  OutboxProcessor.processNext() returns false (partition status = PAUSED)
   worker suspends on channel.receive()
-  ScheduledRetrySignal job fires when rateLimitedUntil has passed, signals the channel
-  worker resumes → claim picks up the current task (nextRetryAt <= now)
-  all subsequent tasks in the partition are also processed normally
+  resume coroutine fires after retryAfter elapses:
+    OutboxRepository.activatePartition(partition)  (status = ACTIVE, clears reason + pausedUntil)
+    signals channel → worker resumes
+  worker claims next due task and processing continues normally
 ```
 
-When a 429 is received, **the entire `spotify` partition is paused** until `rateLimitedUntil`
-elapses. The `claim` query is extended with an additional partition-level guard:
-`rateLimitedUntil IS NULL OR rateLimitedUntil <= now`. This prevents any further Spotify request
-from being dispatched during the cooldown, regardless of which task triggered the 429.
+When a 429 is received, **the entire `spotify` partition is paused** by setting `status = PAUSED` in
+MongoDB. The `claim` query only returns tasks for partitions where `status = ACTIVE`, preventing any
+further Spotify requests during the cooldown. The partition-level pause is a core outbox concept,
+not specific to Spotify.
 
 ---
 
 ## New Components
+
+### `OutboxPartition` data model change (util-outbox / MongoDB)
+
+The outbox partition document gains three new fields to support partition-level pausing as a
+**core outbox concept**, independent of Spotify:
+
+| Field          | Type        | Default    | Description                                        |
+|----------------|-------------|------------|----------------------------------------------------|
+| `status`       | `enum`      | `ACTIVE`   | `ACTIVE` — processing normally; `PAUSED` — no tasks claimed until resumed |
+| `statusReason` | `String?`   | `null`     | Human-readable reason for the current status (e.g. `"rate_limited"`) |
+| `pausedUntil`  | `Instant?`  | `null`     | When the partition will automatically resume; `null` when `ACTIVE` |
+
+The `claim` query gains a partition-level guard: tasks are only returned for partitions where
+`status = ACTIVE`. No schema migration is needed for existing documents — absence of `status` is
+treated as `ACTIVE`.
 
 ### `SpotifyRateLimitError` (domain-api)
 
@@ -125,25 +142,40 @@ data class SpotifyRateLimitError(val retryAfter: Duration) : OutboxError
 `OutboxProcessor.processNext` inspects the returned `Either.Left` value. When it detects a
 `SpotifyRateLimitError` it:
 
-1. Writes `rateLimitedUntil = now + retryAfter` to a shared, in-memory (or MongoDB-persisted)
-   field for the partition.
-2. Calls `OutboxRepository.fail(task, error, nextRetryAt = now + retryAfter)` so the triggering
-   task is also rescheduled.
-3. Returns `false`, causing `OutboxPartitionWorker` to suspend on `channel.receive()`.
+1. Persists the partition pause to MongoDB:
+   `OutboxRepository.pausePartition(partition, reason = "rate_limited", pausedUntil = now + retryAfter)`.
+2. Reschedules the triggering task:
+   `OutboxRepository.fail(task, error, nextRetryAt = now + retryAfter)`.
+3. Launches a resume coroutine (within the existing coroutine scope):
+   ```kotlin
+   launch {
+       delay(retryAfter)
+       outboxRepository.activatePartition(partition)
+       workerChannel.send(Unit)
+   }
+   ```
+4. Returns `false`, causing `OutboxPartitionWorker` to suspend on `channel.receive()`.
 
-While `rateLimitedUntil > now`, the `claim` query returns no task for the `spotify` partition,
-so no Spotify requests are issued even if `ScheduledRetrySignal` prematurely wakes the worker.
+The resume coroutine is the **only** mechanism that reactivates the partition. There is no
+scheduler or polling loop; the coroutine suspends cheaply via `delay` and wakes exactly once when
+the cooldown has elapsed.
 
 The standard `RetryPolicy` (5 s → 10 s → 30 s → 60 s, max 5 attempts) still applies to all
 other failures. A 429 does **not** increment the `attempts` counter, because it is not a handler
 fault; it is a temporary external constraint.
 
-### `ScheduledRetrySignal` (adapter-in-outbox)
+### Startup recovery in `OutboxPartitionWorker` (util-outbox)
 
-A lightweight Quarkus `@Scheduled` job that runs every 10 seconds. It checks whether the
-`spotify` partition's `rateLimitedUntil` has elapsed and, if so, clears the field and signals
-the `spotify` partition channel. This wakes the dormant `OutboxPartitionWorker` to resume normal
-processing without requiring a fixed sleep or polling inside the coroutine.
+On startup each `OutboxPartitionWorker` reads its partition document from MongoDB. If the
+partition is found in `PAUSED` state, the worker applies one of two paths before entering the
+normal processing loop:
+
+| Condition                          | Action                                                              |
+|------------------------------------|---------------------------------------------------------------------|
+| `pausedUntil > now`                | Launch resume coroutine with `delay(pausedUntil - now)`, then suspend on `channel.receive()` |
+| `pausedUntil <= now` (or `null`)   | Call `activatePartition()` immediately, then start processing normally |
+
+This ensures the partition self-heals after an application restart without external intervention.
 
 ---
 
