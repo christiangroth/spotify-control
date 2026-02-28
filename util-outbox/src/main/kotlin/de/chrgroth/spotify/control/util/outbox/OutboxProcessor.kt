@@ -8,6 +8,10 @@ class OutboxProcessor(
     private val retryPolicy: RetryPolicy = RetryPolicy(),
 ) {
 
+    /**
+     * Claims and dispatches the next available task for [partition].
+     * Returns true if a task was claimed (regardless of dispatch outcome), false if no task was available.
+     */
     fun processNext(
         partition: OutboxPartition,
         dispatch: (OutboxTask) -> Either<OutboxError, Unit>,

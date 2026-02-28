@@ -161,6 +161,7 @@ class MongoOutboxRepository : OutboxRepository {
     override fun findPartition(partition: OutboxPartition): OutboxPartitionDocument? =
         OutboxPartitionDocument.findById(partition.key)
 
+    /** Resets all PROCESSING tasks back to PENDING. Should be called at application startup to recover tasks that were interrupted mid-processing. */
     override fun resetStaleProcessingTasks() {
         val now = Instant.now()
         val result = OutboxDocument.mongoCollection().updateMany(
