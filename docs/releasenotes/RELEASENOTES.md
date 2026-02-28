@@ -1,3 +1,6 @@
+# 0.4.2 - 2026.02.28
+## New Features
+* implement-util-outbox-module: Add util-outbox module with outbox pattern support (MongoDB-backed task queue with retry, deduplication, and partition management).
 # 0.4.1 - 2026.02.28
 ## Bugfixes / Chore
 * add-spotify-throttling-concept: Add Spotify request throttling concept document (docs/plans/spotify-throttling.md).* create-test-concept-docs: Added test-boundaries.md concept document describing the "Test Your Boundaries" approach for the hexagonal architecture.
