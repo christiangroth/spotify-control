@@ -1,8 +1,5 @@
 package de.chrgroth.spotify.control.domain
 
-import arrow.core.Either
-import arrow.core.raise.either
-import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.RecentlyPlayedPort
 import de.chrgroth.spotify.control.domain.port.out.RecentlyPlayedRepositoryPort
@@ -26,27 +23,27 @@ class RecentlyPlayedAdapter(
         logger.info { "Fetching recently played for ${users.size} user(s)" }
         users.forEach { user ->
             try {
-                fetchAndPersistForUser(user.spotifyUserId).fold(
-                    ifLeft = { logger.error { "Failed to fetch recently played for user ${user.spotifyUserId.value}: ${it.code}" } },
-                    ifRight = { count -> logger.info { "Persisted $count new recently played item(s) for user ${user.spotifyUserId.value}" } },
-                )
+                fetchAndPersistForUser(user.spotifyUserId)
             } catch (e: Exception) {
                 logger.error(e) { "Unexpected error fetching recently played for user ${user.spotifyUserId.value}" }
             }
         }
     }
 
-    private fun fetchAndPersistForUser(userId: UserId): Either<DomainError, Int> = either {
+    private fun fetchAndPersistForUser(userId: UserId) {
         val accessToken = spotifyAccessToken.getValidAccessToken(userId)
-        val tracks = spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken).bind()
-        val playedAts = tracks.map { it.playedAt }.toSet()
-        val existingPlayedAts = recentlyPlayedRepository.findExistingPlayedAts(userId, playedAts)
-        val newItems = tracks.filter { it.playedAt !in existingPlayedAts }
-        if (newItems.isNotEmpty()) {
-            logger.info { "Persisting ${newItems.size} new recently played items for user: ${userId.value}" }
-            recentlyPlayedRepository.saveAll(newItems)
-        }
-        newItems.size
+        spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken).fold(
+            ifLeft = { logger.error { "Failed to fetch recently played for user ${userId.value}: ${it.code}" } },
+            ifRight = { tracks ->
+                val playedAts = tracks.map { it.playedAt }.toSet()
+                val existingPlayedAts = recentlyPlayedRepository.findExistingPlayedAts(userId, playedAts)
+                val newItems = tracks.filter { it.playedAt !in existingPlayedAts }
+                if (newItems.isNotEmpty()) {
+                    logger.info { "Persisting ${newItems.size} new recently played items for user: ${userId.value}" }
+                    recentlyPlayedRepository.saveAll(newItems)
+                }
+            },
+        )
     }
 
     companion object : KLogging()
