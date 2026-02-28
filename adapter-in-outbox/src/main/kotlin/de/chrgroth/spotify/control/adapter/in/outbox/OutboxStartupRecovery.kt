@@ -4,6 +4,7 @@ import de.chrgroth.spotify.control.domain.outbox.AppOutboxPartition
 import de.chrgroth.spotify.control.util.outbox.OutboxRepository
 import de.chrgroth.spotify.control.util.outbox.OutboxWakeupService
 import io.quarkus.runtime.StartupEvent
+import jakarta.annotation.Priority
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.enterprise.event.Observes
 import mu.KLogging
@@ -15,7 +16,7 @@ class OutboxStartupRecovery(
     private val wakeupService: OutboxWakeupService,
 ) {
 
-    fun onStart(@Observes event: StartupEvent) {
+    fun onStart(@Observes @Priority(1) event: StartupEvent) {
         outboxRepository.resetStaleProcessingTasks()
         AppOutboxPartition.all.forEach { partition ->
             wakeupService.signal(partition)

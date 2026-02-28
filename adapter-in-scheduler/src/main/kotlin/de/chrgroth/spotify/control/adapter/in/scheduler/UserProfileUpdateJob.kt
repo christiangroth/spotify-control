@@ -1,7 +1,6 @@
 package de.chrgroth.spotify.control.adapter.`in`.scheduler
 
-import de.chrgroth.spotify.control.domain.outbox.AppOutboxEvent
-import de.chrgroth.spotify.control.domain.port.out.OutboxPort
+import de.chrgroth.spotify.control.domain.port.`in`.UserProfileUpdatePort
 import io.quarkus.scheduler.Scheduled
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
@@ -9,13 +8,13 @@ import mu.KLogging
 @ApplicationScoped
 @Suppress("Unused")
 class UserProfileUpdateJob(
-    private val outboxPort: OutboxPort,
+    private val userProfileUpdate: UserProfileUpdatePort,
 ) {
 
     @Scheduled(cron = "0 0 4 * * ?")
     fun run() {
-        logger.info { "Enqueuing user profile update" }
-        outboxPort.enqueue(AppOutboxEvent.UpdateUserProfiles)
+        logger.info { "Running scheduled user profile update" }
+        userProfileUpdate.updateUserProfiles()
     }
 
     companion object : KLogging()

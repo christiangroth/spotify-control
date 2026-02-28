@@ -15,7 +15,7 @@ class OutboxPortAdapter(
 ) : OutboxPort {
 
     override fun enqueue(event: AppOutboxEvent) {
-        val inserted = repository.enqueue(event.partition, event, "{}", event.priority)
+        val inserted = repository.enqueue(event.partition, event, event.toPayload(), event.priority)
         if (inserted) {
             logger.debug { "Enqueued outbox event ${event.key} in partition ${event.partition.key}" }
             wakeupService.signal(event.partition)

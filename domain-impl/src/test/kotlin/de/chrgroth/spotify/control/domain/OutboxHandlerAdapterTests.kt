@@ -1,6 +1,7 @@
 package de.chrgroth.spotify.control.domain
 
 import arrow.core.Either
+import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.RecentlyPlayedPort
 import de.chrgroth.spotify.control.domain.port.`in`.UserProfileUpdatePort
 import io.mockk.every
@@ -18,40 +19,42 @@ class OutboxHandlerAdapterTests {
 
     private val adapter = OutboxHandlerAdapter(recentlyPlayed, userProfileUpdate)
 
-    @Test
-    fun `handleFetchRecentlyPlayed delegates to RecentlyPlayedPort successfully`() {
-        every { recentlyPlayed.fetchAndPersistForAllUsers() } just runs
+    private val userId = UserId("user-1")
 
-        val result = adapter.handleFetchRecentlyPlayed()
+    @Test
+    fun `handleFetchRecentlyPlayedForUser delegates to RecentlyPlayedPort successfully`() {
+        every { recentlyPlayed.fetchAndPersistForUser(userId) } just runs
+
+        val result = adapter.handleFetchRecentlyPlayedForUser(userId)
 
         assertThat(result).isInstanceOf(Either.Right::class.java)
-        verify { recentlyPlayed.fetchAndPersistForAllUsers() }
+        verify { recentlyPlayed.fetchAndPersistForUser(userId) }
     }
 
     @Test
-    fun `handleFetchRecentlyPlayed returns left on unexpected exception`() {
-        every { recentlyPlayed.fetchAndPersistForAllUsers() } throws RuntimeException("connection error")
+    fun `handleFetchRecentlyPlayedForUser returns left on unexpected exception`() {
+        every { recentlyPlayed.fetchAndPersistForUser(userId) } throws RuntimeException("connection error")
 
-        val result = adapter.handleFetchRecentlyPlayed()
+        val result = adapter.handleFetchRecentlyPlayedForUser(userId)
 
         assertThat(result).isInstanceOf(Either.Left::class.java)
     }
 
     @Test
-    fun `handleUpdateUserProfiles delegates to UserProfileUpdatePort successfully`() {
-        every { userProfileUpdate.updateUserProfiles() } just runs
+    fun `handleUpdateUserProfileForUser delegates to UserProfileUpdatePort successfully`() {
+        every { userProfileUpdate.updateUserProfile(userId) } just runs
 
-        val result = adapter.handleUpdateUserProfiles()
+        val result = adapter.handleUpdateUserProfileForUser(userId)
 
         assertThat(result).isInstanceOf(Either.Right::class.java)
-        verify { userProfileUpdate.updateUserProfiles() }
+        verify { userProfileUpdate.updateUserProfile(userId) }
     }
 
     @Test
-    fun `handleUpdateUserProfiles returns left on unexpected exception`() {
-        every { userProfileUpdate.updateUserProfiles() } throws RuntimeException("connection error")
+    fun `handleUpdateUserProfileForUser returns left on unexpected exception`() {
+        every { userProfileUpdate.updateUserProfile(userId) } throws RuntimeException("connection error")
 
-        val result = adapter.handleUpdateUserProfiles()
+        val result = adapter.handleUpdateUserProfileForUser(userId)
 
         assertThat(result).isInstanceOf(Either.Left::class.java)
     }

@@ -1,7 +1,6 @@
 package de.chrgroth.spotify.control.adapter.`in`.scheduler
 
-import de.chrgroth.spotify.control.domain.outbox.AppOutboxEvent
-import de.chrgroth.spotify.control.domain.port.out.OutboxPort
+import de.chrgroth.spotify.control.domain.port.`in`.RecentlyPlayedPort
 import io.quarkus.scheduler.Scheduled
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
@@ -9,13 +8,13 @@ import mu.KLogging
 @ApplicationScoped
 @Suppress("Unused")
 class RecentlyPlayedFetchJob(
-    private val outboxPort: OutboxPort,
+    private val recentlyPlayed: RecentlyPlayedPort,
 ) {
 
     @Scheduled(cron = "0 0/15 * * * ?")
     fun run() {
-        logger.info { "Enqueuing recently played fetch" }
-        outboxPort.enqueue(AppOutboxEvent.FetchRecentlyPlayed)
+        logger.info { "Running scheduled recently played fetch" }
+        recentlyPlayed.fetchAndPersistForAllUsers()
     }
 
     companion object : KLogging()

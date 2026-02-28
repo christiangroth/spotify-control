@@ -1,7 +1,6 @@
 package de.chrgroth.spotify.control.adapter.`in`.scheduler
 
-import de.chrgroth.spotify.control.domain.outbox.AppOutboxEvent
-import de.chrgroth.spotify.control.domain.port.out.OutboxPort
+import de.chrgroth.spotify.control.domain.port.`in`.RecentlyPlayedPort
 import io.quarkus.test.InjectMock
 import io.quarkus.test.junit.QuarkusTest
 import jakarta.inject.Inject
@@ -12,15 +11,15 @@ import org.mockito.Mockito.verify
 class RecentlyPlayedFetchJobTests {
 
     @InjectMock
-    lateinit var outboxPort: OutboxPort
+    lateinit var recentlyPlayed: RecentlyPlayedPort
 
     @Inject
     lateinit var job: RecentlyPlayedFetchJob
 
     @Test
-    fun `run enqueues FetchRecentlyPlayed event`() {
+    fun `run calls fetchAndPersistForAllUsers`() {
         job.run()
 
-        verify(outboxPort).enqueue(AppOutboxEvent.FetchRecentlyPlayed)
+        verify(recentlyPlayed).fetchAndPersistForAllUsers()
     }
 }

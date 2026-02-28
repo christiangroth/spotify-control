@@ -6,24 +6,35 @@ import de.chrgroth.spotify.control.util.outbox.OutboxTaskPriority
 sealed interface AppOutboxEvent : OutboxEvent {
     val partition: AppOutboxPartition
     val priority: OutboxTaskPriority get() = OutboxTaskPriority.NORMAL
+    fun toPayload(): String
 
-    data object FetchRecentlyPlayed : AppOutboxEvent {
-        override val key = "FetchRecentlyPlayed"
-        override fun deduplicationKey() = "FetchRecentlyPlayed"
+    data class FetchRecentlyPlayedForUser(val userId: String) : AppOutboxEvent {
+        override val key = KEY
+        override fun deduplicationKey() = "$KEY:$userId"
         override val partition = AppOutboxPartition.RecentlyPlayed
         override val priority = OutboxTaskPriority.HIGH
+        override fun toPayload() = userId
+
+        companion object {
+            const val KEY = "FetchRecentlyPlayedForUser"
+        }
     }
 
-    data object UpdateUserProfiles : AppOutboxEvent {
-        override val key = "UpdateUserProfiles"
-        override fun deduplicationKey() = "UpdateUserProfiles"
+    data class UpdateUserProfileForUser(val userId: String) : AppOutboxEvent {
+        override val key = KEY
+        override fun deduplicationKey() = "$KEY:$userId"
         override val partition = AppOutboxPartition.UserProfileUpdate
+        override fun toPayload() = userId
+
+        companion object {
+            const val KEY = "UpdateUserProfileForUser"
+        }
     }
 
     companion object {
-        fun fromKey(key: String): AppOutboxEvent = when (key) {
-            FetchRecentlyPlayed.key -> FetchRecentlyPlayed
-            UpdateUserProfiles.key -> UpdateUserProfiles
+        fun fromKey(key: String, payload: String): AppOutboxEvent = when (key) {
+            FetchRecentlyPlayedForUser.KEY -> FetchRecentlyPlayedForUser(payload)
+            UpdateUserProfileForUser.KEY -> UpdateUserProfileForUser(payload)
             else -> throw IllegalArgumentException("Unknown outbox event type: $key")
         }
     }

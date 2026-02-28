@@ -4,6 +4,7 @@ import arrow.core.Either
 import arrow.core.left
 import de.chrgroth.spotify.control.domain.outbox.AppOutboxEvent
 import de.chrgroth.spotify.control.domain.outbox.AppOutboxPartition
+import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.OutboxHandlerPort
 import de.chrgroth.spotify.control.util.outbox.OutboxError
 import de.chrgroth.spotify.control.util.outbox.OutboxProcessor
@@ -58,13 +59,13 @@ class OutboxPartitionWorker(
 
     private fun dispatch(task: OutboxTask): Either<OutboxError, Unit> {
         val event = try {
-            AppOutboxEvent.fromKey(task.eventType)
+            AppOutboxEvent.fromKey(task.eventType, task.payload)
         } catch (e: IllegalArgumentException) {
             return OutboxError("Unknown event type: ${task.eventType}").left()
         }
         return when (event) {
-            is AppOutboxEvent.FetchRecentlyPlayed -> handlerPort.handleFetchRecentlyPlayed()
-            is AppOutboxEvent.UpdateUserProfiles -> handlerPort.handleUpdateUserProfiles()
+            is AppOutboxEvent.FetchRecentlyPlayedForUser -> handlerPort.handleFetchRecentlyPlayedForUser(UserId(event.userId))
+            is AppOutboxEvent.UpdateUserProfileForUser -> handlerPort.handleUpdateUserProfileForUser(UserId(event.userId))
         }
     }
 
