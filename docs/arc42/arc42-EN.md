@@ -129,7 +129,7 @@ Contains the core business logic: playback enrichment, aggregation computation, 
 
 ### `util-outbox`
 
-A self-contained outbox implementation providing: persistent task storage (MongoDB), atomic claim via `findOneAndUpdate`, at-least-once delivery with configurable retry backoff, partition-level pause/resume, task deduplication, priority-based ordering, and a conflated `Channel<Unit>` per partition for event-driven wakeup. Designed to be potentially extracted as a standalone library. See [outbox-usage.md](../addons/outbox-usage.md) for usage guidance.
+A self-contained outbox implementation providing: persistent task storage (MongoDB), atomic claim via `findOneAndUpdate`, at-least-once delivery with configurable retry backoff, partition-level pause/resume, task deduplication, priority-based ordering, and a conflated `Channel<Unit>` per partition for event-driven wakeup. Designed to be potentially extracted as a standalone library. See [outbox.md](outbox.md) for architecture details and usage guidance.
 
 ## Level 2
 
@@ -317,6 +317,20 @@ Architecture decisions are documented as Architecture Decision Records (ADRs) in
 | [0003](../adr/0003-no-separate-frontend-project.md) | No Separate Frontend Project |
 | [0004](../adr/0004-using-ai-coding-agents.md) | Using AI Coding Agents |
 | [0005](../adr/0005-markdown-rendering-library.md) | Markdown Rendering Library: marked |
+
+## Outbox Design Decisions
+
+The following decisions were made for the `util-outbox` module. Detailed usage guidance is in [outbox.md](outbox.md).
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Persistence backend | MongoDB (`findOneAndUpdate`) | Already present in the stack; atomic claim without an additional runtime dependency. |
+| No Kafka / dedicated outbox library | Pure MongoDB | No additional infrastructure; at-most one application instance. |
+| `kotlinx-coroutines-core` for wakeup | `Channel<Unit>(CONFLATED)` per partition | Zero idle CPU; zero extra latency; no polling fallback needed. |
+| Single `OutboxEvent` interface | Combines event type key + deduplication key | Reduces the number of types callers must implement; payload class owns the dedup logic naturally. |
+| Absent partition document = ACTIVE | Lazy creation on first pause | Existing deployments need no migration; only paused partitions need a document. |
+| Priority via enum name ordering | `HIGH` < `NORMAL` alphabetically (ascending sort) | Avoids a numeric mapping; enum names are self-documenting. |
+| Persistence co-located with core logic | Single `util-outbox` module | Simplicity over separation; can be split later if extraction is needed. |
 
 # Quality Requirements
 

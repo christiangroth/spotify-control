@@ -97,11 +97,11 @@ class MongoOutboxRepository : OutboxRepository {
 
     override fun enqueue(
         partition: OutboxPartition,
-        eventType: OutboxEventType,
+        event: OutboxEvent,
         payload: String,
-        deduplicationKey: String,
         priority: OutboxTaskPriority,
     ): Boolean {
+        val deduplicationKey = event.deduplicationKey()
         val existing = OutboxDocument.mongoCollection().find(
             Filters.and(
                 Filters.eq("partition", partition.key),
@@ -119,7 +119,7 @@ class MongoOutboxRepository : OutboxRepository {
         val doc = OutboxDocument().apply {
             id = UUID.randomUUID().toString()
             this.partition = partition.key
-            this.eventType = eventType.key
+            this.eventType = event.key
             this.deduplicationKey = deduplicationKey
             this.payload = payload
             status = OutboxTaskStatus.PENDING.name

@@ -46,7 +46,7 @@ Kafka, RabbitMQ, Debezium, and dedicated outbox libraries are all out of scope.
 ## Module Structure
 
 ```
-util-outbox          – ✅ Implemented – see docs/addons/outbox-usage.md
+util-outbox          – ✅ Implemented – see docs/arc42/outbox.md
 adapter-in-outbox    – Drives domain processing: event-driven wakeup, exhaustive dispatch, startup recovery.
 adapter-out-outbox   – Write side: implements OutboxPort so domain services can enqueue tasks.
 adapter-out-spotify  – Spotify API client (no outbox handler responsibility).
@@ -479,7 +479,7 @@ domain-api
     ├── AppOutboxPartition (sealed, extends OutboxPartition from util-outbox)
     └── AppOutboxEventType (sealed, extends OutboxEventType from util-outbox)
 
-util-outbox  ✅ Implemented – see docs/addons/outbox-usage.md
+util-outbox  ✅ Implemented – see docs/arc42/outbox.md
 
 adapter-in-outbox
     ├── depends on: domain-api, util-outbox

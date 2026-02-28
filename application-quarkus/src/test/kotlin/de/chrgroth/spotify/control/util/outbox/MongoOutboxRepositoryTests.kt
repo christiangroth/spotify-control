@@ -18,20 +18,21 @@ class MongoOutboxRepositoryTests {
         override val key = "test-${UUID.randomUUID()}"
     }
 
-    private val eventType = object : OutboxEventType {
+    private fun event(dedupKey: String = "TestEvent:1") = object : OutboxEvent {
         override val key = "TestEvent"
+        override fun deduplicationKey() = dedupKey
     }
 
     @Test
     fun `enqueue inserts a new task and claim retrieves it`() {
         val partition = uniquePartition()
-        repository.enqueue(partition, eventType, """{"id":"1"}""", "TestEvent:1")
+        repository.enqueue(partition, event(), """{"id":"1"}""")
 
         val task = repository.claim(partition)
 
         assertThat(task).isNotNull()
         assertThat(task!!.partition).isEqualTo(partition.key)
-        assertThat(task.eventType).isEqualTo(eventType.key)
+        assertThat(task.eventType).isEqualTo("TestEvent")
         assertThat(task.status).isEqualTo(OutboxTaskStatus.PROCESSING)
     }
 
@@ -39,8 +40,8 @@ class MongoOutboxRepositoryTests {
     fun `enqueue returns true for new task and false for duplicate PENDING`() {
         val partition = uniquePartition()
 
-        val first = repository.enqueue(partition, eventType, """{"id":"1"}""", "TestEvent:1")
-        val second = repository.enqueue(partition, eventType, """{"id":"1"}""", "TestEvent:1")
+        val first = repository.enqueue(partition, event(), """{"id":"1"}""")
+        val second = repository.enqueue(partition, event(), """{"id":"1"}""")
 
         assertThat(first).isTrue()
         assertThat(second).isFalse()
@@ -49,11 +50,11 @@ class MongoOutboxRepositoryTests {
     @Test
     fun `enqueue allows re-enqueue after FAILED task`() {
         val partition = uniquePartition()
-        repository.enqueue(partition, eventType, """{"id":"1"}""", "TestEvent:1")
+        repository.enqueue(partition, event(), """{"id":"1"}""")
         val task = repository.claim(partition)!!
         repository.fail(task, "error", null)
 
-        val reEnqueued = repository.enqueue(partition, eventType, """{"id":"1"}""", "TestEvent:1")
+        val reEnqueued = repository.enqueue(partition, event(), """{"id":"1"}""")
 
         assertThat(reEnqueued).isTrue()
     }
@@ -70,7 +71,7 @@ class MongoOutboxRepositoryTests {
     @Test
     fun `claim respects nextRetryAt and skips tasks not yet due`() {
         val partition = uniquePartition()
-        repository.enqueue(partition, eventType, """{"id":"1"}""", "TestEvent:1")
+        repository.enqueue(partition, event(), """{"id":"1"}""")
         val task = repository.claim(partition)!!
         repository.fail(task, "temporary error", Instant.now().plus(Duration.ofMinutes(10)))
 
@@ -82,7 +83,7 @@ class MongoOutboxRepositoryTests {
     @Test
     fun `complete moves task to archive and no further claim is possible`() {
         val partition = uniquePartition()
-        repository.enqueue(partition, eventType, """{"id":"1"}""", "TestEvent:1")
+        repository.enqueue(partition, event(), """{"id":"1"}""")
         val task = repository.claim(partition)!!
 
         repository.complete(task)
@@ -93,7 +94,7 @@ class MongoOutboxRepositoryTests {
     @Test
     fun `fail with nextRetryAt makes task available again after delay`() {
         val partition = uniquePartition()
-        repository.enqueue(partition, eventType, """{"id":"1"}""", "TestEvent:1")
+        repository.enqueue(partition, event(), """{"id":"1"}""")
         val task = repository.claim(partition)!!
 
         repository.fail(task, "temporary error", Instant.now().minus(Duration.ofSeconds(1)))
@@ -106,7 +107,7 @@ class MongoOutboxRepositoryTests {
     @Test
     fun `fail with null nextRetryAt makes task unavailable for claim`() {
         val partition = uniquePartition()
-        repository.enqueue(partition, eventType, """{"id":"1"}""", "TestEvent:1")
+        repository.enqueue(partition, event(), """{"id":"1"}""")
         val task = repository.claim(partition)!!
 
         repository.fail(task, "permanent error", null)
@@ -117,7 +118,7 @@ class MongoOutboxRepositoryTests {
     @Test
     fun `reschedule sets task back to PENDING without incrementing attempts`() {
         val partition = uniquePartition()
-        repository.enqueue(partition, eventType, """{"id":"1"}""", "TestEvent:1")
+        repository.enqueue(partition, event(), """{"id":"1"}""")
         val task = repository.claim(partition)!!
 
         repository.reschedule(task, Instant.now().minus(Duration.ofSeconds(1)))
@@ -130,7 +131,7 @@ class MongoOutboxRepositoryTests {
     @Test
     fun `pausePartition blocks claim and activatePartition restores it`() {
         val partition = uniquePartition()
-        repository.enqueue(partition, eventType, """{"id":"1"}""", "TestEvent:1")
+        repository.enqueue(partition, event(), """{"id":"1"}""")
         repository.pausePartition(partition, "rate limited", Instant.now().plus(Duration.ofMinutes(5)))
 
         assertThat(repository.claim(partition)).isNull()
@@ -176,7 +177,7 @@ class MongoOutboxRepositoryTests {
     @Test
     fun `resetStaleProcessingTasks makes claimed tasks available again`() {
         val partition = uniquePartition()
-        repository.enqueue(partition, eventType, """{"id":"1"}""", "TestEvent:1")
+        repository.enqueue(partition, event(), """{"id":"1"}""")
         repository.claim(partition)!! // leaves task in PROCESSING
 
         repository.resetStaleProcessingTasks()
@@ -188,8 +189,8 @@ class MongoOutboxRepositoryTests {
     @Test
     fun `HIGH priority task is claimed before NORMAL priority task`() {
         val partition = uniquePartition()
-        repository.enqueue(partition, eventType, """{"id":"normal"}""", "TestEvent:normal", OutboxTaskPriority.NORMAL)
-        repository.enqueue(partition, eventType, """{"id":"high"}""", "TestEvent:high", OutboxTaskPriority.HIGH)
+        repository.enqueue(partition, event("TestEvent:normal"), """{"id":"normal"}""", OutboxTaskPriority.NORMAL)
+        repository.enqueue(partition, event("TestEvent:high"), """{"id":"high"}""", OutboxTaskPriority.HIGH)
 
         val first = repository.claim(partition)!!
 

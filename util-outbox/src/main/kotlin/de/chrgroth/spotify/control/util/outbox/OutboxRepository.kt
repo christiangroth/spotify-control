@@ -9,9 +9,8 @@ interface OutboxRepository {
     fun reschedule(task: OutboxTask, nextRetryAt: Instant)
     fun enqueue(
         partition: OutboxPartition,
-        eventType: OutboxEventType,
+        event: OutboxEvent,
         payload: String,
-        deduplicationKey: String,
         priority: OutboxTaskPriority = OutboxTaskPriority.NORMAL,
     ): Boolean
     fun pausePartition(partition: OutboxPartition, reason: String, pausedUntil: Instant)

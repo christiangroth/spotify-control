@@ -1,5 +1,6 @@
 package de.chrgroth.spotify.control.util.outbox
 
-interface OutboxEventType {
+interface OutboxEvent {
     val key: String
+    fun deduplicationKey(): String
 }

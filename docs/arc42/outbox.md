@@ -1,4 +1,4 @@
-# Outbox Pattern – Usage Guide
+# Outbox – Architecture and Usage
 
 ## Overview
 
@@ -9,8 +9,8 @@ The `util-outbox` module provides a persistent, reliable task queue backed by Mo
 | Concept              | Description                                                                                      |
 |----------------------|--------------------------------------------------------------------------------------------------|
 | **Partition**        | An independent processing channel (e.g. `spotify`, `domain`). Each partition is processed serially. |
-| **Event type**       | Identifies the kind of work to be done (e.g. `PollRecentlyPlayed`).                             |
-| **Payload**          | JSON-serialised task data; must include a `deduplicationKey` to prevent duplicate work.          |
+| **Event**            | Identifies the kind of work to be done and provides the deduplication key (e.g. `PollRecentlyPlayedPayload`). |
+| **Payload**          | JSON-serialised event data passed to the handler.                                                |
 | **Deduplication key** | A unique string per logical operation within a partition. Duplicate enqueues are silently skipped. |
 | **Priority**         | `NORMAL` (default) or `HIGH`. HIGH-priority tasks are always claimed before NORMAL tasks.        |
 
@@ -18,9 +18,8 @@ The `util-outbox` module provides a persistent, reliable task queue backed by Mo
 
 | Class / Interface            | Role                                                                                 |
 |------------------------------|--------------------------------------------------------------------------------------|
-| `OutboxPartition`            | Interface for partition keys; extend with your own sealed interface.                 |
-| `OutboxEventType`            | Interface for event type keys; extend with your own sealed interface.                |
-| `OutboxPayload`              | Interface every payload class must implement; declares `deduplicationKey()`.         |
+| `OutboxPartition`            | Interface for partition keys; extend with a sealed interface in `domain-api`.        |
+| `OutboxEvent`                | Combined interface: `val key: String` (event type) + `fun deduplicationKey(): String`. Implemented by payload data classes. |
 | `OutboxTask`                 | Immutable snapshot of a claimed task handed to the dispatch function.                |
 | `OutboxTaskStatus`           | `PENDING`, `PROCESSING`, `DONE`, `FAILED`.                                           |
 | `OutboxTaskPriority`         | `NORMAL`, `HIGH`.                                                                    |
@@ -29,51 +28,53 @@ The `util-outbox` module provides a persistent, reliable task queue backed by Mo
 | `RetryPolicy`                | Configures `maxAttempts` and the `backoff` delay list.                               |
 | `OutboxRepository`           | Interface for all repository operations (claim, complete, fail, enqueue, …).         |
 | `MongoOutboxRepository`      | MongoDB-backed `@ApplicationScoped` implementation of `OutboxRepository`.            |
-| `OutboxPartitionInfo`        | Simple data class returned by `OutboxRepository.findPartition`.                      |
+| `OutboxPartitionInfo`        | Data class returned by `OutboxRepository.findPartition`.                             |
 | `OutboxProcessor`            | Orchestrates claim → dispatch → complete/fail for one task at a time.                |
 | `OutboxWakeupService`        | Holds a `Channel<Unit>(CONFLATED)` per partition; signals partition workers.         |
 | `OutboxDocument`             | Panache entity mapped to the `outbox` MongoDB collection.                            |
 | `OutboxArchiveDocument`      | Panache entity mapped to the `outbox_archive` MongoDB collection.                    |
 | `OutboxPartitionDocument`    | Panache entity mapped to the `outbox_partitions` MongoDB collection.                 |
 
-## Defining Partitions and Event Types
+## Defining Partitions
 
-Extend the open interfaces in your own module (e.g. `domain-api`):
+Extend `OutboxPartition` with a sealed interface in `domain-api`:
 
 ```kotlin
 sealed interface AppOutboxPartition : OutboxPartition {
     data object Spotify : AppOutboxPartition { override val key = "spotify" }
     data object Domain  : AppOutboxPartition { override val key = "domain"  }
 }
-
-sealed interface AppOutboxEventType : OutboxEventType {
-    data object PollRecentlyPlayed    : AppOutboxEventType { override val key = "PollRecentlyPlayed" }
-    data object EnrichPlaybackEvents  : AppOutboxEventType { override val key = "EnrichPlaybackEvents" }
-    // … add more as needed
-}
 ```
 
-Sealing these interfaces ensures an exhaustive `when` expression at compile time.
+## Defining Events and Payloads
 
-## Defining Payloads
-
-Every payload class must implement `OutboxPayload`:
+Each payload class implements `OutboxEvent`, providing both the event type key and the deduplication key:
 
 ```kotlin
+// domain-api
 data class PollRecentlyPlayedPayload(
     val userId: String,
     val version: Int = 1,
-) : OutboxPayload {
+) : OutboxEvent {
+    override val key = "PollRecentlyPlayed"
     override fun deduplicationKey() = "PollRecentlyPlayed:$userId"
 }
 ```
 
-The `deduplicationKey()` uniquely identifies the logical operation within its partition.
-For tasks where only one pending instance should ever exist, return the event type name alone.
+For events where only one pending instance should exist, return the key alone as the deduplication key:
+
+```kotlin
+data class RecomputeAggregationsPayload(val version: Int = 1) : OutboxEvent {
+    override val key = "RecomputeAggregations"
+    override fun deduplicationKey() = key
+}
+```
+
+Sealing a parent interface over all payload types enables exhaustive `when` dispatch at compile time.
 
 ## Enqueueing Tasks
 
-Inject `OutboxRepository` (or a thin port wrapping it) and call `enqueue`:
+Inject `OutboxRepository` (or a port wrapping it) and call `enqueue`:
 
 ```kotlin
 @ApplicationScoped
@@ -84,12 +85,11 @@ class OutboxPortAdapter(
 ) {
     fun enqueue(
         partition: AppOutboxPartition,
-        eventType: AppOutboxEventType,
-        payload: OutboxPayload,
+        payload: OutboxEvent,
         priority: OutboxTaskPriority = OutboxTaskPriority.NORMAL,
     ) {
         val json = objectMapper.writeValueAsString(payload)
-        val inserted = repository.enqueue(partition, eventType, json, payload.deduplicationKey(), priority)
+        val inserted = repository.enqueue(partition, payload, json, priority)
         if (inserted) {
             wakeup.signal(partition)
         }
@@ -98,6 +98,7 @@ class OutboxPortAdapter(
 ```
 
 Signal `OutboxWakeupService` after a successful insert so the partition worker wakes immediately.
+No signal is sent for duplicate inserts (when `enqueue` returns `false`).
 
 ## Processing Tasks
 
@@ -118,7 +119,7 @@ class OutboxPartitionWorker(
             while (isActive) {
                 channel.receive()
                 do {
-                    val processed = processor.processNext(partition, dispatch(partition))
+                    val processed = processor.processNext(partition, dispatch)
                 } while (processed && isActive)
             }
         }
@@ -127,20 +128,19 @@ class OutboxPartitionWorker(
     @PreDestroy
     fun stop() = scope.cancel()
 
-    private fun dispatch(partition: AppOutboxPartition): (OutboxTask) -> Either<OutboxError, Unit> = { task ->
-        when (AppOutboxEventType.fromKey(task.eventType)) {
-            AppOutboxEventType.PollRecentlyPlayed -> handlerPort.handlePollRecentlyPlayed(deserialise(task.payload))
-            // … exhaustive when
+    private val dispatch: (OutboxTask) -> Either<OutboxError, Unit> = { task ->
+        when (task.eventType) {
+            "PollRecentlyPlayed" -> handlerPort.handlePollRecentlyPlayed(deserialise(task.payload))
+            // … exhaustive when over task.eventType string (or sealed AppOutboxEventType.fromKey)
+            else -> Either.Left(OutboxError("Unknown event type: ${task.eventType}"))
         }
     }
 }
 ```
 
-The `Channel.CONFLATED` type coalesces multiple rapid signals into a single wakeup, so the worker drains the full queue before suspending again.
-
 ## Startup Recovery
 
-On startup, reset any tasks stuck in `PROCESSING` (left over from a previous crash), then signal all partition channels:
+Reset stale `PROCESSING` tasks on startup, then signal all partition channels:
 
 ```kotlin
 @ApplicationScoped
@@ -157,28 +157,32 @@ class OutboxStartupRecovery(
 
 ## Retry and Backoff
 
-Configure `RetryPolicy` to control how many times a failing task is retried:
+Configure `RetryPolicy` to control retry attempts and delays:
 
 ```kotlin
 val policy = RetryPolicy(
     maxAttempts = 5,
-    backoff = listOf(5.seconds, 10.seconds, 30.seconds, 60.seconds).map { it.toJavaDuration() },
+    backoff = listOf(
+        Duration.ofSeconds(5),
+        Duration.ofSeconds(10),
+        Duration.ofSeconds(30),
+        Duration.ofSeconds(60),
+    ),
 )
 val processor = OutboxProcessor(repository, policy)
 ```
 
-After `maxAttempts` failures the task is marked `FAILED` and remains in the `outbox` collection
-for manual inspection or replay.
+After `maxAttempts` failures the task is marked `FAILED` and stays in the `outbox` collection for manual replay.
 
 ## Partition Pause and Resume
 
-Pause a partition when rate-limited (e.g. HTTP 429 from an external API):
+Pause a partition when rate-limited:
 
 ```kotlin
 repository.pausePartition(partition, "HTTP 429 – rate limited", Instant.now().plus(Duration.ofMinutes(1)))
 ```
 
-Resume with an inline coroutine:
+Resume after the pause window expires:
 
 ```kotlin
 scope.launch {
@@ -188,8 +192,7 @@ scope.launch {
 }
 ```
 
-When paused, `OutboxRepository.claim` returns `null` for that partition, so the worker
-suspends on `channel.receive()` without spinning.
+When paused, `OutboxRepository.claim` returns `null` for that partition. An absent `outbox_partitions` document is treated as `ACTIVE`, so no migration is required for existing deployments.
 
 ## MongoDB Collections
 
@@ -204,10 +207,9 @@ suspends on `channel.receive()` without spinning.
 Enqueue time-sensitive tasks with `OutboxTaskPriority.HIGH`:
 
 ```kotlin
-repository.enqueue(partition, eventType, payload, deduplicationKey, OutboxTaskPriority.HIGH)
+repository.enqueue(partition, payload, json, OutboxTaskPriority.HIGH)
 ```
 
 HIGH-priority tasks are always claimed before NORMAL tasks within the same partition.
 The claim query sorts by `priority` ascending. The enum names were chosen so that `HIGH` sorts
-before `NORMAL` alphabetically (`H` < `N`), giving the correct semantic order without requiring
-a numeric mapping.
+before `NORMAL` alphabetically (`H` < `N`), giving the correct semantic order without a numeric mapping.

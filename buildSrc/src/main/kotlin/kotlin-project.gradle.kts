@@ -31,6 +31,7 @@ dependencies {
   implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
   implementation("org.jetbrains.kotlin:kotlin-reflect")
   implementation(libs.findLibrary("kotlinLogging").get())
+  implementation(libs.findLibrary("kotlinxCoroutinesCore").get())
   implementation(libs.findLibrary("kotlinxDatetime").get())
   api(libs.findLibrary("arrowCore").get())
 
