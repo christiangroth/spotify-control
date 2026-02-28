@@ -362,9 +362,9 @@ retention window and must be fetched promptly to avoid silently missing playback
 ### Priority field
 
 The `outbox` collection stores a `priority` field (`NORMAL` or `HIGH`, default `NORMAL`). The
-`claim` query sorts `priority ASC, createdAt ASC` (since `HIGH` < `NORMAL` alphabetically), so any
-`HIGH` priority task is always claimed before `NORMAL` tasks regardless of enqueue order. Within
-the same priority level FIFO order is preserved.
+`claim` query sorts `priority ASC, createdAt ASC`. The enum names were chosen so that `HIGH`
+sorts before `NORMAL` alphabetically (`H` < `N`), which gives the correct semantic order: HIGH
+tasks are claimed first, NORMAL tasks after. Within the same priority level FIFO order is preserved.
 
 `OutboxTask` exposes the priority as an `OutboxTaskPriority` field. `OutboxPort.enqueue` gains an
 optional `priority` parameter (default `NORMAL`):

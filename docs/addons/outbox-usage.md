@@ -208,4 +208,6 @@ repository.enqueue(partition, eventType, payload, deduplicationKey, OutboxTaskPr
 ```
 
 HIGH-priority tasks are always claimed before NORMAL tasks within the same partition.
-The claim query sorts alphabetically by `priority` ascending (`HIGH` < `NORMAL`).
+The claim query sorts by `priority` ascending. The enum names were chosen so that `HIGH` sorts
+before `NORMAL` alphabetically (`H` < `N`), giving the correct semantic order without requiring
+a numeric mapping.
