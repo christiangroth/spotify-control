@@ -1,0 +1,1 @@
+* implement-util-outbox-module: Implement util-outbox module providing persistent outbox core with MongoDB-backed repository, retry/backoff policy, deduplication, partition pause/resume, and wakeup channel signalling.
