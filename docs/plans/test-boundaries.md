@@ -190,11 +190,77 @@ tests can be moved closer to their production code without affecting coverage.
 
 ---
 
+## Suggested Actions
+
+The following actions bring the test suite into full alignment with the concept above,
+ordered from highest to lowest value.
+
+### S1 – Remove `UserServiceTests` (duplicate / wrong layer)
+
+`UserServiceTests` in `application-quarkus` tests a pure configuration-backed domain rule.
+It is slow (requires a full Quarkus runtime) and offers no benefit over a plain unit test.
+Replace it with a new `UserServiceAdapterTests` in `domain-impl` that constructs the service
+directly with a hard-coded allow-list, then **delete** `UserServiceTests` entirely.
+
+*Impact: one test class replaced and removed, faster CI.*
+
+### S2 – Add `SpotifyAuthAdapterTests` (Layer 2 – missing)
+
+Add a `@QuarkusTest` test class in `application-quarkus` that injects `SpotifyAuthPort`
+and exercises it against the existing Spotify mock server (`SpotifyMockResource`).
+Key cases: `exchangeCode` happy path, `getUserProfile` happy path, token refresh, error responses.
+
+*Impact: covers the auth adapter boundary, currently completely untested.*
+
+### S3 – Add `SpotifyRecentlyPlayedAdapterTests` (Layer 2 – missing)
+
+Same approach as S2. Inject `SpotifyRecentlyPlayedPort` and test it against the Spotify mock.
+Key cases: items returned, empty list, error response (HTTP 4xx/5xx from mock).
+
+*Impact: covers the recently-played adapter boundary, currently completely untested.*
+
+### S4 – Add `RecentlyPlayedFetchJobTests` (Layer 3 – missing)
+
+Add a `@QuarkusTest` test class that uses `@InjectMock` to mock `RecentlyPlayedPort`
+(the inbound domain port that the job depends on).
+Verify that the job calls `fetchAndPersistForAllUsers()` exactly once per invocation and that
+any exception is swallowed (not propagated to the Quarkus scheduler).
+
+*Impact: covers the scheduler entry point for playback tracking.*
+
+### S5 – Add `UserProfileUpdateJobTests` (Layer 3 – missing)
+
+Same approach as S4 for `UserProfileUpdateJob`, mocking `UserProfileUpdatePort`.
+
+*Impact: covers the scheduler entry point for profile sync.*
+
+---
+
+## Duplicate Tests
+
+The table below lists tests that overlap with another test at the same or a better layer
+and are candidates for removal or consolidation.
+
+| Test class         | Module                | Issue and recommended action                                                            |
+|--------------------|-----------------------|-----------------------------------------------------------------------------------------|
+| `UserServiceTests` | `application-quarkus` | Tests a pure domain rule with `@QuarkusTest` — no infrastructure is exercised. The allow-list logic is also verified indirectly by `OAuthFlowTests`. Replace with a plain unit test in `domain-impl` (see S1), then delete this class. |
+
+No other test classes are genuine duplicates. `LoginServiceAdapterTests` (Layer 1) and
+`OAuthFlowTests` (Layer 3) appear to cover similar ground but they test different boundaries:
+the former checks domain logic in isolation, the latter checks that the HTTP adapter correctly
+drives the domain. Both are necessary.
+
+---
+
 ## Summary Table
 
-| Layer                   | Module(s)                | Mechanism                    | Speed   | Status         |
-|-------------------------|--------------------------|------------------------------|---------|----------------|
-| 1 – Domain logic        | `domain-impl`            | Unit test + MockK             | Fast    | ✅ complete    |
-| 2 – Outbound adapters   | `application-quarkus`    | `@QuarkusTest` + real infra  | Medium  | ⚠️ partial     |
-| 3 – Inbound adapters    | `application-quarkus`    | `@QuarkusTest` + REST Assured | Medium  | ⚠️ partial     |
-| 4 – Application wiring  | `application-quarkus`    | `@QuarkusTest` smoke         | Fast    | ✅ complete    |
+| Layer                   | Module(s)                | Mechanism                     | Speed   | Status          |
+|-------------------------|--------------------------|-------------------------------|---------|-----------------|
+| 1 – Domain logic        | `domain-impl`            | Unit test + MockK             | Fast    | ✅ complete     |
+| 2 – Outbound adapters   | `application-quarkus`    | `@QuarkusTest` + real infra   | Medium  | ⚠️ partial (S2, S3) |
+| 3 – Inbound adapters    | `application-quarkus`    | `@QuarkusTest` + REST Assured | Medium  | ⚠️ partial (S4, S5) |
+| 4 – Application wiring  | `application-quarkus`    | `@QuarkusTest` smoke          | Fast    | ✅ complete     |
+
+**Immediate wins (no new code, only restructuring):** S1 removes a slow `@QuarkusTest` for
+pure domain logic and closes the Layer 1 gap for `UserService`. All other actions require
+new test classes.
