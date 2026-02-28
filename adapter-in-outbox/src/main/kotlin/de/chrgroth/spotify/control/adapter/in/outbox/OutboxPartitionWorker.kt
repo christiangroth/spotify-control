@@ -57,7 +57,7 @@ class OutboxPartitionWorker(
         logger.info { "Outbox partition workers stopped" }
     }
 
-    private fun dispatch(task: OutboxTask): Either<OutboxError, Unit> {
+    internal fun dispatch(task: OutboxTask): Either<OutboxError, Unit> {
         val event = try {
             AppOutboxEvent.fromKey(task.eventType, task.payload)
         } catch (e: IllegalArgumentException) {
