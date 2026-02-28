@@ -213,3 +213,15 @@ repository.enqueue(partition, payload, json, OutboxTaskPriority.HIGH)
 HIGH-priority tasks are always claimed before NORMAL tasks within the same partition.
 The claim query sorts by `priority` ascending. The enum names were chosen so that `HIGH` sorts
 before `NORMAL` alphabetically (`H` < `N`), giving the correct semantic order without a numeric mapping.
+
+## Design Decisions
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Persistence backend | MongoDB (`findOneAndUpdate`) | Already present in the stack; atomic claim without an additional runtime dependency. |
+| No Kafka / dedicated outbox library | Pure MongoDB | No additional infrastructure; at-most one application instance. |
+| `kotlinx-coroutines-core` for wakeup | `Channel<Unit>(CONFLATED)` per partition | Zero idle CPU; zero extra latency; no polling fallback needed. |
+| Single `OutboxEvent` interface | Combines event type key + deduplication key | Reduces the number of types callers must implement; payload class owns the dedup logic naturally. |
+| Absent partition document = ACTIVE | Lazy creation on first pause | Existing deployments need no migration; only paused partitions need a document. |
+| Priority via enum name ordering | `HIGH` < `NORMAL` alphabetically (ascending sort) | Avoids a numeric mapping; enum names are self-documenting. |
+| Persistence co-located with core logic | Single `util-outbox` module | Simplicity over separation; can be split later if extraction is needed. |

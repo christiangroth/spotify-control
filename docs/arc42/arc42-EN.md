@@ -318,19 +318,7 @@ Architecture decisions are documented as Architecture Decision Records (ADRs) in
 | [0004](../adr/0004-using-ai-coding-agents.md) | Using AI Coding Agents |
 | [0005](../adr/0005-markdown-rendering-library.md) | Markdown Rendering Library: marked |
 
-## Outbox Design Decisions
-
-The following decisions were made for the `util-outbox` module. Detailed usage guidance is in [outbox.md](outbox.md).
-
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| Persistence backend | MongoDB (`findOneAndUpdate`) | Already present in the stack; atomic claim without an additional runtime dependency. |
-| No Kafka / dedicated outbox library | Pure MongoDB | No additional infrastructure; at-most one application instance. |
-| `kotlinx-coroutines-core` for wakeup | `Channel<Unit>(CONFLATED)` per partition | Zero idle CPU; zero extra latency; no polling fallback needed. |
-| Single `OutboxEvent` interface | Combines event type key + deduplication key | Reduces the number of types callers must implement; payload class owns the dedup logic naturally. |
-| Absent partition document = ACTIVE | Lazy creation on first pause | Existing deployments need no migration; only paused partitions need a document. |
-| Priority via enum name ordering | `HIGH` < `NORMAL` alphabetically (ascending sort) | Avoids a numeric mapping; enum names are self-documenting. |
-| Persistence co-located with core logic | Single `util-outbox` module | Simplicity over separation; can be split later if extraction is needed. |
+See [outbox.md](outbox.md) for outbox-specific design decisions.
 
 # Quality Requirements
 
