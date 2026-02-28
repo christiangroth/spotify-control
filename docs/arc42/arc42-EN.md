@@ -129,7 +129,7 @@ Contains the core business logic: playback enrichment, aggregation computation, 
 
 ### `util-outbox`
 
-A self-contained outbox implementation that routes tasks to domain handlers via partitions. Designed to be potentially extracted as a standalone library.
+A self-contained outbox implementation providing: persistent task storage (MongoDB), atomic claim via `findOneAndUpdate`, at-least-once delivery with configurable retry backoff, partition-level pause/resume, task deduplication, priority-based ordering, and a conflated `Channel<Unit>` per partition for event-driven wakeup. Designed to be potentially extracted as a standalone library. See [outbox-usage.md](../addons/outbox-usage.md) for usage guidance.
 
 ## Level 2
 

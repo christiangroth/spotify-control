@@ -35,7 +35,7 @@ class MongoOutboxRepository : OutboxRepository {
                 Updates.set("updatedAt", now),
             ),
             FindOneAndUpdateOptions()
-                .sort(Sorts.orderBy(Sorts.descending("priority"), Sorts.ascending("createdAt")))
+                .sort(Sorts.orderBy(Sorts.ascending("priority"), Sorts.ascending("createdAt")))
                 .returnDocument(ReturnDocument.AFTER),
         ) ?: return null
 
@@ -158,8 +158,15 @@ class MongoOutboxRepository : OutboxRepository {
         )
     }
 
-    override fun findPartition(partition: OutboxPartition): OutboxPartitionDocument? =
-        OutboxPartitionDocument.findById(partition.key)
+    override fun findPartition(partition: OutboxPartition): OutboxPartitionInfo? =
+        OutboxPartitionDocument.findById(partition.key)?.toInfo()
+
+    private fun OutboxPartitionDocument.toInfo() = OutboxPartitionInfo(
+        key = partitionKey,
+        status = status,
+        statusReason = statusReason,
+        pausedUntil = pausedUntil,
+    )
 
     /** Resets all PROCESSING tasks back to PENDING. Should be called at application startup to recover tasks that were interrupted mid-processing. */
     override fun resetStaleProcessingTasks() {

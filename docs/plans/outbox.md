@@ -46,45 +46,13 @@ Kafka, RabbitMQ, Debezium, and dedicated outbox libraries are all out of scope.
 ## Module Structure
 
 ```
-util-outbox          – Core logic and MongoDB persistence. Quarkus dependency only.
+util-outbox          – ✅ Implemented – see docs/addons/outbox-usage.md
 adapter-in-outbox    – Drives domain processing: event-driven wakeup, exhaustive dispatch, startup recovery.
 adapter-out-outbox   – Write side: implements OutboxPort so domain services can enqueue tasks.
 adapter-out-spotify  – Spotify API client (no outbox handler responsibility).
 domain-impl          – Implements OutboxHandlerPort with one method per event type (all partitions).
 domain-api           – Defines OutboxPort, OutboxHandlerPort, and the project's sealed event types.
 ```
-
-### `util-outbox`
-
-Kotlin module with a Quarkus dependency for MongoDB Panache access (both already used by the project — no new dependencies introduced). Contains:
-
-* `OutboxPartition` – plain (non-sealed) interface with a `key: String` property.
-* `OutboxEventType` – plain (non-sealed) interface with a `key: String` property.
-* `OutboxPayload` – interface that every payload class must implement; declares
-  `fun deduplicationKey(): String`, which returns a value that uniquely identifies the
-  logical operation (e.g. `"SyncPlaylist:$playlistId"`). Used by `OutboxRepository.enqueue`
-  to detect and silently skip duplicates.
-* `OutboxTask` – data class (id, partition, eventType, payload as String, deduplicationKey,
-  status, attempts, createdAt, updatedAt, nextRetryAt, priority).
-* `OutboxTaskStatus` – enum: `PENDING`, `PROCESSING`, `DONE`, `FAILED`.
-* `OutboxPartitionStatus` – enum: `ACTIVE`, `PAUSED`.
-* `OutboxPartitionDocument` – Panache entity mapped to the `outbox_partitions` collection; stores
-  `status`, `statusReason`, and `pausedUntil` per partition key.
-* `OutboxRepository` – interface; provides `claim`, `complete`, `fail`, `reschedule`, `enqueue`,
-  `pausePartition`, `activatePartition`, `findPartition`.
-* `OutboxDocument` – Panache entity mapped to the `outbox` collection.
-* `OutboxArchiveDocument` – Panache entity mapped to the `outbox_archive` collection.
-* `MongoOutboxRepository` – `@ApplicationScoped` implements `OutboxRepository` using
-  `OutboxDocument` and `OutboxArchiveDocument`.
-* `OutboxProcessor` – orchestrates claim → dispatch → complete/fail/retry for one partition.
-  Receives a `dispatch: (OutboxTask) -> Either<OutboxError, Unit>` function; has no knowledge
-  of specific event types or payload classes.
-* `RetryPolicy` – data class (maxAttempts, backoff list of Durations); injected into
-  `OutboxProcessor`.
-
-Persistence lives here alongside the core logic, sacrificing framework-independence for
-simplicity. Should extraction ever be needed, the persistence layer can be separated at that
-point.
 
 ### `adapter-in-outbox`
 
@@ -166,69 +134,11 @@ reference `MongoOutboxRepository` or other `util-outbox` internals directly.
 
 ---
 
-## Data Model
-
-### `outbox_partitions` collection
-
-| Field           | Type      | Default    | Description                                              |
-|-----------------|-----------|------------|----------------------------------------------------------|
-| `_id`           | String    | –          | Partition key (e.g. `"spotify"`, `"domain"`)             |
-| `status`        | String    | `ACTIVE`   | `ACTIVE` — processing normally; `PAUSED` — no tasks claimed until resumed |
-| `statusReason`  | String?   | `null`     | Human-readable reason for the current status (e.g. `"rate_limited"`) |
-| `pausedUntil`   | Instant?  | `null`     | When the partition will automatically resume; `null` when `ACTIVE` |
-
-Documents are created lazily (on first pause or explicit registration). An absent document is
-treated as `ACTIVE` so existing deployments require no migration. The `claim` query joins against
-this collection and only returns tasks for partitions where `status = ACTIVE`.
-
-### `outbox` collection
-
-| Field              | Type      | Description                                                   |
-|--------------------|-----------|---------------------------------------------------------------|
-| `_id`              | String    | UUID v4                                                       |
-| `partition`        | String    | e.g. `"spotify"`, `"domain"`                                 |
-| `eventType`        | String    | e.g. `"PollRecentlyPlayed"`, `"EnrichPlaybackEvents"`        |
-| `deduplicationKey` | String    | Unique key for this logical operation within the partition (e.g. `"SyncPlaylist:abc123"`). Used to suppress duplicate enqueues. |
-| `payload`          | String    | JSON-serialised payload                                       |
-| `status`           | String    | `PENDING` / `PROCESSING` / `FAILED`                          |
-| `attempts`         | Int       | Number of processing attempts so far                          |
-| `createdAt`        | Instant   | When the task was enqueued                                    |
-| `updatedAt`        | Instant   | Last status change                                            |
-| `nextRetryAt`      | Instant?  | Earliest time for the next attempt (null = immediately)       |
-| `priority`         | String    | `NORMAL` (default) or `HIGH` — affects claim ordering         |
-| `lastError`        | String?   | Error message or stack trace excerpt from the last failure    |
-
-### `outbox_archive` collection
-
-Same structure as `outbox` plus:
-
-| Field          | Type      | Description                   |
-|----------------|-----------|-------------------------------|
-| `completedAt`  | Instant   | When processing succeeded      |
-
-Successful tasks are inserted into `outbox_archive` and deleted from `outbox` in a single
-operation. The archive serves as a persistent audit log and a source of metrics.
-
----
-
 ## Type-Safe Event API
 
-`util-outbox` defines plain (non-sealed) interfaces so the module has no knowledge of the
-concrete partitions or event types used by any specific application:
-
-```kotlin
-// util-outbox – open extension points
-interface OutboxPartition {
-    val key: String
-}
-
-interface OutboxEventType {
-    val key: String
-}
-```
-
-`domain-api` extends these with project-specific sealed sub-interfaces, giving exhaustive
-`when` handling across the whole codebase:
+`util-outbox` defines plain (non-sealed) interfaces (`OutboxPartition`, `OutboxEventType`) as open
+extension points. `domain-api` extends these with project-specific sealed sub-interfaces, giving
+exhaustive `when` handling across the whole codebase:
 
 ```kotlin
 // domain-api – project-specific, sealed
@@ -252,18 +162,6 @@ sealed interface AppOutboxEventType : OutboxEventType {
     object CheckAlbumUpgrades    : AppOutboxEventType { override val key = "CheckAlbumUpgrades" }
     object ApplyAlbumUpgrade     : AppOutboxEventType { override val key = "ApplyAlbumUpgrade" }
 }
-```
-
-Each handler is typed against a specific payload class and uses the base interfaces so it can
-live in `util-outbox`:
-
-```kotlin
-// util-outbox – dispatch function received from adapter-in-outbox
-// OutboxProcessor.processNext calls it without knowing the concrete type
-fun processNext(
-    partition: OutboxPartition,
-    dispatch: (OutboxTask) -> Either<OutboxError, Unit>,
-): Boolean
 ```
 
 `adapter-in-outbox` builds the `dispatch` lambda using an exhaustive `when` on the sealed
@@ -353,24 +251,6 @@ instance is ever added (because `findOneAndUpdate` is atomic at the document lev
 On application startup, `OutboxStartupRecovery` (`adapter-in-outbox`) resets any task stuck in
 `PROCESSING` status back to `PENDING` with `nextRetryAt = now`. This handles the scenario where
 a previous instance crashed mid-processing.
-
----
-
-## Retry and Backoff Strategy
-
-Configured via `RetryPolicy` (injected, overridable per partition):
-
-| Attempt | Delay before next retry                                 |
-|---------|---------------------------------------------------------|
-| 1 → 2   | 5 seconds                                              |
-| 2 → 3   | 10 seconds                                             |
-| 3 → 4   | 30 seconds                                             |
-| 4 → 5   | 60 seconds                                             |
-| ≥ 5     | task status set to `FAILED` (no more automatic retries) |
-
-Default `maxAttempts = 5` (one initial attempt plus four retries). On reaching `maxAttempts`, the task remains in the `outbox` collection
-with `status = FAILED`. It is visible in the dashboard and can be retried manually by resetting its
-status to `PENDING` via an admin action (future work) or direct MongoDB operation.
 
 ---
 
@@ -482,15 +362,9 @@ retention window and must be fetched promptly to avoid silently missing playback
 ### Priority field
 
 The `outbox` collection stores a `priority` field (`NORMAL` or `HIGH`, default `NORMAL`). The
-`claim` query sorts `priority DESC, createdAt ASC`, so any `HIGH` priority task is always claimed
-before `NORMAL` tasks regardless of enqueue order. Within the same priority level FIFO order is
-preserved.
-
-The `OutboxTaskPriority` enum is defined in `util-outbox`:
-
-```kotlin
-enum class OutboxTaskPriority { NORMAL, HIGH }
-```
+`claim` query sorts `priority ASC, createdAt ASC` (since `HIGH` < `NORMAL` alphabetically), so any
+`HIGH` priority task is always claimed before `NORMAL` tasks regardless of enqueue order. Within
+the same priority level FIFO order is preserved.
 
 `OutboxTask` exposes the priority as an `OutboxTaskPriority` field. `OutboxPort.enqueue` gains an
 optional `priority` parameter (default `NORMAL`):
@@ -525,15 +399,7 @@ To prevent redundant work, the outbox automatically suppresses duplicate tasks. 
 same logical identity is already pending or being processed, a second enqueue call for the same
 operation is silently discarded.
 
-### `OutboxPayload` interface
-
-Every payload class must implement `OutboxPayload`, defined in `util-outbox`:
-
-```kotlin
-interface OutboxPayload {
-    fun deduplicationKey(): String
-}
-```
+### Payload deduplication key
 
 The key must uniquely identify the logical operation within its partition. Implementations combine
 the event type name with the business entity identifier(s):
@@ -613,20 +479,7 @@ domain-api
     ├── AppOutboxPartition (sealed, extends OutboxPartition from util-outbox)
     └── AppOutboxEventType (sealed, extends OutboxEventType from util-outbox)
 
-util-outbox
-    ├── OutboxPartition (plain interface – open extension point)
-    ├── OutboxEventType (plain interface – open extension point)
-    ├── OutboxPayload (interface; declares deduplicationKey(): String – implemented by all payload classes)
-    ├── OutboxPartitionStatus (enum: ACTIVE, PAUSED)
-    ├── OutboxTaskPriority (enum: NORMAL, HIGH)
-    ├── OutboxTask, OutboxTaskStatus
-    ├── OutboxRepository (interface; claim, complete, fail, reschedule, enqueue, pausePartition, activatePartition, findPartition)
-    ├── MongoOutboxRepository (implements OutboxRepository; enqueue checks deduplicationKey before insert)
-    ├── OutboxDocument, OutboxArchiveDocument (Panache entities; outbox / outbox_archive collections)
-    ├── OutboxPartitionDocument (Panache entity; outbox_partitions collection)
-    ├── OutboxProcessor (claim/complete/fail lifecycle; dispatch is a passed-in function using Result<Unit>)
-    ├── RetryPolicy
-    └── OutboxWakeupService (Channel<Unit>(CONFLATED) per partition; signal() called by adapter-out-outbox)
+util-outbox  ✅ Implemented – see docs/addons/outbox-usage.md
 
 adapter-in-outbox
     ├── depends on: domain-api, util-outbox
@@ -666,16 +519,16 @@ display to the user. This is a read-only query exposed via a dedicated `OutboxMe
 
 ## Testing Strategy
 
-| Test type              | Location              | Scope                                                                          |
-|------------------------|-----------------------|--------------------------------------------------------------------------------|
-| Unit – processor logic | `util-outbox`         | Retry policy application, claim → dispatch → complete/fail cycle with in-memory `OutboxRepository` stub |
-| Unit – deduplication   | `util-outbox`         | Enqueue with an existing PENDING/PROCESSING duplicate is a no-op; FAILED duplicate does not block re-enqueue |
-| Unit – handler logic   | `domain-impl`         | Each `OutboxHandlerPort` method in isolation with a mock Spotify/domain port   |
-| Unit – dispatch wiring | `adapter-in-outbox`   | Exhaustive `when` routes each `AppOutboxEventType` to the correct `OutboxHandlerPort` method |
-| Integration – MongoDB  | `application-quarkus` | `MongoOutboxRepository` against embedded MongoDB; verifies claim atomicity, archive insertion, and deduplication check |
-| Contract – event types | `application-quarkus` | Asserts that each `AppOutboxEventType` has a corresponding method in `OutboxHandlerPort`; fails the build if a new event type is added without updating the port |
-| Contract – payload schema | `application-quarkus` | Round-trip serialise/deserialise each payload class; detects breaking schema changes |
-| Contract – deduplication keys | `application-quarkus` | Asserts that every payload class implements `OutboxPayload` and that `deduplicationKey()` returns a non-blank value |
+| Test type              | Location              | Status | Scope                                                                          |
+|------------------------|-----------------------|--------|--------------------------------------------------------------------------------|
+| Unit – processor logic | `util-outbox`         | ✅ Done | Retry policy application, claim → dispatch → complete/fail cycle with in-memory `OutboxRepository` stub |
+| Unit – wakeup service  | `util-outbox`         | ✅ Done | Channel per partition, signal delivery |
+| Integration – MongoDB  | `application-quarkus` | ✅ Done | `MongoOutboxRepository` against embedded MongoDB; verifies claim atomicity, archive insertion, and deduplication check |
+| Unit – handler logic   | `domain-impl`         | ☐ TODO | Each `OutboxHandlerPort` method in isolation with a mock Spotify/domain port   |
+| Unit – dispatch wiring | `adapter-in-outbox`   | ☐ TODO | Exhaustive `when` routes each `AppOutboxEventType` to the correct `OutboxHandlerPort` method |
+| Contract – event types | `application-quarkus` | ☐ TODO | Asserts that each `AppOutboxEventType` has a corresponding method in `OutboxHandlerPort`; fails the build if a new event type is added without updating the port |
+| Contract – payload schema | `application-quarkus` | ☐ TODO | Round-trip serialise/deserialise each payload class; detects breaking schema changes |
+| Contract – deduplication keys | `application-quarkus` | ☐ TODO | Asserts that every payload class implements `OutboxPayload` and that `deduplicationKey()` returns a non-blank value |
 
 ---
 
