@@ -61,7 +61,11 @@ Kotlin module with a Quarkus dependency for MongoDB Panache access (both already
 * `OutboxTask` – data class (id, partition, eventType, payload as String, status, attempts,
   createdAt, updatedAt, nextRetryAt).
 * `OutboxTaskStatus` – enum: `PENDING`, `PROCESSING`, `DONE`, `FAILED`.
-* `OutboxRepository` – interface; provides `claim`, `complete`, `fail`, `enqueue`.
+* `OutboxPartitionStatus` – enum: `ACTIVE`, `PAUSED`.
+* `OutboxPartitionDocument` – Panache entity mapped to the `outbox_partitions` collection; stores
+  `status`, `statusReason`, and `pausedUntil` per partition key.
+* `OutboxRepository` – interface; provides `claim`, `complete`, `fail`, `enqueue`,
+  `pausePartition`, `activatePartition`, `findPartition`.
 * `OutboxDocument` – Panache entity mapped to the `outbox` collection.
 * `OutboxArchiveDocument` – Panache entity mapped to the `outbox_archive` collection.
 * `MongoOutboxRepository` – `@ApplicationScoped` implements `OutboxRepository` using
@@ -157,6 +161,19 @@ reference `MongoOutboxRepository` or other `util-outbox` internals directly.
 ---
 
 ## Data Model
+
+### `outbox_partitions` collection
+
+| Field           | Type      | Default    | Description                                              |
+|-----------------|-----------|------------|----------------------------------------------------------|
+| `_id`           | String    | –          | Partition key (e.g. `"spotify"`, `"domain"`)             |
+| `status`        | String    | `ACTIVE`   | `ACTIVE` — processing normally; `PAUSED` — no tasks claimed until resumed |
+| `statusReason`  | String?   | `null`     | Human-readable reason for the current status (e.g. `"rate_limited"`) |
+| `pausedUntil`   | Instant?  | `null`     | When the partition will automatically resume; `null` when `ACTIVE` |
+
+Documents are created lazily (on first pause or explicit registration). An absent document is
+treated as `ACTIVE` so existing deployments require no migration. The `claim` query joins against
+this collection and only returns tasks for partitions where `status = ACTIVE`.
 
 ### `outbox` collection
 
@@ -274,6 +291,12 @@ val dispatch: (OutboxTask) -> Either<OutboxError, Unit> = { task ->
    `OutboxRepository.enqueue(...)`.
 3. `MongoOutboxRepository.enqueue` (in `util-outbox`) inserts a new `OutboxDocument` with
    `status = PENDING`, `attempts = 0`, `nextRetryAt = null`.
+4. After the insert, `OutboxPortAdapter` checks the partition's current `status`.
+   * If `ACTIVE`: signals the per-partition `Channel<Unit>` so the worker wakes immediately.
+   * If `PAUSED`: **no signal is sent**. The `claim` query would reject any task from a paused
+     partition anyway, and the resume coroutine (already running) will wake the worker at the
+     right time. Sending a premature signal would cause the worker to wake, call `claim`, find
+     nothing claimable, and immediately suspend again — unnecessary work with no benefit.
 
 Enqueueing is a single MongoDB insert – it does not need to participate in a multi-document
 transaction because the outbox is append-only at write time.
@@ -369,11 +392,69 @@ worker drains the full queue in a tight loop before suspending again. This means
 
 | Partition | Wakeup mechanism            | Batch approach               | Rationale                                              |
 |-----------|------------------------------|------------------------------|--------------------------------------------------------|
-| `spotify` | `Channel<Unit>(CONFLATED)`   | One at a time                | One Spotify call at a time; token bucket enforces ~50 req/30 s |
+| `spotify` | `Channel<Unit>(CONFLATED)`   | One at a time                | One Spotify call at a time; serial processing avoids distributed rate-limit coordination |
 | `domain`  | `Channel<Unit>(CONFLATED)`   | Loop drains queue            | CPU-bound enrichment; no artificial delay needed |
 
 A handler failure in the `spotify` partition does not affect `domain` processing because each
 partition has its own coroutine and channel.
+
+---
+
+## Partition Pause and Resume
+
+Any partition can be paused by writing `status = PAUSED` to its `outbox_partitions` document. While
+paused, the `claim` query returns no tasks for that partition, so the `OutboxPartitionWorker`
+suspends on `channel.receive()` without spinning.
+
+### Pausing a partition
+
+`OutboxRepository.pausePartition(partition, reason, pausedUntil)` atomically upserts the partition
+document:
+
+```
+outbox_partitions.findOneAndUpdate(
+    filter  = { _id: partition.key },
+    update  = { $set: { status: "PAUSED", statusReason: reason, pausedUntil: pausedUntil } },
+    options = { upsert: true }
+)
+```
+
+After persisting, the caller (e.g. `OutboxProcessor` on a rate-limit error) launches a resume
+coroutine within the existing coroutine scope:
+
+```kotlin
+launch {
+    delay(pausedUntil - now)
+    outboxRepository.activatePartition(partition)
+    workerChannel.send(Unit)
+}
+```
+
+The coroutine suspends cheaply via `delay` and fires exactly once — no polling, no scheduler.
+
+### Activating a partition
+
+`OutboxRepository.activatePartition(partition)` clears the pause fields:
+
+```
+outbox_partitions.findOneAndUpdate(
+    filter  = { _id: partition.key },
+    update  = { $set: { status: "ACTIVE" }, $unset: { statusReason: "", pausedUntil: "" } },
+    options = { upsert: true }
+)
+```
+
+### Startup recovery
+
+On startup, `OutboxStartupRecovery` reads each partition document. For any partition found in
+`PAUSED` state:
+
+| Condition                        | Action                                                                        |
+|----------------------------------|-------------------------------------------------------------------------------|
+| `pausedUntil > now`              | Launch resume coroutine with `delay(pausedUntil - now)`, then suspend worker  |
+| `pausedUntil <= now` (or `null`) | Call `activatePartition()` immediately, then start processing normally        |
+
+This ensures every partition self-heals after an application restart without external intervention.
 
 ---
 
@@ -403,10 +484,12 @@ domain-api
 util-outbox
     ├── OutboxPartition (plain interface – open extension point)
     ├── OutboxEventType (plain interface – open extension point)
+    ├── OutboxPartitionStatus (enum: ACTIVE, PAUSED)
     ├── OutboxTask, OutboxTaskStatus
-    ├── OutboxRepository (interface)
+    ├── OutboxRepository (interface; claim, complete, fail, enqueue, pausePartition, activatePartition, findPartition)
     ├── MongoOutboxRepository (implements OutboxRepository)
-    ├── OutboxDocument, OutboxArchiveDocument (Panache entities)
+    ├── OutboxDocument, OutboxArchiveDocument (Panache entities; outbox / outbox_archive collections)
+    ├── OutboxPartitionDocument (Panache entity; outbox_partitions collection)
     ├── OutboxProcessor (claim/complete/fail lifecycle; dispatch is a passed-in function using Result<Unit>)
     ├── RetryPolicy
     └── OutboxWakeupService (Channel<Unit>(CONFLATED) per partition; signal() called by adapter-out-outbox)

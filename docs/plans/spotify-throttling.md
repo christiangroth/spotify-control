@@ -108,6 +108,18 @@ MongoDB. The `claim` query only returns tasks for partitions where `status = ACT
 further Spotify requests during the cooldown. The partition-level pause is a core outbox concept,
 not specific to Spotify.
 
+### Enqueueing during partition pause
+
+When a new outbox task arrives for the `spotify` partition while it is `PAUSED`, the task is
+persisted to MongoDB as `PENDING` normally — but `OutboxPortAdapter` **does not signal the worker
+channel**. The `claim` query would reject the task anyway (partition guard blocks it), and the
+resume coroutine is already scheduled to wake the worker at the right moment. Sending a channel
+signal while paused would cause the worker to wake early, call `claim`, find nothing claimable
+(partition still `PAUSED`), and immediately suspend again — unnecessary work with no benefit.
+
+The resume coroutine is the **sole** mechanism that wakes the worker after a pause. All tasks
+enqueued during the cooldown window will be picked up in order once the worker resumes.
+
 ---
 
 ## New Components
