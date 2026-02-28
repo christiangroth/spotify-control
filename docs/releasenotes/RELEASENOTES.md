@@ -1,3 +1,6 @@
+# 0.4.0 - 2026.02.28
+## New Features
+* implement-recently-played-fetching: Fetch and persist recently played tracks per user with duplicate suppression.
 # 0.3.0 - 2026.02.27
 ## New Features
 * update-user-profile: User display names are now refreshed nightly from Spotify via a scheduled job running at 4am.
