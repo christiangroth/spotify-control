@@ -17,6 +17,7 @@ and ensures that no task is silently lost. In this project the outbox serves two
 * At-least-once delivery: a task is never silently dropped on application restart or failure.
 * Ordering within a partition is preserved (FIFO within the same priority level).
 * High-priority tasks jump ahead of normal-priority tasks within the same partition.
+* Duplicate tasks are silently skipped at enqueue time — no two active tasks with the same deduplication key can coexist in the same partition.
 * Partitions are processed independently; a slow Spotify partition does not block the domain
   partition.
 * No additional runtime dependencies beyond what the project already uses.
@@ -59,8 +60,12 @@ Kotlin module with a Quarkus dependency for MongoDB Panache access (both already
 
 * `OutboxPartition` – plain (non-sealed) interface with a `key: String` property.
 * `OutboxEventType` – plain (non-sealed) interface with a `key: String` property.
-* `OutboxTask` – data class (id, partition, eventType, payload as String, status, attempts,
-  createdAt, updatedAt, nextRetryAt).
+* `OutboxPayload` – interface that every payload class must implement; declares
+  `fun deduplicationKey(): String`, which returns a value that uniquely identifies the
+  logical operation (e.g. `"SyncPlaylist:$playlistId"`). Used by `OutboxRepository.enqueue`
+  to detect and silently skip duplicates.
+* `OutboxTask` – data class (id, partition, eventType, payload as String, deduplicationKey,
+  status, attempts, createdAt, updatedAt, nextRetryAt, priority).
 * `OutboxTaskStatus` – enum: `PENDING`, `PROCESSING`, `DONE`, `FAILED`.
 * `OutboxPartitionStatus` – enum: `ACTIVE`, `PAUSED`.
 * `OutboxPartitionDocument` – Panache entity mapped to the `outbox_partitions` collection; stores
@@ -178,19 +183,20 @@ this collection and only returns tasks for partitions where `status = ACTIVE`.
 
 ### `outbox` collection
 
-| Field          | Type      | Description                                                   |
-|----------------|-----------|---------------------------------------------------------------|
-| `_id`          | String    | UUID v4                                                       |
-| `partition`    | String    | e.g. `"spotify"`, `"domain"`                                 |
-| `eventType`    | String    | e.g. `"PollRecentlyPlayed"`, `"EnrichPlaybackEvents"`        |
-| `payload`      | String    | JSON-serialised payload                                       |
-| `status`       | String    | `PENDING` / `PROCESSING` / `FAILED`                          |
-| `attempts`     | Int       | Number of processing attempts so far                          |
-| `createdAt`    | Instant   | When the task was enqueued                                    |
-| `updatedAt`    | Instant   | Last status change                                            |
-| `nextRetryAt`  | Instant?  | Earliest time for the next attempt (null = immediately)       |
-| `priority`     | String    | `NORMAL` (default) or `HIGH` — affects claim ordering         |
-| `lastError`    | String?   | Error message or stack trace excerpt from the last failure    |
+| Field              | Type      | Description                                                   |
+|--------------------|-----------|---------------------------------------------------------------|
+| `_id`              | String    | UUID v4                                                       |
+| `partition`        | String    | e.g. `"spotify"`, `"domain"`                                 |
+| `eventType`        | String    | e.g. `"PollRecentlyPlayed"`, `"EnrichPlaybackEvents"`        |
+| `deduplicationKey` | String    | Unique key for this logical operation within the partition (e.g. `"SyncPlaylist:abc123"`). Used to suppress duplicate enqueues. |
+| `payload`          | String    | JSON-serialised payload                                       |
+| `status`           | String    | `PENDING` / `PROCESSING` / `FAILED`                          |
+| `attempts`         | Int       | Number of processing attempts so far                          |
+| `createdAt`        | Instant   | When the task was enqueued                                    |
+| `updatedAt`        | Instant   | Last status change                                            |
+| `nextRetryAt`      | Instant?  | Earliest time for the next attempt (null = immediately)       |
+| `priority`         | String    | `NORMAL` (default) or `HIGH` — affects claim ordering         |
+| `lastError`        | String?   | Error message or stack trace excerpt from the last failure    |
 
 ### `outbox_archive` collection
 
@@ -291,8 +297,11 @@ val dispatch: (OutboxTask) -> Either<OutboxError, Unit> = { task ->
 1. A domain service calls `OutboxPort.enqueue(partition, eventType, payload)`.
 2. `OutboxPortAdapter` (in `adapter-out-outbox`) serialises the payload to JSON and delegates to
    `OutboxRepository.enqueue(...)`.
-3. `MongoOutboxRepository.enqueue` (in `util-outbox`) inserts a new `OutboxDocument` with
-   `status = PENDING`, `attempts = 0`, `nextRetryAt = null`.
+3. `MongoOutboxRepository.enqueue` (in `util-outbox`) checks whether a task with the same
+   `(partition, deduplicationKey)` already exists with `status IN (PENDING, PROCESSING)`.
+   * If a duplicate is found: the enqueue call returns silently — no insert, no channel signal.
+   * If no duplicate exists: inserts a new `OutboxDocument` with `status = PENDING`,
+     `attempts = 0`, `nextRetryAt = null`.
 4. After the insert, `OutboxPortAdapter` checks the partition's current `status`.
    * If `ACTIVE`: signals the per-partition `Channel<Unit>` so the worker wakes immediately.
    * If `PAUSED`: **no signal is sent**. The `claim` query would reject any task from a paused
@@ -510,6 +519,77 @@ call site.
 
 ---
 
+## Task Deduplication
+
+To prevent redundant work, the outbox automatically suppresses duplicate tasks. If a task with the
+same logical identity is already pending or being processed, a second enqueue call for the same
+operation is silently discarded.
+
+### `OutboxPayload` interface
+
+Every payload class must implement `OutboxPayload`, defined in `util-outbox`:
+
+```kotlin
+interface OutboxPayload {
+    fun deduplicationKey(): String
+}
+```
+
+The key must uniquely identify the logical operation within its partition. Implementations combine
+the event type name with the business entity identifier(s):
+
+```kotlin
+// domain-api – examples
+data class SyncPlaylistPayload(val playlistId: String) : OutboxPayload {
+    override fun deduplicationKey() = "SyncPlaylist:$playlistId"
+}
+
+data class SyncTrackPayload(val trackId: String) : OutboxPayload {
+    override fun deduplicationKey() = "SyncTrack:$trackId"
+}
+
+data class PollRecentlyPlayedPayload(val userId: String) : OutboxPayload {
+    override fun deduplicationKey() = "PollRecentlyPlayed:$userId"
+}
+```
+
+For event types that have no meaningful distinguishing entity (i.e. there should only ever be one
+pending instance at a time), the key is the event type name alone:
+
+```kotlin
+data class RecomputeAggregationsPayload() : OutboxPayload {
+    override fun deduplicationKey() = "RecomputeAggregations"
+}
+```
+
+### Deduplication check at enqueue time
+
+`MongoOutboxRepository.enqueue` performs a `findOne` before insert:
+
+```
+outbox.findOne(
+    filter = { partition: partition.key, deduplicationKey: key, status: { $in: ["PENDING", "PROCESSING"] } }
+)
+```
+
+* **Match found** → return without inserting. The existing task will handle the operation when it
+  is claimed.
+* **No match** → proceed with the normal insert.
+
+`FAILED` tasks are excluded from the duplicate check so that a manually-retried or re-enqueued
+task is never blocked by a previous failure.
+
+For a single-instance deployment this check is safe without further locking. If horizontal scaling
+is ever introduced, a partial unique index on `(partition, deduplicationKey)` with status filter
+`{status: {$in: ["PENDING", "PROCESSING"]}}` can enforce the constraint at the database level.
+
+### `deduplicationKey` field on `OutboxDocument`
+
+The computed key is stored as the `deduplicationKey` field on every `OutboxDocument` so that
+queries and indexes can operate on it without deserialising the JSON payload.
+
+---
+
 ## Ordering and Idempotency
 
 **Ordering**: FIFO within a partition is maintained by claiming the task with the earliest
@@ -536,11 +616,12 @@ domain-api
 util-outbox
     ├── OutboxPartition (plain interface – open extension point)
     ├── OutboxEventType (plain interface – open extension point)
+    ├── OutboxPayload (interface; declares deduplicationKey(): String – implemented by all payload classes)
     ├── OutboxPartitionStatus (enum: ACTIVE, PAUSED)
     ├── OutboxTaskPriority (enum: NORMAL, HIGH)
     ├── OutboxTask, OutboxTaskStatus
     ├── OutboxRepository (interface; claim, complete, fail, reschedule, enqueue, pausePartition, activatePartition, findPartition)
-    ├── MongoOutboxRepository (implements OutboxRepository)
+    ├── MongoOutboxRepository (implements OutboxRepository; enqueue checks deduplicationKey before insert)
     ├── OutboxDocument, OutboxArchiveDocument (Panache entities; outbox / outbox_archive collections)
     ├── OutboxPartitionDocument (Panache entity; outbox_partitions collection)
     ├── OutboxProcessor (claim/complete/fail lifecycle; dispatch is a passed-in function using Result<Unit>)
@@ -588,11 +669,13 @@ display to the user. This is a read-only query exposed via a dedicated `OutboxMe
 | Test type              | Location              | Scope                                                                          |
 |------------------------|-----------------------|--------------------------------------------------------------------------------|
 | Unit – processor logic | `util-outbox`         | Retry policy application, claim → dispatch → complete/fail cycle with in-memory `OutboxRepository` stub |
+| Unit – deduplication   | `util-outbox`         | Enqueue with an existing PENDING/PROCESSING duplicate is a no-op; FAILED duplicate does not block re-enqueue |
 | Unit – handler logic   | `domain-impl`         | Each `OutboxHandlerPort` method in isolation with a mock Spotify/domain port   |
 | Unit – dispatch wiring | `adapter-in-outbox`   | Exhaustive `when` routes each `AppOutboxEventType` to the correct `OutboxHandlerPort` method |
-| Integration – MongoDB  | `application-quarkus` | `MongoOutboxRepository` against embedded MongoDB; verifies claim atomicity, archive insertion |
+| Integration – MongoDB  | `application-quarkus` | `MongoOutboxRepository` against embedded MongoDB; verifies claim atomicity, archive insertion, and deduplication check |
 | Contract – event types | `application-quarkus` | Asserts that each `AppOutboxEventType` has a corresponding method in `OutboxHandlerPort`; fails the build if a new event type is added without updating the port |
 | Contract – payload schema | `application-quarkus` | Round-trip serialise/deserialise each payload class; detects breaking schema changes |
+| Contract – deduplication keys | `application-quarkus` | Asserts that every payload class implements `OutboxPayload` and that `deduplicationKey()` returns a non-blank value |
 
 ---
 
