@@ -223,6 +223,19 @@ http://localhost:8080/oauth/callback             ← Local development
 
 # Cross-cutting Concepts
 
+## Testing Strategy
+
+Tests follow the *Test Your Boundaries* principle mapped to the hexagonal architecture:
+
+| Layer | Entry point | Test doubles | Module | Framework |
+|-------|-------------|--------------|--------|-----------|
+| 1 – Domain logic | Inbound port (`*Port` in `domain-api`) | MockK mocks for all outbound ports | `domain-impl` | JUnit 5 + MockK |
+| 2 – Outbound adapters | Outbound port interface | None – real infra (MongoDB dev-service, Spotify mock) | `application-quarkus` | `@QuarkusTest` |
+| 3 – Inbound adapters | HTTP endpoint / scheduler `run()` | CDI mocks via `@InjectMock` | `application-quarkus` | `@QuarkusTest` + REST Assured |
+| 4 – App wiring | Health/metrics endpoints | None | `application-quarkus` | `@QuarkusTest` |
+
+Domain services (Layer 1) never depend on Quarkus or any infrastructure. Adapter tests (Layers 2–3) start the full runtime once per test class; startup cost is amortised across all tests in the class.
+
 ## Authentication and Access Control
 
 - Spotify OAuth 2.0 Authorization Code Flow.
