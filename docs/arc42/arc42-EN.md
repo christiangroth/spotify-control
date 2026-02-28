@@ -129,7 +129,7 @@ Contains the core business logic: playback enrichment, aggregation computation, 
 
 ### `util-outbox`
 
-A self-contained outbox implementation that routes tasks to domain handlers via partitions. Designed to be potentially extracted as a standalone library.
+A self-contained outbox implementation providing: persistent task storage (MongoDB), atomic claim via `findOneAndUpdate`, at-least-once delivery with configurable retry backoff, partition-level pause/resume, task deduplication, priority-based ordering, and a conflated `Channel<Unit>` per partition for event-driven wakeup. Designed to be potentially extracted as a standalone library. See [outbox.md](outbox.md) for architecture details and usage guidance.
 
 ## Level 2
 
@@ -330,6 +330,8 @@ Architecture decisions are documented as Architecture Decision Records (ADRs) in
 | [0003](../adr/0003-no-separate-frontend-project.md) | No Separate Frontend Project |
 | [0004](../adr/0004-using-ai-coding-agents.md) | Using AI Coding Agents |
 | [0005](../adr/0005-markdown-rendering-library.md) | Markdown Rendering Library: marked |
+
+See [outbox.md](outbox.md) for outbox-specific design decisions.
 
 # Quality Requirements
 

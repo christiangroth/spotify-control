@@ -9,6 +9,7 @@ grgit = "5.3.3"
 junit = "6.0.3"
 kotlin = "2.3.10"
 kotlinLogging = "3.0.5"
+kotlinxCoroutines = "1.10.2"
 kotlinxDatetime = "0.7.1"
 kover = "0.6.1"
 mockk = "1.14.9"
@@ -27,6 +28,7 @@ grgit = { module = "org.ajoberstar.grgit:grgit-core", version.ref = "grgit" }
 junit = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
 kotlinGradlePlugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 kotlinLogging = { module = "io.github.microutils:kotlin-logging", version.ref = "kotlinLogging" }
+kotlinxCoroutinesCore = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
 kotlinxDatetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime-jvm", version.ref = "kotlinxDatetime" }
 kover = { module = "org.jetbrains.kotlinx:kover", version.ref = "kover" }
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
