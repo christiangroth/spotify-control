@@ -1,5 +1,5 @@
 package de.chrgroth.spotify.control.domain.port.`in`
 
-interface FetchAllRecentlyPlayedPort {
+interface RecentlyPlayedPort {
     fun fetchAndPersistForAllUsers()
 }
