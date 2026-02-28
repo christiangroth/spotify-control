@@ -85,23 +85,26 @@ No delay between tasks. The outbox processes Spotify tasks as fast as they compl
 
 ```
 adapter-out-spotify
-  receives HTTP 429, reads Retry-After: <N> seconds
+  receives HTTP 429, reads Retry-After: <N> seconds (fallback: 60s if header absent)
   returns Either.Left(SpotifyRateLimitError(retryAfter = N.seconds))
 
 OutboxProcessor
   receives Either.Left(SpotifyRateLimitError)
+  records rateLimitedUntil = now + retryAfter on the partition
   calls OutboxRepository.fail(task, error, nextRetryAt = now + retryAfter)
 
 OutboxPartitionWorker
-  OutboxProcessor.processNext() returns false (queue appears empty / next task not yet due)
+  OutboxProcessor.processNext() returns false (partition is rate-limited)
   worker suspends on channel.receive()
-  a separate ScheduledRetrySignal job wakes the channel at nextRetryAt
-  worker resumes → claim picks up the task (nextRetryAt <= now)
+  ScheduledRetrySignal job fires when rateLimitedUntil has passed, signals the channel
+  worker resumes → claim picks up the current task (nextRetryAt <= now)
+  all subsequent tasks in the partition are also processed normally
 ```
 
-The task is **not** consumed; it is reset to `PENDING` with `nextRetryAt` set to
-`now + Retry-After`. The existing `claim` query (`nextRetryAt IS NULL OR nextRetryAt <= now`)
-already handles this without schema changes.
+When a 429 is received, **the entire `spotify` partition is paused** until `rateLimitedUntil`
+elapses. The `claim` query is extended with an additional partition-level guard:
+`rateLimitedUntil IS NULL OR rateLimitedUntil <= now`. This prevents any further Spotify request
+from being dispatched during the cooldown, regardless of which task triggered the 429.
 
 ---
 
@@ -120,10 +123,16 @@ data class SpotifyRateLimitError(val retryAfter: Duration) : OutboxError
 ### Rate-limit aware retry in `OutboxProcessor` (util-outbox)
 
 `OutboxProcessor.processNext` inspects the returned `Either.Left` value. When it detects a
-`SpotifyRateLimitError` it passes the `retryAfter` duration directly to
-`OutboxRepository.fail(task, error, nextRetryAt = now + retryAfter)`, overriding the standard
-`RetryPolicy` backoff for that specific attempt. This avoids wasting a retry slot on a delay
-that Spotify itself specified.
+`SpotifyRateLimitError` it:
+
+1. Writes `rateLimitedUntil = now + retryAfter` to a shared, in-memory (or MongoDB-persisted)
+   field for the partition.
+2. Calls `OutboxRepository.fail(task, error, nextRetryAt = now + retryAfter)` so the triggering
+   task is also rescheduled.
+3. Returns `false`, causing `OutboxPartitionWorker` to suspend on `channel.receive()`.
+
+While `rateLimitedUntil > now`, the `claim` query returns no task for the `spotify` partition,
+so no Spotify requests are issued even if `ScheduledRetrySignal` prematurely wakes the worker.
 
 The standard `RetryPolicy` (5 s → 10 s → 30 s → 60 s, max 5 attempts) still applies to all
 other failures. A 429 does **not** increment the `attempts` counter, because it is not a handler
@@ -131,14 +140,10 @@ fault; it is a temporary external constraint.
 
 ### `ScheduledRetrySignal` (adapter-in-outbox)
 
-A lightweight Quarkus `@Scheduled` job that runs every 10 seconds. It checks whether any task in
-the `spotify` partition has `status = PENDING AND nextRetryAt <= now`, and if so, signals the
-`spotify` partition channel. This wakes the dormant `OutboxPartitionWorker` without requiring
-polling at the `Channel.receive()` level.
-
-Alternatively, the `OutboxProcessor` can use a timed `withTimeout` on `channel.receive()` instead
-of a separate scheduled job. Both approaches are valid; the scheduled job is preferred because it
-keeps `OutboxPartitionWorker` simpler and the 10-second check interval is negligible overhead.
+A lightweight Quarkus `@Scheduled` job that runs every 10 seconds. It checks whether the
+`spotify` partition's `rateLimitedUntil` has elapsed and, if so, clears the field and signals
+the `spotify` partition channel. This wakes the dormant `OutboxPartitionWorker` to resume normal
+processing without requiring a fixed sleep or polling inside the coroutine.
 
 ---
 
@@ -157,23 +162,11 @@ attempt slot. Once the `Retry-After` window expires the task resumes from its pr
 
 ## Open Questions
 
-1. **Missing `Retry-After` header** – Spotify documentation indicates `Retry-After` is always
-   present on a 429, but defensive handling is needed. If the header is absent, fall back to a
-   fixed wait of 30 seconds before re-queuing the task.
-
-2. **Cascading 429 across task types** – A large playlist sync may generate many tasks that all
-   hit rate limits in sequence. Consider whether a single 429 should pause the entire `spotify`
-   partition for the specified duration (simpler) or only the affected task (current design). The
-   current design (per-task `nextRetryAt`) is more fine-grained but may result in rapid
-   re-claiming of other tasks that also trigger 429s. A partition-level pause (implemented as a
-   shared `rateLimitedUntil: Instant?` field checked in `claim`) may be more efficient for bulk
-   operations.
-
-3. **Hidden daily bulk limits** – If Spotify silently rejects requests without a 429 (e.g. HTTP
+1. **Hidden daily bulk limits** – If Spotify silently rejects requests without a 429 (e.g. HTTP
    200 with an empty or error body), a separate detection mechanism is needed. This is out of
    scope for the initial throttling implementation and can be addressed with targeted monitoring
    (unexpected empty response bodies, success rate dashboards).
 
-4. **Observability** – Throttle events (429 received, partition paused, resumed) should emit
+2. **Observability** – Throttle events (429 received, partition paused, resumed) should emit
    structured log entries and ideally increment a counter exposed via the outbox metrics dashboard.
    This is implementation detail rather than a concept concern.
