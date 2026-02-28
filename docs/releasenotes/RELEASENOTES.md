@@ -1,3 +1,6 @@
+# 0.4.1 - 2026.02.28
+## Bugfixes / Chore
+* add-spotify-throttling-concept: Add Spotify request throttling concept document (docs/plans/spotify-throttling.md).* create-test-concept-docs: Added test-boundaries.md concept document describing the "Test Your Boundaries" approach for the hexagonal architecture.
 # 0.4.0 - 2026.02.28
 ## New Features
 * implement-recently-played-fetching: Fetch and persist recently played tracks per user with duplicate suppression.

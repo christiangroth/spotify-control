@@ -1,1 +1,0 @@
-* add-spotify-throttling-concept: Add Spotify request throttling concept document (docs/plans/spotify-throttling.md).
