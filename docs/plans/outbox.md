@@ -15,7 +15,8 @@ and ensures that no task is silently lost. In this project the outbox serves two
 ### Key requirements
 
 * At-least-once delivery: a task is never silently dropped on application restart or failure.
-* Ordering within a partition is preserved (FIFO).
+* Ordering within a partition is preserved (FIFO within the same priority level).
+* High-priority tasks jump ahead of normal-priority tasks within the same partition.
 * Partitions are processed independently; a slow Spotify partition does not block the domain
   partition.
 * No additional runtime dependencies beyond what the project already uses.
@@ -64,7 +65,7 @@ Kotlin module with a Quarkus dependency for MongoDB Panache access (both already
 * `OutboxPartitionStatus` – enum: `ACTIVE`, `PAUSED`.
 * `OutboxPartitionDocument` – Panache entity mapped to the `outbox_partitions` collection; stores
   `status`, `statusReason`, and `pausedUntil` per partition key.
-* `OutboxRepository` – interface; provides `claim`, `complete`, `fail`, `enqueue`,
+* `OutboxRepository` – interface; provides `claim`, `complete`, `fail`, `reschedule`, `enqueue`,
   `pausePartition`, `activatePartition`, `findPartition`.
 * `OutboxDocument` – Panache entity mapped to the `outbox` collection.
 * `OutboxArchiveDocument` – Panache entity mapped to the `outbox_archive` collection.
@@ -188,6 +189,7 @@ this collection and only returns tasks for partitions where `status = ACTIVE`.
 | `createdAt`    | Instant   | When the task was enqueued                                    |
 | `updatedAt`    | Instant   | Last status change                                            |
 | `nextRetryAt`  | Instant?  | Earliest time for the next attempt (null = immediately)       |
+| `priority`     | String    | `NORMAL` (default) or `HIGH` — affects claim ordering         |
 | `lastError`    | String?   | Error message or stack trace excerpt from the last failure    |
 
 ### `outbox_archive` collection
@@ -314,7 +316,7 @@ outbox is empty (see Partition Semantics and Scheduling).
 `OutboxRepository.claim(partition)` uses MongoDB `findOneAndUpdate` to atomically:
 
 * Filter: `status = PENDING AND partition = <p> AND (nextRetryAt IS NULL OR nextRetryAt <= now)`
-* Sort: `createdAt ASC` (FIFO within partition)
+* Sort: `priority DESC, createdAt ASC` (HIGH priority first, then FIFO within each priority level)
 * Update: `status → PROCESSING, updatedAt → now`
 * Return: the updated document
 
@@ -330,7 +332,11 @@ instance is ever added (because `findOneAndUpdate` is atomic at the document lev
 3. If a task was claimed: calls `dispatch(task)` – the function provided by `adapter-in-outbox`.
 4. On `Either.Right` (success): calls `OutboxRepository.complete(task)` which inserts into
    `outbox_archive` and deletes from `outbox`.
-5. On `Either.Left` (failure): calls `OutboxRepository.fail(task, error, nextRetryAt)`.
+5. On `Either.Left` (failure): calls `OutboxRepository.fail(task, error, nextRetryAt)` which
+   increments `attempts` and sets `status = PENDING` (or `FAILED` if `maxAttempts` is reached).
+   For failures that must not count as an attempt (e.g. HTTP 429), the caller uses
+   `OutboxRepository.reschedule(task, nextRetryAt)` instead — sets `status = PENDING` without
+   touching `attempts`.
 6. Returns `true` so the caller loops immediately for the next task.
 
 ### Stale task recovery
@@ -458,6 +464,52 @@ This ensures every partition self-heals after an application restart without ext
 
 ---
 
+## Task Priority
+
+Certain event types are time-sensitive and must not be delayed by a backlog of lower-priority
+tasks. `PollRecentlyPlayed` is the primary example: Spotify's recently-played history has a fixed
+retention window and must be fetched promptly to avoid silently missing playback events.
+
+### Priority field
+
+The `outbox` collection stores a `priority` field (`NORMAL` or `HIGH`, default `NORMAL`). The
+`claim` query sorts `priority DESC, createdAt ASC`, so any `HIGH` priority task is always claimed
+before `NORMAL` tasks regardless of enqueue order. Within the same priority level FIFO order is
+preserved.
+
+The `OutboxTaskPriority` enum is defined in `util-outbox`:
+
+```kotlin
+enum class OutboxTaskPriority { NORMAL, HIGH }
+```
+
+`OutboxTask` exposes the priority as an `OutboxTaskPriority` field. `OutboxPort.enqueue` gains an
+optional `priority` parameter (default `NORMAL`):
+
+```kotlin
+interface OutboxPort {
+    fun enqueue(
+        partition: AppOutboxPartition,
+        eventType: AppOutboxEventType,
+        payload: Any,
+        priority: OutboxTaskPriority = OutboxTaskPriority.NORMAL,
+    )
+}
+```
+
+### Project-specific priority assignments
+
+| Event type              | Priority | Rationale                                                         |
+|-------------------------|----------|-------------------------------------------------------------------|
+| `PollRecentlyPlayed`    | `HIGH`   | Playback data expires quickly; delays risk missing playback events |
+| All other event types   | `NORMAL` | No strict latency requirement                                     |
+
+The caller (domain service via `OutboxPort`) decides the priority at enqueue time. The outbox core
+has no knowledge of which event types are high-priority — the decision is encapsulated in the
+call site.
+
+---
+
 ## Ordering and Idempotency
 
 **Ordering**: FIFO within a partition is maintained by claiming the task with the earliest
@@ -485,8 +537,9 @@ util-outbox
     ├── OutboxPartition (plain interface – open extension point)
     ├── OutboxEventType (plain interface – open extension point)
     ├── OutboxPartitionStatus (enum: ACTIVE, PAUSED)
+    ├── OutboxTaskPriority (enum: NORMAL, HIGH)
     ├── OutboxTask, OutboxTaskStatus
-    ├── OutboxRepository (interface; claim, complete, fail, enqueue, pausePartition, activatePartition, findPartition)
+    ├── OutboxRepository (interface; claim, complete, fail, reschedule, enqueue, pausePartition, activatePartition, findPartition)
     ├── MongoOutboxRepository (implements OutboxRepository)
     ├── OutboxDocument, OutboxArchiveDocument (Panache entities; outbox / outbox_archive collections)
     ├── OutboxPartitionDocument (Panache entity; outbox_partitions collection)
