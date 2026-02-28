@@ -41,119 +41,100 @@ Extend `OutboxPartition` with a sealed interface in `domain-api`:
 
 ```kotlin
 sealed interface AppOutboxPartition : OutboxPartition {
-    data object Spotify : AppOutboxPartition { override val key = "spotify" }
-    data object Domain  : AppOutboxPartition { override val key = "domain"  }
+    data object RecentlyPlayed : AppOutboxPartition { override val key = "recently-played" }
+    data object UserProfileUpdate : AppOutboxPartition { override val key = "user-profile-update" }
+
+    companion object {
+        val all: List<AppOutboxPartition> = listOf(RecentlyPlayed, UserProfileUpdate)
+    }
 }
 ```
 
 ## Defining Events and Payloads
 
-Each payload class implements `OutboxEvent`, providing both the event type key and the deduplication key:
+Implement `OutboxEvent` within a sealed interface in `domain-api`. Each event type carries its own
+partition and priority, enabling exhaustive `when` dispatch at compile time:
 
 ```kotlin
-// domain-api
-data class PollRecentlyPlayedPayload(
-    val userId: String,
-    val version: Int = 1,
-) : OutboxEvent {
-    override val key = "PollRecentlyPlayed"
-    override fun deduplicationKey() = "PollRecentlyPlayed:$userId"
+sealed interface AppOutboxEvent : OutboxEvent {
+    val partition: AppOutboxPartition
+    val priority: OutboxTaskPriority get() = OutboxTaskPriority.NORMAL
+
+    data object FetchRecentlyPlayed : AppOutboxEvent {
+        override val key = "FetchRecentlyPlayed"
+        override fun deduplicationKey() = "FetchRecentlyPlayed"
+        override val partition = AppOutboxPartition.RecentlyPlayed
+        override val priority = OutboxTaskPriority.HIGH
+    }
+
+    data object UpdateUserProfiles : AppOutboxEvent {
+        override val key = "UpdateUserProfiles"
+        override fun deduplicationKey() = "UpdateUserProfiles"
+        override val partition = AppOutboxPartition.UserProfileUpdate
+    }
+
+    companion object {
+        fun fromKey(key: String): AppOutboxEvent = when (key) {
+            FetchRecentlyPlayed.key -> FetchRecentlyPlayed
+            UpdateUserProfiles.key -> UpdateUserProfiles
+            else -> throw IllegalArgumentException("Unknown outbox event type: $key")
+        }
+    }
 }
 ```
 
-For events where only one pending instance should exist, return the key alone as the deduplication key:
-
-```kotlin
-data class RecomputeAggregationsPayload(val version: Int = 1) : OutboxEvent {
-    override val key = "RecomputeAggregations"
-    override fun deduplicationKey() = key
-}
-```
-
-Sealing a parent interface over all payload types enables exhaustive `when` dispatch at compile time.
+For events where only one pending instance should exist, return the key alone as the deduplication key.
+For per-entity events, include the entity identifier (e.g. `"SyncPlaylist:$playlistId"`).
 
 ## Enqueueing Tasks
 
-Inject `OutboxRepository` (or a port wrapping it) and call `enqueue`:
+Enqueue via `OutboxPort` (in `domain-api`), implemented by `OutboxPortAdapter` in `adapter-out-outbox`:
 
 ```kotlin
-@ApplicationScoped
-class OutboxPortAdapter(
-    private val repository: OutboxRepository,
-    private val wakeup: OutboxWakeupService,
-    private val objectMapper: ObjectMapper,
-) {
-    fun enqueue(
-        partition: AppOutboxPartition,
-        payload: OutboxEvent,
-        priority: OutboxTaskPriority = OutboxTaskPriority.NORMAL,
-    ) {
-        val json = objectMapper.writeValueAsString(payload)
-        val inserted = repository.enqueue(partition, payload, json, priority)
-        if (inserted) {
-            wakeup.signal(partition)
-        }
-    }
-}
+// caller (e.g. adapter-in-scheduler)
+outboxPort.enqueue(AppOutboxEvent.FetchRecentlyPlayed)
 ```
 
-Signal `OutboxWakeupService` after a successful insert so the partition worker wakes immediately.
-No signal is sent for duplicate inserts (when `enqueue` returns `false`).
+`OutboxPortAdapter` delegates to `OutboxRepository.enqueue` and signals the wakeup channel:
+
+```kotlin
+val inserted = repository.enqueue(event.partition, event, "{}", event.priority)
+if (inserted) wakeupService.signal(event.partition)
+```
 
 ## Processing Tasks
 
-Create one coroutine worker per partition, launched at application startup:
+`OutboxPartitionWorker` in `adapter-in-outbox` launches one coroutine per partition at startup.
+Each coroutine waits for a wakeup signal, then drains the partition queue:
 
 ```kotlin
-@ApplicationScoped
-class OutboxPartitionWorker(
-    private val wakeup: OutboxWakeupService,
-    private val processor: OutboxProcessor,
-    private val handlerPort: OutboxHandlerPort,
-) {
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-
-    fun start(partition: AppOutboxPartition) {
-        scope.launch {
-            val channel = wakeup.getOrCreate(partition)
-            while (isActive) {
-                channel.receive()
-                do {
-                    val processed = processor.processNext(partition, dispatch)
-                } while (processed && isActive)
-            }
-        }
-    }
-
-    @PreDestroy
-    fun stop() = scope.cancel()
-
-    private val dispatch: (OutboxTask) -> Either<OutboxError, Unit> = { task ->
-        when (task.eventType) {
-            "PollRecentlyPlayed" -> handlerPort.handlePollRecentlyPlayed(deserialise(task.payload))
-            // … exhaustive when over task.eventType string (or sealed AppOutboxEventType.fromKey)
-            else -> Either.Left(OutboxError("Unknown event type: ${task.eventType}"))
-        }
-    }
+val channel = wakeupService.getOrCreate(partition)
+while (isActive) {
+    channel.receive()
+    var processed: Boolean
+    do {
+        processed = outboxProcessor.processNext(partition) { task -> dispatch(task) }
+    } while (processed && isActive)
 }
 ```
+
+The `dispatch` function uses an exhaustive `when` on `AppOutboxEvent.fromKey(task.eventType)`:
+
+```kotlin
+when (AppOutboxEvent.fromKey(task.eventType)) {
+    is AppOutboxEvent.FetchRecentlyPlayed -> handlerPort.handleFetchRecentlyPlayed()
+    is AppOutboxEvent.UpdateUserProfiles  -> handlerPort.handleUpdateUserProfiles()
+    // Sealed when – compiler error if a new AppOutboxEvent is added without a branch
+}
+```
+
+`OutboxHandlerPort` (in `domain-api`) is implemented by `OutboxHandlerAdapter` in `domain-impl`.
 
 ## Startup Recovery
 
-Reset stale `PROCESSING` tasks on startup, then signal all partition channels:
-
-```kotlin
-@ApplicationScoped
-class OutboxStartupRecovery(
-    private val repository: OutboxRepository,
-    private val wakeup: OutboxWakeupService,
-) {
-    fun onStart(@Observes event: StartupEvent) {
-        repository.resetStaleProcessingTasks()
-        AppOutboxPartition.entries.forEach { wakeup.signal(it) }
-    }
-}
-```
+`OutboxStartupRecovery` in `adapter-in-outbox` runs at application startup: it calls
+`OutboxRepository.resetStaleProcessingTasks()` to recover tasks left in `PROCESSING` status
+from a previous crash, then signals every partition channel so workers process any recovered tasks.
 
 ## Retry and Backoff
 

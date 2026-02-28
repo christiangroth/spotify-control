@@ -1,6 +1,7 @@
 package de.chrgroth.spotify.control.adapter.`in`.scheduler
 
-import de.chrgroth.spotify.control.domain.port.`in`.UserProfileUpdatePort
+import de.chrgroth.spotify.control.domain.outbox.AppOutboxEvent
+import de.chrgroth.spotify.control.domain.port.out.OutboxPort
 import io.quarkus.test.InjectMock
 import io.quarkus.test.junit.QuarkusTest
 import jakarta.inject.Inject
@@ -11,15 +12,15 @@ import org.mockito.Mockito.verify
 class UserProfileUpdateJobTests {
 
     @InjectMock
-    lateinit var userProfileUpdate: UserProfileUpdatePort
+    lateinit var outboxPort: OutboxPort
 
     @Inject
     lateinit var job: UserProfileUpdateJob
 
     @Test
-    fun `run calls updateUserProfiles`() {
+    fun `run enqueues UpdateUserProfiles event`() {
         job.run()
 
-        verify(userProfileUpdate).updateUserProfiles()
+        verify(outboxPort).enqueue(AppOutboxEvent.UpdateUserProfiles)
     }
 }

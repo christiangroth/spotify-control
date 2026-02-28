@@ -5,9 +5,11 @@ plugins {
 }
 
 dependencies {
+  implementation(project(":adapter-in-outbox"))
   implementation(project(":adapter-in-scheduler"))
   implementation(project(":adapter-in-web"))
   implementation(project(":adapter-out-mongodb"))
+  implementation(project(":adapter-out-outbox"))
   implementation(project(":adapter-out-spotify"))
   implementation(project(":domain-impl"))
   implementation(project(":util-outbox"))

@@ -47,176 +47,19 @@ Kafka, RabbitMQ, Debezium, and dedicated outbox libraries are all out of scope.
 
 ```
 util-outbox          – ✅ Implemented – see docs/arc42/outbox.md
-adapter-in-outbox    – Drives domain processing: event-driven wakeup, exhaustive dispatch, startup recovery.
-adapter-out-outbox   – Write side: implements OutboxPort so domain services can enqueue tasks.
+adapter-in-outbox    – ✅ Implemented – OutboxPartitionWorker + OutboxStartupRecovery
+adapter-out-outbox   – ✅ Implemented – OutboxPortAdapter
 adapter-out-spotify  – Spotify API client (no outbox handler responsibility).
-domain-impl          – Implements OutboxHandlerPort with one method per event type (all partitions).
-domain-api           – Defines OutboxPort, OutboxHandlerPort, and the project's sealed event types.
+domain-impl          – ✅ OutboxHandlerAdapter implemented for FetchRecentlyPlayed and UpdateUserProfiles
+domain-api           – ✅ OutboxPort, OutboxHandlerPort, AppOutboxPartition, AppOutboxEvent implemented
 ```
 
-### `adapter-in-outbox`
-
-Inbound adapter – drives the domain by consuming the outbox. Depends on `util-outbox` and
-`domain-api`. Contains:
-
-* `OutboxPartitionWorker` – one per partition; runs as a coroutine launched at `StartupEvent`.
-  The coroutine loops: `channel.receive()` to wait for a wakeup signal, then calls
-  `OutboxProcessor.processNext(partition, dispatch)` in a loop until the queue is drained.
-  No fixed polling timeout is needed – the `Channel` provides reliable signal delivery.
-* `OutboxStartupRecovery` – bean that resets tasks stuck in `PROCESSING` status back to
-  `PENDING` on application start (handles the previous-crash scenario), then signals each
-  partition channel so workers wake up and process any recovered tasks.
-* Exhaustive `when` dispatch: the `dispatch` function passed to `OutboxProcessor` deserialises
-  the raw JSON payload and calls the appropriate method on `OutboxHandlerPort` (from
-  `domain-api`) using a Kotlin exhaustive `when` on the sealed `AppOutboxEventType`. The
-  compiler enforces that every event type has a handler.
-
-The `Channel<Unit>(Channel.CONFLATED)` per partition is signalled by `OutboxPortAdapter`
-immediately after a task is enqueued, so processing begins without any fixed delay. Using
-`Channel.CONFLATED` means multiple rapid enqueues coalesce into a single wakeup, and the
-worker drains the full queue before returning to `receive()`.
-
-This module is an inbound adapter because it is the entry point that triggers domain work –
-analogous to a web request handler or a Kafka consumer.
-
-### `adapter-out-outbox`
-
-Outbound adapter – the write side. Depends on `domain-api` and `util-outbox`. Contains:
-
-* `OutboxPortAdapter` – `@ApplicationScoped` bean; implements `OutboxPort` by delegating to
-  `OutboxRepository.enqueue`. After the insert it signals the per-partition `Channel<Unit>` in
-  `OutboxWakeupService` so the coroutine worker wakes up immediately. This is what domain
-  services call to enqueue a task.
-
-### `adapter-out-spotify`
-
-Provides the Spotify API client implementation (outbound HTTP calls). It has no outbox handler
-responsibility — it exposes ports that `domain-impl` handlers call to execute Spotify operations.
-
-### `domain-impl`
-
-Implements `OutboxHandlerPort` (from `domain-api`) with one method per event type across both
-partitions:
-
-* Methods for `AppOutboxPartition.Spotify` event types call `adapter-out-spotify` ports to
-  perform the actual Spotify API operations (sync playlists, push edits, etc.).
-* Methods for `AppOutboxPartition.Domain` event types execute enrichment, aggregation, and
-  invariant logic entirely within the domain layer.
-
-### `domain-api`
-
-Defines `OutboxPort`, `OutboxHandlerPort`, and the project-specific sealed event types:
-
-```kotlin
-interface OutboxPort {
-    fun enqueue(partition: AppOutboxPartition, eventType: AppOutboxEventType, payload: Any)
-}
-
-// One method per AppOutboxEventType; exhaustive when in adapter-in-outbox guarantees
-// every event type is covered at compile time.
-interface OutboxHandlerPort {
-    fun handleSyncPlaylist(payload: SyncPlaylistPayload): Either<OutboxError, Unit>
-    fun handleSyncTrack(payload: SyncTrackPayload): Either<OutboxError, Unit>
-    fun handleSyncArtist(payload: SyncArtistPayload): Either<OutboxError, Unit>
-    fun handlePushPlaylistEdit(payload: PushPlaylistEditPayload): Either<OutboxError, Unit>
-    fun handlePollRecentlyPlayed(payload: PollRecentlyPlayedPayload): Either<OutboxError, Unit>
-    fun handleEnrichPlaybackEvents(payload: EnrichPlaybackEventsPayload): Either<OutboxError, Unit>
-    fun handleRecomputeAggregations(payload: RecomputeAggregationsPayload): Either<OutboxError, Unit>
-    fun handleApplyGenreOverride(payload: ApplyGenreOverridePayload): Either<OutboxError, Unit>
-    fun handleSyncPlaylistInvariant(payload: SyncPlaylistInvariantPayload): Either<OutboxError, Unit>
-    fun handleCheckAlbumUpgrades(payload: CheckAlbumUpgradesPayload): Either<OutboxError, Unit>
-    fun handleApplyAlbumUpgrade(payload: ApplyAlbumUpgradePayload): Either<OutboxError, Unit>
-}
-```
-
-Domain services depend only on `OutboxPort` and the sealed types in `domain-api`; they never
-reference `MongoOutboxRepository` or other `util-outbox` internals directly.
+Future event types (SyncPlaylist, SyncTrack, SyncArtist, EnrichPlaybackEvents, etc.) will be added
+to `AppOutboxEvent` and `AppOutboxHandlerPort` as new use cases are implemented. See `docs/arc42/outbox.md`
+for the current implementation reference.
 
 ---
 
-## Type-Safe Event API
-
-`util-outbox` defines plain (non-sealed) interfaces (`OutboxPartition`, `OutboxEventType`) as open
-extension points. `domain-api` extends these with project-specific sealed sub-interfaces, giving
-exhaustive `when` handling across the whole codebase:
-
-```kotlin
-// domain-api – project-specific, sealed
-sealed interface AppOutboxPartition : OutboxPartition {
-    object Spotify : AppOutboxPartition { override val key = "spotify" }
-    object Domain  : AppOutboxPartition { override val key = "domain"  }
-}
-
-sealed interface AppOutboxEventType : OutboxEventType {
-    // Spotify partition
-    object SyncPlaylist          : AppOutboxEventType { override val key = "SyncPlaylist" }
-    object SyncTrack             : AppOutboxEventType { override val key = "SyncTrack" }
-    object SyncArtist            : AppOutboxEventType { override val key = "SyncArtist" }
-    object PushPlaylistEdit      : AppOutboxEventType { override val key = "PushPlaylistEdit" }
-    object PollRecentlyPlayed    : AppOutboxEventType { override val key = "PollRecentlyPlayed" }
-    // Domain partition
-    object EnrichPlaybackEvents  : AppOutboxEventType { override val key = "EnrichPlaybackEvents" }
-    object RecomputeAggregations : AppOutboxEventType { override val key = "RecomputeAggregations" }
-    object ApplyGenreOverride    : AppOutboxEventType { override val key = "ApplyGenreOverride" }
-    object SyncPlaylistInvariant : AppOutboxEventType { override val key = "SyncPlaylistInvariant" }
-    object CheckAlbumUpgrades    : AppOutboxEventType { override val key = "CheckAlbumUpgrades" }
-    object ApplyAlbumUpgrade     : AppOutboxEventType { override val key = "ApplyAlbumUpgrade" }
-}
-```
-
-`adapter-in-outbox` builds the `dispatch` lambda using an exhaustive `when` on the sealed
-`AppOutboxEventType`, ensuring at compile time that every event type has a handler:
-
-```kotlin
-// adapter-in-outbox
-val dispatch: (OutboxTask) -> Either<OutboxError, Unit> = { task ->
-    val payload = task.payload  // raw JSON String
-    when (AppOutboxEventType.fromKey(task.eventType)) {
-        AppOutboxEventType.SyncPlaylist          -> handlerPort.handleSyncPlaylist(deserialise(payload))
-        AppOutboxEventType.SyncTrack             -> handlerPort.handleSyncTrack(deserialise(payload))
-        AppOutboxEventType.SyncArtist            -> handlerPort.handleSyncArtist(deserialise(payload))
-        AppOutboxEventType.PushPlaylistEdit      -> handlerPort.handlePushPlaylistEdit(deserialise(payload))
-        AppOutboxEventType.PollRecentlyPlayed    -> handlerPort.handlePollRecentlyPlayed(deserialise(payload))
-        AppOutboxEventType.EnrichPlaybackEvents  -> handlerPort.handleEnrichPlaybackEvents(deserialise(payload))
-        AppOutboxEventType.RecomputeAggregations -> handlerPort.handleRecomputeAggregations(deserialise(payload))
-        AppOutboxEventType.ApplyGenreOverride    -> handlerPort.handleApplyGenreOverride(deserialise(payload))
-        AppOutboxEventType.SyncPlaylistInvariant -> handlerPort.handleSyncPlaylistInvariant(deserialise(payload))
-        AppOutboxEventType.CheckAlbumUpgrades    -> handlerPort.handleCheckAlbumUpgrades(deserialise(payload))
-        AppOutboxEventType.ApplyAlbumUpgrade     -> handlerPort.handleApplyAlbumUpgrade(deserialise(payload))
-        // Sealed when – compiler error if a new AppOutboxEventType is added without a branch
-    }
-}
-```
-
----
-
-## Enqueuing Tasks (Write Path)
-
-1. A domain service calls `OutboxPort.enqueue(partition, eventType, payload)`.
-2. `OutboxPortAdapter` (in `adapter-out-outbox`) serialises the payload to JSON and delegates to
-   `OutboxRepository.enqueue(...)`.
-3. `MongoOutboxRepository.enqueue` (in `util-outbox`) checks whether a task with the same
-   `(partition, deduplicationKey)` already exists with `status IN (PENDING, PROCESSING)`.
-   * If a duplicate is found: the enqueue call returns silently — no insert, no channel signal.
-   * If no duplicate exists: inserts a new `OutboxDocument` with `status = PENDING`,
-     `attempts = 0`, `nextRetryAt = null`.
-4. After the insert, `OutboxPortAdapter` checks the partition's current `status`.
-   * If `ACTIVE`: signals the per-partition `Channel<Unit>` so the worker wakes immediately.
-   * If `PAUSED`: **no signal is sent**. The `claim` query would reject any task from a paused
-     partition anyway, and the resume coroutine (already running) will wake the worker at the
-     right time. Sending a premature signal would cause the worker to wake, call `claim`, find
-     nothing claimable, and immediately suspend again — unnecessary work with no benefit.
-
-Enqueueing is a single MongoDB insert – it does not need to participate in a multi-document
-transaction because the outbox is append-only at write time.
-
----
-
-## Processing Tasks (Read/Execute Path)
-
-Processing is driven by `OutboxPartitionWorker` threads in `adapter-in-outbox` (one per
-partition). Each worker loops continuously on a background thread, sleeping only when the
-outbox is empty (see Partition Semantics and Scheduling).
 
 ### Claim
 
@@ -524,11 +367,11 @@ display to the user. This is a read-only query exposed via a dedicated `OutboxMe
 | Unit – processor logic | `util-outbox`         | ✅ Done | Retry policy application, claim → dispatch → complete/fail cycle with in-memory `OutboxRepository` stub |
 | Unit – wakeup service  | `util-outbox`         | ✅ Done | Channel per partition, signal delivery |
 | Integration – MongoDB  | `application-quarkus` | ✅ Done | `MongoOutboxRepository` against embedded MongoDB; verifies claim atomicity, archive insertion, and deduplication check |
-| Unit – handler logic   | `domain-impl`         | ☐ TODO | Each `OutboxHandlerPort` method in isolation with a mock Spotify/domain port   |
-| Unit – dispatch wiring | `adapter-in-outbox`   | ☐ TODO | Exhaustive `when` routes each `AppOutboxEventType` to the correct `OutboxHandlerPort` method |
-| Contract – event types | `application-quarkus` | ☐ TODO | Asserts that each `AppOutboxEventType` has a corresponding method in `OutboxHandlerPort`; fails the build if a new event type is added without updating the port |
+| Unit – handler logic   | `domain-impl`         | ✅ Done | `OutboxHandlerAdapterTests` covers each method with mock ports |
+| Unit – dispatch wiring | `adapter-in-outbox`   | ☐ TODO | Exhaustive `when` routes each `AppOutboxEvent` to the correct `OutboxHandlerPort` method |
+| Contract – event types | `application-quarkus` | ☐ TODO | Asserts that each `AppOutboxEvent` has a corresponding method in `OutboxHandlerPort`; fails the build if a new event type is added without updating the port |
 | Contract – payload schema | `application-quarkus` | ☐ TODO | Round-trip serialise/deserialise each payload class; detects breaking schema changes |
-| Contract – deduplication keys | `application-quarkus` | ☐ TODO | Asserts that every payload class implements `OutboxPayload` and that `deduplicationKey()` returns a non-blank value |
+| Contract – deduplication keys | `application-quarkus` | ☐ TODO | Asserts that every `AppOutboxEvent` returns a non-blank `deduplicationKey()` |
 
 ---
 
