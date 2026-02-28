@@ -1,0 +1,1 @@
+* connect-outbox-for-profile-update: Connect outbox for profile update and recently played fetch using new adapter-in-outbox and adapter-out-outbox modules.
