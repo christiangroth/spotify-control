@@ -1,7 +1,12 @@
 package de.chrgroth.spotify.control.util.outbox
 
-import arrow.core.Either
+import jakarta.annotation.PreDestroy
 import jakarta.enterprise.context.ApplicationScoped
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @ApplicationScoped
 class Outbox(
@@ -9,7 +14,15 @@ class Outbox(
     private val wakeupService: OutboxWakeupService,
 ) {
 
-    private val processor = OutboxProcessor(repository)
+    private val scope = CoroutineScope(Dispatchers.IO)
+
+    private val processor = OutboxProcessor(repository) { partition, retryAfter ->
+        scope.launch {
+            delay(retryAfter.toMillis())
+            repository.activatePartition(partition)
+            wakeupService.signal(partition)
+        }
+    }
 
     fun enqueue(
         partition: OutboxPartition,
@@ -22,7 +35,7 @@ class Outbox(
         return inserted
     }
 
-    fun processNext(partition: OutboxPartition, dispatch: (OutboxTask) -> Either<OutboxError, Unit>): Boolean =
+    fun processNext(partition: OutboxPartition, dispatch: (OutboxTask) -> OutboxTaskResult): Boolean =
         processor.processNext(partition, dispatch)
 
     fun signal(partition: OutboxPartition) = wakeupService.signal(partition)
@@ -34,4 +47,9 @@ class Outbox(
     fun findPartition(partition: OutboxPartition) = repository.findPartition(partition)
 
     fun activatePartition(partition: OutboxPartition) = repository.activatePartition(partition)
+
+    @PreDestroy
+    fun onStop() {
+        scope.cancel()
+    }
 }

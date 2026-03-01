@@ -1,6 +1,5 @@
 package de.chrgroth.spotify.control.adapter.`in`.outbox
 
-import arrow.core.Either
 import arrow.core.left
 import arrow.core.right
 import de.chrgroth.spotify.control.domain.model.UserId
@@ -9,6 +8,7 @@ import de.chrgroth.spotify.control.domain.port.`in`.OutboxHandlerPort
 import de.chrgroth.spotify.control.util.outbox.OutboxError
 import de.chrgroth.spotify.control.util.outbox.OutboxTask
 import de.chrgroth.spotify.control.util.outbox.OutboxTaskPriority
+import de.chrgroth.spotify.control.util.outbox.OutboxTaskResult
 import de.chrgroth.spotify.control.util.outbox.OutboxTaskStatus
 import io.mockk.every
 import io.mockk.mockk
@@ -49,7 +49,7 @@ class DomainOutboxTaskDispatcherTests {
 
         val result = subject.dispatch(task)
 
-        assertThat(result).isInstanceOf(Either.Right::class.java)
+        assertThat(result).isInstanceOf(OutboxTaskResult.Success::class.java)
         verify { handlerPort.handle(event) }
     }
 
@@ -61,28 +61,31 @@ class DomainOutboxTaskDispatcherTests {
 
         val result = subject.dispatch(task)
 
-        assertThat(result).isInstanceOf(Either.Right::class.java)
+        assertThat(result).isInstanceOf(OutboxTaskResult.Success::class.java)
         verify { handlerPort.handle(event) }
     }
 
     @Test
-    fun `unknown event type returns OutboxError left`() {
+    fun `unknown event type returns Failed result`() {
         val task = buildTask("UnknownEvent", "payload")
 
         val result = subject.dispatch(task)
 
-        assertThat(result).isInstanceOf(Either.Left::class.java)
+        assertThat(result).isInstanceOf(OutboxTaskResult.Failed::class.java)
     }
 
     @Test
-    fun `handler failure propagates as left`() {
+    fun `handler failure propagates as Failed result`() {
         val event = DomainOutboxEvent.FetchRecentlyPlayed(userIdObj)
         val task = buildTask(DomainOutboxEvent.FetchRecentlyPlayed.KEY, userId)
-        val error = OutboxError("fetch failed")
+        val cause = RuntimeException("root cause")
+        val error = OutboxError("fetch failed", cause)
         every { handlerPort.handle(event) } returns error.left()
 
         val result = subject.dispatch(task)
 
-        assertThat(result).isInstanceOf(Either.Left::class.java)
+        assertThat(result).isInstanceOf(OutboxTaskResult.Failed::class.java)
+        assertThat((result as OutboxTaskResult.Failed).message).isEqualTo("fetch failed")
+        assertThat(result.cause).isSameAs(cause)
     }
 }
