@@ -87,7 +87,9 @@ class Outbox(
 
     private fun getOrCreatePartitionStatusGauge(partition: OutboxPartition): AtomicInteger =
         partitionStatusGauges.getOrPut(partition.key) {
-            AtomicInteger(1).also { gauge ->
+            val initialStatus = repository.findPartition(partition)
+                ?.let { if (it.status == OutboxPartitionStatus.ACTIVE.name) 1 else 0 } ?: 1
+            AtomicInteger(initialStatus).also { gauge ->
                 Gauge.builder("outbox_partition_status", gauge) { it.get().toDouble() }
                     .tag("partition", partition.key)
                     .description("Outbox partition status: 1=active, 0=paused")
