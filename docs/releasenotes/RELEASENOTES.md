@@ -1,3 +1,7 @@
+# 0.5.0 - 2026.03.01
+## New Features
+* connect-outbox-for-profile-update: Connect outbox for profile update and recently played fetch.
+
 # 0.4.2 - 2026.02.28
 ## New Features
 * implement-util-outbox-module: Add util-outbox module with outbox pattern support (MongoDB-backed task queue with retry, deduplication, and partition management).
