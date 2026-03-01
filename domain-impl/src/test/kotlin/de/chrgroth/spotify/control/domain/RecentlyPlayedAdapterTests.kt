@@ -7,7 +7,7 @@ import de.chrgroth.spotify.control.domain.model.AccessToken
 import de.chrgroth.spotify.control.domain.model.RecentlyPlayedItem
 import de.chrgroth.spotify.control.domain.model.User
 import de.chrgroth.spotify.control.domain.model.UserId
-import de.chrgroth.spotify.control.domain.outbox.AppOutboxEvent
+import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.RecentlyPlayedRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
@@ -56,39 +56,39 @@ class RecentlyPlayedAdapterTests {
         playedAt = now - index.hours,
     )
 
-    // --- fetchAndPersistForAllUsers tests ---
+    // --- enqueueUpdates tests ---
 
     @Test
-    fun `fetchAndPersistForAllUsers does nothing when no users exist`() {
+    fun `enqueueUpdates does nothing when no users exist`() {
         every { userRepository.findAll() } returns emptyList()
 
-        adapter.fetchAndPersistForAllUsers()
+        adapter.enqueueUpdates()
 
         verify(exactly = 0) { outboxPort.enqueue(any()) }
     }
 
     @Test
-    fun `fetchAndPersistForAllUsers enqueues one task per user`() {
+    fun `enqueueUpdates enqueues one task per user`() {
         every { userRepository.findAll() } returns listOf(buildUser("user-1"), buildUser("user-2"))
         every { outboxPort.enqueue(any()) } just runs
 
-        adapter.fetchAndPersistForAllUsers()
+        adapter.enqueueUpdates()
 
-        verify(exactly = 1) { outboxPort.enqueue(AppOutboxEvent.FetchRecentlyPlayedForUser("user-1")) }
-        verify(exactly = 1) { outboxPort.enqueue(AppOutboxEvent.FetchRecentlyPlayedForUser("user-2")) }
+        verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.FetchRecentlyPlayed("user-1")) }
+        verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.FetchRecentlyPlayed("user-2")) }
     }
 
-    // --- fetchAndPersistForUser tests ---
+    // --- update tests ---
 
     @Test
-    fun `fetchAndPersistForUser persists new tracks`() {
+    fun `update persists new tracks`() {
         val items = listOf(item(1), item(2))
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken) } returns items.right()
         every { recentlyPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
         every { recentlyPlayedRepository.saveAll(any()) } just runs
 
-        adapter.fetchAndPersistForUser(userId)
+        adapter.update(userId)
 
         val savedSlot = slot<List<RecentlyPlayedItem>>()
         verify { recentlyPlayedRepository.saveAll(capture(savedSlot)) }
@@ -97,14 +97,14 @@ class RecentlyPlayedAdapterTests {
     }
 
     @Test
-    fun `fetchAndPersistForUser skips duplicate tracks`() {
+    fun `update skips duplicate tracks`() {
         val items = listOf(item(1), item(2))
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken) } returns items.right()
         every { recentlyPlayedRepository.findExistingPlayedAts(userId, any()) } returns setOf(items[0].playedAt)
         every { recentlyPlayedRepository.saveAll(any()) } just runs
 
-        adapter.fetchAndPersistForUser(userId)
+        adapter.update(userId)
 
         val savedSlot = slot<List<RecentlyPlayedItem>>()
         verify { recentlyPlayedRepository.saveAll(capture(savedSlot)) }
@@ -113,34 +113,34 @@ class RecentlyPlayedAdapterTests {
     }
 
     @Test
-    fun `fetchAndPersistForUser does not call saveAll when all tracks are duplicates`() {
+    fun `update does not call saveAll when all tracks are duplicates`() {
         val items = listOf(item(1))
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken) } returns items.right()
         every { recentlyPlayedRepository.findExistingPlayedAts(userId, any()) } returns setOf(items[0].playedAt)
 
-        adapter.fetchAndPersistForUser(userId)
+        adapter.update(userId)
 
         verify(exactly = 0) { recentlyPlayedRepository.saveAll(any()) }
     }
 
     @Test
-    fun `fetchAndPersistForUser does not call saveAll when no tracks returned`() {
+    fun `update does not call saveAll when no tracks returned`() {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken) } returns emptyList<RecentlyPlayedItem>().right()
         every { recentlyPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
 
-        adapter.fetchAndPersistForUser(userId)
+        adapter.update(userId)
 
         verify(exactly = 0) { recentlyPlayedRepository.saveAll(any()) }
     }
 
     @Test
-    fun `fetchAndPersistForUser logs error on domain error`() {
+    fun `update logs error on domain error`() {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken) } returns PlaybackError.RECENTLY_PLAYED_FETCH_FAILED.left()
 
-        adapter.fetchAndPersistForUser(userId)
+        adapter.update(userId)
 
         verify(exactly = 0) { recentlyPlayedRepository.saveAll(any()) }
     }

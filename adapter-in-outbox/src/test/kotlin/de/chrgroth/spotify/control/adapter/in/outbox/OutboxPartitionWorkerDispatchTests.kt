@@ -3,15 +3,14 @@ package de.chrgroth.spotify.control.adapter.`in`.outbox
 import arrow.core.Either
 import arrow.core.left
 import arrow.core.right
-import de.chrgroth.spotify.control.domain.model.UserId
-import de.chrgroth.spotify.control.domain.outbox.AppOutboxEvent
+import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.OutboxHandlerPort
+import de.chrgroth.spotify.control.util.outbox.Outbox
 import de.chrgroth.spotify.control.util.outbox.OutboxError
 import de.chrgroth.spotify.control.util.outbox.OutboxProcessor
 import de.chrgroth.spotify.control.util.outbox.OutboxTask
 import de.chrgroth.spotify.control.util.outbox.OutboxTaskPriority
 import de.chrgroth.spotify.control.util.outbox.OutboxTaskStatus
-import de.chrgroth.spotify.control.util.outbox.OutboxWakeupService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -22,10 +21,10 @@ import java.time.Instant
 class OutboxPartitionWorkerDispatchTests {
 
     private val outboxProcessor: OutboxProcessor = mockk()
-    private val wakeupService: OutboxWakeupService = mockk(relaxed = true)
+    private val outbox: Outbox = mockk(relaxed = true)
     private val handlerPort: OutboxHandlerPort = mockk()
 
-    private val worker = OutboxPartitionWorker(outboxProcessor, wakeupService, handlerPort)
+    private val worker = OutboxPartitionWorker(outboxProcessor, outbox, handlerPort)
 
     private val userId = "user-123"
 
@@ -45,25 +44,27 @@ class OutboxPartitionWorkerDispatchTests {
     )
 
     @Test
-    fun `FetchRecentlyPlayedForUser dispatches to handleFetchRecentlyPlayedForUser`() {
-        val task = buildTask(AppOutboxEvent.FetchRecentlyPlayedForUser.KEY, userId)
-        every { handlerPort.handleFetchRecentlyPlayedForUser(UserId(userId)) } returns Unit.right()
+    fun `FetchRecentlyPlayed dispatches to handle(FetchRecentlyPlayed)`() {
+        val event = DomainOutboxEvent.FetchRecentlyPlayed(userId)
+        val task = buildTask(DomainOutboxEvent.FetchRecentlyPlayed.KEY, userId)
+        every { handlerPort.handle(event) } returns Unit.right()
 
         val result = worker.dispatch(task)
 
         assertThat(result).isInstanceOf(Either.Right::class.java)
-        verify { handlerPort.handleFetchRecentlyPlayedForUser(UserId(userId)) }
+        verify { handlerPort.handle(event) }
     }
 
     @Test
-    fun `UpdateUserProfileForUser dispatches to handleUpdateUserProfileForUser`() {
-        val task = buildTask(AppOutboxEvent.UpdateUserProfileForUser.KEY, userId)
-        every { handlerPort.handleUpdateUserProfileForUser(UserId(userId)) } returns Unit.right()
+    fun `UpdateUserProfile dispatches to handle(UpdateUserProfile)`() {
+        val event = DomainOutboxEvent.UpdateUserProfile(userId)
+        val task = buildTask(DomainOutboxEvent.UpdateUserProfile.KEY, userId)
+        every { handlerPort.handle(event) } returns Unit.right()
 
         val result = worker.dispatch(task)
 
         assertThat(result).isInstanceOf(Either.Right::class.java)
-        verify { handlerPort.handleUpdateUserProfileForUser(UserId(userId)) }
+        verify { handlerPort.handle(event) }
     }
 
     @Test
@@ -77,9 +78,10 @@ class OutboxPartitionWorkerDispatchTests {
 
     @Test
     fun `handler failure propagates as left`() {
-        val task = buildTask(AppOutboxEvent.FetchRecentlyPlayedForUser.KEY, userId)
+        val event = DomainOutboxEvent.FetchRecentlyPlayed(userId)
+        val task = buildTask(DomainOutboxEvent.FetchRecentlyPlayed.KEY, userId)
         val error = OutboxError("fetch failed")
-        every { handlerPort.handleFetchRecentlyPlayedForUser(UserId(userId)) } returns error.left()
+        every { handlerPort.handle(event) } returns error.left()
 
         val result = worker.dispatch(task)
 

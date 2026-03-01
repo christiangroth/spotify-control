@@ -1,7 +1,7 @@
 package de.chrgroth.spotify.control.domain
 
 import de.chrgroth.spotify.control.domain.model.UserId
-import de.chrgroth.spotify.control.domain.outbox.AppOutboxEvent
+import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.RecentlyPlayedPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.RecentlyPlayedRepositoryPort
@@ -21,15 +21,15 @@ class RecentlyPlayedAdapter(
     private val outboxPort: OutboxPort,
 ) : RecentlyPlayedPort {
 
-    override fun fetchAndPersistForAllUsers() {
+    override fun enqueueUpdates() {
         val users = userRepository.findAll()
         logger.info { "Scheduling recently played fetch for ${users.size} user(s)" }
         users.forEach { user ->
-            outboxPort.enqueue(AppOutboxEvent.FetchRecentlyPlayedForUser(user.spotifyUserId.value))
+            outboxPort.enqueue(DomainOutboxEvent.FetchRecentlyPlayed(user.spotifyUserId.value))
         }
     }
 
-    override fun fetchAndPersistForUser(userId: UserId) {
+    override fun update(userId: UserId) {
         val accessToken = spotifyAccessToken.getValidAccessToken(userId)
         spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken).fold(
             ifLeft = { logger.error { "Failed to fetch recently played for user ${userId.value}: ${it.code}" } },

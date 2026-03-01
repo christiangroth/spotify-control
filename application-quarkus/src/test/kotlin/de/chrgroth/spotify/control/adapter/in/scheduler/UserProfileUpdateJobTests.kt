@@ -17,9 +17,9 @@ class UserProfileUpdateJobTests {
     lateinit var job: UserProfileUpdateJob
 
     @Test
-    fun `run calls updateUserProfiles`() {
+    fun `run calls enqueueUpdates`() {
         job.run()
 
-        verify(userProfileUpdate).updateUserProfiles()
+        verify(userProfileUpdate).enqueueUpdates()
     }
 }

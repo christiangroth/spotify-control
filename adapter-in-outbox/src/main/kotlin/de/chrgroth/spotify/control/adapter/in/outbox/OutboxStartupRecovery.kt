@@ -1,9 +1,8 @@
 package de.chrgroth.spotify.control.adapter.`in`.outbox
 
-import de.chrgroth.spotify.control.domain.outbox.AppOutboxPartition
+import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
+import de.chrgroth.spotify.control.util.outbox.Outbox
 import de.chrgroth.spotify.control.util.outbox.OutboxPartitionStatus
-import de.chrgroth.spotify.control.util.outbox.OutboxRepository
-import de.chrgroth.spotify.control.util.outbox.OutboxWakeupService
 import io.quarkus.runtime.StartupEvent
 import jakarta.annotation.PreDestroy
 import jakarta.annotation.Priority
@@ -20,45 +19,43 @@ import java.time.Instant
 @ApplicationScoped
 @Suppress("Unused", "UnusedParameter")
 class OutboxStartupRecovery(
-    private val outboxRepository: OutboxRepository,
-    private val wakeupService: OutboxWakeupService,
+    private val outbox: Outbox,
 ) {
 
-    private var scope: CoroutineScope? = null
+    private val scope = CoroutineScope(Dispatchers.IO)
 
     fun onStart(@Observes @Priority(1) event: StartupEvent) {
-        scope = CoroutineScope(Dispatchers.IO)
-        outboxRepository.resetStaleProcessingTasks()
+        outbox.resetStaleProcessingTasks()
         val now = Instant.now()
-        AppOutboxPartition.all.forEach { partition ->
-            val partitionInfo = outboxRepository.findPartition(partition)
+        DomainOutboxPartition.all.forEach { partition ->
+            val partitionInfo = outbox.findPartition(partition)
             // partitionInfo.status is persisted as a String; compare via .name
             if (partitionInfo?.status == OutboxPartitionStatus.PAUSED.name) {
                 val pausedUntil = partitionInfo.pausedUntil
                 if (pausedUntil != null && pausedUntil.isAfter(now)) {
                     val delayMs = pausedUntil.toEpochMilli() - now.toEpochMilli()
-                    scope!!.launch {
+                    scope.launch {
                         delay(delayMs)
-                        outboxRepository.activatePartition(partition)
-                        wakeupService.signal(partition)
+                        outbox.activatePartition(partition)
+                        outbox.signal(partition)
                         logger.info { "Resumed partition ${partition.key} after delayed activation" }
                     }
                     logger.info { "Partition ${partition.key} still paused until $pausedUntil, scheduled delayed activation" }
                 } else {
-                    outboxRepository.activatePartition(partition)
-                    wakeupService.signal(partition)
+                    outbox.activatePartition(partition)
+                    outbox.signal(partition)
                     logger.info { "Reactivated expired paused partition ${partition.key}" }
                 }
             } else {
-                wakeupService.signal(partition)
+                outbox.signal(partition)
             }
         }
-        logger.info { "Outbox startup recovery complete for ${AppOutboxPartition.all.size} partition(s)" }
+        logger.info { "Outbox startup recovery complete for ${DomainOutboxPartition.all.size} partition(s)" }
     }
 
     @PreDestroy
     fun onStop() {
-        scope?.cancel()
+        scope.cancel()
     }
 
     companion object : KLogging()

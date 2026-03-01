@@ -8,7 +8,7 @@ import de.chrgroth.spotify.control.domain.model.SpotifyProfile
 import de.chrgroth.spotify.control.domain.model.SpotifyProfileId
 import de.chrgroth.spotify.control.domain.model.User
 import de.chrgroth.spotify.control.domain.model.UserId
-import de.chrgroth.spotify.control.domain.outbox.AppOutboxEvent
+import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAuthPort
@@ -45,32 +45,32 @@ class UserProfileUpdateAdapterTests {
         lastLoginAt = Clock.System.now(),
     )
 
-    // --- updateUserProfiles tests ---
+    // --- enqueueUpdates tests ---
 
     @Test
-    fun `updateUserProfiles does nothing when no users exist`() {
+    fun `enqueueUpdates does nothing when no users exist`() {
         every { userRepository.findAll() } returns emptyList()
 
-        adapter.updateUserProfiles()
+        adapter.enqueueUpdates()
 
         verify(exactly = 0) { outboxPort.enqueue(any()) }
     }
 
     @Test
-    fun `updateUserProfiles enqueues one task per user`() {
+    fun `enqueueUpdates enqueues one task per user`() {
         every { userRepository.findAll() } returns listOf(buildUser("user-1"), buildUser("user-2"))
         every { outboxPort.enqueue(any()) } just runs
 
-        adapter.updateUserProfiles()
+        adapter.enqueueUpdates()
 
-        verify(exactly = 1) { outboxPort.enqueue(AppOutboxEvent.UpdateUserProfileForUser("user-1")) }
-        verify(exactly = 1) { outboxPort.enqueue(AppOutboxEvent.UpdateUserProfileForUser("user-2")) }
+        verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.UpdateUserProfile("user-1")) }
+        verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.UpdateUserProfile("user-2")) }
     }
 
-    // --- updateUserProfile tests ---
+    // --- update tests ---
 
     @Test
-    fun `updateUserProfile updates displayName when profile returns a changed name`() {
+    fun `update updates displayName when profile returns a changed name`() {
         val user = buildUser(displayName = "Old Name")
         every { userRepository.findById(userId) } returns user
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
@@ -80,7 +80,7 @@ class UserProfileUpdateAdapterTests {
         ).right()
         every { userRepository.upsert(any()) } just runs
 
-        adapter.updateUserProfile(userId)
+        adapter.update(userId)
 
         val upsertedSlot = slot<User>()
         verify { userRepository.upsert(capture(upsertedSlot)) }
@@ -88,7 +88,7 @@ class UserProfileUpdateAdapterTests {
     }
 
     @Test
-    fun `updateUserProfile does not upsert when displayName is unchanged`() {
+    fun `update does not upsert when displayName is unchanged`() {
         val user = buildUser(displayName = "Same Name")
         every { userRepository.findById(userId) } returns user
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
@@ -97,29 +97,29 @@ class UserProfileUpdateAdapterTests {
             displayName = "Same Name",
         ).right()
 
-        adapter.updateUserProfile(userId)
+        adapter.update(userId)
 
         verify(exactly = 0) { userRepository.upsert(any()) }
     }
 
     @Test
-    fun `updateUserProfile skips when user not found`() {
+    fun `update skips when user not found`() {
         every { userRepository.findById(userId) } returns null
 
-        adapter.updateUserProfile(userId)
+        adapter.update(userId)
 
         verify(exactly = 0) { spotifyAccessToken.getValidAccessToken(any()) }
         verify(exactly = 0) { userRepository.upsert(any()) }
     }
 
     @Test
-    fun `updateUserProfile logs error when profile fetch fails`() {
+    fun `update logs error when profile fetch fails`() {
         val user = buildUser()
         every { userRepository.findById(userId) } returns user
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { spotifyAuth.getUserProfile(accessToken) } returns AuthError.PROFILE_FETCH_FAILED.left()
 
-        adapter.updateUserProfile(userId)
+        adapter.update(userId)
 
         verify(exactly = 0) { userRepository.upsert(any()) }
     }

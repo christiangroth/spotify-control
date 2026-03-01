@@ -2,14 +2,13 @@ package de.chrgroth.spotify.control.adapter.`in`.outbox
 
 import arrow.core.Either
 import arrow.core.left
-import de.chrgroth.spotify.control.domain.outbox.AppOutboxEvent
-import de.chrgroth.spotify.control.domain.outbox.AppOutboxPartition
-import de.chrgroth.spotify.control.domain.model.UserId
+import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
+import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
 import de.chrgroth.spotify.control.domain.port.`in`.OutboxHandlerPort
+import de.chrgroth.spotify.control.util.outbox.Outbox
 import de.chrgroth.spotify.control.util.outbox.OutboxError
 import de.chrgroth.spotify.control.util.outbox.OutboxProcessor
 import de.chrgroth.spotify.control.util.outbox.OutboxTask
-import de.chrgroth.spotify.control.util.outbox.OutboxWakeupService
 import io.quarkus.runtime.StartupEvent
 import jakarta.annotation.PreDestroy
 import jakarta.enterprise.context.ApplicationScoped
@@ -25,18 +24,16 @@ import mu.KLogging
 @Suppress("Unused", "UnusedParameter", "SwallowedException")
 class OutboxPartitionWorker(
     private val outboxProcessor: OutboxProcessor,
-    private val wakeupService: OutboxWakeupService,
+    private val outbox: Outbox,
     private val handlerPort: OutboxHandlerPort,
 ) {
 
-    private var scope: CoroutineScope? = null
+    private val scope = CoroutineScope(Dispatchers.IO)
 
     fun onStart(@Observes event: StartupEvent) {
-        val workerScope = CoroutineScope(Dispatchers.IO)
-        scope = workerScope
-        AppOutboxPartition.all.forEach { partition ->
-            workerScope.launch {
-                val channel = wakeupService.getOrCreate(partition)
+        DomainOutboxPartition.all.forEach { partition ->
+            scope.launch {
+                val channel = outbox.getOrCreateChannel(partition)
                 while (isActive) {
                     channel.receive()
                     var processed: Boolean
@@ -47,25 +44,25 @@ class OutboxPartitionWorker(
                     } while (processed && isActive)
                 }
             }
+            logger.info { "Outbox partition worker started for ${partition.key}" }
         }
-        logger.info { "Outbox partition workers started for ${AppOutboxPartition.all.size} partition(s)" }
     }
 
     @PreDestroy
     fun onStop() {
-        scope?.cancel()
+        scope.cancel()
         logger.info { "Outbox partition workers stopped" }
     }
 
     internal fun dispatch(task: OutboxTask): Either<OutboxError, Unit> {
         val event = try {
-            AppOutboxEvent.fromKey(task.eventType, task.payload)
+            DomainOutboxEvent.fromKey(task.eventType, task.payload)
         } catch (e: IllegalArgumentException) {
             return OutboxError("Unknown event type: ${task.eventType}").left()
         }
         return when (event) {
-            is AppOutboxEvent.FetchRecentlyPlayedForUser -> handlerPort.handleFetchRecentlyPlayedForUser(UserId(event.userId))
-            is AppOutboxEvent.UpdateUserProfileForUser -> handlerPort.handleUpdateUserProfileForUser(UserId(event.userId))
+            is DomainOutboxEvent.FetchRecentlyPlayed -> handlerPort.handle(event)
+            is DomainOutboxEvent.UpdateUserProfile -> handlerPort.handle(event)
         }
     }
 

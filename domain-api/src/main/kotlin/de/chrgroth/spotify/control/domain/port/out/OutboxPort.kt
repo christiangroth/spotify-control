@@ -1,7 +1,7 @@
 package de.chrgroth.spotify.control.domain.port.out
 
-import de.chrgroth.spotify.control.domain.outbox.AppOutboxEvent
+import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 
 interface OutboxPort {
-    fun enqueue(event: AppOutboxEvent)
+    fun enqueue(event: DomainOutboxEvent)
 }

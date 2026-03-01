@@ -1,7 +1,7 @@
 package de.chrgroth.spotify.control.domain
 
 import de.chrgroth.spotify.control.domain.model.UserId
-import de.chrgroth.spotify.control.domain.outbox.AppOutboxEvent
+import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.UserProfileUpdatePort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
@@ -19,15 +19,15 @@ class UserProfileUpdateAdapter(
     private val outboxPort: OutboxPort,
 ) : UserProfileUpdatePort {
 
-    override fun updateUserProfiles() {
+    override fun enqueueUpdates() {
         val users = userRepository.findAll()
         logger.info { "Scheduling profile update for ${users.size} user(s)" }
         users.forEach { user ->
-            outboxPort.enqueue(AppOutboxEvent.UpdateUserProfileForUser(user.spotifyUserId.value))
+            outboxPort.enqueue(DomainOutboxEvent.UpdateUserProfile(user.spotifyUserId.value))
         }
     }
 
-    override fun updateUserProfile(userId: UserId) {
+    override fun update(userId: UserId) {
         val user = userRepository.findById(userId) ?: run {
             logger.warn { "User not found for profile update: ${userId.value}" }
             return
