@@ -14,7 +14,6 @@ import mu.KLogging
 @ApplicationScoped
 @Suppress("Unused", "UnusedParameter", "SwallowedException")
 class OutboxPartitionWorker(
-    private val outboxProcessor: OutboxProcessor,
     private val outbox: Outbox,
     private val dispatcher: OutboxTaskDispatcher,
 ) {
@@ -29,7 +28,7 @@ class OutboxPartitionWorker(
                     channel.receive()
                     var processed: Boolean
                     do {
-                        processed = outboxProcessor.processNext(partition) { task ->
+                        processed = outbox.processNext(partition) { task ->
                             dispatcher.dispatch(task)
                         }
                     } while (processed && isActive)

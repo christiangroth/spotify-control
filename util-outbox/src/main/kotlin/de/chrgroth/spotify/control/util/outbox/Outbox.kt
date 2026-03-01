@@ -1,5 +1,6 @@
 package de.chrgroth.spotify.control.util.outbox
 
+import arrow.core.Either
 import jakarta.enterprise.context.ApplicationScoped
 
 @ApplicationScoped
@@ -7,6 +8,8 @@ class Outbox(
     private val repository: OutboxRepository,
     private val wakeupService: OutboxWakeupService,
 ) {
+
+    private val processor = OutboxProcessor(repository)
 
     fun enqueue(
         partition: OutboxPartition,
@@ -18,6 +21,9 @@ class Outbox(
         if (inserted) wakeupService.signal(partition)
         return inserted
     }
+
+    fun processNext(partition: OutboxPartition, dispatch: (OutboxTask) -> Either<OutboxError, Unit>): Boolean =
+        processor.processNext(partition, dispatch)
 
     fun signal(partition: OutboxPartition) = wakeupService.signal(partition)
 
