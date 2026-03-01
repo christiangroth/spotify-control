@@ -22,9 +22,20 @@ discovery.docker "containers" {
   host = "unix:///var/run/docker.sock"
 }
 
+discovery.relabel "spotify_control_containers" {
+  targets = discovery.docker.containers.targets
+
+  // Keep only containers that belong to the spotify-control Docker Swarm stack
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_stack_namespace"]
+    regex         = "spotify-control"
+    action        = "keep"
+  }
+}
+
 loki.source.docker "spotify_control_logs" {
   host    = "unix:///var/run/docker.sock"
-  targets = discovery.docker.containers.targets
+  targets = discovery.relabel.spotify_control_containers.output
   forward_to = [loki.write.grafana_cloud.receiver]
 }
 
