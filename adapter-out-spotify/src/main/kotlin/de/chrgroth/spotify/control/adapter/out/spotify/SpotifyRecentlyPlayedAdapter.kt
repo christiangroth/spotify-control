@@ -38,10 +38,8 @@ class SpotifyRecentlyPlayedAdapter(
                 .GET()
                 .build()
             val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
-            if (response.statusCode() != HTTP_OK) {
-                logger.error { "Spotify recently played fetch failed: ${response.statusCode()} - ${response.body()}" }
-                return PlaybackError.RECENTLY_PLAYED_FETCH_FAILED.left()
-            }
+            val errorResult = response.checkRateLimitOrError(logger, PlaybackError.RECENTLY_PLAYED_FETCH_FAILED)
+            if (errorResult != null) return errorResult
             val json: JsonNode = objectMapper.readTree(response.body())
             val items = json.get("items") ?: return emptyList<RecentlyPlayedItem>().right()
             items.map { item ->
@@ -61,7 +59,5 @@ class SpotifyRecentlyPlayedAdapter(
         }
     }
 
-    companion object : KLogging() {
-        private const val HTTP_OK = 200
-    }
+    companion object : KLogging()
 }

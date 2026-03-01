@@ -1,20 +1,18 @@
 package de.chrgroth.spotify.control.adapter.`in`.outbox
 
-import arrow.core.Either
-import arrow.core.left
-import arrow.core.right
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.OutboxHandlerPort
-import de.chrgroth.spotify.control.util.outbox.OutboxError
 import de.chrgroth.spotify.control.util.outbox.OutboxTask
 import de.chrgroth.spotify.control.util.outbox.OutboxTaskPriority
+import de.chrgroth.spotify.control.util.outbox.OutboxTaskResult
 import de.chrgroth.spotify.control.util.outbox.OutboxTaskStatus
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import java.time.Duration
 import java.time.Instant
 
 class DomainOutboxTaskDispatcherTests {
@@ -45,11 +43,11 @@ class DomainOutboxTaskDispatcherTests {
     fun `FetchRecentlyPlayed dispatches to handle(FetchRecentlyPlayed)`() {
         val event = DomainOutboxEvent.FetchRecentlyPlayed(userIdObj)
         val task = buildTask(DomainOutboxEvent.FetchRecentlyPlayed.KEY, userId)
-        every { handlerPort.handle(event) } returns Unit.right()
+        every { handlerPort.handle(event) } returns OutboxTaskResult.Success
 
         val result = subject.dispatch(task)
 
-        assertThat(result).isInstanceOf(Either.Right::class.java)
+        assertThat(result).isInstanceOf(OutboxTaskResult.Success::class.java)
         verify { handlerPort.handle(event) }
     }
 
@@ -57,32 +55,45 @@ class DomainOutboxTaskDispatcherTests {
     fun `UpdateUserProfile dispatches to handle(UpdateUserProfile)`() {
         val event = DomainOutboxEvent.UpdateUserProfile(userIdObj)
         val task = buildTask(DomainOutboxEvent.UpdateUserProfile.KEY, userId)
-        every { handlerPort.handle(event) } returns Unit.right()
+        every { handlerPort.handle(event) } returns OutboxTaskResult.Success
 
         val result = subject.dispatch(task)
 
-        assertThat(result).isInstanceOf(Either.Right::class.java)
+        assertThat(result).isInstanceOf(OutboxTaskResult.Success::class.java)
         verify { handlerPort.handle(event) }
     }
 
     @Test
-    fun `unknown event type returns OutboxError left`() {
+    fun `unknown event type returns Failed result`() {
         val task = buildTask("UnknownEvent", "payload")
 
         val result = subject.dispatch(task)
 
-        assertThat(result).isInstanceOf(Either.Left::class.java)
+        assertThat(result).isInstanceOf(OutboxTaskResult.Failed::class.java)
     }
 
     @Test
-    fun `handler failure propagates as left`() {
+    fun `handler failure propagates as Failed result`() {
         val event = DomainOutboxEvent.FetchRecentlyPlayed(userIdObj)
         val task = buildTask(DomainOutboxEvent.FetchRecentlyPlayed.KEY, userId)
-        val error = OutboxError("fetch failed")
-        every { handlerPort.handle(event) } returns error.left()
+        every { handlerPort.handle(event) } returns OutboxTaskResult.Failed("fetch failed")
 
         val result = subject.dispatch(task)
 
-        assertThat(result).isInstanceOf(Either.Left::class.java)
+        assertThat(result).isInstanceOf(OutboxTaskResult.Failed::class.java)
+        assertThat((result as OutboxTaskResult.Failed).message).isEqualTo("fetch failed")
+    }
+
+    @Test
+    fun `handler rate limited propagates as RateLimited result`() {
+        val event = DomainOutboxEvent.FetchRecentlyPlayed(userIdObj)
+        val task = buildTask(DomainOutboxEvent.FetchRecentlyPlayed.KEY, userId)
+        val retryAfter = Duration.ofSeconds(30)
+        every { handlerPort.handle(event) } returns OutboxTaskResult.RateLimited(retryAfter)
+
+        val result = subject.dispatch(task)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.RateLimited::class.java)
+        assertThat((result as OutboxTaskResult.RateLimited).retryAfter).isEqualTo(retryAfter)
     }
 }

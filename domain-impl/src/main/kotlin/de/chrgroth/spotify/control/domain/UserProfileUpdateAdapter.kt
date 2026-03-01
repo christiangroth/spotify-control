@@ -1,5 +1,8 @@
 package de.chrgroth.spotify.control.domain
 
+import arrow.core.Either
+import arrow.core.right
+import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.UserProfileUpdatePort
@@ -27,21 +30,18 @@ class UserProfileUpdateAdapter(
         }
     }
 
-    override fun update(userId: UserId) {
+    override fun update(userId: UserId): Either<DomainError, Unit> {
         val user = userRepository.findById(userId) ?: run {
             logger.warn { "User not found for profile update: ${userId.value}" }
-            return
+            return Unit.right()
         }
         val accessToken = spotifyAccessToken.getValidAccessToken(userId)
-        spotifyAuth.getUserProfile(accessToken).fold(
-            ifLeft = { logger.error { "Failed to fetch profile for user ${userId.value}: ${it.code}" } },
-            ifRight = { profile ->
-                if (profile.displayName != user.displayName) {
-                    logger.info { "Updating displayName for user ${userId.value}" }
-                    userRepository.upsert(user.copy(displayName = profile.displayName))
-                }
-            },
-        )
+        return spotifyAuth.getUserProfile(accessToken).map { profile ->
+            if (profile.displayName != user.displayName) {
+                logger.info { "Updating displayName for user ${userId.value}" }
+                userRepository.upsert(user.copy(displayName = profile.displayName))
+            }
+        }
     }
 
     companion object : KLogging()

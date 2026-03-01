@@ -10,9 +10,9 @@ The Spotify Web API enforces two layers of rate limiting:
    syncing large catalogues) can trigger silent or delayed rejections with no clear signal.
 
 The application currently issues all Spotify API calls via `adapter-out-spotify`. The outbox
-pattern (designed in `docs/plans/outbox.md`) routes all Spotify calls through the `spotify`
-partition of the persistent outbox queue, processing **one task at a time**. This document
-addresses how throttling should be layered on top of that architecture.
+pattern routes all Spotify calls through the `spotify` partition of the persistent outbox queue,
+processing **one task at a time**. This document records the architectural decisions for how
+throttling is layered on top of that architecture.
 
 ---
 
@@ -66,99 +66,13 @@ as a separate change.
 
 ---
 
-## Throttling Mechanism
-
-### Happy path (no 429)
-
-```
-OutboxPartitionWorker (spotify)
-  └── OutboxProcessor.processNext()
-        └── dispatch(task)
-              └── adapter-out-spotify → Spotify API (HTTP 2xx)
-                    └── OutboxRepository.complete(task)   (→ outbox_archive)
-                          └── loop: claim next task immediately
-```
-
-No delay between tasks. The outbox processes Spotify tasks as fast as they complete.
-
-### Rate-limited path (HTTP 429 received)
-
-```
-adapter-out-spotify
-  receives HTTP 429, reads Retry-After: <N> seconds (fallback: 60s if header absent)
-  returns Either.Left(SpotifyRateLimitError(retryAfter = N.seconds))
-
-OutboxProcessor
-  receives Either.Left(SpotifyRateLimitError)
-  calls OutboxRepository.pausePartition(partition, reason = "rate_limited", pausedUntil = now + retryAfter)
-  calls OutboxRepository.reschedule(task, nextRetryAt = now + retryAfter)  (status → PENDING, attempts unchanged)
-  launches resume coroutine: delay(retryAfter) → activatePartition() → workerChannel.send(Unit)
-
-OutboxPartitionWorker
-  OutboxProcessor.processNext() returns false (partition status = PAUSED)
-  worker suspends on channel.receive()
-  resume coroutine fires after retryAfter elapses:
-    OutboxRepository.activatePartition(partition)  (status = ACTIVE, clears reason + pausedUntil)
-    signals channel → worker resumes
-  worker claims next due task and processing continues normally
-```
-
-When a 429 is received, **the entire `spotify` partition is paused** via the core outbox
-partition-pause feature (see `docs/plans/outbox.md` — *Partition Pause and Resume*). No further
-Spotify requests are dispatched until the resume coroutine reactivates the partition. Tasks
-enqueued for the partition during the cooldown are persisted normally but **do not wake the worker**;
-the resume coroutine is the sole wakeup mechanism.
-
----
-
-## New Components
-
-### `SpotifyRateLimitError` (domain-api)
-
-A dedicated error sub-type that carries the `retryAfter: Duration` value extracted from the
-`Retry-After` response header. Returned by any `adapter-out-spotify` port method when HTTP 429
-is received.
-
-```kotlin
-data class SpotifyRateLimitError(val retryAfter: Duration) : OutboxError
-```
-
-### Rate-limit aware retry in `OutboxProcessor` (util-outbox)
-
-`OutboxProcessor.processNext` inspects the returned `Either.Left` value. When it detects a
-`SpotifyRateLimitError` it:
-
-1. Persists the partition pause to MongoDB:
-   `OutboxRepository.pausePartition(partition, reason = "rate_limited", pausedUntil = now + retryAfter)`.
-2. Reschedules the triggering task without incrementing `attempts`:
-   `OutboxRepository.reschedule(task, nextRetryAt = now + retryAfter)` — sets `status = PENDING`,
-   leaves `attempts` unchanged (the 429 is a transient external constraint, not a handler fault).
-3. Launches a resume coroutine (within the existing coroutine scope):
-   ```kotlin
-   launch {
-       delay(retryAfter)
-       outboxRepository.activatePartition(partition)
-       workerChannel.send(Unit)
-   }
-   ```
-4. Returns `false`, causing `OutboxPartitionWorker` to suspend on `channel.receive()`.
-
-The resume coroutine is the **only** mechanism that reactivates the partition. There is no
-scheduler or polling loop; the coroutine suspends cheaply via `delay` and wakes exactly once when
-the cooldown has elapsed.
-
-Partition-pause persistence, enqueueing behaviour during a pause, and startup recovery are all
-handled by the core outbox partition-pause feature described in `docs/plans/outbox.md`.
-
----
-
 ## Interaction with the Standard Retry Policy
 
-| Failure type             | Increments `attempts`? | Status after handling                              | `nextRetryAt` source         |
-|--------------------------|------------------------|----------------------------------------------------|------------------------------|
-| Handler exception / error | Yes                  | `PENDING` (retry) / `FAILED` (max attempts reached) | `RetryPolicy` backoff table  |
-| HTTP 429 rate limit       | No                   | `PENDING`                                          | `Retry-After` header value   |
-| Permanent failure (HTTP 4xx except 429) | Yes    | `PENDING` (retry) / `FAILED` (max attempts reached) | `RetryPolicy` backoff table  |
+| `OutboxTaskResult` variant | Increments `attempts`? | Status after handling                               | `nextRetryAt` source         |
+|----------------------------|------------------------|-----------------------------------------------------|------------------------------|
+| `Failed`                   | Yes                    | `PENDING` (retry) / `FAILED` (max attempts reached) | `RetryPolicy` backoff table  |
+| `RateLimited`              | No                     | `PENDING`                                           | `Retry-After` header value   |
+| `Success`                  | N/A                    | `DONE` (archived)                                   | N/A                          |
 
 A task that previously used retry attempts and then hits a 429 will not consume an additional
 attempt slot. Once the `Retry-After` window expires the task resumes from its prior attempt count.

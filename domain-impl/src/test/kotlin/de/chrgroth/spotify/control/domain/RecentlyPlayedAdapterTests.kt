@@ -136,12 +136,13 @@ class RecentlyPlayedAdapterTests {
     }
 
     @Test
-    fun `update logs error on domain error`() {
+    fun `update returns Left on domain error`() {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken) } returns PlaybackError.RECENTLY_PLAYED_FETCH_FAILED.left()
 
-        adapter.update(userId)
+        val result = adapter.update(userId)
 
+        assertThat(result.isLeft()).isTrue()
         verify(exactly = 0) { recentlyPlayedRepository.saveAll(any()) }
     }
 }
