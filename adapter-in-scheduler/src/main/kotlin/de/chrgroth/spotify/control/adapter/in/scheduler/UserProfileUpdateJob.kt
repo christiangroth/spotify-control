@@ -14,7 +14,7 @@ class UserProfileUpdateJob(
     @Scheduled(cron = "0 0 4 * * ?")
     fun run() {
         logger.info { "Running scheduled user profile update" }
-        userProfileUpdate.updateUserProfiles()
+        userProfileUpdate.enqueueUpdates()
     }
 
     companion object : KLogging()

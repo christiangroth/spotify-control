@@ -7,6 +7,8 @@ import de.chrgroth.spotify.control.domain.model.AccessToken
 import de.chrgroth.spotify.control.domain.model.RecentlyPlayedItem
 import de.chrgroth.spotify.control.domain.model.User
 import de.chrgroth.spotify.control.domain.model.UserId
+import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
+import de.chrgroth.spotify.control.domain.port.out.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.RecentlyPlayedRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyRecentlyPlayedPort
@@ -28,8 +30,9 @@ class RecentlyPlayedAdapterTests {
     private val spotifyAccessToken: SpotifyAccessTokenPort = mockk()
     private val spotifyRecentlyPlayed: SpotifyRecentlyPlayedPort = mockk()
     private val recentlyPlayedRepository: RecentlyPlayedRepositoryPort = mockk()
+    private val outboxPort: OutboxPort = mockk()
 
-    private val adapter = RecentlyPlayedAdapter(userRepository, spotifyAccessToken, spotifyRecentlyPlayed, recentlyPlayedRepository)
+    private val adapter = RecentlyPlayedAdapter(userRepository, spotifyAccessToken, spotifyRecentlyPlayed, recentlyPlayedRepository, outboxPort)
 
     private val userId = UserId("user-1")
     private val accessToken = AccessToken("token")
@@ -53,27 +56,39 @@ class RecentlyPlayedAdapterTests {
         playedAt = now - index.hours,
     )
 
+    // --- enqueueUpdates tests ---
+
     @Test
-    fun `does nothing when no users exist`() {
+    fun `enqueueUpdates does nothing when no users exist`() {
         every { userRepository.findAll() } returns emptyList()
 
-        adapter.fetchAndPersistForAllUsers()
+        adapter.enqueueUpdates()
 
-        verify(exactly = 0) { spotifyAccessToken.getValidAccessToken(any()) }
-        verify(exactly = 0) { recentlyPlayedRepository.saveAll(any()) }
+        verify(exactly = 0) { outboxPort.enqueue(any()) }
     }
 
     @Test
-    fun `persists new tracks for a single user`() {
-        val user = buildUser("user-1")
+    fun `enqueueUpdates enqueues one task per user`() {
+        every { userRepository.findAll() } returns listOf(buildUser("user-1"), buildUser("user-2"))
+        every { outboxPort.enqueue(any()) } just runs
+
+        adapter.enqueueUpdates()
+
+        verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.FetchRecentlyPlayed(UserId("user-1"))) }
+        verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.FetchRecentlyPlayed(UserId("user-2"))) }
+    }
+
+    // --- update tests ---
+
+    @Test
+    fun `update persists new tracks`() {
         val items = listOf(item(1), item(2))
-        every { userRepository.findAll() } returns listOf(user)
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken) } returns items.right()
         every { recentlyPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
         every { recentlyPlayedRepository.saveAll(any()) } just runs
 
-        adapter.fetchAndPersistForAllUsers()
+        adapter.update(userId)
 
         val savedSlot = slot<List<RecentlyPlayedItem>>()
         verify { recentlyPlayedRepository.saveAll(capture(savedSlot)) }
@@ -82,16 +97,14 @@ class RecentlyPlayedAdapterTests {
     }
 
     @Test
-    fun `skips duplicate tracks`() {
-        val user = buildUser("user-1")
+    fun `update skips duplicate tracks`() {
         val items = listOf(item(1), item(2))
-        every { userRepository.findAll() } returns listOf(user)
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken) } returns items.right()
         every { recentlyPlayedRepository.findExistingPlayedAts(userId, any()) } returns setOf(items[0].playedAt)
         every { recentlyPlayedRepository.saveAll(any()) } just runs
 
-        adapter.fetchAndPersistForAllUsers()
+        adapter.update(userId)
 
         val savedSlot = slot<List<RecentlyPlayedItem>>()
         verify { recentlyPlayedRepository.saveAll(capture(savedSlot)) }
@@ -100,66 +113,35 @@ class RecentlyPlayedAdapterTests {
     }
 
     @Test
-    fun `does not call saveAll when all tracks are duplicates`() {
-        val user = buildUser("user-1")
+    fun `update does not call saveAll when all tracks are duplicates`() {
         val items = listOf(item(1))
-        every { userRepository.findAll() } returns listOf(user)
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken) } returns items.right()
         every { recentlyPlayedRepository.findExistingPlayedAts(userId, any()) } returns setOf(items[0].playedAt)
 
-        adapter.fetchAndPersistForAllUsers()
+        adapter.update(userId)
 
         verify(exactly = 0) { recentlyPlayedRepository.saveAll(any()) }
     }
 
     @Test
-    fun `does not call saveAll when no tracks returned`() {
-        val user = buildUser("user-1")
-        every { userRepository.findAll() } returns listOf(user)
+    fun `update does not call saveAll when no tracks returned`() {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken) } returns emptyList<RecentlyPlayedItem>().right()
         every { recentlyPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
 
-        adapter.fetchAndPersistForAllUsers()
+        adapter.update(userId)
 
         verify(exactly = 0) { recentlyPlayedRepository.saveAll(any()) }
     }
 
     @Test
-    fun `continues with remaining users when one returns a domain error`() {
-        val userId2 = UserId("user-2")
-        val userA = buildUser("user-1")
-        val userB = buildUser("user-2")
-        val items = listOf(item(1, userId2))
-        every { userRepository.findAll() } returns listOf(userA, userB)
+    fun `update logs error on domain error`() {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken) } returns PlaybackError.RECENTLY_PLAYED_FETCH_FAILED.left()
-        every { spotifyAccessToken.getValidAccessToken(userId2) } returns accessToken
-        every { spotifyRecentlyPlayed.getRecentlyPlayed(userId2, accessToken) } returns items.right()
-        every { recentlyPlayedRepository.findExistingPlayedAts(userId2, any()) } returns emptySet()
-        every { recentlyPlayedRepository.saveAll(any()) } just runs
 
-        adapter.fetchAndPersistForAllUsers()
+        adapter.update(userId)
 
-        verify(exactly = 1) { recentlyPlayedRepository.saveAll(any()) }
-    }
-
-    @Test
-    fun `continues with remaining users when one throws an exception`() {
-        val userId2 = UserId("user-2")
-        val userA = buildUser("user-1")
-        val userB = buildUser("user-2")
-        val items = listOf(item(1, userId2))
-        every { userRepository.findAll() } returns listOf(userA, userB)
-        every { spotifyAccessToken.getValidAccessToken(userId) } throws RuntimeException("token error")
-        every { spotifyAccessToken.getValidAccessToken(userId2) } returns accessToken
-        every { spotifyRecentlyPlayed.getRecentlyPlayed(userId2, accessToken) } returns items.right()
-        every { recentlyPlayedRepository.findExistingPlayedAts(userId2, any()) } returns emptySet()
-        every { recentlyPlayedRepository.saveAll(any()) } just runs
-
-        adapter.fetchAndPersistForAllUsers()
-
-        verify(exactly = 1) { recentlyPlayedRepository.saveAll(any()) }
+        verify(exactly = 0) { recentlyPlayedRepository.saveAll(any()) }
     }
 }

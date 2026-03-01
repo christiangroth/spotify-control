@@ -17,9 +17,9 @@ class RecentlyPlayedFetchJobTests {
     lateinit var job: RecentlyPlayedFetchJob
 
     @Test
-    fun `run calls fetchAndPersistForAllUsers`() {
+    fun `run calls enqueueUpdates`() {
         job.run()
 
-        verify(recentlyPlayed).fetchAndPersistForAllUsers()
+        verify(recentlyPlayed).enqueueUpdates()
     }
 }

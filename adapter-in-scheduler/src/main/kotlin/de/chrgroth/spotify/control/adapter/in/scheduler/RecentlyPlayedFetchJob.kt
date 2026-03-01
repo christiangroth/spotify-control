@@ -14,7 +14,7 @@ class RecentlyPlayedFetchJob(
     @Scheduled(cron = "0 0/15 * * * ?")
     fun run() {
         logger.info { "Running scheduled recently played fetch" }
-        recentlyPlayed.fetchAndPersistForAllUsers()
+        recentlyPlayed.enqueueUpdates()
     }
 
     companion object : KLogging()
