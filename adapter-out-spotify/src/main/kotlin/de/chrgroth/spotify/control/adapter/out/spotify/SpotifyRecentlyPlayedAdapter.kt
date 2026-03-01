@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.PlaybackError
+import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
 import de.chrgroth.spotify.control.domain.model.AccessToken
 import de.chrgroth.spotify.control.domain.model.RecentlyPlayedItem
 import de.chrgroth.spotify.control.domain.model.UserId
@@ -18,6 +19,7 @@ import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.time.Duration
 import kotlin.time.Instant
 
 @ApplicationScoped
@@ -38,10 +40,8 @@ class SpotifyRecentlyPlayedAdapter(
                 .GET()
                 .build()
             val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
-            if (response.statusCode() != HTTP_OK) {
-                logger.error { "Spotify recently played fetch failed: ${response.statusCode()} - ${response.body()}" }
-                return PlaybackError.RECENTLY_PLAYED_FETCH_FAILED.left()
-            }
+            val errorResult = checkResponseError(response)
+            if (errorResult != null) return errorResult
             val json: JsonNode = objectMapper.readTree(response.body())
             val items = json.get("items") ?: return emptyList<RecentlyPlayedItem>().right()
             items.map { item ->
@@ -61,7 +61,24 @@ class SpotifyRecentlyPlayedAdapter(
         }
     }
 
+    private fun checkResponseError(response: HttpResponse<String>): Either<DomainError, Nothing>? {
+        if (response.statusCode() == HTTP_RATE_LIMITED) {
+            val retryAfterSeconds = response.headers().firstValue("Retry-After")
+                .map { it.toLongOrNull() ?: DEFAULT_RETRY_AFTER_SECONDS }
+                .orElse(DEFAULT_RETRY_AFTER_SECONDS)
+            logger.warn { "Spotify rate limit exceeded, retry after ${retryAfterSeconds}s" }
+            return SpotifyRateLimitError(Duration.ofSeconds(retryAfterSeconds)).left()
+        }
+        if (response.statusCode() != HTTP_OK) {
+            logger.error { "Spotify recently played fetch failed: ${response.statusCode()} - ${response.body()}" }
+            return PlaybackError.RECENTLY_PLAYED_FETCH_FAILED.left()
+        }
+        return null
+    }
+
     companion object : KLogging() {
         private const val HTTP_OK = 200
+        private const val HTTP_RATE_LIMITED = 429
+        private const val DEFAULT_RETRY_AFTER_SECONDS = 60L
     }
 }

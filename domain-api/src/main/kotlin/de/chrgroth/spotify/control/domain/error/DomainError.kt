@@ -31,3 +31,7 @@ enum class PlaybackError(override val code: String) : DomainError {
     RECENTLY_PLAYED_FETCH_FAILED("PLAY-001"),
     ;
 }
+
+data class SpotifyRateLimitError(val retryAfter: java.time.Duration) : DomainError {
+    override val code: String = "SPOTIFY-429"
+}
