@@ -31,7 +31,7 @@ services:
       - global_router
 
   alloy:
-    image: grafana/alloy:latest
+    image: grafana/alloy:v1.13.2
     deploy:
       replicas: 1
       restart_policy:
@@ -44,9 +44,10 @@ services:
     environment:
       - GRAFANA_CLOUD_METRICS_URL=${GRAFANA_CLOUD_METRICS_URL}
       - GRAFANA_CLOUD_METRICS_USERNAME=${GRAFANA_CLOUD_METRICS_USERNAME}
+      - GRAFANA_CLOUD_METRICS_API_KEY=${GRAFANA_CLOUD_METRICS_API_KEY}
       - GRAFANA_CLOUD_LOGS_URL=${GRAFANA_CLOUD_LOGS_URL}
       - GRAFANA_CLOUD_LOGS_USERNAME=${GRAFANA_CLOUD_LOGS_USERNAME}
-      - GRAFANA_CLOUD_API_KEY=${GRAFANA_CLOUD_API_KEY}
+      - GRAFANA_CLOUD_LOGS_API_KEY=${GRAFANA_CLOUD_LOGS_API_KEY}
     networks:
       - spotify_control
     command:
