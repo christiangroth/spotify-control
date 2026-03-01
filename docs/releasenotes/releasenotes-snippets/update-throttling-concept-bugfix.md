@@ -1,1 +1,0 @@
-* update-throttling-concept: Updated outbox throttling concept to configure rate-limit handling as a core outbox feature.
