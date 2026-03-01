@@ -3,6 +3,7 @@ package de.chrgroth.spotify.control.domain
 import arrow.core.left
 import arrow.core.right
 import de.chrgroth.spotify.control.domain.error.AuthError
+import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
 import de.chrgroth.spotify.control.domain.model.AccessToken
 import de.chrgroth.spotify.control.domain.model.SpotifyProfile
 import de.chrgroth.spotify.control.domain.model.SpotifyProfileId
@@ -21,6 +22,7 @@ import io.mockk.slot
 import io.mockk.verify
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import java.time.Duration
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.hours
 
@@ -80,8 +82,9 @@ class UserProfileUpdateAdapterTests {
         ).right()
         every { userRepository.upsert(any()) } just runs
 
-        adapter.update(userId)
+        val result = adapter.update(userId)
 
+        assertThat(result.isRight()).isTrue()
         val upsertedSlot = slot<User>()
         verify { userRepository.upsert(capture(upsertedSlot)) }
         assertThat(upsertedSlot.captured.displayName).isEqualTo("New Name")
@@ -97,8 +100,9 @@ class UserProfileUpdateAdapterTests {
             displayName = "Same Name",
         ).right()
 
-        adapter.update(userId)
+        val result = adapter.update(userId)
 
+        assertThat(result.isRight()).isTrue()
         verify(exactly = 0) { userRepository.upsert(any()) }
     }
 
@@ -106,21 +110,37 @@ class UserProfileUpdateAdapterTests {
     fun `update skips when user not found`() {
         every { userRepository.findById(userId) } returns null
 
-        adapter.update(userId)
+        val result = adapter.update(userId)
 
+        assertThat(result.isRight()).isTrue()
         verify(exactly = 0) { spotifyAccessToken.getValidAccessToken(any()) }
         verify(exactly = 0) { userRepository.upsert(any()) }
     }
 
     @Test
-    fun `update logs error when profile fetch fails`() {
+    fun `update returns Left when profile fetch fails`() {
         val user = buildUser()
         every { userRepository.findById(userId) } returns user
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { spotifyAuth.getUserProfile(accessToken) } returns AuthError.PROFILE_FETCH_FAILED.left()
 
-        adapter.update(userId)
+        val result = adapter.update(userId)
 
+        assertThat(result.isLeft()).isTrue()
         verify(exactly = 0) { userRepository.upsert(any()) }
+    }
+
+    @Test
+    fun `update returns Left with SpotifyRateLimitError when rate limited`() {
+        val retryAfter = Duration.ofSeconds(30)
+        val user = buildUser()
+        every { userRepository.findById(userId) } returns user
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { spotifyAuth.getUserProfile(accessToken) } returns SpotifyRateLimitError(retryAfter).left()
+
+        val result = adapter.update(userId)
+
+        assertThat(result.isLeft()).isTrue()
+        assertThat(result.leftOrNull()).isInstanceOf(SpotifyRateLimitError::class.java)
     }
 }

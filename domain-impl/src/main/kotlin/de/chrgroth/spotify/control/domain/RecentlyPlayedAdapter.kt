@@ -1,5 +1,8 @@
 package de.chrgroth.spotify.control.domain
 
+import arrow.core.Either
+import arrow.core.flatMap
+import arrow.core.right
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.RecentlyPlayedPort
@@ -8,6 +11,7 @@ import de.chrgroth.spotify.control.domain.port.out.RecentlyPlayedRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyRecentlyPlayedPort
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
+import de.chrgroth.spotify.control.domain.error.DomainError
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
 
@@ -29,20 +33,18 @@ class RecentlyPlayedAdapter(
         }
     }
 
-    override fun update(userId: UserId) {
+    override fun update(userId: UserId): Either<DomainError, Unit> {
         val accessToken = spotifyAccessToken.getValidAccessToken(userId)
-        spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken).fold(
-            ifLeft = { logger.error { "Failed to fetch recently played for user ${userId.value}: ${it.code}" } },
-            ifRight = { tracks ->
-                val playedAts = tracks.map { it.playedAt }.toSet()
-                val existingPlayedAts = recentlyPlayedRepository.findExistingPlayedAts(userId, playedAts)
-                val newItems = tracks.filter { it.playedAt !in existingPlayedAts }
-                if (newItems.isNotEmpty()) {
-                    logger.info { "Persisting ${newItems.size} new recently played items for user: ${userId.value}" }
-                    recentlyPlayedRepository.saveAll(newItems)
-                }
-            },
-        )
+        return spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken).flatMap { tracks ->
+            val playedAts = tracks.map { it.playedAt }.toSet()
+            val existingPlayedAts = recentlyPlayedRepository.findExistingPlayedAts(userId, playedAts)
+            val newItems = tracks.filter { it.playedAt !in existingPlayedAts }
+            if (newItems.isNotEmpty()) {
+                logger.info { "Persisting ${newItems.size} new recently played items for user: ${userId.value}" }
+                recentlyPlayedRepository.saveAll(newItems)
+            }
+            Unit.right()
+        }
     }
 
     companion object : KLogging()

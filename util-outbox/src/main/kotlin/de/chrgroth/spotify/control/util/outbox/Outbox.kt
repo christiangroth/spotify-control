@@ -3,8 +3,14 @@ package de.chrgroth.spotify.control.util.outbox
 import arrow.core.Either
 import io.micrometer.core.instrument.Counter
 import io.micrometer.core.instrument.MeterRegistry
+import jakarta.annotation.PreDestroy
 import jakarta.enterprise.context.ApplicationScoped
 import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @ApplicationScoped
 class Outbox(
@@ -13,7 +19,16 @@ class Outbox(
     private val meterRegistry: MeterRegistry,
 ) {
 
-    private val processor = OutboxProcessor(repository)
+    private val scope = CoroutineScope(Dispatchers.IO)
+
+    private val processor = OutboxProcessor(repository) { partition, retryAfter ->
+        scope.launch {
+            delay(retryAfter.toMillis())
+            repository.activatePartition(partition)
+            wakeupService.signal(partition)
+        }
+    }
+    
     private val enqueuedCounters = ConcurrentHashMap<String, Counter>()
     private val processedCounters = ConcurrentHashMap<String, Counter>()
     private val failedCounters = ConcurrentHashMap<String, Counter>()
@@ -57,4 +72,9 @@ class Outbox(
     fun findPartition(partition: OutboxPartition) = repository.findPartition(partition)
 
     fun activatePartition(partition: OutboxPartition) = repository.activatePartition(partition)
+
+    @PreDestroy
+    fun onStop() {
+        scope.cancel()
+    }
 }

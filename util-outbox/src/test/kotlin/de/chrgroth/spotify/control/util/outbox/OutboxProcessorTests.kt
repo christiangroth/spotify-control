@@ -1,7 +1,5 @@
 package de.chrgroth.spotify.control.util.outbox
 
-import arrow.core.left
-import arrow.core.right
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -44,7 +42,7 @@ class OutboxProcessorTests {
     fun `processNext returns false when no task is available`() {
         every { repository.claim(partition) } returns null
 
-        val result = processor.processNext(partition) { Unit.right() }
+        val result = processor.processNext(partition) { OutboxTaskResult.Success }
 
         assertThat(result).isFalse()
     }
@@ -55,7 +53,7 @@ class OutboxProcessorTests {
         every { repository.claim(partition) } returns task
         every { repository.complete(task) } just runs
 
-        val result = processor.processNext(partition) { Unit.right() }
+        val result = processor.processNext(partition) { OutboxTaskResult.Success }
 
         assertThat(result).isTrue()
         verify { repository.complete(task) }
@@ -69,7 +67,7 @@ class OutboxProcessorTests {
         val capturedNextRetryAt = mutableListOf<Instant?>()
         every { repository.fail(task, any(), captureNullable(capturedNextRetryAt)) } just runs
 
-        val result = processor.processNext(partition) { OutboxError("dispatch failed").left() }
+        val result = processor.processNext(partition) { OutboxTaskResult.Failed("dispatch failed") }
 
         assertThat(result).isTrue()
         assertThat(capturedNextRetryAt.first()).isNotNull()
@@ -81,7 +79,7 @@ class OutboxProcessorTests {
         every { repository.claim(partition) } returns task
         every { repository.fail(task, any(), null) } just runs
 
-        val result = processor.processNext(partition) { OutboxError("permanent failure").left() }
+        val result = processor.processNext(partition) { OutboxTaskResult.Failed("permanent failure") }
 
         assertThat(result).isTrue()
         verify { repository.fail(task, "permanent failure", null) }
@@ -95,7 +93,7 @@ class OutboxProcessorTests {
         every { repository.fail(task, any(), captureNullable(capturedNextRetryAt)) } just runs
 
         val before = Instant.now()
-        processor.processNext(partition) { OutboxError("fail").left() }
+        processor.processNext(partition) { OutboxTaskResult.Failed("fail") }
         val after = Instant.now()
 
         // nextRetryAt should be approximately now + 10 seconds
@@ -117,7 +115,7 @@ class OutboxProcessorTests {
         every { repository.fail(task, any(), captureNullable(capturedNextRetryAt)) } just runs
 
         val before = Instant.now()
-        processorWithLargePolicy.processNext(partition) { OutboxError("fail").left() }
+        processorWithLargePolicy.processNext(partition) { OutboxTaskResult.Failed("fail") }
 
         // Should use last backoff entry (10s) for out-of-bounds index
         val captured = capturedNextRetryAt.first()!!
@@ -130,8 +128,65 @@ class OutboxProcessorTests {
         every { repository.claim(partition) } returns task
         every { repository.fail(task, any(), any()) } just runs
 
-        val result = processor.processNext(partition) { OutboxError("error").left() }
+        val result = processor.processNext(partition) { OutboxTaskResult.Failed("error") }
 
         assertThat(result).isTrue()
+    }
+
+    @Test
+    fun `processNext pauses partition and reschedules task without incrementing attempts on rate limited result`() {
+        val task = task(attempts = 1)
+        every { repository.claim(partition) } returns task
+        every { repository.pausePartition(partition, "rate_limited", any()) } just runs
+        every { repository.reschedule(task, any()) } just runs
+
+        val retryAfter = Duration.ofSeconds(30)
+        val result = processor.processNext(partition) { OutboxTaskResult.RateLimited(retryAfter) }
+
+        assertThat(result).isFalse()
+        verify { repository.pausePartition(partition, "rate_limited", any()) }
+        verify { repository.reschedule(task, any()) }
+        verify(exactly = 0) { repository.complete(any()) }
+        verify(exactly = 0) { repository.fail(any(), any(), any()) }
+    }
+
+    @Test
+    fun `processNext schedules resume via onRateLimited callback with correct retryAfter`() {
+        val task = task()
+        every { repository.claim(partition) } returns task
+        every { repository.pausePartition(partition, "rate_limited", any()) } just runs
+        every { repository.reschedule(task, any()) } just runs
+
+        val capturedPartitions = mutableListOf<OutboxPartition>()
+        val capturedDurations = mutableListOf<Duration>()
+        val processorWithCallback = OutboxProcessor(repository, retryPolicy) { p, d ->
+            capturedPartitions.add(p)
+            capturedDurations.add(d)
+        }
+
+        val retryAfter = Duration.ofSeconds(60)
+        processorWithCallback.processNext(partition) { OutboxTaskResult.RateLimited(retryAfter) }
+
+        assertThat(capturedPartitions).containsExactly(partition)
+        assertThat(capturedDurations).containsExactly(retryAfter)
+    }
+
+    @Test
+    fun `rate limited task blocks all subsequent tasks in the partition`() {
+        val task = task()
+        // First claim returns a task; second returns null as the repository reflects the paused partition state
+        every { repository.claim(partition) } returnsMany listOf(task, null)
+        every { repository.pausePartition(partition, "rate_limited", any()) } just runs
+        every { repository.reschedule(task, any()) } just runs
+
+        // First call: dispatch signals rate-limited – partition is paused, processNext returns false
+        val firstResult = processor.processNext(partition) { OutboxTaskResult.RateLimited(Duration.ofSeconds(30)) }
+        assertThat(firstResult).isFalse()
+
+        // Second call: claim returns null (partition paused) – no further tasks processed
+        val secondResult = processor.processNext(partition) { OutboxTaskResult.Success }
+        assertThat(secondResult).isFalse()
+
+        verify(exactly = 1) { repository.pausePartition(partition, "rate_limited", any()) }
     }
 }

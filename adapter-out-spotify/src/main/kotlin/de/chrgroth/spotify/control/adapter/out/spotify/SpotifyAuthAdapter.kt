@@ -67,10 +67,8 @@ class SpotifyAuthAdapter(
                 .GET()
                 .build()
             val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
-            if (response.statusCode() != HTTP_OK) {
-                logger.error { "Spotify profile fetch failed: ${response.statusCode()} - ${response.body()}" }
-                return AuthError.PROFILE_FETCH_FAILED.left()
-            }
+            val errorResult = response.checkRateLimitOrError(logger, AuthError.PROFILE_FETCH_FAILED)
+            if (errorResult != null) return errorResult
             val json: JsonNode = objectMapper.readTree(response.body())
             SpotifyProfile(
                 id = SpotifyProfileId(json.get("id").asText()),
@@ -114,7 +112,5 @@ class SpotifyAuthAdapter(
         return objectMapper.readTree(response.body())
     }
 
-    companion object : KLogging() {
-        private const val HTTP_OK = 200
-    }
+    companion object : KLogging()
 }
