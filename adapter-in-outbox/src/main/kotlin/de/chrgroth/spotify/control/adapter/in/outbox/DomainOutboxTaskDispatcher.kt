@@ -12,7 +12,7 @@ import de.chrgroth.spotify.control.util.outbox.OutboxTaskDispatcher
 import jakarta.enterprise.context.ApplicationScoped
 
 @ApplicationScoped
-@Suppress("Unused", "SwallowedException")
+@Suppress("Unused")
 class DomainOutboxTaskDispatcher(
     private val handlerPort: OutboxHandlerPort,
 ) : OutboxTaskDispatcher {
@@ -23,7 +23,7 @@ class DomainOutboxTaskDispatcher(
         val event = try {
             DomainOutboxEvent.fromKey(task.eventType, task.payload)
         } catch (e: IllegalArgumentException) {
-            return OutboxError("Unknown event type: ${task.eventType}").left()
+            return OutboxError("Unknown event type: ${task.eventType}", e).left()
         }
         return when (event) {
             is DomainOutboxEvent.FetchRecentlyPlayed -> handlerPort.handle(event)
