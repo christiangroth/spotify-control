@@ -1,0 +1,40 @@
+// Grafana Alloy config (River syntax)
+
+// ── Metrics ──────────────────────────────────────────────────────────────────
+prometheus.scrape "spotify_control" {
+  targets = [{ "__address__" = "quarkus:8080", "__metrics_path__" = "/q/metrics" }]
+  scrape_interval = "30s"
+  forward_to = [prometheus.remote_write.grafana_cloud.receiver]
+}
+
+prometheus.remote_write "grafana_cloud" {
+  endpoint {
+    url = env("GRAFANA_CLOUD_METRICS_URL")
+    basic_auth {
+      username = env("GRAFANA_CLOUD_METRICS_USERNAME")
+      password = env("GRAFANA_CLOUD_API_KEY")
+    }
+  }
+}
+
+// ── Logs ─────────────────────────────────────────────────────────────────────
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+loki.source.docker "spotify_control_logs" {
+  host    = "unix:///var/run/docker.sock"
+  targets = discovery.docker.containers.targets
+  forward_to = [loki.write.grafana_cloud.receiver]
+}
+
+loki.write "grafana_cloud" {
+  endpoint {
+    url = env("GRAFANA_CLOUD_LOGS_URL")
+    basic_auth {
+      username = env("GRAFANA_CLOUD_LOGS_USERNAME")
+      password = env("GRAFANA_CLOUD_API_KEY")
+    }
+  }
+  external_labels = { service_name = "spotify-control" }
+}
