@@ -21,8 +21,8 @@ class OutboxHandlerAdapterTests {
     private val adapter = OutboxHandlerAdapter(recentlyPlayed, userProfileUpdate)
 
     private val userId = UserId("user-1")
-    private val fetchEvent = DomainOutboxEvent.FetchRecentlyPlayed(userId.value)
-    private val updateEvent = DomainOutboxEvent.UpdateUserProfile(userId.value)
+    private val fetchEvent = DomainOutboxEvent.FetchRecentlyPlayed(userId)
+    private val updateEvent = DomainOutboxEvent.UpdateUserProfile(userId)
 
     @Test
     fun `handle FetchRecentlyPlayed delegates to RecentlyPlayedPort successfully`() {

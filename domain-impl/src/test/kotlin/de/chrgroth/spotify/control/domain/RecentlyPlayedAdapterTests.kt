@@ -74,8 +74,8 @@ class RecentlyPlayedAdapterTests {
 
         adapter.enqueueUpdates()
 
-        verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.FetchRecentlyPlayed("user-1")) }
-        verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.FetchRecentlyPlayed("user-2")) }
+        verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.FetchRecentlyPlayed(UserId("user-1"))) }
+        verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.FetchRecentlyPlayed(UserId("user-2"))) }
     }
 
     // --- update tests ---

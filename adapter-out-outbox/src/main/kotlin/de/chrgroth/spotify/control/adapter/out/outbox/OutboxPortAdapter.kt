@@ -15,9 +15,9 @@ class OutboxPortAdapter(
     override fun enqueue(event: DomainOutboxEvent) {
         val inserted = outbox.enqueue(event.partition, event, event.toPayload(), event.priority)
         if (inserted) {
-            logger.debug { "Enqueued outbox event ${event.key} in partition ${event.partition.key}" }
+            logger.info { "Enqueued outbox event ${event.key} in partition ${event.partition.key}" }
         } else {
-            logger.debug { "Skipped duplicate outbox event ${event.key} in partition ${event.partition.key}" }
+            logger.info { "Skipped duplicate outbox event ${event.key} in partition ${event.partition.key}" }
         }
     }
 

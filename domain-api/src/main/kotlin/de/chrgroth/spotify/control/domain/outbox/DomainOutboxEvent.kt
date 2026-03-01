@@ -1,5 +1,6 @@
 package de.chrgroth.spotify.control.domain.outbox
 
+import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.util.outbox.OutboxEvent
 import de.chrgroth.spotify.control.util.outbox.OutboxTaskPriority
 
@@ -8,23 +9,23 @@ sealed interface DomainOutboxEvent : OutboxEvent {
     val priority: OutboxTaskPriority get() = OutboxTaskPriority.NORMAL
     fun toPayload(): String
 
-    data class FetchRecentlyPlayed(val userId: String) : DomainOutboxEvent {
+    data class FetchRecentlyPlayed(val userId: UserId) : DomainOutboxEvent {
         override val key = KEY
-        override fun deduplicationKey() = "$KEY:$userId"
+        override fun deduplicationKey() = "$KEY:${userId.value}"
         override val partition = DomainOutboxPartition.ToSpotify
         override val priority = OutboxTaskPriority.HIGH
-        override fun toPayload() = userId
+        override fun toPayload() = userId.value
 
         companion object {
             const val KEY = "FetchRecentlyPlayed"
         }
     }
 
-    data class UpdateUserProfile(val userId: String) : DomainOutboxEvent {
+    data class UpdateUserProfile(val userId: UserId) : DomainOutboxEvent {
         override val key = KEY
-        override fun deduplicationKey() = "$KEY:$userId"
+        override fun deduplicationKey() = "$KEY:${userId.value}"
         override val partition = DomainOutboxPartition.ToSpotify
-        override fun toPayload() = userId
+        override fun toPayload() = userId.value
 
         companion object {
             const val KEY = "UpdateUserProfile"
@@ -33,8 +34,8 @@ sealed interface DomainOutboxEvent : OutboxEvent {
 
     companion object {
         fun fromKey(key: String, payload: String): DomainOutboxEvent = when (key) {
-            FetchRecentlyPlayed.KEY -> FetchRecentlyPlayed(payload)
-            UpdateUserProfile.KEY -> UpdateUserProfile(payload)
+            FetchRecentlyPlayed.KEY -> FetchRecentlyPlayed(UserId(payload))
+            UpdateUserProfile.KEY -> UpdateUserProfile(UserId(payload))
             else -> throw IllegalArgumentException("Unknown outbox event type: $key")
         }
     }

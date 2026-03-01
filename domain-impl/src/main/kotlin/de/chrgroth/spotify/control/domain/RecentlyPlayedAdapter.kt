@@ -25,7 +25,7 @@ class RecentlyPlayedAdapter(
         val users = userRepository.findAll()
         logger.info { "Scheduling recently played fetch for ${users.size} user(s)" }
         users.forEach { user ->
-            outboxPort.enqueue(DomainOutboxEvent.FetchRecentlyPlayed(user.spotifyUserId.value))
+            outboxPort.enqueue(DomainOutboxEvent.FetchRecentlyPlayed(user.spotifyUserId))
         }
     }
 

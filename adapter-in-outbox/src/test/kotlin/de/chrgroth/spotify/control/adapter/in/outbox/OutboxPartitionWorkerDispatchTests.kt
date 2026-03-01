@@ -3,6 +3,7 @@ package de.chrgroth.spotify.control.adapter.`in`.outbox
 import arrow.core.Either
 import arrow.core.left
 import arrow.core.right
+import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.OutboxHandlerPort
 import de.chrgroth.spotify.control.util.outbox.Outbox
@@ -27,6 +28,7 @@ class OutboxPartitionWorkerDispatchTests {
     private val worker = OutboxPartitionWorker(outboxProcessor, outbox, handlerPort)
 
     private val userId = "user-123"
+    private val userIdObj = UserId(userId)
 
     private fun buildTask(eventType: String, payload: String) = OutboxTask(
         id = "task-id",
@@ -45,7 +47,7 @@ class OutboxPartitionWorkerDispatchTests {
 
     @Test
     fun `FetchRecentlyPlayed dispatches to handle(FetchRecentlyPlayed)`() {
-        val event = DomainOutboxEvent.FetchRecentlyPlayed(userId)
+        val event = DomainOutboxEvent.FetchRecentlyPlayed(userIdObj)
         val task = buildTask(DomainOutboxEvent.FetchRecentlyPlayed.KEY, userId)
         every { handlerPort.handle(event) } returns Unit.right()
 
@@ -57,7 +59,7 @@ class OutboxPartitionWorkerDispatchTests {
 
     @Test
     fun `UpdateUserProfile dispatches to handle(UpdateUserProfile)`() {
-        val event = DomainOutboxEvent.UpdateUserProfile(userId)
+        val event = DomainOutboxEvent.UpdateUserProfile(userIdObj)
         val task = buildTask(DomainOutboxEvent.UpdateUserProfile.KEY, userId)
         every { handlerPort.handle(event) } returns Unit.right()
 
@@ -78,7 +80,7 @@ class OutboxPartitionWorkerDispatchTests {
 
     @Test
     fun `handler failure propagates as left`() {
-        val event = DomainOutboxEvent.FetchRecentlyPlayed(userId)
+        val event = DomainOutboxEvent.FetchRecentlyPlayed(userIdObj)
         val task = buildTask(DomainOutboxEvent.FetchRecentlyPlayed.KEY, userId)
         val error = OutboxError("fetch failed")
         every { handlerPort.handle(event) } returns error.left()

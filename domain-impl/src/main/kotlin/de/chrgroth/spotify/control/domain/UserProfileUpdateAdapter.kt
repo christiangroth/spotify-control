@@ -23,7 +23,7 @@ class UserProfileUpdateAdapter(
         val users = userRepository.findAll()
         logger.info { "Scheduling profile update for ${users.size} user(s)" }
         users.forEach { user ->
-            outboxPort.enqueue(DomainOutboxEvent.UpdateUserProfile(user.spotifyUserId.value))
+            outboxPort.enqueue(DomainOutboxEvent.UpdateUserProfile(user.spotifyUserId))
         }
     }
 

@@ -1,5 +1,6 @@
 package de.chrgroth.spotify.control.domain.outbox
 
+import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.OutboxHandlerPort
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -7,8 +8,8 @@ import org.junit.jupiter.api.Test
 class DomainOutboxContractTests {
 
     private val allEvents: List<DomainOutboxEvent> = listOf(
-        DomainOutboxEvent.FetchRecentlyPlayed("user-1"),
-        DomainOutboxEvent.UpdateUserProfile("user-1"),
+        DomainOutboxEvent.FetchRecentlyPlayed(UserId("user-1")),
+        DomainOutboxEvent.UpdateUserProfile(UserId("user-1")),
     )
 
     @Test
@@ -24,8 +25,8 @@ class DomainOutboxContractTests {
     fun `deduplication key includes userId to allow per-user deduplication`() {
         val userId = "user-abc"
         listOf(
-            DomainOutboxEvent.FetchRecentlyPlayed(userId),
-            DomainOutboxEvent.UpdateUserProfile(userId),
+            DomainOutboxEvent.FetchRecentlyPlayed(UserId(userId)),
+            DomainOutboxEvent.UpdateUserProfile(UserId(userId)),
         ).forEach { event ->
             assertThat(event.deduplicationKey())
                 .describedAs("deduplicationKey for ${event::class.simpleName} should contain userId")

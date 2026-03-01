@@ -63,8 +63,8 @@ class UserProfileUpdateAdapterTests {
 
         adapter.enqueueUpdates()
 
-        verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.UpdateUserProfile("user-1")) }
-        verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.UpdateUserProfile("user-2")) }
+        verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.UpdateUserProfile(UserId("user-1"))) }
+        verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.UpdateUserProfile(UserId("user-2"))) }
     }
 
     // --- update tests ---
