@@ -1,3 +1,6 @@
+# 0.6.0 - 2026.03.01
+## New Features
+* update-throttling-concept: Implement outbox throttling as core feature with OutboxTaskResult sealed interface for rate-limit handling in Spotify adapters.
 # 0.5.0 - 2026.03.01
 ## New Features
 * connect-outbox-for-profile-update: Connect outbox for profile update and recently played fetch.
