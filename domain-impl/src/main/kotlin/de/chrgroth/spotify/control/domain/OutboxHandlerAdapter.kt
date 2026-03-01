@@ -34,8 +34,16 @@ class OutboxHandlerAdapter(
     }
 
     override fun handle(event: DomainOutboxEvent.UpdateUserProfile): OutboxTaskResult = try {
-        userProfileUpdate.update(event.userId)
-        OutboxTaskResult.Success
+        when (val result = userProfileUpdate.update(event.userId)) {
+            is Either.Right -> OutboxTaskResult.Success
+            is Either.Left -> when (val error = result.value) {
+                is SpotifyRateLimitError -> OutboxTaskResult.RateLimited(error.retryAfter)
+                else -> {
+                    logger.error { "Failed to update user profile for ${event.userId.value}: ${error.code}" }
+                    OutboxTaskResult.Failed("Failed to update user profile: ${error.code}")
+                }
+            }
+        }
     } catch (e: Exception) {
         logger.error(e) { "Unexpected error in handle(UpdateUserProfile) for user ${event.userId.value}" }
         OutboxTaskResult.Failed("Unexpected error in update: ${e.message}", e)

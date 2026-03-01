@@ -4,15 +4,14 @@ import arrow.core.left
 import arrow.core.right
 import de.chrgroth.spotify.control.domain.error.PlaybackError
 import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
+import de.chrgroth.spotify.control.domain.error.AuthError
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.RecentlyPlayedPort
 import de.chrgroth.spotify.control.domain.port.`in`.UserProfileUpdatePort
 import de.chrgroth.spotify.control.util.outbox.OutboxTaskResult
 import io.mockk.every
-import io.mockk.just
 import io.mockk.mockk
-import io.mockk.runs
 import io.mockk.verify
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -71,12 +70,33 @@ class OutboxHandlerAdapterTests {
 
     @Test
     fun `handle UpdateUserProfile delegates to UserProfileUpdatePort successfully`() {
-        every { userProfileUpdate.update(userId) } just runs
+        every { userProfileUpdate.update(userId) } returns Unit.right()
 
         val result = adapter.handle(updateEvent)
 
         assertThat(result).isInstanceOf(OutboxTaskResult.Success::class.java)
         verify { userProfileUpdate.update(userId) }
+    }
+
+    @Test
+    fun `handle UpdateUserProfile returns Failed on domain error`() {
+        every { userProfileUpdate.update(userId) } returns AuthError.PROFILE_FETCH_FAILED.left()
+
+        val result = adapter.handle(updateEvent)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.Failed::class.java)
+        assertThat((result as OutboxTaskResult.Failed).message).contains(AuthError.PROFILE_FETCH_FAILED.code)
+    }
+
+    @Test
+    fun `handle UpdateUserProfile returns RateLimited on SpotifyRateLimitError`() {
+        val retryAfter = Duration.ofSeconds(30)
+        every { userProfileUpdate.update(userId) } returns SpotifyRateLimitError(retryAfter).left()
+
+        val result = adapter.handle(updateEvent)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.RateLimited::class.java)
+        assertThat((result as OutboxTaskResult.RateLimited).retryAfter).isEqualTo(retryAfter)
     }
 
     @Test
