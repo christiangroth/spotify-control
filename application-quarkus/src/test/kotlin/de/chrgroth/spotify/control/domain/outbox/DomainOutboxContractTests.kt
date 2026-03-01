@@ -46,11 +46,15 @@ class DomainOutboxContractTests {
 
     @Test
     fun `OutboxHandlerPort has a handler method for every DomainOutboxEvent type`() {
-        val handlerMethodNames = OutboxHandlerPort::class.java.methods.map { it.name }.toSet()
+        val methods = OutboxHandlerPort::class.java.methods
         allEvents.forEach { event ->
-            assertThat(handlerMethodNames)
-                .describedAs("OutboxHandlerPort should have method 'handle' for event ${event::class.simpleName}")
-                .contains("handle")
+            val eventClass = event::class.java
+            val hasMatchingHandle = methods.any { method ->
+                method.name == "handle" && method.parameterCount == 1 && method.parameterTypes[0].isAssignableFrom(eventClass)
+            }
+            assertThat(hasMatchingHandle)
+                .describedAs("OutboxHandlerPort should have method 'handle(${eventClass.simpleName})'")
+                .isTrue()
         }
     }
 }

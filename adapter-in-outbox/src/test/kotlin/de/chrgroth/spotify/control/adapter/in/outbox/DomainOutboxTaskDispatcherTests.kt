@@ -6,9 +6,7 @@ import arrow.core.right
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.OutboxHandlerPort
-import de.chrgroth.spotify.control.util.outbox.Outbox
 import de.chrgroth.spotify.control.util.outbox.OutboxError
-import de.chrgroth.spotify.control.util.outbox.OutboxProcessor
 import de.chrgroth.spotify.control.util.outbox.OutboxTask
 import de.chrgroth.spotify.control.util.outbox.OutboxTaskPriority
 import de.chrgroth.spotify.control.util.outbox.OutboxTaskStatus
@@ -19,13 +17,11 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.time.Instant
 
-class OutboxPartitionWorkerDispatchTests {
+class DomainOutboxTaskDispatcherTests {
 
-    private val outboxProcessor: OutboxProcessor = mockk()
-    private val outbox: Outbox = mockk(relaxed = true)
     private val handlerPort: OutboxHandlerPort = mockk()
 
-    private val worker = OutboxPartitionWorker(outboxProcessor, outbox, handlerPort)
+    private val subject = DomainOutboxTaskDispatcher(handlerPort)
 
     private val userId = "user-123"
     private val userIdObj = UserId(userId)
@@ -51,7 +47,7 @@ class OutboxPartitionWorkerDispatchTests {
         val task = buildTask(DomainOutboxEvent.FetchRecentlyPlayed.KEY, userId)
         every { handlerPort.handle(event) } returns Unit.right()
 
-        val result = worker.dispatch(task)
+        val result = subject.dispatch(task)
 
         assertThat(result).isInstanceOf(Either.Right::class.java)
         verify { handlerPort.handle(event) }
@@ -63,7 +59,7 @@ class OutboxPartitionWorkerDispatchTests {
         val task = buildTask(DomainOutboxEvent.UpdateUserProfile.KEY, userId)
         every { handlerPort.handle(event) } returns Unit.right()
 
-        val result = worker.dispatch(task)
+        val result = subject.dispatch(task)
 
         assertThat(result).isInstanceOf(Either.Right::class.java)
         verify { handlerPort.handle(event) }
@@ -73,7 +69,7 @@ class OutboxPartitionWorkerDispatchTests {
     fun `unknown event type returns OutboxError left`() {
         val task = buildTask("UnknownEvent", "payload")
 
-        val result = worker.dispatch(task)
+        val result = subject.dispatch(task)
 
         assertThat(result).isInstanceOf(Either.Left::class.java)
     }
@@ -85,7 +81,7 @@ class OutboxPartitionWorkerDispatchTests {
         val error = OutboxError("fetch failed")
         every { handlerPort.handle(event) } returns error.left()
 
-        val result = worker.dispatch(task)
+        val result = subject.dispatch(task)
 
         assertThat(result).isInstanceOf(Either.Left::class.java)
     }

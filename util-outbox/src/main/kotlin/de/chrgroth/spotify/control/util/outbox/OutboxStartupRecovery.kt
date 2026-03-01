@@ -1,8 +1,5 @@
-package de.chrgroth.spotify.control.adapter.`in`.outbox
+package de.chrgroth.spotify.control.util.outbox
 
-import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
-import de.chrgroth.spotify.control.util.outbox.Outbox
-import de.chrgroth.spotify.control.util.outbox.OutboxPartitionStatus
 import io.quarkus.runtime.StartupEvent
 import jakarta.annotation.PreDestroy
 import jakarta.annotation.Priority
@@ -20,6 +17,7 @@ import java.time.Instant
 @Suppress("Unused", "UnusedParameter")
 class OutboxStartupRecovery(
     private val outbox: Outbox,
+    private val dispatcher: OutboxTaskDispatcher,
 ) {
 
     private val scope = CoroutineScope(Dispatchers.IO)
@@ -27,7 +25,7 @@ class OutboxStartupRecovery(
     fun onStart(@Observes @Priority(1) event: StartupEvent) {
         outbox.resetStaleProcessingTasks()
         val now = Instant.now()
-        DomainOutboxPartition.all.forEach { partition ->
+        dispatcher.partitions.forEach { partition ->
             val partitionInfo = outbox.findPartition(partition)
             // partitionInfo.status is persisted as a String; compare via .name
             if (partitionInfo?.status == OutboxPartitionStatus.PAUSED.name) {
@@ -50,7 +48,7 @@ class OutboxStartupRecovery(
                 outbox.signal(partition)
             }
         }
-        logger.info { "Outbox startup recovery complete for ${DomainOutboxPartition.all.size} partition(s)" }
+        logger.info { "Outbox startup recovery complete for ${dispatcher.partitions.size} partition(s)" }
     }
 
     @PreDestroy
