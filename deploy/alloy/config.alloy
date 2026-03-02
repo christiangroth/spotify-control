@@ -31,6 +31,20 @@ discovery.relabel "spotify_control_containers" {
     regex         = "spotify-control"
     action        = "keep"
   }
+
+  // Add container name as label for log filtering
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/?(.*)"
+    target_label  = "container_name"
+    replacement   = "$1"
+  }
+
+  // Add Docker Swarm service name as label for log filtering
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_swarm_service_name"]
+    target_label  = "service_name"
+  }
 }
 
 loki.source.docker "spotify_control_logs" {
