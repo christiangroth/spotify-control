@@ -46,11 +46,14 @@ jobs:
           echo "Computed docker tag for next deployment $DOCKER_TAG"
       - name: Encode docker stack file
         run: echo "DOCKER_STACK_FILE=$(base64 -w 0 deploy/docker-stack.yml)" >> $GITHUB_ENV
+      - name: Encode alloy config file
+        run: echo "ALLOY_CONFIG_FILE=$(base64 -w 0 deploy/alloy/config.alloy)" >> $GITHUB_ENV
       - uses: appleboy/ssh-action@v1.0.3
         env:
           DOCKER_STACK: "spotify-control"
           DOCKER_TAG: ${{ env.DOCKER_TAG }}
           DOCKER_STACK_FILE: ${{ env.DOCKER_STACK_FILE }}
+          ALLOY_CONFIG_FILE: ${{ env.ALLOY_CONFIG_FILE }}
           MONGODB_CONNECTION_STRING: ${{ secrets.MONGODB_CONNECTION_STRING }}
           SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
           SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
@@ -60,17 +63,24 @@ jobs:
           HTTP_AUTH_ENCRYPTION_KEY: ${{ secrets.HTTP_AUTH_ENCRYPTION_KEY }}
           TRAEFIK_HTTP_ROUTERS_SPOTIFYCONTROL_RULE: ${{ secrets.TRAEFIK_HTTP_ROUTERS_SPOTIFYCONTROL_RULE }}
           GHCR_PAT: ${{ secrets.GHCR_PAT }}
+          GRAFANA_CLOUD_METRICS_URL: ${{ secrets.GRAFANA_CLOUD_METRICS_URL }}
+          GRAFANA_CLOUD_METRICS_USERNAME: ${{ secrets.GRAFANA_CLOUD_METRICS_USERNAME }}
+          GRAFANA_CLOUD_METRICS_API_KEY: ${{ secrets.GRAFANA_CLOUD_METRICS_API_KEY }}
+          GRAFANA_CLOUD_LOGS_URL: ${{ secrets.GRAFANA_CLOUD_LOGS_URL }}
+          GRAFANA_CLOUD_LOGS_USERNAME: ${{ secrets.GRAFANA_CLOUD_LOGS_USERNAME }}
+          GRAFANA_CLOUD_LOGS_API_KEY: ${{ secrets.GRAFANA_CLOUD_LOGS_API_KEY }}
         with:
           host: ${{ secrets.CONTABO_SSH_HOST }}
           username: ${{ secrets.CONTABO_SSH_USER }}
           key: ${{ secrets.CONTABO_SSH_PRIVATE_KEY }}
           port: 22
-          envs: DOCKER_STACK,DOCKER_TAG,DOCKER_STACK_FILE,MONGODB_CONNECTION_STRING,SPOTIFY_CLIENT_ID,SPOTIFY_CLIENT_SECRET,APP_OAUTH_REDIRECT_URI,APP_ALLOWED_SPOTIFY_USER_IDS,APP_TOKEN_ENCRYPTION_KEY,HTTP_AUTH_ENCRYPTION_KEY,TRAEFIK_HTTP_ROUTERS_SPOTIFYCONTROL_RULE,GHCR_PAT
+          envs: DOCKER_STACK,DOCKER_TAG,DOCKER_STACK_FILE,ALLOY_CONFIG_FILE,MONGODB_CONNECTION_STRING,SPOTIFY_CLIENT_ID,SPOTIFY_CLIENT_SECRET,APP_OAUTH_REDIRECT_URI,APP_ALLOWED_SPOTIFY_USER_IDS,APP_TOKEN_ENCRYPTION_KEY,HTTP_AUTH_ENCRYPTION_KEY,TRAEFIK_HTTP_ROUTERS_SPOTIFYCONTROL_RULE,GHCR_PAT,GRAFANA_CLOUD_METRICS_URL,GRAFANA_CLOUD_METRICS_USERNAME,GRAFANA_CLOUD_METRICS_API_KEY,GRAFANA_CLOUD_LOGS_URL,GRAFANA_CLOUD_LOGS_USERNAME,GRAFANA_CLOUD_LOGS_API_KEY
           script_stop: true
           script: |
             echo "writing docker stack file"
-            mkdir -p ~/$DOCKER_STACK
+            mkdir -p ~/$DOCKER_STACK/alloy
             echo "$DOCKER_STACK_FILE" | base64 -d > ~/$DOCKER_STACK/docker-stack.yml
+            echo "$ALLOY_CONFIG_FILE" | base64 -d > ~/$DOCKER_STACK/alloy/config.alloy
 
             echo "login to ghcr.io"
             echo $GHCR_PAT | docker login ghcr.io -u christiangroth --password-stdin
@@ -85,6 +95,12 @@ jobs:
               APP_TOKEN_ENCRYPTION_KEY=$APP_TOKEN_ENCRYPTION_KEY \
               HTTP_AUTH_ENCRYPTION_KEY=$HTTP_AUTH_ENCRYPTION_KEY \
               TRAEFIK_HTTP_ROUTERS_SPOTIFYCONTROL_RULE=$TRAEFIK_HTTP_ROUTERS_SPOTIFYCONTROL_RULE \
+              GRAFANA_CLOUD_METRICS_URL=$GRAFANA_CLOUD_METRICS_URL \
+              GRAFANA_CLOUD_METRICS_USERNAME=$GRAFANA_CLOUD_METRICS_USERNAME \
+              GRAFANA_CLOUD_METRICS_API_KEY=$GRAFANA_CLOUD_METRICS_API_KEY \
+              GRAFANA_CLOUD_LOGS_URL=$GRAFANA_CLOUD_LOGS_URL \
+              GRAFANA_CLOUD_LOGS_USERNAME=$GRAFANA_CLOUD_LOGS_USERNAME \
+              GRAFANA_CLOUD_LOGS_API_KEY=$GRAFANA_CLOUD_LOGS_API_KEY \
               docker stack deploy --detach=false --prune --with-registry-auth --resolve-image changed -c ~/$DOCKER_STACK/docker-stack.yml $DOCKER_STACK
             sleep 5
 

@@ -30,6 +30,34 @@ services:
       - spotify_control
       - global_router
 
+  alloy:
+    image: grafana/alloy:v1.13.2
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    configs:
+      - source: alloy_config
+        target: /etc/alloy/config.alloy
+    environment:
+      - GRAFANA_CLOUD_METRICS_URL=${GRAFANA_CLOUD_METRICS_URL}
+      - GRAFANA_CLOUD_METRICS_USERNAME=${GRAFANA_CLOUD_METRICS_USERNAME}
+      - GRAFANA_CLOUD_METRICS_API_KEY=${GRAFANA_CLOUD_METRICS_API_KEY}
+      - GRAFANA_CLOUD_LOGS_URL=${GRAFANA_CLOUD_LOGS_URL}
+      - GRAFANA_CLOUD_LOGS_USERNAME=${GRAFANA_CLOUD_LOGS_USERNAME}
+      - GRAFANA_CLOUD_LOGS_API_KEY=${GRAFANA_CLOUD_LOGS_API_KEY}
+    networks:
+      - spotify_control
+    command:
+      - run
+      - /etc/alloy/config.alloy
+
+configs:
+  alloy_config:
+    file: ./alloy/config.alloy
+
 networks:
   spotify_control:
   global_router:
