@@ -1,0 +1,1 @@
+* add-logs-metadata: Add container name and service name as log metadata labels for Loki log filtering.
