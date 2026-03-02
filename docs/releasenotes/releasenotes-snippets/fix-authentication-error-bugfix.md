@@ -1,0 +1,1 @@
+* fix-authentication-error: OutboxStartupRecovery no longer crashes the application when MongoDB authentication fails during startup.

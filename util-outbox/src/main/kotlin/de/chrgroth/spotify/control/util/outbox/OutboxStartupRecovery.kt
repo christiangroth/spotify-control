@@ -23,28 +23,37 @@ class OutboxStartupRecovery(
     private val scope = CoroutineScope(Dispatchers.IO)
 
     fun onStart(@Observes @Priority(1) event: StartupEvent) {
-        outbox.resetStaleProcessingTasks()
+        try {
+            outbox.resetStaleProcessingTasks()
+        } catch (e: Exception) {
+            logger.error(e) { "Failed to reset stale processing tasks during startup recovery" }
+        }
         val now = Instant.now()
         dispatcher.partitions.forEach { partition ->
-            val partitionInfo = outbox.findPartition(partition)
-            // partitionInfo.status is persisted as a String; compare via .name
-            if (partitionInfo?.status == OutboxPartitionStatus.PAUSED.name) {
-                val pausedUntil = partitionInfo.pausedUntil
-                if (pausedUntil != null && pausedUntil.isAfter(now)) {
-                    val delayMs = pausedUntil.toEpochMilli() - now.toEpochMilli()
-                    scope.launch {
-                        delay(delayMs)
+            try {
+                val partitionInfo = outbox.findPartition(partition)
+                // partitionInfo.status is persisted as a String; compare via .name
+                if (partitionInfo?.status == OutboxPartitionStatus.PAUSED.name) {
+                    val pausedUntil = partitionInfo.pausedUntil
+                    if (pausedUntil != null && pausedUntil.isAfter(now)) {
+                        val delayMs = pausedUntil.toEpochMilli() - now.toEpochMilli()
+                        scope.launch {
+                            delay(delayMs)
+                            outbox.activatePartition(partition)
+                            outbox.signal(partition)
+                            logger.info { "Resumed partition ${partition.key} after delayed activation" }
+                        }
+                        logger.info { "Partition ${partition.key} still paused until $pausedUntil, scheduled delayed activation" }
+                    } else {
                         outbox.activatePartition(partition)
                         outbox.signal(partition)
-                        logger.info { "Resumed partition ${partition.key} after delayed activation" }
+                        logger.info { "Reactivated expired paused partition ${partition.key}" }
                     }
-                    logger.info { "Partition ${partition.key} still paused until $pausedUntil, scheduled delayed activation" }
                 } else {
-                    outbox.activatePartition(partition)
                     outbox.signal(partition)
-                    logger.info { "Reactivated expired paused partition ${partition.key}" }
                 }
-            } else {
+            } catch (e: Exception) {
+                logger.error(e) { "Failed to recover partition ${partition.key} during startup recovery, signalling anyway" }
                 outbox.signal(partition)
             }
         }
