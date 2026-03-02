@@ -1,3 +1,8 @@
+# 0.7.0 - 2026.03.02
+## New Features
+* implement-monitoring-basics: Add monitoring via Grafana Alloy forwarding Prometheus metrics and structured JSON logs to Grafana Cloud.
+* implement-monitoring-basics: Add custom outbox metrics (enqueued, processed, failed counters per partition).
+
 # 0.6.0 - 2026.03.01
 ## New Features
 * update-throttling-concept: Implement outbox throttling as core feature with OutboxTaskResult sealed interface for rate-limit handling in Spotify adapters.
