@@ -37,10 +37,10 @@ services:
       restart_policy:
         condition: on-failure
     volumes:
+      - "/etc/timezone:/etc/timezone:ro"
+      - "/etc/localtime:/etc/localtime:ro"
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
-    configs:
-      - source: alloy_config
-        target: /etc/alloy/config.alloy
+      - "~/spotify-control/alloy/config.alloy:/etc/alloy/config.alloy:ro"
     environment:
       - GRAFANA_CLOUD_METRICS_URL=${GRAFANA_CLOUD_METRICS_URL}
       - GRAFANA_CLOUD_METRICS_USERNAME=${GRAFANA_CLOUD_METRICS_USERNAME}
@@ -53,10 +53,6 @@ services:
     command:
       - run
       - /etc/alloy/config.alloy
-
-configs:
-  alloy_config:
-    file: ./alloy/config.alloy
 
 networks:
   spotify_control:
