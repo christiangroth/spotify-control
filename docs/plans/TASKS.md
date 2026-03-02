@@ -6,15 +6,11 @@
 - Dependency updates and other maintenance tasks
 - local development?
 
-# Spotify Connect
-
-- Fix login
-
 # Playback data gathering
 
-- create minimal outbox
-- cronjob to fetch recently played
-- cronjob to update user profiles
+- fix cronjobs
+- fix dashboard
+- fix docs rendering
 - playback duplicate/skip handling
 - simple dashboard stats (outbox, playback events)
 
