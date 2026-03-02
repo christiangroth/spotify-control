@@ -4,7 +4,6 @@ import io.quarkus.runtime.StartupEvent
 import jakarta.annotation.PreDestroy
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.enterprise.event.Observes
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
@@ -29,15 +28,8 @@ class OutboxPartitionWorker(
                     channel.receive()
                     var processed: Boolean
                     do {
-                        try {
-                            processed = outbox.processNext(partition) { task ->
-                                dispatcher.dispatch(task)
-                            }
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
-                            logger.error(e) { "Unexpected error processing outbox partition ${partition.key}" }
-                            processed = false
+                        processed = outbox.processNext(partition) { task ->
+                            dispatcher.dispatch(task)
                         }
                     } while (processed && isActive)
                 }

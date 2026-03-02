@@ -1,1 +1,1 @@
-* fix-authentication-error: OutboxStartupRecovery no longer crashes the application when MongoDB authentication fails during startup.
+* fix-authentication-error: MongoDB connection configuration changed from connection-string to separate properties to fix authentication issues with MongoDB Atlas.
