@@ -53,7 +53,7 @@ class OutboxStartupRecovery(
                     outbox.signal(partition)
                 }
             } catch (e: Exception) {
-                logger.error(e) { "Failed to recover partition ${partition.key} during startup recovery, signalling anyway" }
+                logger.error(e) { "Failed to recover partition ${partition.key} during startup recovery, signaling anyway" }
                 outbox.signal(partition)
             }
         }
