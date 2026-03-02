@@ -4,4 +4,4 @@ set -a
 . ./.env
 set +a
 
-./gradlew :application-quarkus:quarkusDev -Dquarkus.profile=prod
+./gradlew :application-quarkus:quarkusDev -Dquarkus.profile=prod -Dquarkus.log.console.json=false
