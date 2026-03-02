@@ -1,3 +1,6 @@
+# 0.7.1 - 2026.03.02
+## New Features
+* add-logs-metadata: Add container name and service name as log metadata labels for Loki log filtering.
 # 0.7.0 - 2026.03.02
 ## New Features
 * implement-monitoring-basics: Add monitoring via Grafana Alloy forwarding Prometheus metrics and structured JSON logs to Grafana Cloud.
