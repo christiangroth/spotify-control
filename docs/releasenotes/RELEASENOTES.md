@@ -1,3 +1,6 @@
+# 0.9.3 - 2026.03.03
+## Bugfixes / Chore
+* increase-polling-recently-played: Increased polling frequency for recently played tracks from every 15 minutes to every 10 minutes.
 # 0.9.2 - 2026.03.03
 ## Bugfixes / Chore
 * change-to-repository-pattern: Changed MongoDB entities from active record pattern to Quarkus Panache repository pattern.
