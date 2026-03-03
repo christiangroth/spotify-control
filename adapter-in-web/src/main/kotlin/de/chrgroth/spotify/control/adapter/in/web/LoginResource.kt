@@ -5,7 +5,7 @@ import de.chrgroth.spotify.control.domain.error.OAuthError
 import de.chrgroth.spotify.control.domain.error.TokenError
 import io.quarkus.qute.Location
 import io.quarkus.qute.Template
-import io.quarkus.qute.TemplateInstance
+import io.quarkus.security.identity.SecurityIdentity
 import jakarta.annotation.security.PermitAll
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
@@ -14,6 +14,8 @@ import jakarta.ws.rs.Path
 import jakarta.ws.rs.Produces
 import jakarta.ws.rs.QueryParam
 import jakarta.ws.rs.core.MediaType
+import jakarta.ws.rs.core.Response
+import java.net.URI
 
 @Path("/")
 @ApplicationScoped
@@ -24,11 +26,18 @@ class LoginResource {
   @Location("login.html")
   private lateinit var loginTemplate: Template
 
+  @Inject
+  private lateinit var securityIdentity: SecurityIdentity
+
   @GET
   @PermitAll
   @Produces(MediaType.TEXT_HTML)
-  fun index(@QueryParam("error") error: String?): TemplateInstance =
-      loginTemplate.data("errorMessage", error?.let { errorMessage(it) })
+  fun index(@QueryParam("error") error: String?): Response {
+    if (!securityIdentity.isAnonymous) {
+      return Response.temporaryRedirect(URI.create("/ui/dashboard")).build()
+    }
+    return Response.ok(loginTemplate.data("errorMessage", error?.let { errorMessage(it) })).build()
+  }
 
   private fun errorMessage(code: String): String = when (code) {
       AuthError.USER_NOT_ALLOWED.code -> "You are not allowed to log in with this Spotify account."

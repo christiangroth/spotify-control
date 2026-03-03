@@ -93,6 +93,45 @@ class OAuthFlowTests {
     }
 
     @Test
+    fun `index page redirects to dashboard with valid session cookie`() {
+        // First: do full OAuth flow to register the user in the database
+        val authorizeResponse = given()
+            .redirects().follow(false)
+            .`when`()
+            .get("/oauth/authorize")
+            .then()
+            .statusCode(307)
+            .extract()
+            .response()
+
+        val location = authorizeResponse.getHeader("Location")
+        val state = location.substringAfter("state=").substringBefore("&")
+
+        val callbackResponse = given()
+            .redirects().follow(false)
+            .queryParam("code", "mock-auth-code")
+            .queryParam("state", state)
+            .`when`()
+            .get("/oauth/callback")
+            .then()
+            .statusCode(307)
+            .extract()
+            .response()
+
+        val sessionCookie = callbackResponse.cookie("spotify-session")
+
+        // Hitting index with a valid session cookie should redirect to dashboard
+        given()
+            .cookie("spotify-session", sessionCookie)
+            .redirects().follow(false)
+            .`when`()
+            .get("/")
+            .then()
+            .statusCode(307)
+            .header("Location", org.hamcrest.CoreMatchers.endsWith("/ui/dashboard"))
+    }
+
+    @Test
     fun `logout clears session and redirects to root`() {
         val cookieValue = (tokenEncryption.encrypt("test-user-a") as arrow.core.Either.Right).value
 

@@ -1,0 +1,1 @@
+* fix-index-page-redirect: Redirect authenticated users from the index page to the dashboard UI when a valid session cookie is present.
