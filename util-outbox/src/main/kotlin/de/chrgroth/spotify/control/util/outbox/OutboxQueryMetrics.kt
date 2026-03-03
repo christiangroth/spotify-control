@@ -1,4 +1,4 @@
-package de.chrgroth.spotify.control.adapter.out.mongodb
+package de.chrgroth.spotify.control.util.outbox
 
 import io.micrometer.core.instrument.Counter
 import io.micrometer.core.instrument.MeterRegistry
@@ -10,7 +10,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
 @ApplicationScoped
-class MongoQueryMetrics(
+class OutboxQueryMetrics(
     private val meterRegistry: MeterRegistry,
     @ConfigProperty(name = "app.mongodb.slow-query-threshold-ms", defaultValue = "250")
     private val slowQueryThresholdMs: Long,
