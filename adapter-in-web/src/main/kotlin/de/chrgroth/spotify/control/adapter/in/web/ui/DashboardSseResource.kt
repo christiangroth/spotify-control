@@ -15,11 +15,10 @@ import jakarta.ws.rs.core.MediaType
 @Suppress("Unused")
 class DashboardSseResource(
     private val sseService: DashboardSseService,
-    private val securityIdentity: SecurityIdentity,
 ) {
 
     @GET
     @Authenticated
     @Produces(MediaType.SERVER_SENT_EVENTS)
-    fun events(): Multi<String> = sseService.stream(UserId(securityIdentity.principal.name))
+    fun events(securityIdentity: SecurityIdentity): Multi<String> = sseService.stream(UserId(securityIdentity.principal.name))
 }

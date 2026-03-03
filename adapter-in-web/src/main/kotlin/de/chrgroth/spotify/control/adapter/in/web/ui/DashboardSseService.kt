@@ -27,7 +27,7 @@ class DashboardSseService : DashboardRefreshPort, OutboxPartitionObserver {
 
     override fun notifyUser(userId: UserId) = emitToUser(userId.value, "refresh")
 
-    override fun notifyAllUsers() = emittersByUser.keys.forEach { emitToUser(it, "refresh") }
+    private fun notifyAllUsers() = emittersByUser.keys.forEach { emitToUser(it, "refresh") }
 
     override fun onPartitionPaused(partition: OutboxPartition) = notifyAllUsers()
 
