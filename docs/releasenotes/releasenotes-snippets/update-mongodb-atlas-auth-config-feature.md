@@ -1,1 +1,1 @@
-* update-mongodb-atlas-auth-config: Answer to the ultimate question of life, the universe, and everything.
+* update-mongodb-atlas-auth-config: Switch MongoDB Atlas connection from connection-string to separate host, credentials and tuning configuration.
