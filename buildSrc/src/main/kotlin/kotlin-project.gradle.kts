@@ -1,9 +1,9 @@
-import io.gitlab.arturbosch.detekt.Detekt
+import dev.detekt.gradle.Detekt
 import kotlinx.kover.api.CounterType
 import kotlinx.kover.api.VerificationTarget
 import kotlinx.kover.api.VerificationValueType
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21
-import org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_1
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_25
+import org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_3
 
 plugins {
   kotlin("jvm")
@@ -11,7 +11,7 @@ plugins {
   `java-library`
   `java-test-fixtures`
 
-  id("io.gitlab.arturbosch.detekt")
+  id("dev.detekt")
   id("org.jetbrains.kotlinx.kover")
 }
 
@@ -46,8 +46,8 @@ dependencies {
 }
 
 java {
-  sourceCompatibility = JavaVersion.VERSION_21
-  targetCompatibility = JavaVersion.VERSION_21
+  sourceCompatibility = JavaVersion.VERSION_25
+  targetCompatibility = JavaVersion.VERSION_25
 }
 
 detekt {
@@ -58,13 +58,13 @@ detekt {
 tasks {
 
   withType<Detekt> {
-    this.jvmTarget = "21"
+    this.jvmTarget.set("25")
   }
 
   kotlin {
-    compilerOptions.apiVersion = KOTLIN_2_1
-    compilerOptions.languageVersion = KOTLIN_2_1
-    compilerOptions.jvmTarget = JVM_21
+    compilerOptions.apiVersion = KOTLIN_2_3
+    compilerOptions.languageVersion = KOTLIN_2_3
+    compilerOptions.jvmTarget = JVM_25
     compilerOptions.allWarningsAsErrors = true
     compilerOptions.optIn = listOf("kotlin.time.ExperimentalTime")
   }

@@ -11,7 +11,7 @@ import java.time.temporal.ChronoUnit
 @Suppress("Unused")
 class OutboxArchiveCleanupJob(
     private val repository: MongoOutboxRepository,
-    @ConfigProperty(name = "app.outbox.archive-retention-days")
+    @param:ConfigProperty(name = "app.outbox.archive-retention-days")
     private val retentionDays: Long,
 ) {
 

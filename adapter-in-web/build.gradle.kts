@@ -69,6 +69,9 @@ tasks {
 
   compileKotlin {
     dependsOn(openApiGenerate)
+    compilerOptions {
+      freeCompilerArgs.add("-Xannotation-default-target=param-property")
+    }
   }
 
   val syncDocsMd by registering(Sync::class) {
