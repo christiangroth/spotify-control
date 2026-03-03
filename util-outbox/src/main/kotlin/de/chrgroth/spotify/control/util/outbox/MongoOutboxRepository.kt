@@ -184,6 +184,9 @@ class MongoOutboxRepository : OutboxRepository {
         }
     }
 
+    override fun countByPartition(partition: OutboxPartition): Long =
+        OutboxDocument.count("partition = ?1", partition.key)
+  
     fun deleteArchiveEntriesOlderThan(cutoff: Instant): Long {
         val result = OutboxArchiveDocument.mongoCollection().deleteMany(
             Filters.lt("completedAt", cutoff),

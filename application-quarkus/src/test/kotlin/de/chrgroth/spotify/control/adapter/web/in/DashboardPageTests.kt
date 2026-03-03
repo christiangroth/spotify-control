@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test
 class DashboardPageTests {
 
   @Test
-  fun `dashboard page is available and displays logout link and welcome message`() {
+  fun `dashboard page is available and displays logout link and personalized welcome message`() {
     given()
       .`when`()
       .get("/ui/dashboard")
@@ -20,6 +20,28 @@ class DashboardPageTests {
       .contentType(containsString("text/html"))
       .body(containsString("""data-testid="logout-link""""))
       .body(containsString("""data-testid="welcome-message""""))
-      .body(containsString("Welcome to SpCtl"))
+      .body(containsString("Hi "))
+  }
+
+  @Test
+  fun `dashboard page displays stats section`() {
+    given()
+      .`when`()
+      .get("/ui/dashboard")
+      .then()
+      .statusCode(200)
+      .body(containsString("""id="stats-section""""))
+      .body(containsString("Total Playback Events"))
+      .body(containsString("Playback Events (Last 30 Days)"))
+  }
+
+  @Test
+  fun `dashboard page contains sse script`() {
+    given()
+      .`when`()
+      .get("/ui/dashboard")
+      .then()
+      .statusCode(200)
+      .body(containsString("/ui/dashboard/events"))
   }
 }
