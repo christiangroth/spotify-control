@@ -1,0 +1,1 @@
+* update-partition-table-appearance: Fixed partition information table to use dark mode styling on dashboard. 
