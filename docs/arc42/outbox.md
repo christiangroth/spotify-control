@@ -34,6 +34,7 @@ The `util-outbox` module provides a persistent, reliable task queue backed by Mo
 | `OutboxDocument`             | Panache entity mapped to the `outbox` MongoDB collection.                            |
 | `OutboxArchiveDocument`      | Panache entity mapped to the `outbox_archive` MongoDB collection.                    |
 | `OutboxPartitionDocument`    | Panache entity mapped to the `outbox_partitions` MongoDB collection.                 |
+| `OutboxArchiveCleanupJob`    | Scheduled job that deletes old archive entries nightly (configurable retention).     |
 
 ## Defining Partitions and Events
 
@@ -106,6 +107,17 @@ the task is marked `FAILED` and remains in the `outbox` collection for manual re
 
 Call `outbox.activatePartition(partition)` / use `OutboxRepository.pausePartition(...)` to pause.
 When paused, `OutboxRepository.claim` returns `null` for that partition.
+
+## Archive Cleanup
+
+`OutboxArchiveCleanupJob` runs every night at 01:00 and removes archive entries whose `completedAt`
+timestamp is older than the configured retention period:
+
+```properties
+app.outbox.archive-retention-days=365
+```
+
+The default value is 365 days.
 
 ## MongoDB Collections
 

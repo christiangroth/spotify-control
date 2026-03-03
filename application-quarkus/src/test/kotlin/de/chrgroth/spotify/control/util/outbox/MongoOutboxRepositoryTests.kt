@@ -196,4 +196,30 @@ class MongoOutboxRepositoryTests {
 
         assertThat(first.priority).isEqualTo(OutboxTaskPriority.HIGH)
     }
+
+    @Test
+    fun `deleteArchiveEntriesOlderThan removes entries older than cutoff and keeps newer ones`() {
+        val partition = uniquePartition()
+
+        // Enqueue and complete two tasks
+        repository.enqueue(partition, event("TestEvent:1"), """{"id":"1"}""")
+        val oldTask = repository.claim(partition)!!
+        repository.complete(oldTask)
+
+        repository.enqueue(partition, event("TestEvent:2"), """{"id":"2"}""")
+        val recentTask = repository.claim(partition)!!
+        repository.complete(recentTask)
+
+        // Delete entries older than 1 day in the future (i.e. delete everything)
+        val deletedAll = repository.deleteArchiveEntriesOlderThan(Instant.now().plus(Duration.ofDays(1)))
+        assertThat(deletedAll).isGreaterThanOrEqualTo(2)
+
+        // Delete entries older than 1 day in the past (should not delete recently completed ones)
+        repository.enqueue(partition, event("TestEvent:3"), """{"id":"3"}""")
+        val newestTask = repository.claim(partition)!!
+        repository.complete(newestTask)
+
+        val deletedNone = repository.deleteArchiveEntriesOlderThan(Instant.now().minus(Duration.ofDays(1)))
+        assertThat(deletedNone).isEqualTo(0)
+    }
 }
