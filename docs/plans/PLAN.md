@@ -1,21 +1,6 @@
 # Projektplan: Spotify Playlist Manager
 
-Stand: 2026.02.24
-
-## Leitprinzip
-
-Jedes Inkrement ist **deploybar und in sich abgeschlossen**. Keine halbfertigen Features auf dem VPS. Nach jeder Phase kannst du zwei Monate pausieren und weißt beim Wiedereinstieg
-genau wo du stehst.
-
-## Phase 1: Fundament & Playback-Tracking
-
-*Ziel: So schnell wie möglich Daten sammeln. Alles andere ist sekundär.*
-
-- Spotify Poll-Job: `recently_played` alle 5 Minuten → Raw Events in MongoDB
-- Outbox-Grundgerüst (nur Spotify-Partition, nur PollRecentlyPlayed)
-- Minimalstes Dashboard: Login-Status, "X Events gesammelt seit Y"
-
-**Nach Phase 1 läuft der Service im Hintergrund und sammelt Daten. Das ist der wichtigste Meilenstein.**
+Stand: 2026.03.03
 
 ## Phase 2: Playlist-Spiegel
 
