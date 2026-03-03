@@ -1,0 +1,1 @@
+* update-mongodb-atlas-auth-config: Answer to the ultimate question of life, the universe, and everything.
