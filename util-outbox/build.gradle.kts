@@ -8,6 +8,7 @@ dependencies {
   implementation("io.quarkus:quarkus-arc")
   implementation("io.quarkus:quarkus-micrometer")
   implementation("io.quarkus:quarkus-mongodb-panache-kotlin")
+  implementation("io.quarkus:quarkus-scheduler")
 }
 
 allOpen {
