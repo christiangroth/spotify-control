@@ -1,16 +1,12 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
 import io.quarkus.mongodb.panache.common.MongoEntity
-import io.quarkus.mongodb.panache.kotlin.PanacheMongoCompanionBase
-import io.quarkus.mongodb.panache.kotlin.PanacheMongoEntityBase
 import org.bson.codecs.pojo.annotations.BsonId
 import org.bson.types.ObjectId
 import java.time.Instant
 
 @MongoEntity(collection = "recently_played")
-class RecentlyPlayedDocument : PanacheMongoEntityBase() {
-
-  companion object : PanacheMongoCompanionBase<RecentlyPlayedDocument, ObjectId>
+class RecentlyPlayedDocument {
 
   @BsonId
   var id: ObjectId = ObjectId()

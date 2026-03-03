@@ -4,6 +4,7 @@ import de.chrgroth.spotify.control.domain.model.User
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
+import jakarta.inject.Inject
 import kotlin.time.toJavaInstant
 import kotlin.time.toKotlinInstant
 import mu.KLogging
@@ -11,14 +12,17 @@ import mu.KLogging
 @ApplicationScoped
 class UserRepositoryAdapter : UserRepositoryPort {
 
+    @Inject
+    lateinit var userDocumentRepository: UserDocumentRepository
+
     override fun findById(spotifyUserId: UserId): User? =
-        UserDocument.findById(spotifyUserId.value)?.toDomain()
+        userDocumentRepository.findById(spotifyUserId.value)?.toDomain()
 
     override fun findAll(): List<User> =
-        UserDocument.listAll().map { it.toDomain() }
+        userDocumentRepository.listAll().map { it.toDomain() }
 
     override fun upsert(user: User) {
-        val existing = UserDocument.findById(user.spotifyUserId.value)
+        val existing = userDocumentRepository.findById(user.spotifyUserId.value)
         if (existing == null) {
             logger.info { "Creating new user: ${user.spotifyUserId.value}" }
         } else {
@@ -33,7 +37,7 @@ class UserRepositoryAdapter : UserRepositoryPort {
         document.encryptedRefreshToken = user.encryptedRefreshToken
         document.tokenExpiresAt = user.tokenExpiresAt.toJavaInstant()
         document.lastLoginAt = user.lastLoginAt.toJavaInstant()
-        document.persistOrUpdate()
+        userDocumentRepository.persistOrUpdate(document)
     }
 
     private fun UserDocument.toDomain() = User(

@@ -1,15 +1,11 @@
 package de.chrgroth.spotify.control.util.outbox
 
 import io.quarkus.mongodb.panache.common.MongoEntity
-import io.quarkus.mongodb.panache.kotlin.PanacheMongoCompanionBase
-import io.quarkus.mongodb.panache.kotlin.PanacheMongoEntityBase
 import org.bson.codecs.pojo.annotations.BsonId
 import java.time.Instant
 
 @MongoEntity(collection = "outbox_partitions")
-class OutboxPartitionDocument : PanacheMongoEntityBase() {
-
-    companion object : PanacheMongoCompanionBase<OutboxPartitionDocument, String>
+class OutboxPartitionDocument {
 
     @BsonId
     lateinit var partitionKey: String

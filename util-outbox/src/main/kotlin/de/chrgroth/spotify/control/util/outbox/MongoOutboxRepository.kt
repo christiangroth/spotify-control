@@ -6,12 +6,22 @@ import com.mongodb.client.model.ReturnDocument
 import com.mongodb.client.model.Sorts
 import com.mongodb.client.model.Updates
 import jakarta.enterprise.context.ApplicationScoped
+import jakarta.inject.Inject
 import mu.KLogging
 import java.time.Instant
 import java.util.UUID
 
 @ApplicationScoped
 class MongoOutboxRepository : OutboxRepository {
+
+    @Inject
+    lateinit var outboxDocumentRepository: OutboxDocumentRepository
+
+    @Inject
+    lateinit var outboxPartitionDocumentRepository: OutboxPartitionDocumentRepository
+
+    @Inject
+    lateinit var outboxArchiveDocumentRepository: OutboxArchiveDocumentRepository
 
     override fun claim(partition: OutboxPartition): OutboxTask? {
         val partitionDoc = findPartition(partition)
@@ -20,7 +30,7 @@ class MongoOutboxRepository : OutboxRepository {
         }
 
         val now = Instant.now()
-        val doc = OutboxDocument.mongoCollection().findOneAndUpdate(
+        val doc = outboxDocumentRepository.mongoCollection().findOneAndUpdate(
             Filters.and(
                 Filters.eq("partition", partition.key),
                 Filters.eq("status", OutboxTaskStatus.PENDING.name),
@@ -59,8 +69,8 @@ class MongoOutboxRepository : OutboxRepository {
             lastError = task.lastError
             completedAt = now
         }
-        archiveDoc.persist()
-        OutboxDocument.deleteById(task.id)
+        outboxArchiveDocumentRepository.persist(archiveDoc)
+        outboxDocumentRepository.deleteById(task.id)
     }
 
     override fun fail(task: OutboxTask, error: String, nextRetryAt: Instant?) {
@@ -77,7 +87,7 @@ class MongoOutboxRepository : OutboxRepository {
         } else {
             updates.add(Updates.unset("nextRetryAt"))
         }
-        OutboxDocument.mongoCollection().updateOne(
+        outboxDocumentRepository.mongoCollection().updateOne(
             Filters.eq("_id", task.id),
             Updates.combine(updates),
         )
@@ -85,7 +95,7 @@ class MongoOutboxRepository : OutboxRepository {
 
     override fun reschedule(task: OutboxTask, nextRetryAt: Instant) {
         val now = Instant.now()
-        OutboxDocument.mongoCollection().updateOne(
+        outboxDocumentRepository.mongoCollection().updateOne(
             Filters.eq("_id", task.id),
             Updates.combine(
                 Updates.set("status", OutboxTaskStatus.PENDING.name),
@@ -102,7 +112,7 @@ class MongoOutboxRepository : OutboxRepository {
         priority: OutboxTaskPriority,
     ): Boolean {
         val deduplicationKey = event.deduplicationKey()
-        val existing = OutboxDocument.mongoCollection().find(
+        val existing = outboxDocumentRepository.mongoCollection().find(
             Filters.and(
                 Filters.eq("partition", partition.key),
                 Filters.eq("deduplicationKey", deduplicationKey),
@@ -130,12 +140,12 @@ class MongoOutboxRepository : OutboxRepository {
             this.priority = priority.name
             lastError = null
         }
-        doc.persist()
+        outboxDocumentRepository.persist(doc)
         return true
     }
 
     override fun pausePartition(partition: OutboxPartition, reason: String, pausedUntil: Instant) {
-        OutboxPartitionDocument.mongoCollection().findOneAndUpdate(
+        outboxPartitionDocumentRepository.mongoCollection().findOneAndUpdate(
             Filters.eq("_id", partition.key),
             Updates.combine(
                 Updates.set("status", OutboxPartitionStatus.PAUSED.name),
@@ -147,7 +157,7 @@ class MongoOutboxRepository : OutboxRepository {
     }
 
     override fun activatePartition(partition: OutboxPartition) {
-        OutboxPartitionDocument.mongoCollection().findOneAndUpdate(
+        outboxPartitionDocumentRepository.mongoCollection().findOneAndUpdate(
             Filters.eq("_id", partition.key),
             Updates.combine(
                 Updates.set("status", OutboxPartitionStatus.ACTIVE.name),
@@ -159,7 +169,7 @@ class MongoOutboxRepository : OutboxRepository {
     }
 
     override fun findPartition(partition: OutboxPartition): OutboxPartitionInfo? =
-        OutboxPartitionDocument.findById(partition.key)?.toInfo()
+        outboxPartitionDocumentRepository.findById(partition.key)?.toInfo()
 
     private fun OutboxPartitionDocument.toInfo() = OutboxPartitionInfo(
         key = partitionKey,
@@ -171,7 +181,7 @@ class MongoOutboxRepository : OutboxRepository {
     /** Resets all PROCESSING tasks back to PENDING. Should be called at application startup to recover tasks that were interrupted mid-processing. */
     override fun resetStaleProcessingTasks() {
         val now = Instant.now()
-        val result = OutboxDocument.mongoCollection().updateMany(
+        val result = outboxDocumentRepository.mongoCollection().updateMany(
             Filters.eq("status", OutboxTaskStatus.PROCESSING.name),
             Updates.combine(
                 Updates.set("status", OutboxTaskStatus.PENDING.name),
@@ -185,10 +195,10 @@ class MongoOutboxRepository : OutboxRepository {
     }
 
     override fun countByPartition(partition: OutboxPartition): Long =
-        OutboxDocument.count("partition = ?1", partition.key)
+        outboxDocumentRepository.count("partition = ?1", partition.key)
   
     fun deleteArchiveEntriesOlderThan(cutoff: Instant): Long {
-        val result = OutboxArchiveDocument.mongoCollection().deleteMany(
+        val result = outboxArchiveDocumentRepository.mongoCollection().deleteMany(
             Filters.lt("completedAt", cutoff),
         )
         return result.deletedCount

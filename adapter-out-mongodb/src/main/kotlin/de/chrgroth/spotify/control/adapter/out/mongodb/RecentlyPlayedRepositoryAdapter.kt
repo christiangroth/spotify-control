@@ -8,6 +8,7 @@ import de.chrgroth.spotify.control.domain.model.RecentlyPlayedItem
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.out.RecentlyPlayedRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
+import jakarta.inject.Inject
 import kotlin.time.Instant
 import kotlin.time.toJavaInstant
 import kotlin.time.toKotlinInstant
@@ -18,10 +19,13 @@ import org.bson.Document
 @ApplicationScoped
 class RecentlyPlayedRepositoryAdapter : RecentlyPlayedRepositoryPort {
 
+    @Inject
+    lateinit var recentlyPlayedDocumentRepository: RecentlyPlayedDocumentRepository
+
     override fun findExistingPlayedAts(spotifyUserId: UserId, playedAts: Set<Instant>): Set<Instant> {
         if (playedAts.isEmpty()) return emptySet()
         val javaPlayedAts = playedAts.map { it.toJavaInstant() }
-        return RecentlyPlayedDocument
+        return recentlyPlayedDocumentRepository
             .list("spotifyUserId = ?1 and playedAt in ?2", spotifyUserId.value, javaPlayedAts)
             .map { it.playedAt.toKotlinInstant() }
             .toSet()
@@ -40,14 +44,14 @@ class RecentlyPlayedRepositoryAdapter : RecentlyPlayedRepositoryPort {
             }
         }
         logger.info { "Saving ${documents.size} recently played documents" }
-        RecentlyPlayedDocument.persist(documents)
+        recentlyPlayedDocumentRepository.persist(documents)
     }
 
     override fun countAll(spotifyUserId: UserId): Long =
-        RecentlyPlayedDocument.count("spotifyUserId = ?1", spotifyUserId.value)
+        recentlyPlayedDocumentRepository.count("spotifyUserId = ?1", spotifyUserId.value)
 
     override fun countSince(spotifyUserId: UserId, since: Instant): Long =
-        RecentlyPlayedDocument.count(
+        recentlyPlayedDocumentRepository.count(
             "spotifyUserId = ?1 and playedAt >= ?2",
             spotifyUserId.value,
             since.toJavaInstant(),
@@ -67,7 +71,7 @@ class RecentlyPlayedRepositoryAdapter : RecentlyPlayedRepositoryPort {
             ),
             Aggregates.sort(Sorts.ascending("_id")),
         )
-        return RecentlyPlayedDocument.mongoCollection()
+        return recentlyPlayedDocumentRepository.mongoCollection()
             .aggregate(pipeline, Document::class.java)
             .map { doc ->
                 val dateStr = doc.getString("_id")
