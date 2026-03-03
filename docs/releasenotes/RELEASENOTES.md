@@ -1,3 +1,6 @@
+# 0.9.1 - 2026.03.03
+## Bugfixes / Chore
+* update-partition-table-appearance: Fixed partition information table to use dark mode styling on dashboard. 
 # 0.9.0 - 2026.03.03
 ## New Features
 * enhance-dashboard-features: Dashboard now shows a personalised greeting, playback statistics, outbox partition health, and live updates via server-sent events.
