@@ -11,7 +11,7 @@ import java.time.temporal.ChronoUnit
 
 class OutboxArchiveCleanupJobTests {
 
-    private val repository: OutboxRepository = mockk()
+    private val repository: MongoOutboxRepository = mockk()
 
     @Test
     fun `run deletes archive entries older than retention period`() {

@@ -10,8 +10,8 @@ import java.time.temporal.ChronoUnit
 @ApplicationScoped
 @Suppress("Unused")
 class OutboxArchiveCleanupJob(
-    private val repository: OutboxRepository,
-    @ConfigProperty(name = "app.outbox.archive-retention-days", defaultValue = "365")
+    private val repository: MongoOutboxRepository,
+    @ConfigProperty(name = "app.outbox.archive-retention-days")
     private val retentionDays: Long,
 ) {
 

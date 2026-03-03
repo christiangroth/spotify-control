@@ -184,7 +184,7 @@ class MongoOutboxRepository : OutboxRepository {
         }
     }
 
-    override fun deleteArchiveEntriesOlderThan(cutoff: Instant): Long {
+    fun deleteArchiveEntriesOlderThan(cutoff: Instant): Long {
         val result = OutboxArchiveDocument.mongoCollection().deleteMany(
             Filters.lt("completedAt", cutoff),
         )

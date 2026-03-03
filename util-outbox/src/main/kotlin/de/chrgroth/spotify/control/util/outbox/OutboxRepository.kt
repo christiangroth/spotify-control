@@ -17,5 +17,4 @@ interface OutboxRepository {
     fun activatePartition(partition: OutboxPartition)
     fun findPartition(partition: OutboxPartition): OutboxPartitionInfo?
     fun resetStaleProcessingTasks()
-    fun deleteArchiveEntriesOlderThan(cutoff: Instant): Long
 }
