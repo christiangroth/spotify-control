@@ -1,3 +1,6 @@
+# 0.9.0 - 2026.03.03
+## New Features
+* enhance-dashboard-features: Dashboard now shows a personalised greeting, playback statistics, outbox partition health, and live updates via server-sent events.
 # 0.8.0 - 2026.03.03
 ## New Features
 * add-outbox-archive-cleanup: Added nightly cleanup job for outbox archive that deletes documents older than a configurable number of days (default: 365).
