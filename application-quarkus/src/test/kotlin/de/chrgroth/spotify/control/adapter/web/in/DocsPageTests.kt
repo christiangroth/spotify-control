@@ -113,6 +113,6 @@ class DocsPageTests {
     assertThat(body).contains("""id="docs-raw"""")
     assertThat(body).contains(expectedMarkdownHeader)
     assertThat(body).contains("marked.parse(")
-    assertThat(body.indexOf("marked.min.js")).isLessThan(body.indexOf("marked.parse("))
+    assertThat(body.indexOf("marked.umd.js")).isLessThan(body.indexOf("marked.parse("))
   }
 }
