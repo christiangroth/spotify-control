@@ -5,6 +5,8 @@ import io.micrometer.core.instrument.Gauge
 import io.micrometer.core.instrument.MeterRegistry
 import jakarta.annotation.PreDestroy
 import jakarta.enterprise.context.ApplicationScoped
+import jakarta.enterprise.inject.Any
+import jakarta.enterprise.inject.Instance
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.CoroutineScope
@@ -18,11 +20,13 @@ class Outbox(
     private val repository: OutboxRepository,
     private val wakeupService: OutboxWakeupService,
     private val meterRegistry: MeterRegistry,
+    @Any private val partitionObservers: Instance<OutboxPartitionObserver>,
 ) {
 
     private val scope = CoroutineScope(Dispatchers.IO)
 
     private val processor = OutboxProcessor(repository) { partition, retryAfter ->
+        partitionObservers.forEach { it.onPartitionPaused(partition) }
         scope.launch {
             delay(retryAfter.toMillis())
             activatePartition(partition)
@@ -83,6 +87,7 @@ class Outbox(
     fun activatePartition(partition: OutboxPartition) {
         repository.activatePartition(partition)
         getOrCreatePartitionStatusGauge(partition).set(1)
+        partitionObservers.forEach { it.onPartitionActivated(partition) }
     }
 
     private fun getOrCreatePartitionStatusGauge(partition: OutboxPartition): AtomicInteger =

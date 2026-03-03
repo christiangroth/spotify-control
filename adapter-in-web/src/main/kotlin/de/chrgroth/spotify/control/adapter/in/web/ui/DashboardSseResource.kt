@@ -1,6 +1,8 @@
 package de.chrgroth.spotify.control.adapter.`in`.web.ui
 
+import de.chrgroth.spotify.control.domain.model.UserId
 import io.quarkus.security.Authenticated
+import io.quarkus.security.identity.SecurityIdentity
 import io.smallrye.mutiny.Multi
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.ws.rs.GET
@@ -13,10 +15,11 @@ import jakarta.ws.rs.core.MediaType
 @Suppress("Unused")
 class DashboardSseResource(
     private val sseService: DashboardSseService,
+    private val securityIdentity: SecurityIdentity,
 ) {
 
     @GET
     @Authenticated
     @Produces(MediaType.SERVER_SENT_EVENTS)
-    fun events(): Multi<String> = sseService.stream()
+    fun events(): Multi<String> = sseService.stream(UserId(securityIdentity.principal.name))
 }

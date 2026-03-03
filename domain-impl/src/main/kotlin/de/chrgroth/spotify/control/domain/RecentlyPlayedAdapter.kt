@@ -6,6 +6,7 @@ import arrow.core.right
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.RecentlyPlayedPort
+import de.chrgroth.spotify.control.domain.port.out.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.RecentlyPlayedRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
@@ -23,6 +24,7 @@ class RecentlyPlayedAdapter(
     private val spotifyRecentlyPlayed: SpotifyRecentlyPlayedPort,
     private val recentlyPlayedRepository: RecentlyPlayedRepositoryPort,
     private val outboxPort: OutboxPort,
+    private val dashboardRefresh: DashboardRefreshPort,
 ) : RecentlyPlayedPort {
 
     override fun enqueueUpdates() {
@@ -42,6 +44,7 @@ class RecentlyPlayedAdapter(
             if (newItems.isNotEmpty()) {
                 logger.info { "Persisting ${newItems.size} new recently played items for user: ${userId.value}" }
                 recentlyPlayedRepository.saveAll(newItems)
+                dashboardRefresh.notifyUser(userId)
             }
             Unit.right()
         }

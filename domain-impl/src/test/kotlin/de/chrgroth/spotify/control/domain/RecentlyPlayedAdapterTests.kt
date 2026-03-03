@@ -8,8 +8,9 @@ import de.chrgroth.spotify.control.domain.model.RecentlyPlayedItem
 import de.chrgroth.spotify.control.domain.model.User
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
-import de.chrgroth.spotify.control.domain.port.out.OutboxPort
+import de.chrgroth.spotify.control.domain.port.out.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.RecentlyPlayedRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyRecentlyPlayedPort
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
@@ -31,8 +32,9 @@ class RecentlyPlayedAdapterTests {
     private val spotifyRecentlyPlayed: SpotifyRecentlyPlayedPort = mockk()
     private val recentlyPlayedRepository: RecentlyPlayedRepositoryPort = mockk()
     private val outboxPort: OutboxPort = mockk()
+    private val dashboardRefresh: DashboardRefreshPort = mockk(relaxed = true)
 
-    private val adapter = RecentlyPlayedAdapter(userRepository, spotifyAccessToken, spotifyRecentlyPlayed, recentlyPlayedRepository, outboxPort)
+    private val adapter = RecentlyPlayedAdapter(userRepository, spotifyAccessToken, spotifyRecentlyPlayed, recentlyPlayedRepository, outboxPort, dashboardRefresh)
 
     private val userId = UserId("user-1")
     private val accessToken = AccessToken("token")
