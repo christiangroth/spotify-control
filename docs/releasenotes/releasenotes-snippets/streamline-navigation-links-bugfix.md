@@ -1,0 +1,1 @@
+* streamline-navigation-links: Streamlined navigation links across all pages, fixed partition stats table text color, fixed docs page headline styling, added Spotify favicon, fixed marked.js webjar path, and switched dashboard stats refresh to 60-second polling.
