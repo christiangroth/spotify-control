@@ -1,0 +1,1 @@
+* update-partition-table-appearance: Fixed partition information table to use dark mode styling on dashboard. Reordered dashboard items so outbox partitions appear in the stats row alongside total and last-30-days counters, with the playback events per day histogram below.
