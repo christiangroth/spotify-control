@@ -1,3 +1,6 @@
+# 0.8.0 - 2026.03.03
+## New Features
+* add-outbox-archive-cleanup: Added nightly cleanup job for outbox archive that deletes documents older than a configurable number of days (default: 365).
 # 0.7.7 - 2026.03.03
 ## New Features
 * update-mongodb-atlas-auth-config: Switch MongoDB Atlas connection from connection-string to separate host, credentials and tuning configuration.
