@@ -58,7 +58,7 @@ detekt {
 tasks {
 
   withType<Detekt> {
-    this.jvmTarget.set("25")
+    this.jvmTarget.set(JVM_25.target)
   }
 
   kotlin {
