@@ -15,14 +15,23 @@ class UserRepositoryAdapter : UserRepositoryPort {
     @Inject
     lateinit var userDocumentRepository: UserDocumentRepository
 
+    @Inject
+    lateinit var mongoQueryMetrics: MongoQueryMetrics
+
     override fun findById(spotifyUserId: UserId): User? =
-        userDocumentRepository.findById(spotifyUserId.value)?.toDomain()
+        mongoQueryMetrics.timed("user.findById") {
+            userDocumentRepository.findById(spotifyUserId.value)?.toDomain()
+        }
 
     override fun findAll(): List<User> =
-        userDocumentRepository.listAll().map { it.toDomain() }
+        mongoQueryMetrics.timed("user.findAll") {
+            userDocumentRepository.listAll().map { it.toDomain() }
+        }
 
     override fun upsert(user: User) {
-        val existing = userDocumentRepository.findById(user.spotifyUserId.value)
+        val existing = mongoQueryMetrics.timed("user.upsert.findById") {
+            userDocumentRepository.findById(user.spotifyUserId.value)
+        }
         if (existing == null) {
             logger.info { "Creating new user: ${user.spotifyUserId.value}" }
         } else {
@@ -37,7 +46,9 @@ class UserRepositoryAdapter : UserRepositoryPort {
         document.encryptedRefreshToken = user.encryptedRefreshToken
         document.tokenExpiresAt = user.tokenExpiresAt.toJavaInstant()
         document.lastLoginAt = user.lastLoginAt.toJavaInstant()
-        userDocumentRepository.persistOrUpdate(document)
+        mongoQueryMetrics.timed("user.upsert.persistOrUpdate") {
+            userDocumentRepository.persistOrUpdate(document)
+        }
     }
 
     private fun UserDocument.toDomain() = User(

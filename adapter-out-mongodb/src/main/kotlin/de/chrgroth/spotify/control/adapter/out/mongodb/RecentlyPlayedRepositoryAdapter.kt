@@ -22,13 +22,18 @@ class RecentlyPlayedRepositoryAdapter : RecentlyPlayedRepositoryPort {
     @Inject
     lateinit var recentlyPlayedDocumentRepository: RecentlyPlayedDocumentRepository
 
+    @Inject
+    lateinit var mongoQueryMetrics: MongoQueryMetrics
+
     override fun findExistingPlayedAts(spotifyUserId: UserId, playedAts: Set<Instant>): Set<Instant> {
         if (playedAts.isEmpty()) return emptySet()
         val javaPlayedAts = playedAts.map { it.toJavaInstant() }
-        return recentlyPlayedDocumentRepository
-            .list("spotifyUserId = ?1 and playedAt in ?2", spotifyUserId.value, javaPlayedAts)
-            .map { it.playedAt.toKotlinInstant() }
-            .toSet()
+        return mongoQueryMetrics.timed("recently_played.findExistingPlayedAts") {
+            recentlyPlayedDocumentRepository
+                .list("spotifyUserId = ?1 and playedAt in ?2", spotifyUserId.value, javaPlayedAts)
+                .map { it.playedAt.toKotlinInstant() }
+                .toSet()
+        }
     }
 
     override fun saveAll(items: List<RecentlyPlayedItem>) {
@@ -44,18 +49,24 @@ class RecentlyPlayedRepositoryAdapter : RecentlyPlayedRepositoryPort {
             }
         }
         logger.info { "Saving ${documents.size} recently played documents" }
-        recentlyPlayedDocumentRepository.persist(documents)
+        mongoQueryMetrics.timed("recently_played.saveAll") {
+            recentlyPlayedDocumentRepository.persist(documents)
+        }
     }
 
     override fun countAll(spotifyUserId: UserId): Long =
-        recentlyPlayedDocumentRepository.count("spotifyUserId = ?1", spotifyUserId.value)
+        mongoQueryMetrics.timed("recently_played.countAll") {
+            recentlyPlayedDocumentRepository.count("spotifyUserId = ?1", spotifyUserId.value)
+        }
 
     override fun countSince(spotifyUserId: UserId, since: Instant): Long =
-        recentlyPlayedDocumentRepository.count(
-            "spotifyUserId = ?1 and playedAt >= ?2",
-            spotifyUserId.value,
-            since.toJavaInstant(),
-        )
+        mongoQueryMetrics.timed("recently_played.countSince") {
+            recentlyPlayedDocumentRepository.count(
+                "spotifyUserId = ?1 and playedAt >= ?2",
+                spotifyUserId.value,
+                since.toJavaInstant(),
+            )
+        }
 
     override fun countPerDaySince(spotifyUserId: UserId, since: Instant): List<Pair<LocalDate, Long>> {
         val pipeline = listOf(
@@ -71,14 +82,16 @@ class RecentlyPlayedRepositoryAdapter : RecentlyPlayedRepositoryPort {
             ),
             Aggregates.sort(Sorts.ascending("_id")),
         )
-        return recentlyPlayedDocumentRepository.mongoCollection()
-            .aggregate(pipeline, Document::class.java)
-            .map { doc ->
-                val dateStr = doc.getString("_id")
-                val count = (doc["count"] as? Int)?.toLong() ?: doc.getLong("count") ?: 0L
-                LocalDate.parse(dateStr) to count
-            }
-            .toList()
+        return mongoQueryMetrics.timed("recently_played.countPerDaySince") {
+            recentlyPlayedDocumentRepository.mongoCollection()
+                .aggregate(pipeline, Document::class.java)
+                .map { doc ->
+                    val dateStr = doc.getString("_id")
+                    val count = (doc["count"] as? Int)?.toLong() ?: doc.getLong("count") ?: 0L
+                    LocalDate.parse(dateStr) to count
+                }
+                .toList()
+        }
     }
 
     companion object : KLogging()
