@@ -1,0 +1,1 @@
+* enhance-dashboard-features: Enhanced dashboard with personalised welcome header, playback event statistics (total, last 30 days, per-day histogram), outbox partition stats, and server-sent events infrastructure for live updates.
