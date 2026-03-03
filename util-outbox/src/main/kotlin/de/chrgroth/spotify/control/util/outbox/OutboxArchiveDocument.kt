@@ -1,15 +1,11 @@
 package de.chrgroth.spotify.control.util.outbox
 
 import io.quarkus.mongodb.panache.common.MongoEntity
-import io.quarkus.mongodb.panache.kotlin.PanacheMongoCompanionBase
-import io.quarkus.mongodb.panache.kotlin.PanacheMongoEntityBase
 import org.bson.codecs.pojo.annotations.BsonId
 import java.time.Instant
 
 @MongoEntity(collection = "outbox_archive")
-class OutboxArchiveDocument : PanacheMongoEntityBase() {
-
-    companion object : PanacheMongoCompanionBase<OutboxArchiveDocument, String>
+class OutboxArchiveDocument {
 
     @BsonId
     lateinit var id: String
