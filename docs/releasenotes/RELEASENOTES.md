@@ -1,3 +1,7 @@
+# 0.9.2 - 2026.03.03
+## Bugfixes / Chore
+* change-to-repository-pattern: Changed MongoDB entities from active record pattern to Quarkus Panache repository pattern.
+* fix-docs-rendering-issue: Fix docs markdown rendering JS error by ensuring marked.js is loaded before content scripts execute.
 # 0.9.1 - 2026.03.03
 ## Bugfixes / Chore
 * update-partition-table-appearance: Fixed partition information table to use dark mode styling on dashboard. 
