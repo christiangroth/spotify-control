@@ -36,12 +36,13 @@ class DashboardPageTests {
   }
 
   @Test
-  fun `dashboard page contains sse script`() {
+  fun `dashboard page contains polling refresh script`() {
     given()
       .`when`()
       .get("/ui/dashboard")
       .then()
       .statusCode(200)
-      .body(containsString("/ui/dashboard/events"))
+      .body(containsString("setInterval"))
+      .body(containsString("60000"))
   }
 }

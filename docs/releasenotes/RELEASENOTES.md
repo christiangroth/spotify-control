@@ -1,3 +1,18 @@
+# 0.9.4 - 2026.03.03
+## Bugfixes / Chore
+* streamline-navigation-links: Streamlined navigation links across all pages.
+* streamline-navigation-links: Fixed partition stats table text color (unreadable black-on-dark).
+* streamline-navigation-links: Fixed docs page headline styling to match dashboard heading.
+* streamline-navigation-links: Added Spotify favicon.
+* streamline-navigation-links: Fixed marked.js webjar path (was 404).
+* streamline-navigation-links: Switched dashboard stats refresh to 60-second polling.
+# 0.9.3 - 2026.03.03
+## Bugfixes / Chore
+* increase-polling-recently-played: Increased polling frequency for recently played tracks from every 15 minutes to every 10 minutes.
+# 0.9.2 - 2026.03.03
+## Bugfixes / Chore
+* change-to-repository-pattern: Changed MongoDB entities from active record pattern to Quarkus Panache repository pattern.
+* fix-docs-rendering-issue: Fix docs markdown rendering JS error by ensuring marked.js is loaded before content scripts execute.
 # 0.9.1 - 2026.03.03
 ## Bugfixes / Chore
 * update-partition-table-appearance: Fixed partition information table to use dark mode styling on dashboard. 

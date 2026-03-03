@@ -1,6 +1,7 @@
 {#include layout.html}
     {#navLinks}
-    <a href="/ui/docs" class="nav-link text-white me-3" data-testid="docs-link">Docs</a>
+    <a href="/ui/docs/arc42" class="nav-link text-white me-3" data-testid="docs-link">Docs</a>
+    <a href="/ui/docs/adr" class="nav-link text-white me-3" data-testid="adrs-link">ADRs</a>
     <a href="/logout" class="btn btn-sm btn-outline-secondary" data-testid="logout-link">Logout</a>
     {/navLinks}
     {#content}
@@ -43,7 +44,7 @@
                                     <tbody>
                                         {#for p in stats.outboxPartitions}
                                         <tr style="border-color:#333;">
-                                            <td style="border-color:#333;background-color:transparent;">{p.name}</td>
+                                            <td style="border-color:#333;color:#e0e0e0;background-color:transparent;">{p.name}</td>
                                             <td style="border-color:#333;background-color:transparent;">
                                                 {#if p.status == "ACTIVE"}
                                                 <span style="color:var(--spotify-green);">{p.status}</span>
@@ -51,7 +52,7 @@
                                                 <span style="color:#f90;">{p.status}</span>
                                                 {/if}
                                             </td>
-                                            <td style="border-color:#333;text-align:right;background-color:transparent;">{p.documentCount}</td>
+                                            <td style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">{p.documentCount}</td>
                                         </tr>
                                         {/for}
                                     </tbody>
@@ -83,28 +84,21 @@
 
     <script>
         (function () {
-            function connect() {
-                var evtSource = new EventSource('/ui/dashboard/events');
-                evtSource.onmessage = function () {
-                    fetch(window.location.href)
-                        .then(function (r) { return r.text(); })
-                        .then(function (html) {
-                            var parser = new DOMParser();
-                            var newDoc = parser.parseFromString(html, 'text/html');
-                            var current = document.getElementById('stats-section');
-                            var updated = newDoc.getElementById('stats-section');
-                            if (current && updated) {
-                                current.replaceWith(updated);
-                            }
-                        })
-                        .catch(function () {});
-                };
-                evtSource.onerror = function () {
-                    evtSource.close();
-                    setTimeout(connect, 5000);
-                };
+            function refresh() {
+                fetch(window.location.href)
+                    .then(function (r) { return r.text(); })
+                    .then(function (html) {
+                        var parser = new DOMParser();
+                        var newDoc = parser.parseFromString(html, 'text/html');
+                        var current = document.getElementById('stats-section');
+                        var updated = newDoc.getElementById('stats-section');
+                        if (current && updated) {
+                            current.replaceWith(updated);
+                        }
+                    })
+                    .catch(function () {});
             }
-            connect();
+            setInterval(refresh, 60000);
         })();
     </script>
     {/content}

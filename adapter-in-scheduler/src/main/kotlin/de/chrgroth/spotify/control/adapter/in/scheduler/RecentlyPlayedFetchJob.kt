@@ -11,7 +11,7 @@ class RecentlyPlayedFetchJob(
     private val recentlyPlayed: RecentlyPlayedPort,
 ) {
 
-    @Scheduled(cron = "0 0/15 * * * ?")
+    @Scheduled(cron = "0 0/10 * * * ?")
     fun run() {
         logger.info { "Running scheduled recently played fetch" }
         recentlyPlayed.enqueueUpdates()

@@ -1,13 +1,12 @@
 {#include layout.html}
     {#title}SpCtl – {title}{/title}
     {#navLinks}
-    <a href="/ui/docs" class="nav-link text-white me-3" data-testid="docs-link">Docs</a>
-    <a href="/ui/dashboard" class="nav-link text-white me-3" data-testid="dashboard-link">Dashboard</a>
+    <a href="/ui/docs/arc42" class="nav-link text-white me-3" data-testid="docs-link">Docs</a>
     <a href="/logout" class="btn btn-sm btn-outline-secondary" data-testid="logout-link">Logout</a>
     {/navLinks}
     {#content}
     <div class="container py-4">
-        <h5 class="text-muted mb-3">{title}</h5>
+        <h1 class="mb-4 fs-4 fw-semibold">{title}</h1>
         <ul class="list-unstyled" data-testid="adr-list">
             {#for adr in adrs}
             <li class="mb-2">

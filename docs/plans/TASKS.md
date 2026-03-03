@@ -4,15 +4,10 @@
 - Code and architecture review
 - Update coding guidelines
 - Dependency updates and other maintenance tasks
-- local development?
 
 # Playback data gathering
 
-- fix cronjobs
-- fix dashboard
-- fix docs rendering
 - playback duplicate/skip handling
-- simple dashboard stats (outbox, playback events)
 
 # Spotify API
 

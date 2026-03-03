@@ -38,6 +38,8 @@ class DocsResource {
   fun arc42(): TemplateInstance =
     docsTemplate.instance()
       .data("title", "Architecture Documentation")
+      .data("showDocsLink", false)
+      .data("showAdrLink", true)
       .data("markdownContent", readMarkdown("docs/arc42/arc42-EN.md"))
 
   @GET
@@ -60,6 +62,8 @@ class DocsResource {
     val content = readMarkdown("docs/adr/$filename") ?: throw NotFoundException("ADR not found: $filename")
     return docsTemplate.instance()
       .data("title", extractTitle(content, filename))
+      .data("showDocsLink", true)
+      .data("showAdrLink", true)
       .data("markdownContent", content)
   }
 
@@ -70,6 +74,8 @@ class DocsResource {
   fun releasenotes(): TemplateInstance =
     docsTemplate.instance()
       .data("title", "Release Notes")
+      .data("showDocsLink", false)
+      .data("showAdrLink", false)
       .data("markdownContent", readMarkdown("docs/releasenotes/RELEASENOTES.md"))
 
   private fun readMarkdown(resourcePath: String): String? {
