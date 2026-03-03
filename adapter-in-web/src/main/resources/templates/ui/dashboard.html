@@ -4,8 +4,108 @@
     <a href="/logout" class="btn btn-sm btn-outline-secondary" data-testid="logout-link">Logout</a>
     {/navLinks}
     {#content}
-    <div class="container py-5">
-        <h1 data-testid="welcome-message">Welcome to SpCtl</h1>
+    <div class="container-fluid py-4 px-3 px-md-4">
+
+        <h1 class="mb-4 fs-4 fw-semibold" data-testid="welcome-message">Hi {displayName}</h1>
+
+        <div id="stats-section">
+            <div class="row g-3 mb-4">
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                        <div class="card-body">
+                            <p class="card-subtitle mb-1" style="color:#888;font-size:.8rem;">Total Playback Events</p>
+                            <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.totalPlaybackEvents}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                        <div class="card-body">
+                            <p class="card-subtitle mb-1" style="color:#888;font-size:.8rem;">Playback Events (Last 30 Days)</p>
+                            <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.playbackEventsLast30Days}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4" style="background-color:#1e1e1e;border-color:#333;">
+                <div class="card-body">
+                    <p class="card-subtitle mb-3" style="color:#888;font-size:.8rem;">Playback Events per Day (Last 30 Days)</p>
+                    {#if stats.playbackEventsPerDay.isEmpty()}
+                    <p style="color:#888;font-size:.85rem;">No data available yet.</p>
+                    {#else}
+                    <div class="d-flex align-items-end overflow-auto" style="height:80px;gap:2px;" data-testid="histogram">
+                        {#for entry in stats.playbackEventsPerDay}
+                        <div style="height:{entry.heightPercent}%;min-height:2px;flex:1;min-width:6px;background-color:var(--spotify-green);border-radius:2px 2px 0 0;"
+                             title="{entry.date}: {entry.count}"></div>
+                        {/for}
+                    </div>
+                    {/if}
+                </div>
+            </div>
+
+            {#if stats.outboxPartitions.isEmpty() == false}
+            <div class="card mb-4" style="background-color:#1e1e1e;border-color:#333;">
+                <div class="card-body">
+                    <p class="card-subtitle mb-3" style="color:#888;font-size:.8rem;">Outbox Partitions</p>
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0" style="color:#e0e0e0;" data-testid="outbox-table">
+                            <thead>
+                                <tr style="border-color:#333;">
+                                    <th style="border-color:#333;color:#888;font-weight:400;">Partition</th>
+                                    <th style="border-color:#333;color:#888;font-weight:400;">Status</th>
+                                    <th style="border-color:#333;color:#888;font-weight:400;text-align:right;">Documents</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {#for p in stats.outboxPartitions}
+                                <tr style="border-color:#333;">
+                                    <td style="border-color:#333;">{p.name}</td>
+                                    <td style="border-color:#333;">
+                                        {#if p.status == "ACTIVE"}
+                                        <span style="color:var(--spotify-green);">{p.status}</span>
+                                        {#else}
+                                        <span style="color:#f90;">{p.status}</span>
+                                        {/if}
+                                    </td>
+                                    <td style="border-color:#333;text-align:right;">{p.documentCount}</td>
+                                </tr>
+                                {/for}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {/if}
+        </div>
     </div>
+
+    <script>
+        (function () {
+            function connect() {
+                var evtSource = new EventSource('/ui/dashboard/events');
+                evtSource.onmessage = function () {
+                    fetch(window.location.href)
+                        .then(function (r) { return r.text(); })
+                        .then(function (html) {
+                            var parser = new DOMParser();
+                            var newDoc = parser.parseFromString(html, 'text/html');
+                            var current = document.getElementById('stats-section');
+                            var updated = newDoc.getElementById('stats-section');
+                            if (current && updated) {
+                                current.replaceWith(updated);
+                            }
+                        })
+                        .catch(function () {});
+                };
+                evtSource.onerror = function () {
+                    evtSource.close();
+                    setTimeout(connect, 5000);
+                };
+            }
+            connect();
+        })();
+    </script>
     {/content}
 {/include}
+

@@ -184,6 +184,9 @@ class MongoOutboxRepository : OutboxRepository {
         }
     }
 
+    override fun countByPartition(partition: OutboxPartition): Long =
+        OutboxDocument.count("partition = ?1", partition.key)
+
     private fun OutboxDocument.toTask() = OutboxTask(
         id = id,
         partition = partition,
