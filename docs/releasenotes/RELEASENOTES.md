@@ -1,3 +1,6 @@
+# 0.7.7 - 2026.03.03
+## New Features
+* update-mongodb-atlas-auth-config: Switch MongoDB Atlas connection from connection-string to separate host, credentials and tuning configuration.
 # 0.7.1 - 2026.03.02
 ## New Features
 * add-logs-metadata: Add container name and service name as log metadata labels for Loki log filtering.
