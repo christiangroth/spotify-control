@@ -12,10 +12,7 @@ import java.util.UUID
 class MongoOutboxRepositoryTests {
 
     @Inject
-    lateinit var repository: OutboxRepository
-
-    @Inject
-    lateinit var mongoRepository: MongoOutboxRepository
+    lateinit var repository: MongoOutboxRepository
 
     private fun uniquePartition() = object : OutboxPartition {
         override val key = "test-${UUID.randomUUID()}"
@@ -214,7 +211,7 @@ class MongoOutboxRepositoryTests {
         repository.complete(recentTask)
 
         // Delete entries older than 1 day in the future (i.e. delete everything)
-        val deletedAll = mongoRepository.deleteArchiveEntriesOlderThan(Instant.now().plus(Duration.ofDays(1)))
+        val deletedAll = repository.deleteArchiveEntriesOlderThan(Instant.now().plus(Duration.ofDays(1)))
         assertThat(deletedAll).isGreaterThanOrEqualTo(2)
 
         // Delete entries older than 1 day in the past (should not delete recently completed ones)
@@ -222,7 +219,7 @@ class MongoOutboxRepositoryTests {
         val newestTask = repository.claim(partition)!!
         repository.complete(newestTask)
 
-        val deletedNone = mongoRepository.deleteArchiveEntriesOlderThan(Instant.now().minus(Duration.ofDays(1)))
+        val deletedNone = repository.deleteArchiveEntriesOlderThan(Instant.now().minus(Duration.ofDays(1)))
         assertThat(deletedNone).isEqualTo(0)
     }
 }
