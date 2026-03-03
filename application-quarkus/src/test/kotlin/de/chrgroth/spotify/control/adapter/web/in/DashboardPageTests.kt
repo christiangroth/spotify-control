@@ -20,7 +20,7 @@ class DashboardPageTests {
       .contentType(containsString("text/html"))
       .body(containsString("""data-testid="logout-link""""))
       .body(containsString("""data-testid="welcome-message""""))
-      .body(containsString("Hi "))
+      .body(containsString("Hej "))
   }
 
   @Test
