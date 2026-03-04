@@ -11,6 +11,7 @@ import de.chrgroth.spotify.control.domain.model.SpotifyPlaylistItem
 import de.chrgroth.spotify.control.domain.model.User
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
+import de.chrgroth.spotify.control.domain.port.out.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
@@ -35,8 +36,9 @@ class PlaylistSyncAdapterTests {
     private val spotifyAccessToken: SpotifyAccessTokenPort = mockk()
     private val spotifyPlaylist: SpotifyPlaylistPort = mockk()
     private val outboxPort: OutboxPort = mockk()
+    private val dashboardRefresh: DashboardRefreshPort = mockk()
 
-    private val adapter = PlaylistSyncAdapter(userRepository, playlistRepository, spotifyAccessToken, spotifyPlaylist, outboxPort)
+    private val adapter = PlaylistSyncAdapter(userRepository, playlistRepository, spotifyAccessToken, spotifyPlaylist, outboxPort, dashboardRefresh)
 
     private val userId = UserId("user-1")
     private val accessToken = AccessToken("access-token")
@@ -107,6 +109,7 @@ class PlaylistSyncAdapterTests {
         every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(buildSpotifyItem("p1")).right()
         every { playlistRepository.findByUserId(userId) } returns emptyList()
         every { playlistRepository.saveAll(any(), any()) } just runs
+        every { dashboardRefresh.notifyUser(userId) } just runs
 
         val result = adapter.syncPlaylists(userId)
 
@@ -180,6 +183,53 @@ class PlaylistSyncAdapterTests {
         val savedSlot = slot<List<PlaylistInfo>>()
         verify { playlistRepository.saveAll(userId, capture(savedSlot)) }
         assertThat(savedSlot.captured[0].lastSnapshotIdSyncTime).isGreaterThan(now - 1.hours)
+    }
+
+    @Test
+    fun `syncPlaylists notifies dashboard when playlist count increases`() {
+        val user = buildUser()
+        every { userRepository.findById(userId) } returns user
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(buildSpotifyItem("p1"), buildSpotifyItem("p2")).right()
+        every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1"))
+        every { playlistRepository.saveAll(any(), any()) } just runs
+        every { dashboardRefresh.notifyUser(userId) } just runs
+
+        val result = adapter.syncPlaylists(userId)
+
+        assertThat(result.isRight()).isTrue()
+        verify(exactly = 1) { dashboardRefresh.notifyUser(userId) }
+    }
+
+    @Test
+    fun `syncPlaylists notifies dashboard when playlist count decreases`() {
+        val user = buildUser()
+        every { userRepository.findById(userId) } returns user
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(buildSpotifyItem("p1")).right()
+        every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1"), buildPlaylistInfo("p2"))
+        every { playlistRepository.saveAll(any(), any()) } just runs
+        every { dashboardRefresh.notifyUser(userId) } just runs
+
+        val result = adapter.syncPlaylists(userId)
+
+        assertThat(result.isRight()).isTrue()
+        verify(exactly = 1) { dashboardRefresh.notifyUser(userId) }
+    }
+
+    @Test
+    fun `syncPlaylists does not notify dashboard when playlist count is unchanged`() {
+        val user = buildUser()
+        every { userRepository.findById(userId) } returns user
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(buildSpotifyItem("p1")).right()
+        every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1"))
+        every { playlistRepository.saveAll(any(), any()) } just runs
+
+        val result = adapter.syncPlaylists(userId)
+
+        assertThat(result.isRight()).isTrue()
+        verify(exactly = 0) { dashboardRefresh.notifyUser(any()) }
     }
 
     @Test
