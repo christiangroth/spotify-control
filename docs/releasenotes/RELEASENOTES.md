@@ -1,3 +1,8 @@
+# 0.12.1 - 2026.03.04
+## New Features
+* show-last-30-days-dates: Date labels under playback events histogram columns are now only shown on large screens.
+## Bugfixes / Chore
+* optimize-build-performance: Speed up build by removing verbose --info flag from CI, converting @QuarkusTest scheduler job tests to unit tests, and moving DomainOutboxContractTests to domain-api module.
 # 0.12.0 - 2026.03.04
 ## New Features
 * add-playlist-infos-to-dashboard: Added playlists synced stats to dashboard and reorganized dashboard sections into Spotify data and System Health.
