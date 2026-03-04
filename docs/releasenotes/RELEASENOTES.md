@@ -1,3 +1,6 @@
+# 0.11.7 - 2026.03.04
+## Bugfixes / Chore
+* improve-sse-handling: SSE dashboard refresh is now also triggered by changes in outgoing HTTP request metrics.
 # 0.11.6 - 2026.03.04
 ## Bugfixes / Chore
 * fix-new-playlists-sync-issue: New found playlists default to PASSIVE sync status instead of ACTIVE.
