@@ -1,0 +1,1 @@
+* format-date-last-playlist-sync: Format the date of the last Playlist Metadata sync using German locale on the Playlists settings page.
