@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit
 @ApplicationScoped
 class MongoQueryMetrics(
     private val meterRegistry: MeterRegistry,
-    @ConfigProperty(name = "app.mongodb.slow-query-threshold-ms", defaultValue = "250")
+    @param:ConfigProperty(name = "app.mongodb.slow-query-threshold-ms", defaultValue = "250")
     private val slowQueryThresholdMs: Long,
 ) {
 
