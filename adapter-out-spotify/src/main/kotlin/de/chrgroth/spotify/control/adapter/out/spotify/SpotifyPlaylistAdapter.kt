@@ -49,6 +49,7 @@ class SpotifyPlaylistAdapter(
                             id = item.get("id").asText(),
                             name = item.get("name").asText(),
                             snapshotId = item.get("snapshot_id").asText(),
+                            ownerId = item.get("owner").get("id").asText(),
                         ),
                     )
                 }
