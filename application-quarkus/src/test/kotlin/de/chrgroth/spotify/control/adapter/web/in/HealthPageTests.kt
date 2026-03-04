@@ -103,6 +103,7 @@ class HealthPageTests {
       .statusCode(200)
       .contentType(containsString("text/html"))
       .body(containsString("Collections"))
+      .body(containsString("""data-testid="mongodb-collections-table""""))
   }
 
   @Test
@@ -114,5 +115,6 @@ class HealthPageTests {
       .statusCode(200)
       .contentType(containsString("text/html"))
       .body(containsString("Queries (Last 24h)"))
+      .body(containsString("""data-testid="mongodb-queries-table""""))
   }
 }
