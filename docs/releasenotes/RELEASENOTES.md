@@ -1,3 +1,8 @@
+# 0.13.0 - 2026.03.04
+## New Features
+* create-playlist-sync: Added playlist entity with full track data (tracks including artist information).
+* create-playlist-sync: Playlist data sync is triggered automatically when a playlist's snapshot ID changes.
+* create-playlist-sync: Playlist data sync is also triggered when a playlist is marked as active but has no synced data yet.
 # 0.12.10 - 2026.03.04
 ## Bugfixes / Chore
 * filter-own-users-playlists: Only store playlist metadata for playlists owned by the user (not followed playlists).
