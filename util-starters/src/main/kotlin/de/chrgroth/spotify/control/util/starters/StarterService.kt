@@ -12,6 +12,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 @ApplicationScoped
+@Suppress("TooGenericExceptionCaught")
 class StarterService(
     private val starters: Instance<Starter>,
     private val repository: StarterDocumentRepository,

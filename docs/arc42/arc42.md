@@ -290,7 +290,7 @@ Spotify provides genres only at the artist level. Genres are derived from the ar
 | `PlaylistCheckJob` | every 15 min    | `SyncPlaylist` (only on snapshot change)   |
 | `AggregationJob`   | nightly         | `RecomputeAggregations`                    |
 
-All scheduler jobs skip execution via `skipExecution = "allStartersCompleted"` until all starters have completed successfully.
+All scheduler jobs skip execution via `skipExecutionIf = StarterSkipPredicate::class` until all starters have completed successfully.
 
 ## Starters
 

@@ -16,7 +16,7 @@ Starters are **never executed** in `dev` or `test` profiles. In those environmen
 | `StarterDocument`             | Panache entity mapped to the `starters` MongoDB collection; tracks per-starter state across all starts.       |
 | `StarterDocumentRepository`   | Panache repository for `StarterDocument`.                                                                     |
 | `StarterCompletionFlag`       | `@ApplicationScoped` bean backed by an `AtomicBoolean`; set to `true` when all starters have succeeded.      |
-| `StarterSkipPredicate`        | Named CDI bean `"allStartersCompleted"` implementing `io.quarkus.scheduler.SkipPredicate`; returns `true` (skip) until the completion flag is set. |
+| `StarterSkipPredicate`        | Plain class with no-args constructor implementing `Scheduled.SkipPredicate`; referenced via `skipExecutionIf = StarterSkipPredicate::class`; returns `true` (skip) until the completion flag is set via CDI programmatic lookup. |
 | `StarterService`              | Orchestrates starter execution: collects all `Starter` CDI beans, runs pending/failed starters in `id` order, persists results, records metrics. |
 | `StarterStartup`              | `@Observes StartupEvent` bean that invokes `StarterService.runAll()` and sets the completion flag on full success. |
 
