@@ -1,3 +1,6 @@
+# 0.15.1 - 2026.03.04
+## Bugfixes / Chore
+* remove-non-owned-playlists: Added bugfix starter to remove playlist metadata documents for playlists not owned by the user.
 # 0.15.0 - 2026.03.04
 ## New Features
 * implement-starters-concept: Added starters concept for one-time startup beans.
