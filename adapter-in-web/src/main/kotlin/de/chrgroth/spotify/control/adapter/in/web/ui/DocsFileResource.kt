@@ -12,6 +12,8 @@ import jakarta.ws.rs.Path
 import jakarta.ws.rs.PathParam
 import jakarta.ws.rs.Produces
 import jakarta.ws.rs.core.MediaType
+import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
 
 @Path("/ui/docs/{subdir}/{filename}")
 @ApplicationScoped
@@ -31,13 +33,14 @@ class DocsFileResource {
     @PathParam("subdir") subdir: String,
     @PathParam("filename") filename: String,
   ): TemplateInstance {
-    if (subdir !in allowedSubdirs || isInvalidFilename(filename)) {
+    val decodedFilename = URLDecoder.decode(filename, StandardCharsets.UTF_8)
+    if (subdir !in allowedSubdirs || isInvalidFilename(decodedFilename)) {
       throw NotFoundException("Doc not found: $subdir/$filename")
     }
-    val content = DocsUtils.readMarkdown("docs/$subdir/$filename")
+    val content = DocsUtils.readMarkdown("docs/$subdir/$decodedFilename")
       ?: throw NotFoundException("Doc not found: $subdir/$filename")
     return docsTemplate.instance()
-      .data("title", DocsUtils.extractTitle(content, filename))
+      .data("title", DocsUtils.extractTitle(content, decodedFilename))
       .data("markdownContent", content)
   }
 
