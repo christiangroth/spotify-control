@@ -15,13 +15,4 @@ class UserDocument {
   lateinit var tokenExpiresAt: Instant
   lateinit var createdAt: Instant
   lateinit var lastLoginAt: Instant
-  var playlists: List<PlaylistInfoDocument> = emptyList()
-}
-
-class PlaylistInfoDocument {
-  lateinit var spotifyPlaylistId: String
-  lateinit var snapshotId: String
-  lateinit var lastSnapshotIdSyncTime: Instant
-  lateinit var name: String
-  lateinit var syncStatus: String
 }

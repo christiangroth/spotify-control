@@ -4,6 +4,7 @@ import de.chrgroth.spotify.control.domain.model.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.PlaylistSyncPort
+import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
 import io.quarkus.qute.Location
 import io.quarkus.qute.Template
@@ -38,6 +39,9 @@ class SettingsResource {
   private lateinit var userRepository: UserRepositoryPort
 
   @Inject
+  private lateinit var playlistRepository: PlaylistRepositoryPort
+
+  @Inject
   private lateinit var playlistSync: PlaylistSyncPort
 
   @GET
@@ -46,7 +50,7 @@ class SettingsResource {
   fun settings(): TemplateInstance {
     val userId = UserId(securityIdentity.principal.name)
     val user = userRepository.findById(userId)
-    val sortedPlaylists = (user?.playlists ?: emptyList()).sortedBy { it.name }
+    val sortedPlaylists = playlistRepository.findByUserId(userId).sortedBy { it.name }
     val padWidth = sortedPlaylists.size.toString().length
     val rows = sortedPlaylists.mapIndexed { index, playlist ->
       PlaylistRow(
