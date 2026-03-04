@@ -99,7 +99,7 @@ class PlaylistSyncAdapterTests {
     }
 
     @Test
-    fun `syncPlaylists persists new playlists with ACTIVE status`() {
+    fun `syncPlaylists persists new playlists with PASSIVE status`() {
         val user = buildUser()
         every { userRepository.findById(userId) } returns user
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
@@ -113,7 +113,7 @@ class PlaylistSyncAdapterTests {
         verify { userRepository.upsert(capture(upsertedSlot)) }
         assertThat(upsertedSlot.captured.playlists).hasSize(1)
         assertThat(upsertedSlot.captured.playlists[0].spotifyPlaylistId).isEqualTo("p1")
-        assertThat(upsertedSlot.captured.playlists[0].syncStatus).isEqualTo(PlaylistSyncStatus.ACTIVE)
+        assertThat(upsertedSlot.captured.playlists[0].syncStatus).isEqualTo(PlaylistSyncStatus.PASSIVE)
     }
 
     @Test
