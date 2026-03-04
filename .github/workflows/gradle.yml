@@ -13,10 +13,6 @@ jobs:
         with:
           java-version: '25'
           distribution: 'temurin'
-      - uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'temurin'
       - uses: gradle/actions/setup-gradle@v5
       - run: ./gradlew --info --stacktrace build
 
@@ -32,10 +28,6 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           java-version: '25'
-          distribution: 'temurin'
-      - uses: actions/setup-java@v4
-        with:
-          java-version: '21'
           distribution: 'temurin'
       - uses: gradle/actions/setup-gradle@v5
       - run: |

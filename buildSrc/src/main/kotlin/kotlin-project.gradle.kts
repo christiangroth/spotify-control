@@ -1,7 +1,4 @@
 import dev.detekt.gradle.Detekt
-import kotlinx.kover.api.CounterType
-import kotlinx.kover.api.VerificationTarget
-import kotlinx.kover.api.VerificationValueType
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_25
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_3
 
@@ -54,6 +51,24 @@ kotlin {
   jvmToolchain(25)
 }
 
+kover {
+  reports {
+    total {
+      html {
+        onCheck.set(true)
+      }
+
+      verify {
+        onCheck.set(true)
+
+        rule {
+          minBound(0)
+        }
+      }
+    }
+  }
+}
+
 detekt {
   buildUponDefaultConfig = true
   config.setFrom(files("${rootProject.projectDir}/detekt-config.yaml"))
@@ -77,28 +92,6 @@ tasks {
     useJUnitPlatform()
     testLogging {
       events("passed", "skipped", "failed")
-    }
-  }
-
-  kover {
-    htmlReport {
-      onCheck.set(true)
-    }
-
-    verify {
-      onCheck.set(true)
-
-      rule {
-        name = "Cover coverage bounds"
-        isEnabled = true
-
-        target = VerificationTarget.ALL
-        bound {
-          minValue = 0
-          valueType = VerificationValueType.COVERED_PERCENTAGE
-          counter = CounterType.INSTRUCTION
-        }
-      }
     }
   }
 }

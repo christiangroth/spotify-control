@@ -22,8 +22,10 @@ moduleGraphConfig {
   readmePath = layout.buildDirectory.file("reports/modulegraph/modules.md").get().asFile.path
 }
 
-koverMerged {
-  enable()
+kover {
+  merge {
+    allProjects()
+  }
 }
 
 private val releasenotesBasePath = "docs/releasenotes/"

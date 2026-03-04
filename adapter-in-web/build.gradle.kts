@@ -70,6 +70,10 @@ tasks {
   compileKotlin {
     dependsOn(openApiGenerate)
     compilerOptions {
+      // Required for auto-generated OpenAPI code (e.g. HelloResponse.kt from build/generated/) which uses
+      // @JsonProperty on constructor params without explicit use-site targets. Kotlin 2.3 warns about this
+      // pattern (upcoming behavior change), and allWarningsAsErrors promotes it to an error. The generated
+      // code cannot be manually edited, so we suppress the warning via this compiler flag instead.
       freeCompilerArgs.add("-Xannotation-default-target=param-property")
     }
   }
