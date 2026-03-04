@@ -332,6 +332,7 @@ class PlaylistSyncAdapterTests {
         )
         every { playlistRepository.saveAll(any(), any()) } just runs
         every { playlistDataRepository.findByUserIdAndPlaylistId(userId, "p1") } returns mockk()
+        every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
 
         val result = adapter.updateSyncStatus(userId, "p1", PlaylistSyncStatus.PASSIVE)
 
@@ -466,6 +467,7 @@ class PlaylistSyncAdapterTests {
         every { playlistRepository.saveAll(any(), any()) } just runs
         every { playlistDataRepository.findByUserIdAndPlaylistId(userId, "p1") } returns null
         every { outboxPort.enqueue(any()) } just runs
+        every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
 
         val result = adapter.updateSyncStatus(userId, "p1", PlaylistSyncStatus.ACTIVE)
 
@@ -480,10 +482,41 @@ class PlaylistSyncAdapterTests {
         every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE))
         every { playlistRepository.saveAll(any(), any()) } just runs
         every { playlistDataRepository.findByUserIdAndPlaylistId(userId, "p1") } returns mockk()
+        every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
 
         val result = adapter.updateSyncStatus(userId, "p1", PlaylistSyncStatus.ACTIVE)
 
         assertThat(result.isRight()).isTrue()
         verify(exactly = 0) { outboxPort.enqueue(any()) }
+    }
+
+    @Test
+    fun `updateSyncStatus notifies dashboard refresh after updating sync status`() {
+        val user = buildUser()
+        every { userRepository.findById(userId) } returns user
+        every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.ACTIVE))
+        every { playlistRepository.saveAll(any(), any()) } just runs
+        every { playlistDataRepository.findByUserIdAndPlaylistId(userId, "p1") } returns mockk()
+        every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
+
+        val result = adapter.updateSyncStatus(userId, "p1", PlaylistSyncStatus.PASSIVE)
+
+        assertThat(result.isRight()).isTrue()
+        verify(exactly = 1) { dashboardRefresh.notifyUserPlaylistMetadata(userId) }
+    }
+
+    @Test
+    fun `updateSyncStatus notifies dashboard refresh when activating playlist`() {
+        val user = buildUser()
+        every { userRepository.findById(userId) } returns user
+        every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE))
+        every { playlistRepository.saveAll(any(), any()) } just runs
+        every { playlistDataRepository.findByUserIdAndPlaylistId(userId, "p1") } returns mockk()
+        every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
+
+        val result = adapter.updateSyncStatus(userId, "p1", PlaylistSyncStatus.ACTIVE)
+
+        assertThat(result.isRight()).isTrue()
+        verify(exactly = 1) { dashboardRefresh.notifyUserPlaylistMetadata(userId) }
     }
 }

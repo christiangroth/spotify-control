@@ -111,6 +111,7 @@ class PlaylistSyncAdapter(
         }
         logger.info { "Updated sync status for playlist $playlistId (user ${userId.value}) to $syncStatus" }
         playlistRepository.saveAll(userId, updatedPlaylists)
+        dashboardRefresh.notifyUserPlaylistMetadata(userId)
         if (syncStatus == PlaylistSyncStatus.ACTIVE &&
             playlistDataRepository.findByUserIdAndPlaylistId(userId, playlist.spotifyPlaylistId) == null
         ) {
