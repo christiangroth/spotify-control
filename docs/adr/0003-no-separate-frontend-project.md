@@ -39,4 +39,4 @@ Chosen option: "Server-side rendering within the Quarkus application", because i
 ## Links
 
 * [role-frontend-developer.md](../coding-guidelines/role-frontend-developer.md)
-* [arc42.md](/ui/docs/arc42)
+* [arc42.md](../arc42/arc42.md)

@@ -8,7 +8,7 @@ You are a software architect focused on building systems that are easy to use co
 
 Single-user Spotify playlist manager. Deployed on a private VPS. Small, allow-listed set of Spotify accounts. No scale-out required. Complexity must match the domain – not underestimated (real async challenges exist), but not inflated either.
 
-See [arc42.md](/ui/docs/arc42) for full architecture documentation.
+See [arc42.md](../arc42/arc42.md) for full architecture documentation.
 
 ## Architecture: Hexagonal
 
@@ -70,7 +70,7 @@ Priority: Domain logic > Contract tests > Adapter integration > REST endpoints
 
 ## Release Process
 
-See [arc42.md](/ui/docs/arc42) — section "Release Process" under Deployment View.
+See [arc42.md](../arc42/arc42.md) — section "Release Process" under Deployment View.
 
 ## Decision Checklist for New Features
 
