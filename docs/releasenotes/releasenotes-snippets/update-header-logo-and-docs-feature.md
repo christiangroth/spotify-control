@@ -1,0 +1,1 @@
+* update-header-logo-and-docs: Add logo to header bar, replace Docs text with icon, make Docs link always visible, rename arc42-EN.md to arc42.md, add outbox.md and coding-guidelines serving, remove ADR index page, update ADR URLs.
