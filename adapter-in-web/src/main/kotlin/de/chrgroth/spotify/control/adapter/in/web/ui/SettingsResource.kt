@@ -14,6 +14,7 @@ import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import jakarta.ws.rs.Consumes
 import jakarta.ws.rs.GET
+import jakarta.ws.rs.POST
 import jakarta.ws.rs.PUT
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.PathParam
@@ -85,4 +86,20 @@ class SettingsResource {
   }
 
   data class SyncStatusRequest(val syncStatus: String = "")
+
+  @POST
+  @Authenticated
+  @Path("/playlists/sync")
+  @Produces(MediaType.APPLICATION_JSON)
+  fun syncNow(): Response {
+    val userId = UserId(securityIdentity.principal.name)
+    return playlistSync.syncPlaylists(userId).fold(
+      ifLeft = { error ->
+        Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+          .entity(mapOf("error" to "Sync failed: ${error.code}"))
+          .build()
+      },
+      ifRight = { Response.ok(mapOf("status" to "ok")).build() },
+    )
+  }
 }
