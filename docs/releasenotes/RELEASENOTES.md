@@ -1,3 +1,6 @@
+# 0.12.8 - 2026.03.04
+## Bugfixes / Chore
+* align-settings-icon-left: Playlists icon in header is now left-aligned and uses a playlist-style icon.
 # 0.12.7 - 2026.03.04
 ## Bugfixes / Chore
 * split-sse-events: Dashboard updates now use fine-grained SSE events per section (playback data, playlist metadata, outgoing HTTP calls, outbox partitions) with partial page updates and a fade effect instead of full page reloads.

@@ -1,1 +1,0 @@
-* align-settings-icon-left: Playlists icon in header is now left-aligned and uses a playlist-style icon.
