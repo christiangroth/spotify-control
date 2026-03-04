@@ -1,2 +1,0 @@
-* add-prometheus-metrics: Add Prometheus metrics for outgoing Spotify HTTP requests (url, duration, response code).
-* add-prometheus-metrics: Add Spotify request stats panel to dashboard showing outgoing request counts per host (last 24h).

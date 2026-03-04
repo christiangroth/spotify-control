@@ -1,3 +1,7 @@
+# 0.11.3 - 2026.03.04
+## New Features
+* add-prometheus-metrics: Add Prometheus metrics for outgoing Spotify HTTP requests (url, duration, response code).
+* add-prometheus-metrics: Add Spotify request stats panel to dashboard showing outgoing request counts per host (last 24h).
 # 0.11.2 - 2026.03.04
 ## Bugfixes / Chore
 * fix-2071856-1165050559-9eb8f697-c4f3-4e2d-8967-17dee0927f82: Fixed HTTP 415 error on dashboard SSE connect by injecting SecurityIdentity via CDI instead of as method parameter.
