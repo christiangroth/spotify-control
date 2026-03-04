@@ -23,7 +23,7 @@ import kotlin.time.Instant
 @ApplicationScoped
 @Suppress("Unused", "TooGenericExceptionCaught")
 class SpotifyRecentlyPlayedAdapter(
-    @ConfigProperty(name = "spotify.api.base-url", defaultValue = "https://api.spotify.com")
+    @param:ConfigProperty(name = "spotify.api.base-url", defaultValue = "https://api.spotify.com")
     private val apiBaseUrl: String,
 ) : SpotifyRecentlyPlayedPort {
 

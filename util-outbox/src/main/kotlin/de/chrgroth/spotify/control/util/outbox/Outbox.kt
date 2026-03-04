@@ -20,7 +20,7 @@ class Outbox(
     private val repository: OutboxRepository,
     private val wakeupService: OutboxWakeupService,
     private val meterRegistry: MeterRegistry,
-    @Any private val partitionObservers: Instance<OutboxPartitionObserver>,
+    @param:Any private val partitionObservers: Instance<OutboxPartitionObserver>,
 ) {
 
     private val scope = CoroutineScope(Dispatchers.IO)

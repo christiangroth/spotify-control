@@ -1,9 +1,6 @@
-import io.gitlab.arturbosch.detekt.Detekt
-import kotlinx.kover.api.CounterType
-import kotlinx.kover.api.VerificationTarget
-import kotlinx.kover.api.VerificationValueType
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21
-import org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_1
+import dev.detekt.gradle.Detekt
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_25
+import org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_3
 
 plugins {
   kotlin("jvm")
@@ -11,7 +8,7 @@ plugins {
   `java-library`
   `java-test-fixtures`
 
-  id("io.gitlab.arturbosch.detekt")
+  id("dev.detekt")
   id("org.jetbrains.kotlinx.kover")
 }
 
@@ -46,8 +43,30 @@ dependencies {
 }
 
 java {
-  sourceCompatibility = JavaVersion.VERSION_21
-  targetCompatibility = JavaVersion.VERSION_21
+  sourceCompatibility = JavaVersion.VERSION_25
+  targetCompatibility = JavaVersion.VERSION_25
+}
+
+kotlin {
+  jvmToolchain(25)
+}
+
+kover {
+  reports {
+    total {
+      html {
+        onCheck.set(true)
+      }
+
+      verify {
+        onCheck.set(true)
+
+        rule {
+          minBound(0)
+        }
+      }
+    }
+  }
 }
 
 detekt {
@@ -58,13 +77,13 @@ detekt {
 tasks {
 
   withType<Detekt> {
-    this.jvmTarget = "21"
+    this.jvmTarget.set(JVM_25.target)
   }
 
   kotlin {
-    compilerOptions.apiVersion = KOTLIN_2_1
-    compilerOptions.languageVersion = KOTLIN_2_1
-    compilerOptions.jvmTarget = JVM_21
+    compilerOptions.apiVersion = KOTLIN_2_3
+    compilerOptions.languageVersion = KOTLIN_2_3
+    compilerOptions.jvmTarget = JVM_25
     compilerOptions.allWarningsAsErrors = true
     compilerOptions.optIn = listOf("kotlin.time.ExperimentalTime")
   }
@@ -73,28 +92,6 @@ tasks {
     useJUnitPlatform()
     testLogging {
       events("passed", "skipped", "failed")
-    }
-  }
-
-  kover {
-    htmlReport {
-      onCheck.set(true)
-    }
-
-    verify {
-      onCheck.set(true)
-
-      rule {
-        name = "Cover coverage bounds"
-        isEnabled = true
-
-        target = VerificationTarget.ALL
-        bound {
-          minValue = 0
-          valueType = VerificationValueType.COVERED_PERCENTAGE
-          counter = CounterType.INSTRUCTION
-        }
-      }
     }
   }
 }
