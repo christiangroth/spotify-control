@@ -2,11 +2,13 @@ package de.chrgroth.spotify.control.domain
 
 import arrow.core.left
 import arrow.core.right
-import de.chrgroth.spotify.control.domain.error.PlaybackError
-import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
 import de.chrgroth.spotify.control.domain.error.AuthError
+import de.chrgroth.spotify.control.domain.error.PlaybackError
+import de.chrgroth.spotify.control.domain.error.PlaylistSyncError
+import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
+import de.chrgroth.spotify.control.domain.port.`in`.PlaylistSyncPort
 import de.chrgroth.spotify.control.domain.port.`in`.RecentlyPlayedPort
 import de.chrgroth.spotify.control.domain.port.`in`.UserProfileUpdatePort
 import de.chrgroth.spotify.control.util.outbox.OutboxTaskResult
@@ -21,12 +23,14 @@ class OutboxHandlerAdapterTests {
 
     private val recentlyPlayed: RecentlyPlayedPort = mockk()
     private val userProfileUpdate: UserProfileUpdatePort = mockk()
+    private val playlistSync: PlaylistSyncPort = mockk()
 
-    private val adapter = OutboxHandlerAdapter(recentlyPlayed, userProfileUpdate)
+    private val adapter = OutboxHandlerAdapter(recentlyPlayed, userProfileUpdate, playlistSync)
 
     private val userId = UserId("user-1")
     private val fetchEvent = DomainOutboxEvent.FetchRecentlyPlayed(userId)
     private val updateEvent = DomainOutboxEvent.UpdateUserProfile(userId)
+    private val syncEvent = DomainOutboxEvent.SyncPlaylistInfo(userId)
 
     @Test
     fun `handle FetchRecentlyPlayed delegates to RecentlyPlayedPort successfully`() {
@@ -104,6 +108,46 @@ class OutboxHandlerAdapterTests {
         every { userProfileUpdate.update(userId) } throws RuntimeException("connection error")
 
         val result = adapter.handle(updateEvent)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.Failed::class.java)
+    }
+
+    @Test
+    fun `handle SyncPlaylistInfo delegates to PlaylistSyncPort successfully`() {
+        every { playlistSync.syncPlaylists(userId) } returns Unit.right()
+
+        val result = adapter.handle(syncEvent)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.Success::class.java)
+        verify { playlistSync.syncPlaylists(userId) }
+    }
+
+    @Test
+    fun `handle SyncPlaylistInfo returns Failed on domain error`() {
+        every { playlistSync.syncPlaylists(userId) } returns PlaylistSyncError.PLAYLIST_FETCH_FAILED.left()
+
+        val result = adapter.handle(syncEvent)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.Failed::class.java)
+        assertThat((result as OutboxTaskResult.Failed).message).contains(PlaylistSyncError.PLAYLIST_FETCH_FAILED.code)
+    }
+
+    @Test
+    fun `handle SyncPlaylistInfo returns RateLimited on SpotifyRateLimitError`() {
+        val retryAfter = Duration.ofSeconds(30)
+        every { playlistSync.syncPlaylists(userId) } returns SpotifyRateLimitError(retryAfter).left()
+
+        val result = adapter.handle(syncEvent)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.RateLimited::class.java)
+        assertThat((result as OutboxTaskResult.RateLimited).retryAfter).isEqualTo(retryAfter)
+    }
+
+    @Test
+    fun `handle SyncPlaylistInfo returns Failed on unexpected exception`() {
+        every { playlistSync.syncPlaylists(userId) } throws RuntimeException("connection error")
+
+        val result = adapter.handle(syncEvent)
 
         assertThat(result).isInstanceOf(OutboxTaskResult.Failed::class.java)
     }

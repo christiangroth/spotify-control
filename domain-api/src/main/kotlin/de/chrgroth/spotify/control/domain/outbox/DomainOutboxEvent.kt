@@ -32,10 +32,22 @@ sealed interface DomainOutboxEvent : OutboxEvent {
         }
     }
 
+    data class SyncPlaylistInfo(val userId: UserId) : DomainOutboxEvent {
+        override val key = KEY
+        override fun deduplicationKey() = "$KEY:${userId.value}"
+        override val partition = DomainOutboxPartition.ToSpotify
+        override fun toPayload() = userId.value
+
+        companion object {
+            const val KEY = "SyncPlaylistInfo"
+        }
+    }
+
     companion object {
         fun fromKey(key: String, payload: String): DomainOutboxEvent = when (key) {
             FetchRecentlyPlayed.KEY -> FetchRecentlyPlayed(UserId(payload))
             UpdateUserProfile.KEY -> UpdateUserProfile(UserId(payload))
+            SyncPlaylistInfo.KEY -> SyncPlaylistInfo(UserId(payload))
             else -> throw IllegalArgumentException("Unknown outbox event type: $key")
         }
     }

@@ -64,6 +64,18 @@ class DomainOutboxTaskDispatcherTests {
     }
 
     @Test
+    fun `SyncPlaylistInfo dispatches to handle(SyncPlaylistInfo)`() {
+        val event = DomainOutboxEvent.SyncPlaylistInfo(userIdObj)
+        val task = buildTask(DomainOutboxEvent.SyncPlaylistInfo.KEY, userId)
+        every { handlerPort.handle(event) } returns OutboxTaskResult.Success
+
+        val result = subject.dispatch(task)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.Success::class.java)
+        verify { handlerPort.handle(event) }
+    }
+
+    @Test
     fun `unknown event type returns Failed result`() {
         val task = buildTask("UnknownEvent", "payload")
 
