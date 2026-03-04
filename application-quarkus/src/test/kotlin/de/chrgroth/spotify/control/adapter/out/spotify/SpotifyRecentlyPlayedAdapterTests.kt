@@ -4,6 +4,8 @@ import arrow.core.Either
 import de.chrgroth.spotify.control.domain.model.AccessToken
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.out.SpotifyRecentlyPlayedPort
+import de.chrgroth.spotify.control.domain.port.out.OutgoingRequestStatsPort
+import io.micrometer.core.instrument.MeterRegistry
 import io.quarkus.test.junit.QuarkusTest
 import jakarta.inject.Inject
 import org.assertj.core.api.Assertions.assertThat
@@ -14,6 +16,12 @@ class SpotifyRecentlyPlayedAdapterTests {
 
     @Inject
     lateinit var spotifyRecentlyPlayed: SpotifyRecentlyPlayedPort
+
+    @Inject
+    lateinit var outgoingRequestStats: OutgoingRequestStatsPort
+
+    @Inject
+    lateinit var meterRegistry: MeterRegistry
 
     @Test
     fun `getRecentlyPlayed returns items from mock`() {
@@ -27,5 +35,23 @@ class SpotifyRecentlyPlayedAdapterTests {
         assertThat(items[0].artistIds).containsExactly("artist-1")
         assertThat(items[0].artistNames).containsExactly("Artist One")
         assertThat(items[0].spotifyUserId).isEqualTo(UserId("test-user-a"))
+    }
+
+    @Test
+    fun `getRecentlyPlayed records spotify request metrics`() {
+        spotifyRecentlyPlayed.getRecentlyPlayed(UserId("test-user-a"), AccessToken("mock-access-token"))
+
+        val timer = meterRegistry.find("spotify.request").timer()
+        assertThat(timer).isNotNull
+        assertThat(timer!!.count()).isGreaterThan(0)
+    }
+
+    @Test
+    fun `getRecentlyPlayed increments in-memory request counter`() {
+        spotifyRecentlyPlayed.getRecentlyPlayed(UserId("test-user-a"), AccessToken("mock-access-token"))
+
+        val stats = outgoingRequestStats.getRequestStats()
+        assertThat(stats).isNotEmpty
+        assertThat(stats.any { it.requestCountLast24h > 0 }).isTrue
     }
 }

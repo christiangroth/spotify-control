@@ -22,8 +22,32 @@
                         </div>
                     </div>
                 </div>
-                {#if stats.outboxPartitions.isEmpty() == false}
-                <div class="col-12 col-sm-12 col-lg-6">
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                        <div class="card-body">
+                            <p class="card-subtitle mb-3" style="color:#888;font-size:.8rem;">Outgoing HTTP Requests (Last 24h)</p>
+                            <div class="table-responsive">
+                                <table class="table table-sm mb-0" style="color:#e0e0e0;background-color:transparent;" data-testid="outgoing-requests-table">
+                                    <thead>
+                                        <tr style="border-color:#333;">
+                                            <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Host</th>
+                                            <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">Requests</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {#for r in stats.outgoingRequestStats}
+                                        <tr style="border-color:#333;">
+                                            <td style="border-color:#333;color:#e0e0e0;background-color:transparent;">{r.host}</td>
+                                            <td style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">{r.requestCountLast24h}</td>
+                                        </tr>
+                                        {/for}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-3">
                     <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
                         <div class="card-body">
                             <p class="card-subtitle mb-3" style="color:#888;font-size:.8rem;">Outbox Partitions</p>
@@ -56,7 +80,6 @@
                         </div>
                     </div>
                 </div>
-                {/if}
             </div>
 
             <div class="card mb-4" style="background-color:#1e1e1e;border-color:#333;">
