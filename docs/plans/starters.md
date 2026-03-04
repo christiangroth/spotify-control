@@ -68,17 +68,16 @@ FAILED     – last execution threw an error
 
 ## Architecture Placement
 
-Starters fit the hexagonal architecture as follows:
+Starters follow the same self-contained utility module pattern as `util-outbox`:
 
-| Layer             | Responsibility                                                            |
-|-------------------|---------------------------------------------------------------------------|
-| `domain-api`      | `Starter` interface (defines `id: String` and `execute()`)                |
-| `domain-api`      | `StarterRepository` port (out): `findById`, `upsert`                      |
-| `domain-impl`     | `StarterService`: orchestrates execution, reads/updates `StarterRepository` |
-| `adapter-out-mongodb` | `StarterDocument`, `StarterExecutionDocument`, `StarterDocumentRepository`, `StarterRepositoryAdapter` |
-| `application-quarkus` | `StarterStartup`: `@Observes StartupEvent`, `@Priority(…)` bean that runs all starters before the scheduler starts |
+| Module              | Responsibility                                                                                         |
+|---------------------|--------------------------------------------------------------------------------------------------------|
+| `util-starters`     | `Starter` interface (`id: String`, `execute()`); `StarterStatus`; `StarterDocument`; `StarterExecutionDocument`; `StarterDocumentRepository`; `StarterService` (orchestration); `StarterStartup` (`@Observes StartupEvent`); `StarterCompletionFlag` (`@ApplicationScoped`, `AtomicBoolean`) |
+| `adapter-in-starter`| Concrete starter implementations that trigger domain logic (e.g. data migration starters calling domain ports) |
 
-Each concrete starter bean (e.g. `SomeDataMigrationStarter`) is defined in `domain-impl` (or the relevant adapter module) and is `@ApplicationScoped`. The `StarterService` collects all `Starter` instances via CDI `Instance<Starter>`.
+`util-starters` is fully self-contained – it owns its own MongoDB documents and is not aware of any domain module. The `StarterService` collects all `Starter` instances at startup via CDI `Instance<Starter>`.
+
+Concrete starters live in `adapter-in-starter` because they act as inbound adapters: they receive a startup trigger from `util-starters` and call into the domain via port interfaces, exactly as scheduled jobs in `adapter-in-scheduler` call domain ports.
 
 ---
 
@@ -145,7 +144,7 @@ The `Timer` is recorded by `StarterService` after each execution using `MeterReg
 ## Example: Defining a Starter
 
 ```kotlin
-// domain-impl
+// adapter-in-starter
 @ApplicationScoped
 class AddMissingGenreFieldMigration(
     private val recentlyPlayedRepository: RecentlyPlayedRepositoryPort,
