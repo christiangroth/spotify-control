@@ -72,7 +72,7 @@
             function fadeUpdate(elementId, url) {
                 var el = document.getElementById(elementId);
                 if (!el) return;
-                el.style.transition = 'opacity 0.3s ease';
+                el.style.transition = 'opacity 1.0s ease';
                 el.style.opacity = '0';
                 fetch(url)
                     .then(function (r) { return r.text(); })
@@ -88,11 +88,8 @@
             function connect() {
                 console.log('[SSE] Connecting to /ui/dashboard/events...');
                 source = new EventSource('/ui/dashboard/events');
-                source.onopen = function () {
-                    console.log('[SSE] Connection established, readyState=' + source.readyState);
-                };
+                source.onopen = function () { };
                 source.onmessage = function (event) {
-                    console.log('[SSE] Message received: ' + event.data);
                     if (event.data === 'refresh-playback-data') {
                         fadeUpdate('snippet-playback-data', '/ui/dashboard/snippets/playback-data');
                         fadeUpdate('snippet-playback-histogram', '/ui/dashboard/snippets/playback-histogram');
@@ -101,7 +98,6 @@
                     }
                 };
                 source.onerror = function () {
-                    console.log('[SSE] Connection error, readyState=' + source.readyState + '. Closing.');
                     source.close();
                 };
             }
@@ -109,7 +105,6 @@
             connect();
 
             setInterval(function () {
-                console.log('[SSE] Polling check, readyState=' + (source ? source.readyState : 'none'));
                 if (!source || source.readyState === EventSource.CLOSED) {
                     connect();
                 }
