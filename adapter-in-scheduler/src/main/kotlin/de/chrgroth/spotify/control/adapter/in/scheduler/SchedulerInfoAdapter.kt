@@ -5,6 +5,7 @@ import de.chrgroth.spotify.control.domain.port.out.CronjobInfoPort
 import io.quarkus.scheduler.Scheduled
 import io.quarkus.scheduler.Scheduler
 import jakarta.enterprise.context.ApplicationScoped
+import mu.KLogging
 import java.time.Instant
 
 @ApplicationScoped
@@ -30,10 +31,13 @@ class SchedulerInfoAdapter(
                         cronSchedule = scheduled.cron,
                         nextExecution = trigger.nextFireTime ?: Instant.now(),
                     )
-                } catch (_: ReflectiveOperationException) {
+                } catch (e: ReflectiveOperationException) {
+                    logger.warn(e) { "Could not resolve cronjob metadata for trigger '$id'" }
                     null
                 }
             }
             .sortedBy { it.simpleName }
             .toList()
+
+    companion object : KLogging()
 }
