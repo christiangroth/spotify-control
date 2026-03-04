@@ -1,1 +1,1 @@
-* implement-starters-concept: Introduced starters concept for one-time startup beans that execute arbitrary logic exactly once in production; includes `util-starters` module and `HelloWorldStarter` demo implementation in `adapter-in-starter`.
+* implement-starters-concept: Added starters concept for one-time startup beans.
