@@ -109,7 +109,7 @@ class PlaylistSyncAdapterTests {
         every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(buildSpotifyItem("p1")).right()
         every { playlistRepository.findByUserId(userId) } returns emptyList()
         every { playlistRepository.saveAll(any(), any()) } just runs
-        every { dashboardRefresh.notifyUser(userId) } just runs
+        every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
 
         val result = adapter.syncPlaylists(userId)
 
@@ -193,12 +193,12 @@ class PlaylistSyncAdapterTests {
         every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(buildSpotifyItem("p1"), buildSpotifyItem("p2")).right()
         every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1"))
         every { playlistRepository.saveAll(any(), any()) } just runs
-        every { dashboardRefresh.notifyUser(userId) } just runs
+        every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
 
         val result = adapter.syncPlaylists(userId)
 
         assertThat(result.isRight()).isTrue()
-        verify(exactly = 1) { dashboardRefresh.notifyUser(userId) }
+        verify(exactly = 1) { dashboardRefresh.notifyUserPlaylistMetadata(userId) }
     }
 
     @Test
@@ -209,12 +209,12 @@ class PlaylistSyncAdapterTests {
         every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(buildSpotifyItem("p1")).right()
         every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1"), buildPlaylistInfo("p2"))
         every { playlistRepository.saveAll(any(), any()) } just runs
-        every { dashboardRefresh.notifyUser(userId) } just runs
+        every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
 
         val result = adapter.syncPlaylists(userId)
 
         assertThat(result.isRight()).isTrue()
-        verify(exactly = 1) { dashboardRefresh.notifyUser(userId) }
+        verify(exactly = 1) { dashboardRefresh.notifyUserPlaylistMetadata(userId) }
     }
 
     @Test
@@ -229,7 +229,7 @@ class PlaylistSyncAdapterTests {
         val result = adapter.syncPlaylists(userId)
 
         assertThat(result.isRight()).isTrue()
-        verify(exactly = 0) { dashboardRefresh.notifyUser(any()) }
+        verify(exactly = 0) { dashboardRefresh.notifyUserPlaylistMetadata(any()) }
     }
 
     @Test

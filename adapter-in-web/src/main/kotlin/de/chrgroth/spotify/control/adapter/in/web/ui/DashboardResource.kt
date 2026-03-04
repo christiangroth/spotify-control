@@ -44,4 +44,54 @@ class DashboardResource {
       .data("displayName", user?.displayName ?: userId.value)
       .data("stats", stats)
   }
+
+  @GET
+  @Path("/snippets/playback-data")
+  @Authenticated
+  @Produces(MediaType.TEXT_HTML)
+  fun snippetPlaybackData(): TemplateInstance {
+    val userId = UserId(securityIdentity.principal.name)
+    val stats = dashboardStats.getStats(userId)
+    return dashboardTemplate.getFragment("snippet_playback_data").data("stats", stats)
+  }
+
+  @GET
+  @Path("/snippets/playback-histogram")
+  @Authenticated
+  @Produces(MediaType.TEXT_HTML)
+  fun snippetPlaybackHistogram(): TemplateInstance {
+    val userId = UserId(securityIdentity.principal.name)
+    val stats = dashboardStats.getStats(userId)
+    return dashboardTemplate.getFragment("snippet_playback_histogram").data("stats", stats)
+  }
+
+  @GET
+  @Path("/snippets/playlist-metadata")
+  @Authenticated
+  @Produces(MediaType.TEXT_HTML)
+  fun snippetPlaylistMetadata(): TemplateInstance {
+    val userId = UserId(securityIdentity.principal.name)
+    val stats = dashboardStats.getStats(userId)
+    return dashboardTemplate.getFragment("snippet_playlist_metadata").data("stats", stats)
+  }
+
+  @GET
+  @Path("/snippets/outgoing-http-calls")
+  @Authenticated
+  @Produces(MediaType.TEXT_HTML)
+  fun snippetOutgoingHttpCalls(): TemplateInstance {
+    val userId = UserId(securityIdentity.principal.name)
+    val stats = dashboardStats.getStats(userId)
+    return dashboardTemplate.getFragment("snippet_outgoing_http_calls").data("stats", stats)
+  }
+
+  @GET
+  @Path("/snippets/outbox-partitions")
+  @Authenticated
+  @Produces(MediaType.TEXT_HTML)
+  fun snippetOutboxPartitions(): TemplateInstance {
+    val userId = UserId(securityIdentity.principal.name)
+    val stats = dashboardStats.getStats(userId)
+    return dashboardTemplate.getFragment("snippet_outbox_partitions").data("stats", stats)
+  }
 }
