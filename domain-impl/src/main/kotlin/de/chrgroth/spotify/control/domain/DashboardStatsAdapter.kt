@@ -22,7 +22,7 @@ class DashboardStatsAdapter(
 ) : DashboardStatsPort {
 
     override fun getStats(userId: UserId): DashboardStats {
-        val since = Clock.System.now() - 30.days
+        val since = Clock.System.now() - STATS_DAYS.days
 
         val total = recentlyPlayedRepository.countAll(userId)
         val last30Days = recentlyPlayedRepository.countSince(userId, since)
@@ -30,7 +30,7 @@ class DashboardStatsAdapter(
 
         val countByDate = rawPerDay.toMap()
         val today = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
-        val allDays = (29 downTo 0).map { today - DatePeriod(days = it) }
+        val allDays = ((STATS_DAYS - 1) downTo 0).map { today - DatePeriod(days = it) }
         val maxCount = countByDate.values.maxOrNull() ?: 1L
         val perDay = allDays.map { date ->
             val count = countByDate[date] ?: 0L
@@ -48,5 +48,9 @@ class DashboardStatsAdapter(
             playbackEventsPerDay = perDay,
             outboxPartitions = outboxInfo.getPartitionStats(),
         )
+    }
+
+    companion object {
+        private const val STATS_DAYS = 30
     }
 }
