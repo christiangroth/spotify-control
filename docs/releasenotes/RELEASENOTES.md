@@ -1,3 +1,6 @@
+# 0.15.0 - 2026.03.04
+## New Features
+* implement-starters-concept: Added starters concept for one-time startup beans.
 # 0.14.0 - 2026.03.04
 ## New Features
 * create-health-ui-page: Added dedicated health monitoring page at /ui/health with system health stats and real-time SSE updates.

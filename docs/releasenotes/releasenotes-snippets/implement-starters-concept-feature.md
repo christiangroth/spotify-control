@@ -1,1 +1,0 @@
-* implement-starters-concept: Added starters concept for one-time startup beans.
