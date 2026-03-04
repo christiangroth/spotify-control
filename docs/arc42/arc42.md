@@ -316,8 +316,6 @@ SLACK_WEBHOOK_URL
 
 # Architecture Decisions
 
-Architecture decisions are documented as Architecture Decision Records (ADRs) in the [`/docs/adr`](../adr/) folder.
-
 | ADR | Title |
 |-----|-------|
 | [0001](../adr/0001-using-arc42-as-project-documentation.md) | Using arc42 as Project Documentation |
@@ -325,6 +323,7 @@ Architecture decisions are documented as Architecture Decision Records (ADRs) in
 | [0003](../adr/0003-no-separate-frontend-project.md) | No Separate Frontend Project |
 | [0004](../adr/0004-using-ai-coding-agents.md) | Using AI Coding Agents |
 | [0005](../adr/0005-markdown-rendering-library.md) | Markdown Rendering Library: marked |
+| [0006](../adr/0006-error-handling-concept.md) | Error Handling: Arrow Either&lt;DomainError, T&gt; |
 
 See [outbox.md](outbox.md) for outbox-specific design decisions.
 

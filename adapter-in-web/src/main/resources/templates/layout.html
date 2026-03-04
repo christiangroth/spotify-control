@@ -81,7 +81,10 @@
 </head>
 <body>
     <nav class="app-navbar d-flex align-items-center px-3 py-2">
-        <a href="/" class="app-name me-2 text-decoration-none">SpCtl</a>
+        <a href="/" class="d-flex align-items-center text-decoration-none me-2">
+            <img src="/favicon.svg" alt="SpCtl Logo" width="24" height="24" class="me-2">
+            <span class="app-name">SpCtl</span>
+        </a>
         {#insert appVersion}<a href="/ui/docs/releasenotes" class="app-version me-auto text-decoration-none" data-testid="version-link">{appBuildVersion}</a>{/insert}
         {#insert navLinks}{/insert}
     </nav>

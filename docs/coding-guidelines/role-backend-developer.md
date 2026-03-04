@@ -32,7 +32,7 @@ Follow the hexagonal structure. See [role-architect.md](role-architect.md).
 
 All Spotify operations and internal domain events are routed through the persistent outbox in MongoDB. Direct Spotify API calls outside `adapter-out-spotify` are forbidden.
 
-Outbox partitions: `spotify` and `domain`. See [arc42-EN.md](../arc42/arc42-EN.md) for full event type listing.
+Outbox partitions: `spotify` and `domain`. See [arc42.md](/ui/docs/arc42) for full event type listing.
 
 CDI events (`jakarta.enterprise.event.Event`) serve as the internal bus between domain services and the `LiveUpdateService` (SSE).
 

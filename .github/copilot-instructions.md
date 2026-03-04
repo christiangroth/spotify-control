@@ -15,7 +15,7 @@
 
 ## Documentation
 
-- **Architecture:** [docs/arc42/arc42-EN.md](../docs/arc42/arc42-EN.md)
+- **Architecture:** [docs/arc42/arc42.md](../docs/arc42/arc42.md)
 - **Architect role guidelines:** [docs/coding-guidelines/role-architect.md](../docs/coding-guidelines/role-architect.md)
 - **Backend developer role guidelines:** [docs/coding-guidelines/role-backend-developer.md](../docs/coding-guidelines/role-backend-developer.md)
 - **Frontend developer role guidelines:** [docs/coding-guidelines/role-frontend-developer.md](../docs/coding-guidelines/role-frontend-developer.md)

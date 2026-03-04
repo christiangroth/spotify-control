@@ -37,4 +37,4 @@ Chosen option: "arc42", because it provides a proven, well-structured template t
 ## Links
 
 * [arc42 documentation](https://arc42.org)
-* [arc42-EN.md](../arc42/arc42-EN.md)
+* [arc42.md](/ui/docs/arc42)

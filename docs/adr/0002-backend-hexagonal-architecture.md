@@ -38,4 +38,4 @@ Chosen option: "Hexagonal Architecture", because it cleanly separates domain fro
 ## Links
 
 * [role-architect.md](../coding-guidelines/role-architect.md)
-* [arc42-EN.md](../arc42/arc42-EN.md)
+* [arc42.md](/ui/docs/arc42)
