@@ -1,0 +1,1 @@
+* fix-build-issue: Fix detekt TooGenericExceptionCaught in MongoStatsAdapter by catching MongoException.
