@@ -12,5 +12,4 @@ data class User(
     val encryptedRefreshToken: String,
     val tokenExpiresAt: Instant,
     val lastLoginAt: Instant,
-    val playlists: List<PlaylistInfo> = emptyList(),
 )
