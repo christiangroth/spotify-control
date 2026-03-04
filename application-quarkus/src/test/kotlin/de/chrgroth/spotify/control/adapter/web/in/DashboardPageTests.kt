@@ -58,8 +58,6 @@ class DashboardPageTests {
       .statusCode(200)
       .body(containsString("refresh-playback-data"))
       .body(containsString("refresh-playlist-metadata"))
-      .body(containsString("refresh-outgoing-http-calls"))
-      .body(containsString("refresh-outbox-partitions"))
       .body(containsString("fadeUpdate"))
   }
 
@@ -83,27 +81,5 @@ class DashboardPageTests {
       .statusCode(200)
       .contentType(containsString("text/html"))
       .body(containsString("Playlists synced"))
-  }
-
-  @Test
-  fun `dashboard snippet endpoint for outgoing http calls is available`() {
-    given()
-      .`when`()
-      .get("/ui/dashboard/snippets/outgoing-http-calls")
-      .then()
-      .statusCode(200)
-      .contentType(containsString("text/html"))
-      .body(containsString("Outgoing HTTP Requests"))
-  }
-
-  @Test
-  fun `dashboard snippet endpoint for outbox partitions is available`() {
-    given()
-      .`when`()
-      .get("/ui/dashboard/snippets/outbox-partitions")
-      .then()
-      .statusCode(200)
-      .contentType(containsString("text/html"))
-      .body(containsString("Outbox Partitions"))
   }
 }

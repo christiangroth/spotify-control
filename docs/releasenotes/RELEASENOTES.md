@@ -1,3 +1,6 @@
+# 0.14.0 - 2026.03.04
+## New Features
+* create-health-ui-page: Added dedicated health monitoring page at /ui/health with system health stats and real-time SSE updates.
 # 0.13.0 - 2026.03.04
 ## New Features
 * create-playlist-sync: Added playlist entity with full track data (tracks including artist information).
