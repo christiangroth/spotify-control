@@ -53,7 +53,7 @@ sealed interface DomainOutboxEvent : OutboxEvent {
             const val KEY = "SyncPlaylistData"
             fun fromPayload(payload: String): SyncPlaylistData {
                 val colonIndex = payload.indexOf(':')
-                require(colonIndex > 0) { "Invalid SyncPlaylistData payload: $payload" }
+                require(colonIndex > 0 && colonIndex < payload.length - 1) { "Invalid SyncPlaylistData payload: $payload" }
                 return SyncPlaylistData(UserId(payload.substring(0, colonIndex)), payload.substring(colonIndex + 1))
             }
         }
