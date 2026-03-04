@@ -1,0 +1,1 @@
+* improve-sse-handling: SSE dashboard refresh is now also triggered by changes in outgoing HTTP request metrics. Added console.log() debugging to the SSE client for connection and event diagnostics.
