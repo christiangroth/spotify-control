@@ -45,8 +45,13 @@ class SpotifyRecentlyPlayedAdapter(
             if (errorResult != null) return errorResult
             val json: JsonNode = objectMapper.readTree(response.body())
             val items = json.get("items") ?: return emptyList<RecentlyPlayedItem>().right()
-            items.map { item ->
+            items.mapNotNull { item ->
                 val track = item.get("track")
+                val type = track?.get("type")?.asText()
+                if (type != "track") {
+                    logger.debug { "Ignoring non-track playback event of type '$type'" }
+                    return@mapNotNull null
+                }
                 RecentlyPlayedItem(
                     spotifyUserId = userId,
                     trackId = track.get("id").asText(),

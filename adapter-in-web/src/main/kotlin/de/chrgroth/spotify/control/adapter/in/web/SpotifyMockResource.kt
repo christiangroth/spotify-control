@@ -50,6 +50,6 @@ class SpotifyMockResource {
         private const val REFRESH_RESPONSE =
             """{"access_token":"mock-refreshed-access-token","expires_in":3600,"token_type":"Bearer"}"""
         private const val RECENTLY_PLAYED_RESPONSE =
-            """{"items":[{"track":{"id":"track-1","name":"Track One","artists":[{"id":"artist-1","name":"Artist One"}]},"played_at":"2024-01-01T12:00:00.000Z"}]}"""
+            """{"items":[{"track":{"id":"track-1","name":"Track One","type":"track","artists":[{"id":"artist-1","name":"Artist One"}]},"played_at":"2024-01-01T12:00:00.000Z"},{"track":{"id":"episode-1","name":"Podcast Episode One","type":"episode"},"played_at":"2024-01-01T11:00:00.000Z"}]}"""
     }
 }
