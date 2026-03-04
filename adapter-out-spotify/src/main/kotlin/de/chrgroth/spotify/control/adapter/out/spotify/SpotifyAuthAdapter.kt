@@ -37,6 +37,7 @@ class SpotifyAuthAdapter(
     private val clientSecret: String,
     @param:ConfigProperty(name = "app.oauth.redirect-uri")
     private val redirectUri: String,
+    private val httpMetrics: SpotifyHttpMetrics,
 ) : SpotifyAuthPort {
 
     private val httpClient = HttpClient.newHttpClient()
@@ -66,7 +67,9 @@ class SpotifyAuthAdapter(
                 .header("Authorization", "Bearer ${accessToken.value}")
                 .GET()
                 .build()
-            val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+            val response = httpMetrics.timed(request.uri()) {
+                httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+            }
             val errorResult = response.checkRateLimitOrError(logger, AuthError.PROFILE_FETCH_FAILED)
             if (errorResult != null) return errorResult
             val json: JsonNode = objectMapper.readTree(response.body())
@@ -104,7 +107,9 @@ class SpotifyAuthAdapter(
             .header("Content-Type", "application/x-www-form-urlencoded")
             .POST(HttpRequest.BodyPublishers.ofString(body))
             .build()
-        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        val response = httpMetrics.timed(request.uri()) {
+            httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        }
         if (response.statusCode() != HTTP_OK) {
             logger.error { "Spotify token endpoint request failed: ${response.statusCode()} - ${response.body()}" }
             return null

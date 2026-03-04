@@ -25,6 +25,7 @@ import kotlin.time.Instant
 class SpotifyRecentlyPlayedAdapter(
     @param:ConfigProperty(name = "spotify.api.base-url", defaultValue = "https://api.spotify.com")
     private val apiBaseUrl: String,
+    private val httpMetrics: SpotifyHttpMetrics,
 ) : SpotifyRecentlyPlayedPort {
 
     private val httpClient = HttpClient.newHttpClient()
@@ -37,7 +38,9 @@ class SpotifyRecentlyPlayedAdapter(
                 .header("Authorization", "Bearer ${accessToken.value}")
                 .GET()
                 .build()
-            val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+            val response = httpMetrics.timed(request.uri()) {
+                httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+            }
             val errorResult = response.checkRateLimitOrError(logger, PlaybackError.RECENTLY_PLAYED_FETCH_FAILED)
             if (errorResult != null) return errorResult
             val json: JsonNode = objectMapper.readTree(response.body())
