@@ -39,7 +39,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - run: ./gradlew -info --stacktrace release -x test -x testNative -x koverHtmlReport -x koverVerify
+      - run: ./gradlew --stacktrace release -x test -x testNative -x koverHtmlReport -x koverVerify
       - run: |
           export DOCKER_TAG=$(docker images ghcr.io/christiangroth/spotify-control/quarkus --format "{{.Tag}} {{.CreatedAt}}" | sort -rk 2 | awk 'NR==1{print $1}')
           echo "DOCKER_TAG=$DOCKER_TAG" >> $GITHUB_ENV
