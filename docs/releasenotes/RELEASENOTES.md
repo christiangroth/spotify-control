@@ -1,3 +1,6 @@
+# 0.12.4 - 2026.03.04
+## New Features
+* split-user-profile-playlist-metadata: Playlist metadata is now stored in a separate collection, preventing user profile syncs from overwriting playlist data.
 # 0.12.3 - 2026.03.04
 ## Bugfixes / Chore
 * fix-sync-status-reset: Fixed scheduled playlist sync overwriting user-configured sync status (ACTIVE/PASSIVE) due to stale data read before the Spotify API call. Also fixed lastSnapshotIdSyncTime being reset on every sync regardless of snapshotId changes.
