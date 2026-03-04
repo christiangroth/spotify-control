@@ -132,6 +132,65 @@ class PlaylistSyncAdapterTests {
     }
 
     @Test
+    fun `syncPlaylists uses latest user state after Spotify API call to preserve syncStatus changes made in the meantime`() {
+        val userBefore = buildUser(playlists = listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE)))
+        val userAfter = buildUser(playlists = listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.ACTIVE)))
+        every { userRepository.findById(userId) } returnsMany listOf(userBefore, userAfter)
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(buildSpotifyItem("p1")).right()
+        every { userRepository.upsert(any()) } just runs
+
+        adapter.syncPlaylists(userId)
+
+        val upsertedSlot = slot<User>()
+        verify { userRepository.upsert(capture(upsertedSlot)) }
+        assertThat(upsertedSlot.captured.playlists[0].syncStatus).isEqualTo(PlaylistSyncStatus.ACTIVE)
+    }
+
+    @Test
+    fun `syncPlaylists skips upsert when user disappears after Spotify API call`() {
+        val user = buildUser()
+        every { userRepository.findById(userId) } returnsMany listOf(user, null)
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(buildSpotifyItem("p1")).right()
+
+        val result = adapter.syncPlaylists(userId)
+
+        assertThat(result.isRight()).isTrue()
+        verify(exactly = 0) { userRepository.upsert(any()) }
+    }
+
+    @Test
+    fun `syncPlaylists preserves lastSnapshotIdSyncTime when snapshotId is unchanged`() {
+        val user = buildUser(playlists = listOf(buildPlaylistInfo("p1", snapshotId = "snap-1")))
+        every { userRepository.findById(userId) } returns user
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(buildSpotifyItem("p1", snapshotId = "snap-1")).right()
+        every { userRepository.upsert(any()) } just runs
+
+        adapter.syncPlaylists(userId)
+
+        val upsertedSlot = slot<User>()
+        verify { userRepository.upsert(capture(upsertedSlot)) }
+        assertThat(upsertedSlot.captured.playlists[0].lastSnapshotIdSyncTime).isEqualTo(now - 1.hours)
+    }
+
+    @Test
+    fun `syncPlaylists updates lastSnapshotIdSyncTime when snapshotId changes`() {
+        val user = buildUser(playlists = listOf(buildPlaylistInfo("p1", snapshotId = "snap-1")))
+        every { userRepository.findById(userId) } returns user
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(buildSpotifyItem("p1", snapshotId = "snap-2")).right()
+        every { userRepository.upsert(any()) } just runs
+
+        adapter.syncPlaylists(userId)
+
+        val upsertedSlot = slot<User>()
+        verify { userRepository.upsert(capture(upsertedSlot)) }
+        assertThat(upsertedSlot.captured.playlists[0].lastSnapshotIdSyncTime).isGreaterThan(now - 1.hours)
+    }
+
+    @Test
     fun `syncPlaylists returns Left when spotify fetch fails`() {
         val user = buildUser()
         every { userRepository.findById(userId) } returns user
