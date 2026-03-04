@@ -1,1 +1,0 @@
-* fix-new-playlists-sync-issue: New found playlists default to PASSIVE sync status instead of ACTIVE.
