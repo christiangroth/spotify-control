@@ -1,1 +1,0 @@
-* create-one-time-startup-beans-concept: Added concept document for one-time startup beans (starters).

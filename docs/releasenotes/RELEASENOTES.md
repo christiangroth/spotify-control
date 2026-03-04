@@ -1,3 +1,8 @@
+# 0.12.5 - 2026.03.04
+## New Features
+* trigger-sse-update-event: Playlist sync now triggers a Dashboard SSE refresh event when the number of playlists changes.
+## Bugfixes / Chore
+* create-one-time-startup-beans-concept: Added concept document for one-time startup beans (starters).
 # 0.12.4 - 2026.03.04
 ## New Features
 * split-user-profile-playlist-metadata: Playlist metadata is now stored in a separate collection, preventing user profile syncs from overwriting playlist data.
