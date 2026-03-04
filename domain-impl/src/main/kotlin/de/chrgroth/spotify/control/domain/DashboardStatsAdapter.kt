@@ -9,6 +9,10 @@ import de.chrgroth.spotify.control.domain.port.out.RecentlyPlayedRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
+import kotlinx.datetime.DatePeriod
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.minus
+import kotlinx.datetime.toLocalDateTime
 
 @ApplicationScoped
 @Suppress("Unused")
@@ -18,18 +22,23 @@ class DashboardStatsAdapter(
 ) : DashboardStatsPort {
 
     override fun getStats(userId: UserId): DashboardStats {
-        val since = Clock.System.now() - 30.days
+        val since = Clock.System.now() - STATS_DAYS.days
 
         val total = recentlyPlayedRepository.countAll(userId)
         val last30Days = recentlyPlayedRepository.countSince(userId, since)
         val rawPerDay = recentlyPlayedRepository.countPerDaySince(userId, since)
 
-        val maxCount = rawPerDay.maxOfOrNull { it.second } ?: 1L
-        val perDay = rawPerDay.map { (date, count) ->
+        val countByDate = rawPerDay.toMap()
+        val today = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
+        val allDays = ((STATS_DAYS - 1) downTo 0).map { today - DatePeriod(days = it) }
+        val maxCount = countByDate.values.maxOrNull() ?: 1L
+        val perDay = allDays.map { date ->
+            val count = countByDate[date] ?: 0L
             DayCount(
                 date = date,
                 count = count,
-                heightPercent = (count * 100 / maxCount).toInt(),
+                heightPercent = if (maxCount > 0) (count * 100 / maxCount).toInt() else 0,
+                dateLabel = "%02d.%02d".format(date.day, date.month.ordinal + 1),
             )
         }
 
@@ -39,5 +48,9 @@ class DashboardStatsAdapter(
             playbackEventsPerDay = perDay,
             outboxPartitions = outboxInfo.getPartitionStats(),
         )
+    }
+
+    companion object {
+        private const val STATS_DAYS = 30
     }
 }

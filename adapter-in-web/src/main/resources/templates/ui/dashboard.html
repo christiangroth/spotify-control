@@ -1,9 +1,4 @@
 {#include layout.html}
-    {#navLinks}
-    <a href="/ui/docs/arc42" class="nav-link text-white me-3" data-testid="docs-link">Docs</a>
-    <a href="/ui/docs/adr" class="nav-link text-white me-3" data-testid="adrs-link">ADRs</a>
-    <a href="/logout" class="btn btn-sm btn-outline-secondary" data-testid="logout-link">Logout</a>
-    {/navLinks}
     {#content}
     <div class="container-fluid py-4 px-3 px-md-4">
 
@@ -67,16 +62,21 @@
             <div class="card mb-4" style="background-color:#1e1e1e;border-color:#333;">
                 <div class="card-body">
                     <p class="card-subtitle mb-3" style="color:#888;font-size:.8rem;">Playback Events per Day (Last 30 Days)</p>
-                    {#if stats.playbackEventsPerDay.isEmpty()}
-                    <p style="color:#888;font-size:.85rem;">No data available yet.</p>
-                    {#else}
-                    <div class="d-flex align-items-end overflow-auto" style="height:80px;gap:2px;" data-testid="histogram">
-                        {#for entry in stats.playbackEventsPerDay}
-                        <div style="height:{entry.heightPercent}%;min-height:2px;flex:1;min-width:6px;background-color:var(--spotify-green);border-radius:2px 2px 0 0;"
-                             title="{entry.date}: {entry.count}"></div>
-                        {/for}
+                    <div style="overflow-x:auto;">
+                        <div class="d-flex align-items-end" style="height:80px;gap:2px;" data-testid="histogram">
+                            {#for entry in stats.playbackEventsPerDay}
+                            <div style="height:{entry.heightPercent}%;min-height:2px;flex:1;min-width:6px;background-color:var(--spotify-green);border-radius:2px 2px 0 0;cursor:default;"
+                                 title="{entry.dateLabel}: {entry.count}"
+                                 onmouseover="this.style.opacity='0.7'"
+                                 onmouseout="this.style.opacity='1'"></div>
+                            {/for}
+                        </div>
+                        <div class="d-flex" style="gap:2px;margin-top:3px;">
+                            {#for entry in stats.playbackEventsPerDay}
+                            <div style="flex:1;min-width:6px;text-align:center;color:#888;font-size:.65rem;overflow:hidden;">{entry.dateLabel}</div>
+                            {/for}
+                        </div>
                     </div>
-                    {/if}
                 </div>
             </div>
         </div>
@@ -84,21 +84,27 @@
 
     <script>
         (function () {
-            function refresh() {
-                fetch(window.location.href)
-                    .then(function (r) { return r.text(); })
-                    .then(function (html) {
-                        var parser = new DOMParser();
-                        var newDoc = parser.parseFromString(html, 'text/html');
-                        var current = document.getElementById('stats-section');
-                        var updated = newDoc.getElementById('stats-section');
-                        if (current && updated) {
-                            current.replaceWith(updated);
-                        }
-                    })
-                    .catch(function () {});
+            var source;
+
+            function connect() {
+                source = new EventSource('/ui/dashboard/events');
+                source.onmessage = function (event) {
+                    if (event.data === 'refresh') {
+                        window.location.reload();
+                    }
+                };
+                source.onerror = function () {
+                    source.close();
+                };
             }
-            setInterval(refresh, 60000);
+
+            connect();
+
+            setInterval(function () {
+                if (!source || source.readyState === EventSource.CLOSED) {
+                    connect();
+                }
+            }, 60000);
         })();
     </script>
     {/content}

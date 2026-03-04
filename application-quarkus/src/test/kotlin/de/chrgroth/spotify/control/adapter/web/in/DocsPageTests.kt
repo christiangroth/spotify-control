@@ -38,22 +38,10 @@ class DocsPageTests {
   }
 
   @Test
-  fun `docs adr index page is available and lists adrs`() {
-    given()
-      .`when`()
-      .get("/ui/docs/adr")
-      .then()
-      .statusCode(200)
-      .contentType(containsString("text/html"))
-      .body(containsString("""data-testid="adr-list""""))
-      .body(containsString("Architecture Decision Records"))
-  }
-
-  @Test
   fun `docs adr detail page renders a specific adr`() {
     given()
       .`when`()
-      .get("/ui/docs/adr/0001-using-arc42-as-project-documentation.md")
+      .get("/ui/adr/0001-using-arc42-as-project-documentation.md")
       .then()
       .statusCode(200)
       .contentType(containsString("text/html"))
@@ -64,7 +52,7 @@ class DocsPageTests {
   fun `docs adr detail page contains raw markdown in textarea and rendering script`() {
     val body = given()
       .`when`()
-      .get("/ui/docs/adr/0001-using-arc42-as-project-documentation.md")
+      .get("/ui/adr/0001-using-arc42-as-project-documentation.md")
       .then()
       .statusCode(200)
       .extract()
@@ -78,7 +66,7 @@ class DocsPageTests {
   fun `docs adr detail page returns not found for invalid filename`() {
     given()
       .`when`()
-      .get("/ui/docs/adr/not-an-md-file.txt")
+      .get("/ui/adr/not-an-md-file.txt")
       .then()
       .statusCode(404)
   }

@@ -80,7 +80,7 @@ tasks {
 
   val syncDocsMd by registering(Sync::class) {
     from(rootProject.layout.projectDirectory.dir("docs/arc42")) {
-      include("arc42-EN.md")
+      include("arc42.md", "outbox.md")
       into("arc42")
     }
     from(rootProject.layout.projectDirectory.dir("docs/adr")) {
@@ -92,16 +92,11 @@ tasks {
       include("RELEASENOTES.md")
       into("releasenotes")
     }
-    into(layout.projectDirectory.dir("src/main/resources/docs"))
-
-    doLast {
-      val adrDir = layout.projectDirectory.dir("src/main/resources/docs/adr").asFile
-      val adrFiles = adrDir.listFiles { f -> f.name.endsWith(".md") }
-        ?.sortedBy { it.name }
-        ?.map { it.name }
-        ?: emptyList()
-      File(adrDir, "index.txt").writeText(adrFiles.joinToString("\n"))
+    from(rootProject.layout.projectDirectory.dir("docs/coding-guidelines")) {
+      include("*.md")
+      into("coding-guidelines")
     }
+    into(layout.projectDirectory.dir("src/main/resources/docs"))
   }
 
   named("processResources") {
