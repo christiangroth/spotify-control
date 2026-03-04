@@ -79,21 +79,27 @@
 
     <script>
         (function () {
-            function refresh() {
-                fetch(window.location.href)
-                    .then(function (r) { return r.text(); })
-                    .then(function (html) {
-                        var parser = new DOMParser();
-                        var newDoc = parser.parseFromString(html, 'text/html');
-                        var current = document.getElementById('stats-section');
-                        var updated = newDoc.getElementById('stats-section');
-                        if (current && updated) {
-                            current.replaceWith(updated);
-                        }
-                    })
-                    .catch(function () {});
+            var source;
+
+            function connect() {
+                source = new EventSource('/ui/dashboard/events');
+                source.onmessage = function (event) {
+                    if (event.data === 'refresh') {
+                        window.location.reload();
+                    }
+                };
+                source.onerror = function () {
+                    source.close();
+                };
             }
-            setInterval(refresh, 60000);
+
+            connect();
+
+            setInterval(function () {
+                if (!source || source.readyState === EventSource.CLOSED) {
+                    connect();
+                }
+            }, 60000);
         })();
     </script>
     {/content}

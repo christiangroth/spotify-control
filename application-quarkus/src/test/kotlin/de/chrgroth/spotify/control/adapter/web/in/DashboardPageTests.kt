@@ -36,12 +36,14 @@ class DashboardPageTests {
   }
 
   @Test
-  fun `dashboard page contains polling refresh script`() {
+  fun `dashboard page contains sse connection setup with reconnect interval`() {
     given()
       .`when`()
       .get("/ui/dashboard")
       .then()
       .statusCode(200)
+      .body(containsString("EventSource"))
+      .body(containsString("/ui/dashboard/events"))
       .body(containsString("setInterval"))
       .body(containsString("60000"))
   }
