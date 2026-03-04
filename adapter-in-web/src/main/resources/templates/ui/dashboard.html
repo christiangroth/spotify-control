@@ -86,7 +86,6 @@
             }
 
             function connect() {
-                console.log('[SSE] Connecting to /ui/dashboard/events...');
                 source = new EventSource('/ui/dashboard/events');
                 source.onopen = function () { };
                 source.onmessage = function (event) {
