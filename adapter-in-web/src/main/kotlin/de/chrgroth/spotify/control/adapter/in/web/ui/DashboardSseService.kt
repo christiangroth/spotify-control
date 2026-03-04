@@ -26,15 +26,19 @@ class DashboardSseService : DashboardRefreshPort, OutboxPartitionObserver, Outgo
         }
     }
 
-    override fun notifyUser(userId: UserId) = emitToUser(userId.value, "refresh")
+    override fun notifyUserPlaybackData(userId: UserId) = emitToUser(userId.value, "refresh-playback-data")
 
-    private fun notifyAllUsers() = emittersByUser.keys.forEach { emitToUser(it, "refresh") }
+    override fun notifyUserPlaylistMetadata(userId: UserId) = emitToUser(userId.value, "refresh-playlist-metadata")
 
-    override fun onPartitionPaused(partition: OutboxPartition) = notifyAllUsers()
+    private fun notifyAllUsersOutboxPartitions() = emittersByUser.keys.forEach { emitToUser(it, "refresh-outbox-partitions") }
 
-    override fun onPartitionActivated(partition: OutboxPartition) = notifyAllUsers()
+    private fun notifyAllUsersOutgoingHttpCalls() = emittersByUser.keys.forEach { emitToUser(it, "refresh-outgoing-http-calls") }
 
-    override fun onRequestRecorded() = notifyAllUsers()
+    override fun onPartitionPaused(partition: OutboxPartition) = notifyAllUsersOutboxPartitions()
+
+    override fun onPartitionActivated(partition: OutboxPartition) = notifyAllUsersOutboxPartitions()
+
+    override fun onRequestRecorded() = notifyAllUsersOutgoingHttpCalls()
 
     private fun emitToUser(userId: String, event: String) {
         emittersByUser[userId]?.forEach { runCatching { it.emit(event) } }

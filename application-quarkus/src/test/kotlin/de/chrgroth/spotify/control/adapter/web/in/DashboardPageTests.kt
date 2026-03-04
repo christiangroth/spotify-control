@@ -48,4 +48,62 @@ class DashboardPageTests {
       .body(containsString("setInterval"))
       .body(containsString("60000"))
   }
+
+  @Test
+  fun `dashboard page uses specific sse events with fade updates instead of full reload`() {
+    given()
+      .`when`()
+      .get("/ui/dashboard")
+      .then()
+      .statusCode(200)
+      .body(containsString("refresh-playback-data"))
+      .body(containsString("refresh-playlist-metadata"))
+      .body(containsString("refresh-outgoing-http-calls"))
+      .body(containsString("refresh-outbox-partitions"))
+      .body(containsString("fadeUpdate"))
+  }
+
+  @Test
+  fun `dashboard snippet endpoint for playback data is available`() {
+    given()
+      .`when`()
+      .get("/ui/dashboard/snippets/playback-data")
+      .then()
+      .statusCode(200)
+      .contentType(containsString("text/html"))
+      .body(containsString("Total Playback Events"))
+  }
+
+  @Test
+  fun `dashboard snippet endpoint for playlist metadata is available`() {
+    given()
+      .`when`()
+      .get("/ui/dashboard/snippets/playlist-metadata")
+      .then()
+      .statusCode(200)
+      .contentType(containsString("text/html"))
+      .body(containsString("Playlists synced"))
+  }
+
+  @Test
+  fun `dashboard snippet endpoint for outgoing http calls is available`() {
+    given()
+      .`when`()
+      .get("/ui/dashboard/snippets/outgoing-http-calls")
+      .then()
+      .statusCode(200)
+      .contentType(containsString("text/html"))
+      .body(containsString("Outgoing HTTP Requests"))
+  }
+
+  @Test
+  fun `dashboard snippet endpoint for outbox partitions is available`() {
+    given()
+      .`when`()
+      .get("/ui/dashboard/snippets/outbox-partitions")
+      .then()
+      .statusCode(200)
+      .contentType(containsString("text/html"))
+      .body(containsString("Outbox Partitions"))
+  }
 }

@@ -62,7 +62,7 @@ class PlaylistSyncAdapter(
             logger.info { "Synced ${updatedPlaylists.size} playlist(s) for user ${userId.value}" }
             playlistRepository.saveAll(userId, updatedPlaylists)
             if (updatedPlaylists.size != existingById.size) {
-                dashboardRefresh.notifyUser(userId)
+                dashboardRefresh.notifyUserPlaylistMetadata(userId)
             }
         }
     }

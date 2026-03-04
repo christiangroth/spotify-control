@@ -7,33 +7,42 @@
         <div id="stats-section">
             <h2 class="mb-3 fs-6 fw-semibold text-uppercase" style="color:#888;letter-spacing:.05em;">Spotify data</h2>
             <div class="row g-3 mb-4">
-                <div class="col-12 col-sm-6 col-lg-3">
+                <div id="snippet-playlist-metadata" class="col-12 col-sm-6 col-lg-3">
+                    {#fragment id="snippet_playlist_metadata"}
                     <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
                         <div class="card-body">
                             <p class="card-subtitle mb-1" style="color:#888;font-size:.8rem;">Playlists synced</p>
                             <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.syncedPlaylists} / {stats.totalPlaylists}</p>
                         </div>
                     </div>
+                    {/fragment}
                 </div>
-                <div class="col-12 col-sm-6 col-lg-3">
-                    <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
-                        <div class="card-body">
-                            <p class="card-subtitle mb-1" style="color:#888;font-size:.8rem;">Total Playback Events</p>
-                            <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.totalPlaybackEvents}</p>
+                <div id="snippet-playback-data" class="col-12 col-sm-6 col-lg-6">
+                    {#fragment id="snippet_playback_data"}
+                    <div class="row g-3">
+                        <div class="col-12 col-sm-6">
+                            <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                                <div class="card-body">
+                                    <p class="card-subtitle mb-1" style="color:#888;font-size:.8rem;">Total Playback Events</p>
+                                    <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.totalPlaybackEvents}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6">
+                            <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                                <div class="card-body">
+                                    <p class="card-subtitle mb-1" style="color:#888;font-size:.8rem;">Playback Events (Last 30 Days)</p>
+                                    <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.playbackEventsLast30Days}</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="col-12 col-sm-6 col-lg-3">
-                    <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
-                        <div class="card-body">
-                            <p class="card-subtitle mb-1" style="color:#888;font-size:.8rem;">Playback Events (Last 30 Days)</p>
-                            <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.playbackEventsLast30Days}</p>
-                        </div>
-                    </div>
+                    {/fragment}
                 </div>
             </div>
 
-            <div class="card mb-4" style="background-color:#1e1e1e;border-color:#333;">
+            <div id="snippet-playback-histogram" class="card mb-4" style="background-color:#1e1e1e;border-color:#333;">
+                {#fragment id="snippet_playback_histogram"}
                 <div class="card-body">
                     <p class="card-subtitle mb-3" style="color:#888;font-size:.8rem;">Playback Events per Day (Last 30 Days)</p>
                     <div style="overflow-x:auto;">
@@ -52,12 +61,14 @@
                         </div>
                     </div>
                 </div>
+                {/fragment}
             </div>
 
             <h2 class="mb-3 fs-6 fw-semibold text-uppercase" style="color:#888;letter-spacing:.05em;">System Health</h2>
             <div class="row g-3 mb-4">
                 <div class="col-12 col-sm-6 col-lg-3">
-                    <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                    <div id="snippet-outgoing-http-calls" class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                        {#fragment id="snippet_outgoing_http_calls"}
                         <div class="card-body">
                             <p class="card-subtitle mb-3" style="color:#888;font-size:.8rem;">Outgoing HTTP Requests (Last 24h)</p>
                             <div class="table-responsive">
@@ -79,10 +90,12 @@
                                 </table>
                             </div>
                         </div>
+                        {/fragment}
                     </div>
                 </div>
                 <div class="col-12 col-sm-6 col-lg-3">
-                    <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                    <div id="snippet-outbox-partitions" class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                        {#fragment id="snippet_outbox_partitions"}
                         <div class="card-body">
                             <p class="card-subtitle mb-3" style="color:#888;font-size:.8rem;">Outbox Partitions</p>
                             <div class="table-responsive">
@@ -112,6 +125,7 @@
                                 </table>
                             </div>
                         </div>
+                        {/fragment}
                     </div>
                 </div>
             </div>
@@ -122,6 +136,22 @@
         (function () {
             var source;
 
+            function fadeUpdate(elementId, url) {
+                var el = document.getElementById(elementId);
+                if (!el) return;
+                el.style.transition = 'opacity 0.3s ease';
+                el.style.opacity = '0';
+                fetch(url)
+                    .then(function (r) { return r.text(); })
+                    .then(function (html) {
+                        el.innerHTML = html;
+                        el.style.opacity = '1';
+                    })
+                    .catch(function () {
+                        el.style.opacity = '1';
+                    });
+            }
+
             function connect() {
                 console.log('[SSE] Connecting to /ui/dashboard/events...');
                 source = new EventSource('/ui/dashboard/events');
@@ -130,8 +160,15 @@
                 };
                 source.onmessage = function (event) {
                     console.log('[SSE] Message received: ' + event.data);
-                    if (event.data === 'refresh') {
-                        window.location.reload();
+                    if (event.data === 'refresh-playback-data') {
+                        fadeUpdate('snippet-playback-data', '/ui/dashboard/snippets/playback-data');
+                        fadeUpdate('snippet-playback-histogram', '/ui/dashboard/snippets/playback-histogram');
+                    } else if (event.data === 'refresh-playlist-metadata') {
+                        fadeUpdate('snippet-playlist-metadata', '/ui/dashboard/snippets/playlist-metadata');
+                    } else if (event.data === 'refresh-outgoing-http-calls') {
+                        fadeUpdate('snippet-outgoing-http-calls', '/ui/dashboard/snippets/outgoing-http-calls');
+                    } else if (event.data === 'refresh-outbox-partitions') {
+                        fadeUpdate('snippet-outbox-partitions', '/ui/dashboard/snippets/outbox-partitions');
                     }
                 };
                 source.onerror = function () {
