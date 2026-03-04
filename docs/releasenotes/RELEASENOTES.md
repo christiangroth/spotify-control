@@ -1,3 +1,6 @@
+# 0.11.4 - 2026.03.04
+## New Features
+* enhance-playlist-sync-settings-ui: Add Spotify playlist sync settings with hourly sync job and settings UI to manage per-playlist sync status.
 # 0.11.3 - 2026.03.04
 ## New Features
 * add-prometheus-metrics: Add Prometheus metrics for outgoing Spotify HTTP requests (url, duration, response code).
