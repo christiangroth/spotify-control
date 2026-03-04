@@ -94,6 +94,7 @@ class OAuthResource {
                                     .path("/")
                                     .httpOnly(true)
                                     .sameSite(NewCookie.SameSite.LAX)
+                                    .maxAge(SESSION_COOKIE_MAX_AGE_SECONDS)
                                     .build()
                             )
                             .build()
@@ -131,6 +132,7 @@ class OAuthResource {
 
     companion object : KLogging() {
         private const val STATE_TTL_MS = 600_000L
+        private const val SESSION_COOKIE_MAX_AGE_SECONDS = 30 * 24 * 60 * 60 // 30 days
     }
 }
 
