@@ -38,6 +38,15 @@ class SpotifyRecentlyPlayedAdapterTests {
     }
 
     @Test
+    fun `getRecentlyPlayed filters out podcast episodes`() {
+        val result = spotifyRecentlyPlayed.getRecentlyPlayed(UserId("test-user-a"), AccessToken("mock-access-token"))
+
+        assertThat(result).isInstanceOf(Either.Right::class.java)
+        val items = (result as Either.Right).value
+        assertThat(items.none { it.trackId == "episode-1" }).isTrue
+    }
+
+    @Test
     fun `getRecentlyPlayed records spotify request metrics`() {
         spotifyRecentlyPlayed.getRecentlyPlayed(UserId("test-user-a"), AccessToken("mock-access-token"))
 

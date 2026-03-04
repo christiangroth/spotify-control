@@ -1,0 +1,1 @@
+* ignore-non-music-events: Podcast episodes and other non-track playback events are now ignored when fetching recently played history.
