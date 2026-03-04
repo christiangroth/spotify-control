@@ -1,3 +1,6 @@
+# 0.10.1 - 2026.03.04
+## New Features
+* fix-index-page-redirect: Redirect authenticated users from the index page to the dashboard UI when a valid session cookie is present.
 # 0.10.0 - 2026.03.04
 ## New Features
 * add-mongodb-slow-query-metrics: Add MongoDB query metrics, slow query detection (configurable threshold, default 250ms), and indexes for recently_played and outbox collections.
