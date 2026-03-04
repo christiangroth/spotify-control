@@ -1,0 +1,1 @@
+* create-playlist-sync: Added playlist entity with full track data; playlist data sync is triggered automatically when a playlist's snapshot ID changes or a playlist is marked as active but has no synced data yet.
