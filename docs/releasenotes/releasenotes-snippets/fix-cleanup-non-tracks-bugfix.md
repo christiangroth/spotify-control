@@ -1,1 +1,0 @@
-* fix-cleanup-non-tracks: Added a bugfix starter to remove non-track items (e.g. podcast episodes) from recently played history.

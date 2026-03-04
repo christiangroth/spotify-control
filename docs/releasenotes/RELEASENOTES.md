@@ -1,3 +1,6 @@
+# 0.15.2 - 2026.03.04
+## Bugfixes / Chore
+* fix-cleanup-non-tracks: Added a bugfix starter to remove non-track items (e.g. podcast episodes) from recently played history.
 # 0.15.1 - 2026.03.04
 ## Bugfixes / Chore
 * remove-non-owned-playlists: Added bugfix starter to remove playlist metadata documents for playlists not owned by the user.
