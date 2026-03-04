@@ -1,3 +1,6 @@
+# 0.11.5 - 2026.03.04
+## New Features
+* tweak-playlists-sync: Playlists settings page now shows heading "Playlists" and includes a "Sync Now" button to trigger an immediate sync.
 # 0.11.4 - 2026.03.04
 ## New Features
 * enhance-playlist-sync-settings-ui: Add Spotify playlist sync settings with hourly sync job and settings UI to manage per-playlist sync status.
