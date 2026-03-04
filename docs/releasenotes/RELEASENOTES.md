@@ -1,3 +1,6 @@
+# 0.10.0 - 2026.03.04
+## New Features
+* add-mongodb-slow-query-metrics: Add MongoDB query metrics, slow query detection (configurable threshold, default 250ms), and indexes for recently_played and outbox collections.
 # 0.9.4 - 2026.03.03
 ## Bugfixes / Chore
 * streamline-navigation-links: Streamlined navigation links across all pages.
