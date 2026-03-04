@@ -4,6 +4,7 @@ import arrow.core.Either
 import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.OutboxHandlerPort
+import de.chrgroth.spotify.control.domain.port.`in`.PlaylistSyncPort
 import de.chrgroth.spotify.control.domain.port.`in`.RecentlyPlayedPort
 import de.chrgroth.spotify.control.domain.port.`in`.UserProfileUpdatePort
 import de.chrgroth.spotify.control.util.outbox.OutboxTaskResult
@@ -15,6 +16,7 @@ import mu.KLogging
 class OutboxHandlerAdapter(
     private val recentlyPlayed: RecentlyPlayedPort,
     private val userProfileUpdate: UserProfileUpdatePort,
+    private val playlistSync: PlaylistSyncPort,
 ) : OutboxHandlerPort {
 
     override fun handle(event: DomainOutboxEvent.FetchRecentlyPlayed): OutboxTaskResult = try {
@@ -47,6 +49,22 @@ class OutboxHandlerAdapter(
     } catch (e: Exception) {
         logger.error(e) { "Unexpected error in handle(UpdateUserProfile) for user ${event.userId.value}" }
         OutboxTaskResult.Failed("Unexpected error in update: ${e.message}", e)
+    }
+
+    override fun handle(event: DomainOutboxEvent.SyncPlaylistInfo): OutboxTaskResult = try {
+        when (val result = playlistSync.syncPlaylists(event.userId)) {
+            is Either.Right -> OutboxTaskResult.Success
+            is Either.Left -> when (val error = result.value) {
+                is SpotifyRateLimitError -> OutboxTaskResult.RateLimited(error.retryAfter)
+                else -> {
+                    logger.error { "Failed to sync playlists for user ${event.userId.value}: ${error.code}" }
+                    OutboxTaskResult.Failed("Failed to sync playlists: ${error.code}")
+                }
+            }
+        }
+    } catch (e: Exception) {
+        logger.error(e) { "Unexpected error in handle(SyncPlaylistInfo) for user ${event.userId.value}" }
+        OutboxTaskResult.Failed("Unexpected error in sync: ${e.message}", e)
     }
 
     companion object : KLogging()

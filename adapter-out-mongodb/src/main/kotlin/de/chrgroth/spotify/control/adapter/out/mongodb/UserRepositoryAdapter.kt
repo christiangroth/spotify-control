@@ -1,5 +1,7 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
+import de.chrgroth.spotify.control.domain.model.PlaylistInfo
+import de.chrgroth.spotify.control.domain.model.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.User
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
@@ -46,6 +48,7 @@ class UserRepositoryAdapter : UserRepositoryPort {
         document.encryptedRefreshToken = user.encryptedRefreshToken
         document.tokenExpiresAt = user.tokenExpiresAt.toJavaInstant()
         document.lastLoginAt = user.lastLoginAt.toJavaInstant()
+        document.playlists = user.playlists.map { it.toDocument() }
         mongoQueryMetrics.timed("user.upsert.persistOrUpdate") {
             userDocumentRepository.persistOrUpdate(document)
         }
@@ -58,7 +61,26 @@ class UserRepositoryAdapter : UserRepositoryPort {
         encryptedRefreshToken = encryptedRefreshToken,
         tokenExpiresAt = tokenExpiresAt.toKotlinInstant(),
         lastLoginAt = lastLoginAt.toKotlinInstant(),
+        playlists = playlists.map { it.toDomain() },
     )
+
+    private fun PlaylistInfoDocument.toDomain() = PlaylistInfo(
+        spotifyPlaylistId = spotifyPlaylistId,
+        snapshotId = snapshotId,
+        lastSnapshotIdSyncTime = lastSnapshotIdSyncTime.toKotlinInstant(),
+        lastSnapshotChange = lastSnapshotChange?.toKotlinInstant(),
+        name = name,
+        syncStatus = PlaylistSyncStatus.valueOf(syncStatus),
+    )
+
+    private fun PlaylistInfo.toDocument() = PlaylistInfoDocument().apply {
+        spotifyPlaylistId = this@toDocument.spotifyPlaylistId
+        snapshotId = this@toDocument.snapshotId
+        lastSnapshotIdSyncTime = this@toDocument.lastSnapshotIdSyncTime.toJavaInstant()
+        lastSnapshotChange = this@toDocument.lastSnapshotChange?.toJavaInstant()
+        name = this@toDocument.name
+        syncStatus = this@toDocument.syncStatus.name
+    }
 
     companion object : KLogging()
 }

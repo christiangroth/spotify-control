@@ -1,0 +1,106 @@
+{#include layout.html}
+    {#title}SpCtl – Settings{/title}
+    {#content}
+    <div class="container py-4">
+        <h1 class="mb-4 fs-4 fw-semibold">Settings – Playlists</h1>
+
+        <div id="status-banner" class="alert d-none mb-3" role="alert"></div>
+
+        {#if rows.isEmpty()}
+        <p class="text-secondary">No playlists found. Playlist data is synced automatically every hour.</p>
+        {#else}
+        <table class="table table-dark table-hover align-middle">
+            <thead>
+                <tr>
+                    <th style="width:3rem">#</th>
+                    <th style="width:2.5rem">Sync</th>
+                    <th>Name</th>
+                    <th style="width:12rem">Last Change</th>
+                </tr>
+            </thead>
+            <tbody>
+                {#for row in rows}
+                <tr>
+                    <td class="text-secondary" style="font-variant-numeric: tabular-nums">{row.lineNumber}</td>
+                    <td>
+                        <button
+                            class="btn btn-link p-0 border-0 sync-toggle"
+                            data-playlist-id="{row.playlist.spotifyPlaylistId}"
+                            data-sync-status="{row.playlist.syncStatus}"
+                            title="Click to toggle sync status"
+                            aria-label="Toggle sync status for {row.playlist.name}"
+                        >
+                            {#if row.active}
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#1db954" viewBox="0 0 16 16">
+                                <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0m-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/>
+                            </svg>
+                            {#else}
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#dc3545" viewBox="0 0 16 16">
+                                <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.646a.5.5 0 0 0-.708-.708L8 7.293z"/>
+                            </svg>
+                            {/if}
+                        </button>
+                    </td>
+                    <td>{row.playlist.name}</td>
+                    <td class="text-secondary small">
+                        {#if row.playlist.lastSnapshotChange}
+                        {row.playlist.lastSnapshotChange}
+                        {#else}
+                        –
+                        {/if}
+                    </td>
+                </tr>
+                {/for}
+            </tbody>
+        </table>
+        {/if}
+    </div>
+    <script>
+        document.querySelectorAll('.sync-toggle').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var playlistId = this.getAttribute('data-playlist-id');
+                var currentStatus = this.getAttribute('data-sync-status');
+                var newStatus = currentStatus === 'ACTIVE' ? 'PASSIVE' : 'ACTIVE';
+                var button = this;
+
+                fetch('/ui/settings/playlists/' + encodeURIComponent(playlistId) + '/sync-status', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ syncStatus: newStatus })
+                })
+                .then(function(response) {
+                    return response.json().then(function(data) {
+                        return { ok: response.ok, data: data };
+                    });
+                })
+                .then(function(result) {
+                    if (result.ok) {
+                        button.setAttribute('data-sync-status', result.data.syncStatus);
+                        var isActive = result.data.syncStatus === 'ACTIVE';
+                        button.innerHTML = isActive
+                            ? '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#1db954" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0m-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/></svg>'
+                            : '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#dc3545" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.646a.5.5 0 0 0-.708-.708L8 7.293z"/></svg>';
+                        showBanner('Sync status updated successfully.', 'success');
+                    } else {
+                        showBanner('Failed to update sync status: ' + (result.data.error || 'Unknown error'), 'danger');
+                    }
+                })
+                .catch(function(err) {
+                    showBanner('Request failed: ' + err.message, 'danger');
+                });
+            });
+        });
+
+        function showBanner(message, type) {
+            var banner = document.getElementById('status-banner');
+            banner.textContent = message;
+            banner.className = 'alert alert-' + type + ' mb-3';
+            banner.classList.remove('d-none');
+            clearTimeout(banner._fadeTimer);
+            banner._fadeTimer = setTimeout(function() {
+                banner.classList.add('d-none');
+            }, 5000);
+        }
+    </script>
+    {/content}
+{/include}

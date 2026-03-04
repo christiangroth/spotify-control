@@ -32,6 +32,12 @@ enum class PlaybackError(override val code: String) : DomainError {
     ;
 }
 
+enum class PlaylistSyncError(override val code: String) : DomainError {
+    PLAYLIST_FETCH_FAILED("PLAYLIST-001"),
+    PLAYLIST_NOT_FOUND("PLAYLIST-002"),
+    ;
+}
+
 data class SpotifyRateLimitError(val retryAfter: java.time.Duration) : DomainError {
     override val code: String = "SPOTIFY-429"
 }

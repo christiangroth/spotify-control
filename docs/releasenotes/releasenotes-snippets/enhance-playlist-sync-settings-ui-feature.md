@@ -1,0 +1,1 @@
+* enhance-playlist-sync-settings-ui: Add Spotify playlist sync settings with hourly sync job and settings UI to manage per-playlist sync status.
