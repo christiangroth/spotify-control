@@ -36,6 +36,15 @@ class DocsResource {
 
   @GET
   @Authenticated
+  @Path("/starters")
+  @Produces(MediaType.TEXT_HTML)
+  fun starters(): TemplateInstance =
+    docsTemplate.instance()
+      .data("title", "Starters")
+      .data("markdownContent", DocsUtils.readMarkdown("docs/arc42/starters.md"))
+
+  @GET
+  @Authenticated
   @Path("/outbox")
   @Produces(MediaType.TEXT_HTML)
   fun outbox(): TemplateInstance =

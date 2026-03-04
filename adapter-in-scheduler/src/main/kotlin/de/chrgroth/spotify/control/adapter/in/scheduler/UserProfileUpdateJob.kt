@@ -1,6 +1,7 @@
 package de.chrgroth.spotify.control.adapter.`in`.scheduler
 
 import de.chrgroth.spotify.control.domain.port.`in`.UserProfileUpdatePort
+import de.chrgroth.spotify.control.util.starters.StarterSkipPredicate
 import io.quarkus.scheduler.Scheduled
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
@@ -11,7 +12,7 @@ class UserProfileUpdateJob(
     private val userProfileUpdate: UserProfileUpdatePort,
 ) {
 
-    @Scheduled(cron = "0 0 4 * * ?")
+    @Scheduled(cron = "0 0 4 * * ?", skipExecutionIf = StarterSkipPredicate::class)
     fun run() {
         logger.info { "Running scheduled user profile update" }
         userProfileUpdate.enqueueUpdates()
