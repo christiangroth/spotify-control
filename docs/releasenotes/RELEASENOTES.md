@@ -1,3 +1,13 @@
+# 0.11.0 - 2026.03.04
+## New Features
+* update-header-logo-and-docs: Add logo to header bar.
+* update-header-logo-and-docs: Replace Docs text in menu bar with icon.
+* update-header-logo-and-docs: Make Docs link always visible when authenticated.
+* update-header-logo-and-docs: Rename arc42-EN.md to arc42.md.
+* update-header-logo-and-docs: Add outbox.md and coding-guidelines serving.
+* update-header-logo-and-docs: Remove ADR index page and related code.
+* update-header-logo-and-docs: Change ADR URL to /ui/adr/$file.md.
+* update-header-logo-and-docs: Dashboard page now uses SSE for live updates.
 # 0.10.2 - 2026.03.04
 ## New Features
 * upgrade-java-25-kotlin-2-3-10: Upgraded to Java 25 (LTS) and Kotlin 2.3.10.
