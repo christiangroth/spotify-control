@@ -8,6 +8,7 @@ import jakarta.ws.rs.GET
 import jakarta.ws.rs.POST
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.Produces
+import jakarta.ws.rs.PathParam
 import jakarta.ws.rs.core.MediaType
 import org.eclipse.microprofile.config.inject.ConfigProperty
 
@@ -44,6 +45,13 @@ class SpotifyMockResource {
     @Produces(MediaType.APPLICATION_JSON)
     fun recentlyPlayed(): String = RECENTLY_PLAYED_RESPONSE
 
+    @GET
+    @Path("/v1/playlists/{playlistId}/tracks")
+    @PermitAll
+    @Produces(MediaType.APPLICATION_JSON)
+    @Suppress("UnusedParameter")
+    fun playlistTracks(@PathParam("playlistId") playlistId: String): String = PLAYLIST_TRACKS_RESPONSE
+
     companion object {
         private const val TOKEN_RESPONSE =
             """{"access_token":"mock-access-token","refresh_token":"mock-refresh-token","expires_in":3600,"token_type":"Bearer"}"""
@@ -51,5 +59,7 @@ class SpotifyMockResource {
             """{"access_token":"mock-refreshed-access-token","expires_in":3600,"token_type":"Bearer"}"""
         private const val RECENTLY_PLAYED_RESPONSE =
             """{"items":[{"track":{"id":"track-1","name":"Track One","type":"track","artists":[{"id":"artist-1","name":"Artist One"}]},"played_at":"2024-01-01T12:00:00.000Z"},{"track":{"id":"episode-1","name":"Podcast Episode One","type":"episode"},"played_at":"2024-01-01T11:00:00.000Z"}]}"""
+        private const val PLAYLIST_TRACKS_RESPONSE =
+            """{"snapshot_id":"mock-snapshot-1","items":[{"track":{"id":"track-1","name":"Track One","type":"track","artists":[{"id":"artist-1","name":"Artist One"}]}},{"track":{"id":"episode-1","name":"Podcast Episode One","type":"episode"}}],"next":null}"""
     }
 }

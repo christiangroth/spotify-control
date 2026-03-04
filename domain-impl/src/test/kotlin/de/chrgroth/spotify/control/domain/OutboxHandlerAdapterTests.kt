@@ -151,4 +151,46 @@ class OutboxHandlerAdapterTests {
 
         assertThat(result).isInstanceOf(OutboxTaskResult.Failed::class.java)
     }
+
+    private val syncPlaylistDataEvent = DomainOutboxEvent.SyncPlaylistData(userId, "playlist-1")
+
+    @Test
+    fun `handle SyncPlaylistData delegates to PlaylistSyncPort successfully`() {
+        every { playlistSync.syncPlaylistData(userId, "playlist-1") } returns Unit.right()
+
+        val result = adapter.handle(syncPlaylistDataEvent)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.Success::class.java)
+        verify { playlistSync.syncPlaylistData(userId, "playlist-1") }
+    }
+
+    @Test
+    fun `handle SyncPlaylistData returns Failed on domain error`() {
+        every { playlistSync.syncPlaylistData(userId, "playlist-1") } returns PlaylistSyncError.PLAYLIST_TRACKS_FETCH_FAILED.left()
+
+        val result = adapter.handle(syncPlaylistDataEvent)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.Failed::class.java)
+        assertThat((result as OutboxTaskResult.Failed).message).contains(PlaylistSyncError.PLAYLIST_TRACKS_FETCH_FAILED.code)
+    }
+
+    @Test
+    fun `handle SyncPlaylistData returns RateLimited on SpotifyRateLimitError`() {
+        val retryAfter = Duration.ofSeconds(30)
+        every { playlistSync.syncPlaylistData(userId, "playlist-1") } returns SpotifyRateLimitError(retryAfter).left()
+
+        val result = adapter.handle(syncPlaylistDataEvent)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.RateLimited::class.java)
+        assertThat((result as OutboxTaskResult.RateLimited).retryAfter).isEqualTo(retryAfter)
+    }
+
+    @Test
+    fun `handle SyncPlaylistData returns Failed on unexpected exception`() {
+        every { playlistSync.syncPlaylistData(userId, "playlist-1") } throws RuntimeException("connection error")
+
+        val result = adapter.handle(syncPlaylistDataEvent)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.Failed::class.java)
+    }
 }

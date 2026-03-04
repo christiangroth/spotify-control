@@ -8,5 +8,6 @@ import de.chrgroth.spotify.control.domain.model.UserId
 interface PlaylistSyncPort {
     fun enqueueUpdates()
     fun syncPlaylists(userId: UserId): Either<DomainError, Unit>
+    fun syncPlaylistData(userId: UserId, playlistId: String): Either<DomainError, Unit>
     fun updateSyncStatus(userId: UserId, playlistId: String, syncStatus: PlaylistSyncStatus): Either<DomainError, Unit>
 }
