@@ -4,12 +4,10 @@ plugins {
 }
 
 dependencies {
-  implementation(project(":domain-api"))
   implementation(project(":util-starters"))
 
   implementation(enforcedPlatform(libs.quarkusBom))
   implementation("io.quarkus:quarkus-arc")
-  implementation("io.quarkus:quarkus-scheduler")
 }
 
 allOpen {

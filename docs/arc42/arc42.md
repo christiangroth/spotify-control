@@ -93,6 +93,7 @@ The system is composed of the following Gradle modules:
 | Module                  | Role                                                                                  |
 |-------------------------|---------------------------------------------------------------------------------------|
 | `adapter-in-web`        | REST endpoints, OAuth callback, SSE endpoints, action endpoints (approve/reject)      |
+| `adapter-in-starter`    | Concrete one-time startup bean implementations                                        |
 | `adapter-out-mongodb`   | Repository implementations for MongoDB                                                |
 | `adapter-out-spotify`   | Spotify API client, token refresh, token bucket rate limiting, backoff                |
 | `adapter-out-slack`     | Slack API client, Block Kit message builder                                           |
@@ -101,6 +102,7 @@ The system is composed of the following Gradle modules:
 | `domain-api`            | Ports (interfaces) – defines the contracts between domain and adapters                |
 | `domain-impl`           | Domain services, domain objects, CDI events                                           |
 | `util-outbox`           | Outbox implementation (designed to be extractable as a separate external module)      |
+| `util-starters`         | One-time startup bean infrastructure (designed to be extractable as a separate external module) |
 
 ### `adapter-in-web`
 
@@ -125,6 +127,14 @@ Contains the core business logic: playback enrichment, aggregation computation, 
 ### `util-outbox`
 
 A self-contained outbox implementation providing: persistent task storage (MongoDB), atomic claim via `findOneAndUpdate`, at-least-once delivery with configurable retry backoff, partition-level pause/resume, task deduplication, priority-based ordering, and a conflated `Channel<Unit>` per partition for event-driven wakeup. Designed to be potentially extracted as a standalone library. See [outbox.md](outbox.md) for architecture details and usage guidance.
+
+### `adapter-in-starter`
+
+Contains concrete `Starter` implementations acting as inbound adapters: they receive a startup trigger from `util-starters` and call into the domain via port interfaces. Currently contains `HelloWorldStarter` as a demo implementation.
+
+### `util-starters`
+
+A self-contained one-time startup bean infrastructure providing: `Starter` interface, persistent state tracking (MongoDB `starters` collection), execution history, profile-aware startup observer, Quarkus scheduler integration via a named `SkipPredicate`, and Micrometer metrics. Starters execute exactly once in `NORMAL` (prod) mode and are skipped in `dev`/`test`. See [starters.md](starters.md) for architecture details and usage guidance.
 
 ## Level 2
 
@@ -280,6 +290,12 @@ Spotify provides genres only at the artist level. Genres are derived from the ar
 | `PlaylistCheckJob` | every 15 min    | `SyncPlaylist` (only on snapshot change)   |
 | `AggregationJob`   | nightly         | `RecomputeAggregations`                    |
 
+All scheduler jobs skip execution via `skipExecutionIf = StarterSkipPredicate::class` until all starters have completed successfully.
+
+## Starters
+
+One-time startup beans for data migrations, schema changes, and one-time bugfixes. Each starter executes exactly once in `NORMAL` (prod) mode; failed starters are retried on the next application start. The Quarkus scheduler is blocked until all starters succeed. See [starters.md](starters.md) for architecture details and usage guidance.
+
 ## MongoDB Charts Contract
 
 Charts work exclusively on `aggregations_*` collections. Field names are stable (public API) – breaking changes require contract test updates. `@QuarkusTest` contract tests validate the schema on every build. Additive changes (new fields) are non-breaking.
@@ -345,6 +361,7 @@ See [outbox.md](outbox.md) for outbox-specific design decisions.
 
 | Term                    | Definition                                                                                                            |
 |-------------------------|-----------------------------------------------------------------------------------------------------------------------|
+| Starter                 | A one-time startup bean (`util-starters`) that executes arbitrary logic exactly once in production; used for data migrations, schema changes, and one-time bugfixes |
 | Outbox                  | A persistent task queue used to reliably dispatch Spotify API calls and domain events asynchronously                  |
 | Snapshot ID             | A Spotify-provided identifier that changes whenever a playlist is modified; used to detect changes efficiently        |
 | All-Invariant           | The rule that the `All` playlist must always be the union of all yearly playlists                                     |
