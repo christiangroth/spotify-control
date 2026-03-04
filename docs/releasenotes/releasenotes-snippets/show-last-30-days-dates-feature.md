@@ -1,0 +1,1 @@
+* show-last-30-days-dates: Date labels under playback events histogram columns are now only shown on large screens.
