@@ -31,7 +31,7 @@ class HealthSseService : OutboxPartitionObserver, OutgoingRequestStatsObserver {
 
     override fun onRequestRecorded() = notifyAllUsers("refresh-outgoing-http-calls")
 
-    private fun notifyAllUsers(event: String) = emittersByUser.keys.forEach { emitToUser(it, event) }
+    private fun notifyAllUsers(event: String) = emittersByUser.keys.toList().forEach { emitToUser(it, event) }
 
     private fun emitToUser(userId: String, event: String) {
         emittersByUser[userId]?.forEach { runCatching { it.emit(event) } }
