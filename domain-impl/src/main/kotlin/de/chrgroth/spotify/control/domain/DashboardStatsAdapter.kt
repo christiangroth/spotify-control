@@ -2,11 +2,13 @@ package de.chrgroth.spotify.control.domain
 
 import de.chrgroth.spotify.control.domain.model.DashboardStats
 import de.chrgroth.spotify.control.domain.model.DayCount
+import de.chrgroth.spotify.control.domain.model.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.DashboardStatsPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxInfoPort
 import de.chrgroth.spotify.control.domain.port.out.RecentlyPlayedRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.OutgoingRequestStatsPort
+import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
@@ -21,6 +23,7 @@ class DashboardStatsAdapter(
     private val recentlyPlayedRepository: RecentlyPlayedRepositoryPort,
     private val outboxInfo: OutboxInfoPort,
     private val outgoingRequestStats: OutgoingRequestStatsPort,
+    private val userRepository: UserRepositoryPort,
 ) : DashboardStatsPort {
 
     override fun getStats(userId: UserId): DashboardStats {
@@ -44,7 +47,14 @@ class DashboardStatsAdapter(
             )
         }
 
+        val user = userRepository.findById(userId)
+        val playlists = user?.playlists.orEmpty()
+        val totalPlaylists = playlists.size.toLong()
+        val syncedPlaylists = playlists.count { it.syncStatus == PlaylistSyncStatus.ACTIVE }.toLong()
+
         return DashboardStats(
+            syncedPlaylists = syncedPlaylists,
+            totalPlaylists = totalPlaylists,
             totalPlaybackEvents = total,
             playbackEventsLast30Days = last30Days,
             playbackEventsPerDay = perDay,
