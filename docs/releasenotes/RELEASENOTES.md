@@ -1,3 +1,6 @@
+# 0.12.6 - 2026.03.04
+## Bugfixes / Chore
+* ignore-non-music-events: Podcast episodes and other non-track playback events are now ignored when fetching recently played history.
 # 0.12.5 - 2026.03.04
 ## New Features
 * trigger-sse-update-event: Playlist sync now triggers a Dashboard SSE refresh event when the number of playlists changes.
