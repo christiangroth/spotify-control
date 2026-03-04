@@ -22,6 +22,10 @@ import jakarta.ws.rs.PathParam
 import jakarta.ws.rs.Produces
 import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+import kotlin.time.toJavaInstant
 
 @Path("/ui/settings")
 @ApplicationScoped
@@ -65,6 +69,14 @@ class SettingsResource {
 
   data class PlaylistRow(val lineNumber: String, val playlist: PlaylistInfo) {
     val active: Boolean get() = playlist.syncStatus == PlaylistSyncStatus.ACTIVE
+    val lastSnapshotIdSyncTimeFormatted: String get() = playlist.lastSnapshotIdSyncTime
+      .toJavaInstant()
+      .atZone(ZoneId.systemDefault())
+      .format(GERMAN_DATE_TIME_FORMATTER)
+
+    companion object {
+      private val GERMAN_DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm", Locale.GERMAN)
+    }
   }
 
   @PUT
