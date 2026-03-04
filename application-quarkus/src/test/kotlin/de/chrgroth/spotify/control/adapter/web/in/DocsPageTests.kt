@@ -20,7 +20,7 @@ class DocsPageTests {
       .statusCode(200)
       .contentType(containsString("text/html"))
       .body(containsString("docs-rendered"))
-      .body(containsString("Architecture Documentation"))
+      .body(containsString("spotify-control"))
   }
 
   @Test
@@ -80,7 +80,7 @@ class DocsPageTests {
       .statusCode(200)
       .contentType(containsString("text/html"))
       .body(containsString("docs-rendered"))
-      .body(containsString("Release Notes"))
+      .body(containsString("Bugfixes"))
   }
 
   @Test
