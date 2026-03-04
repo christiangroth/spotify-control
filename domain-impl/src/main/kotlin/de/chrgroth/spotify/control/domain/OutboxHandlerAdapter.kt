@@ -67,5 +67,21 @@ class OutboxHandlerAdapter(
         OutboxTaskResult.Failed("Unexpected error in sync: ${e.message}", e)
     }
 
+    override fun handle(event: DomainOutboxEvent.SyncPlaylistData): OutboxTaskResult = try {
+        when (val result = playlistSync.syncPlaylistData(event.userId, event.playlistId)) {
+            is Either.Right -> OutboxTaskResult.Success
+            is Either.Left -> when (val error = result.value) {
+                is SpotifyRateLimitError -> OutboxTaskResult.RateLimited(error.retryAfter)
+                else -> {
+                    logger.error { "Failed to sync playlist data for playlist ${event.playlistId} (user ${event.userId.value}): ${error.code}" }
+                    OutboxTaskResult.Failed("Failed to sync playlist data: ${error.code}")
+                }
+            }
+        }
+    } catch (e: Exception) {
+        logger.error(e) { "Unexpected error in handle(SyncPlaylistData) for playlist ${event.playlistId} (user ${event.userId.value})" }
+        OutboxTaskResult.Failed("Unexpected error in sync: ${e.message}", e)
+    }
+
     companion object : KLogging()
 }

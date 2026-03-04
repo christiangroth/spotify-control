@@ -1,0 +1,22 @@
+package de.chrgroth.spotify.control.adapter.out.mongodb
+
+import io.quarkus.mongodb.panache.common.MongoEntity
+import org.bson.codecs.pojo.annotations.BsonId
+
+@MongoEntity(collection = "playlist")
+class PlaylistDocument {
+
+    @BsonId
+    lateinit var id: String
+    lateinit var spotifyUserId: String
+    lateinit var spotifyPlaylistId: String
+    lateinit var snapshotId: String
+    lateinit var tracks: List<PlaylistTrackSubdocument>
+}
+
+class PlaylistTrackSubdocument {
+    lateinit var trackId: String
+    lateinit var trackName: String
+    lateinit var artistIds: List<String>
+    lateinit var artistNames: List<String>
+}

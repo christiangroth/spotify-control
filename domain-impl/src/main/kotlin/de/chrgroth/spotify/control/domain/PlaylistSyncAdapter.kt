@@ -12,9 +12,11 @@ import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.PlaylistSyncPort
 import de.chrgroth.spotify.control.domain.port.out.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
+import de.chrgroth.spotify.control.domain.port.out.PlaylistDataRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyPlaylistPort
+import de.chrgroth.spotify.control.domain.port.out.SpotifyPlaylistTracksPort
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
@@ -25,8 +27,10 @@ import kotlin.time.Clock
 class PlaylistSyncAdapter(
     private val userRepository: UserRepositoryPort,
     private val playlistRepository: PlaylistRepositoryPort,
+    private val playlistDataRepository: PlaylistDataRepositoryPort,
     private val spotifyAccessToken: SpotifyAccessTokenPort,
     private val spotifyPlaylist: SpotifyPlaylistPort,
+    private val spotifyPlaylistTracks: SpotifyPlaylistTracksPort,
     private val outboxPort: OutboxPort,
     private val dashboardRefresh: DashboardRefreshPort,
 ) : PlaylistSyncPort {
@@ -64,6 +68,31 @@ class PlaylistSyncAdapter(
             if (updatedPlaylists.size != existingById.size) {
                 dashboardRefresh.notifyUserPlaylistMetadata(userId)
             }
+            // Enqueue SyncPlaylistData for active playlists that have a changed or missing snapshot
+            updatedPlaylists
+                .filter { it.syncStatus == PlaylistSyncStatus.ACTIVE }
+                .filter { playlist ->
+                    val existing = existingById[playlist.spotifyPlaylistId]
+                    existing == null ||
+                        existing.snapshotId != playlist.snapshotId ||
+                        playlistDataRepository.findByUserIdAndPlaylistId(userId, playlist.spotifyPlaylistId) == null
+                }
+                .forEach { playlist ->
+                    logger.info { "Enqueueing SyncPlaylistData for active playlist ${playlist.spotifyPlaylistId} (user ${userId.value})" }
+                    outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, playlist.spotifyPlaylistId))
+                }
+        }
+    }
+
+    override fun syncPlaylistData(userId: UserId, playlistId: String): Either<DomainError, Unit> {
+        userRepository.findById(userId) ?: run {
+            logger.warn { "User not found for playlist data sync: ${userId.value}" }
+            return Unit.right()
+        }
+        val accessToken = spotifyAccessToken.getValidAccessToken(userId)
+        return spotifyPlaylistTracks.getPlaylistTracks(userId, accessToken, playlistId).map { playlist ->
+            logger.info { "Synced ${playlist.tracks.size} track(s) for playlist $playlistId (user ${userId.value})" }
+            playlistDataRepository.save(userId, playlist)
         }
     }
 
@@ -82,6 +111,12 @@ class PlaylistSyncAdapter(
         }
         logger.info { "Updated sync status for playlist $playlistId (user ${userId.value}) to $syncStatus" }
         playlistRepository.saveAll(userId, updatedPlaylists)
+        if (syncStatus == PlaylistSyncStatus.ACTIVE &&
+            playlistDataRepository.findByUserIdAndPlaylistId(userId, playlist.spotifyPlaylistId) == null
+        ) {
+            logger.info { "Enqueueing SyncPlaylistData for newly active playlist $playlistId (user ${userId.value})" }
+            outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, playlistId))
+        }
         return Unit.right()
     }
 

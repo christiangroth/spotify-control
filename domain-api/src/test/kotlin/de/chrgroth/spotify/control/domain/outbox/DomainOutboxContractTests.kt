@@ -11,6 +11,7 @@ class DomainOutboxContractTests {
         DomainOutboxEvent.FetchRecentlyPlayed(UserId("user-1")),
         DomainOutboxEvent.UpdateUserProfile(UserId("user-1")),
         DomainOutboxEvent.SyncPlaylistInfo(UserId("user-1")),
+        DomainOutboxEvent.SyncPlaylistData(UserId("user-1"), "playlist-1"),
     )
 
     @Test
@@ -29,6 +30,7 @@ class DomainOutboxContractTests {
             DomainOutboxEvent.FetchRecentlyPlayed(UserId(userId)),
             DomainOutboxEvent.UpdateUserProfile(UserId(userId)),
             DomainOutboxEvent.SyncPlaylistInfo(UserId(userId)),
+            DomainOutboxEvent.SyncPlaylistData(UserId(userId), "playlist-abc"),
         ).forEach { event ->
             assertThat(event.deduplicationKey())
                 .describedAs("deduplicationKey for ${event::class.simpleName} should contain userId")

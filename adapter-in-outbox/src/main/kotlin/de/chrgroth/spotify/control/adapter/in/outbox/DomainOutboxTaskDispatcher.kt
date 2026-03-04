@@ -27,6 +27,7 @@ class DomainOutboxTaskDispatcher(
             is DomainOutboxEvent.FetchRecentlyPlayed -> handlerPort.handle(event)
             is DomainOutboxEvent.UpdateUserProfile -> handlerPort.handle(event)
             is DomainOutboxEvent.SyncPlaylistInfo -> handlerPort.handle(event)
+            is DomainOutboxEvent.SyncPlaylistData -> handlerPort.handle(event)
         }
     }
 }
