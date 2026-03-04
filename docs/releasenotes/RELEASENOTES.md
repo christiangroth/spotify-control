@@ -1,3 +1,6 @@
+# 0.12.3 - 2026.03.04
+## Bugfixes / Chore
+* fix-sync-status-reset: Fixed scheduled playlist sync overwriting user-configured sync status (ACTIVE/PASSIVE) due to stale data read before the Spotify API call. Also fixed lastSnapshotIdSyncTime being reset on every sync regardless of snapshotId changes.
 # 0.12.1 - 2026.03.04
 ## New Features
 * show-last-30-days-dates: Date labels under playback events histogram columns are now only shown on large screens.
