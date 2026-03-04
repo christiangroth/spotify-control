@@ -1,3 +1,6 @@
+# 0.11.6 - 2026.03.04
+## Bugfixes / Chore
+* fix-new-playlists-sync-issue: New found playlists default to PASSIVE sync status instead of ACTIVE.
 # 0.11.5 - 2026.03.04
 ## New Features
 * tweak-playlists-sync: Playlists settings page now shows heading "Playlists" and includes a "Sync Now" button to trigger an immediate sync.

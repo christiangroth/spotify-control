@@ -51,7 +51,7 @@ class PlaylistSyncAdapter(
                     snapshotId = item.snapshotId,
                     lastSnapshotIdSyncTime = now,
                     name = item.name,
-                    syncStatus = existing?.syncStatus ?: PlaylistSyncStatus.ACTIVE,
+                    syncStatus = existing?.syncStatus ?: PlaylistSyncStatus.PASSIVE,
                 )
             }
             logger.info { "Synced ${updatedPlaylists.size} playlist(s) for user ${userId.value}" }
