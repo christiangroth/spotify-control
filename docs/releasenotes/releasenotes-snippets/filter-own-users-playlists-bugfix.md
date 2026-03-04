@@ -1,1 +1,0 @@
-* filter-own-users-playlists: Only store playlist metadata for playlists owned by the user (not followed playlists).

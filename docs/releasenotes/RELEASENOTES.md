@@ -1,3 +1,6 @@
+# 0.12.10 - 2026.03.04
+## Bugfixes / Chore
+* filter-own-users-playlists: Only store playlist metadata for playlists owned by the user (not followed playlists).
 # 0.12.9 - 2026.03.04
 ## Bugfixes / Chore
 * format-date-last-playlist-sync: Format the date of the last Playlist Metadata sync using German locale on the Playlists settings page.
