@@ -66,7 +66,7 @@
                         <div class="d-flex align-items-end" style="height:80px;gap:2px;" data-testid="histogram">
                             {#for entry in stats.playbackEventsPerDay}
                             <div style="height:{entry.heightPercent}%;min-height:2px;flex:1;min-width:6px;background-color:var(--spotify-green);border-radius:2px 2px 0 0;cursor:default;"
-                                 title="{entry.dateLabel}: {entry.count}"
+                                 title="{entry.count} events"
                                  onmouseover="this.style.opacity='0.7'"
                                  onmouseout="this.style.opacity='1'"></div>
                             {/for}
