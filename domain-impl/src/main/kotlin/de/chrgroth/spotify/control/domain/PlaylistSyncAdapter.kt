@@ -10,6 +10,7 @@ import de.chrgroth.spotify.control.domain.model.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.PlaylistSyncPort
+import de.chrgroth.spotify.control.domain.port.out.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
@@ -27,6 +28,7 @@ class PlaylistSyncAdapter(
     private val spotifyAccessToken: SpotifyAccessTokenPort,
     private val spotifyPlaylist: SpotifyPlaylistPort,
     private val outboxPort: OutboxPort,
+    private val dashboardRefresh: DashboardRefreshPort,
 ) : PlaylistSyncPort {
 
     override fun enqueueUpdates() {
@@ -59,6 +61,9 @@ class PlaylistSyncAdapter(
             }
             logger.info { "Synced ${updatedPlaylists.size} playlist(s) for user ${userId.value}" }
             playlistRepository.saveAll(userId, updatedPlaylists)
+            if (updatedPlaylists.size != existingById.size) {
+                dashboardRefresh.notifyUser(userId)
+            }
         }
     }
 
