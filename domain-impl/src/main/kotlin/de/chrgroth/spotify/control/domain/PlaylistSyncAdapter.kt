@@ -53,7 +53,7 @@ class PlaylistSyncAdapter(
             val now = Clock.System.now()
             // Re-read playlists after the Spotify API call to pick up any concurrent syncStatus changes
             val existingById = playlistRepository.findByUserId(userId).associateBy { it.spotifyPlaylistId }
-            val updatedPlaylists = spotifyPlaylists.map { item ->
+            val updatedPlaylists = spotifyPlaylists.filter { it.ownerId == userId.value }.map { item ->
                 val existing = existingById[item.id]
                 PlaylistInfo(
                     spotifyPlaylistId = item.id,
@@ -66,7 +66,7 @@ class PlaylistSyncAdapter(
             logger.info { "Synced ${updatedPlaylists.size} playlist(s) for user ${userId.value}" }
             playlistRepository.saveAll(userId, updatedPlaylists)
             if (updatedPlaylists.size != existingById.size) {
-                dashboardRefresh.notifyUser(userId)
+                dashboardRefresh.notifyUserPlaylistMetadata(userId)
             }
             // Enqueue SyncPlaylistData for active playlists that have a changed or missing snapshot
             updatedPlaylists

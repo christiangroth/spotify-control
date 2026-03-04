@@ -71,10 +71,11 @@ class PlaylistSyncAdapterTests {
         syncStatus = syncStatus,
     )
 
-    private fun buildSpotifyItem(id: String, snapshotId: String = "snap-1") = SpotifyPlaylistItem(
+    private fun buildSpotifyItem(id: String, snapshotId: String = "snap-1", ownerId: String = "user-1") = SpotifyPlaylistItem(
         id = id,
         name = "Playlist $id",
         snapshotId = snapshotId,
+        ownerId = ownerId,
     )
 
     // --- enqueueUpdates tests ---
@@ -112,6 +113,28 @@ class PlaylistSyncAdapterTests {
     }
 
     @Test
+    fun `syncPlaylists filters out playlists not owned by user`() {
+        val user = buildUser()
+        every { userRepository.findById(userId) } returns user
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(
+            buildSpotifyItem("p1", ownerId = "user-1"),
+            buildSpotifyItem("p2", ownerId = "other-user"),
+        ).right()
+        every { playlistRepository.findByUserId(userId) } returns emptyList()
+        every { playlistRepository.saveAll(any(), any()) } just runs
+        every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
+
+        val result = adapter.syncPlaylists(userId)
+
+        assertThat(result.isRight()).isTrue()
+        val savedSlot = slot<List<PlaylistInfo>>()
+        verify { playlistRepository.saveAll(userId, capture(savedSlot)) }
+        assertThat(savedSlot.captured).hasSize(1)
+        assertThat(savedSlot.captured[0].spotifyPlaylistId).isEqualTo("p1")
+    }
+
+    @Test
     fun `syncPlaylists persists new playlists with PASSIVE status`() {
         val user = buildUser()
         every { userRepository.findById(userId) } returns user
@@ -119,7 +142,7 @@ class PlaylistSyncAdapterTests {
         every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(buildSpotifyItem("p1")).right()
         every { playlistRepository.findByUserId(userId) } returns emptyList()
         every { playlistRepository.saveAll(any(), any()) } just runs
-        every { dashboardRefresh.notifyUser(userId) } just runs
+        every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
 
         val result = adapter.syncPlaylists(userId)
 
@@ -206,14 +229,14 @@ class PlaylistSyncAdapterTests {
         every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(buildSpotifyItem("p1"), buildSpotifyItem("p2")).right()
         every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1"))
         every { playlistRepository.saveAll(any(), any()) } just runs
-        every { dashboardRefresh.notifyUser(userId) } just runs
         every { playlistDataRepository.findByUserIdAndPlaylistId(userId, "p1") } returns mockk()
         every { outboxPort.enqueue(any()) } just runs
+        every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
 
         val result = adapter.syncPlaylists(userId)
 
         assertThat(result.isRight()).isTrue()
-        verify(exactly = 1) { dashboardRefresh.notifyUser(userId) }
+        verify(exactly = 1) { dashboardRefresh.notifyUserPlaylistMetadata(userId) }
     }
 
     @Test
@@ -224,13 +247,13 @@ class PlaylistSyncAdapterTests {
         every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(buildSpotifyItem("p1")).right()
         every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1"), buildPlaylistInfo("p2"))
         every { playlistRepository.saveAll(any(), any()) } just runs
-        every { dashboardRefresh.notifyUser(userId) } just runs
         every { playlistDataRepository.findByUserIdAndPlaylistId(userId, "p1") } returns mockk()
+        every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
 
         val result = adapter.syncPlaylists(userId)
 
         assertThat(result.isRight()).isTrue()
-        verify(exactly = 1) { dashboardRefresh.notifyUser(userId) }
+        verify(exactly = 1) { dashboardRefresh.notifyUserPlaylistMetadata(userId) }
     }
 
     @Test
@@ -246,7 +269,7 @@ class PlaylistSyncAdapterTests {
         val result = adapter.syncPlaylists(userId)
 
         assertThat(result.isRight()).isTrue()
-        verify(exactly = 0) { dashboardRefresh.notifyUser(any()) }
+        verify(exactly = 0) { dashboardRefresh.notifyUserPlaylistMetadata(any()) }
     }
 
     @Test

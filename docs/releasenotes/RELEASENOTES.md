@@ -1,3 +1,15 @@
+# 0.12.10 - 2026.03.04
+## Bugfixes / Chore
+* filter-own-users-playlists: Only store playlist metadata for playlists owned by the user (not followed playlists).
+# 0.12.9 - 2026.03.04
+## Bugfixes / Chore
+* format-date-last-playlist-sync: Format the date of the last Playlist Metadata sync using German locale on the Playlists settings page.
+# 0.12.8 - 2026.03.04
+## Bugfixes / Chore
+* align-settings-icon-left: Playlists icon in header is now left-aligned and uses a playlist-style icon.
+# 0.12.7 - 2026.03.04
+## Bugfixes / Chore
+* split-sse-events: Dashboard updates now use fine-grained SSE events per section (playback data, playlist metadata, outgoing HTTP calls, outbox partitions) with partial page updates and a fade effect instead of full page reloads.
 # 0.12.6 - 2026.03.04
 ## Bugfixes / Chore
 * ignore-non-music-events: Podcast episodes and other non-track playback events are now ignored when fetching recently played history.
