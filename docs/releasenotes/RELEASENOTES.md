@@ -1,3 +1,6 @@
+# 0.12.0 - 2026.03.04
+## New Features
+* add-playlist-infos-to-dashboard: Added playlists synced stats to dashboard and reorganized dashboard sections into Spotify data and System Health.
 # 0.11.7 - 2026.03.04
 ## Bugfixes / Chore
 * improve-sse-handling: SSE dashboard refresh is now also triggered by changes in outgoing HTTP request metrics.

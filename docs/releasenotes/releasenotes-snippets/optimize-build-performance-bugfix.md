@@ -1,0 +1,1 @@
+* optimize-build-performance: Speed up build by removing verbose --info flag from CI, converting @QuarkusTest scheduler job tests to unit tests, and moving DomainOutboxContractTests to domain-api module.
