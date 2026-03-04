@@ -1,3 +1,6 @@
+# 0.12.7 - 2026.03.04
+## Bugfixes / Chore
+* split-sse-events: Dashboard updates now use fine-grained SSE events per section (playback data, playlist metadata, outgoing HTTP calls, outbox partitions) with partial page updates and a fade effect instead of full page reloads.
 # 0.12.6 - 2026.03.04
 ## Bugfixes / Chore
 * ignore-non-music-events: Podcast episodes and other non-track playback events are now ignored when fetching recently played history.
