@@ -15,6 +15,7 @@
                     <th style="width:3rem">#</th>
                     <th style="width:2.5rem">Sync</th>
                     <th>Name</th>
+                    <th style="width:14rem">Last Snapshot Sync</th>
                 </tr>
             </thead>
             <tbody>
@@ -41,6 +42,7 @@
                         </button>
                     </td>
                     <td>{row.playlist.name}</td>
+                    <td class="text-secondary small">{row.playlist.lastSnapshotIdSyncTime}</td>
                 </tr>
                 {/for}
             </tbody>
