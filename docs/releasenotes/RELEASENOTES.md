@@ -1,3 +1,6 @@
+# 0.12.9 - 2026.03.04
+## Bugfixes / Chore
+* format-date-last-playlist-sync: Format the date of the last Playlist Metadata sync using German locale on the Playlists settings page.
 # 0.12.8 - 2026.03.04
 ## Bugfixes / Chore
 * align-settings-icon-left: Playlists icon in header is now left-aligned and uses a playlist-style icon.
