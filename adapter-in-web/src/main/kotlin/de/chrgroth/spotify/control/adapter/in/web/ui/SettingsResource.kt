@@ -75,7 +75,7 @@ class SettingsResource {
       .format(GERMAN_DATE_TIME_FORMATTER)
 
     companion object {
-      private val GERMAN_DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss", Locale.GERMAN)
+      private val GERMAN_DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm", Locale.GERMAN)
     }
   }
 
