@@ -11,4 +11,5 @@ interface RecentlyPlayedRepositoryPort {
     fun countAll(spotifyUserId: UserId): Long
     fun countSince(spotifyUserId: UserId, since: Instant): Long
     fun countPerDaySince(spotifyUserId: UserId, since: Instant): List<Pair<LocalDate, Long>>
+    fun deleteNonTracks(): Long
 }

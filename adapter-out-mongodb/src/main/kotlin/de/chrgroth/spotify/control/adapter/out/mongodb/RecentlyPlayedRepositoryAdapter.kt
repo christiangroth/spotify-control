@@ -94,5 +94,10 @@ class RecentlyPlayedRepositoryAdapter : RecentlyPlayedRepositoryPort {
         }
     }
 
+    override fun deleteNonTracks(): Long =
+        mongoQueryMetrics.timed("recently_played.deleteNonTracks") {
+            recentlyPlayedDocumentRepository.delete("artistIds = ?1 and artistNames = ?2", emptyList<String>(), emptyList<String>())
+        }
+
     companion object : KLogging()
 }
