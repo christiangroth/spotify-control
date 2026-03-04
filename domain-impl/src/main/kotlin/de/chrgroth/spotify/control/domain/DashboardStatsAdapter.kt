@@ -5,10 +5,8 @@ import de.chrgroth.spotify.control.domain.model.DayCount
 import de.chrgroth.spotify.control.domain.model.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.DashboardStatsPort
-import de.chrgroth.spotify.control.domain.port.out.OutboxInfoPort
 import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.RecentlyPlayedRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.OutgoingRequestStatsPort
 import jakarta.enterprise.context.ApplicationScoped
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
@@ -21,8 +19,6 @@ import kotlinx.datetime.toLocalDateTime
 @Suppress("Unused")
 class DashboardStatsAdapter(
     private val recentlyPlayedRepository: RecentlyPlayedRepositoryPort,
-    private val outboxInfo: OutboxInfoPort,
-    private val outgoingRequestStats: OutgoingRequestStatsPort,
     private val playlistRepository: PlaylistRepositoryPort,
 ) : DashboardStatsPort {
 
@@ -57,8 +53,6 @@ class DashboardStatsAdapter(
             totalPlaybackEvents = total,
             playbackEventsLast30Days = last30Days,
             playbackEventsPerDay = perDay,
-            outgoingRequestStats = outgoingRequestStats.getRequestStats(),
-            outboxPartitions = outboxInfo.getPartitionStats(),
         )
     }
 

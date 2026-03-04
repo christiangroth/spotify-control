@@ -1,0 +1,1 @@
+* create-health-ui-page: Added dedicated health monitoring page at /ui/health with system health stats and real-time SSE updates.
