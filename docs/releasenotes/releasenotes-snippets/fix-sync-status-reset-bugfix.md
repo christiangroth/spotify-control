@@ -1,0 +1,1 @@
+* fix-sync-status-reset: Fixed scheduled playlist sync overwriting user-configured sync status (ACTIVE/PASSIVE) due to stale data read before the Spotify API call. Also fixed lastSnapshotIdSyncTime being reset on every sync regardless of snapshotId changes.

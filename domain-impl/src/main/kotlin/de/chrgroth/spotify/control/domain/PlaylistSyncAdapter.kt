@@ -36,26 +36,31 @@ class PlaylistSyncAdapter(
     }
 
     override fun syncPlaylists(userId: UserId): Either<DomainError, Unit> {
-        val user = userRepository.findById(userId) ?: run {
+        userRepository.findById(userId) ?: run {
             logger.warn { "User not found for playlist sync: ${userId.value}" }
             return Unit.right()
         }
         val accessToken = spotifyAccessToken.getValidAccessToken(userId)
         return spotifyPlaylist.getPlaylists(userId, accessToken).map { spotifyPlaylists ->
             val now = Clock.System.now()
-            val existingById = user.playlists.associateBy { it.spotifyPlaylistId }
+            // Re-read user after the Spotify API call to pick up any concurrent syncStatus changes
+            val currentUser = userRepository.findById(userId) ?: run {
+                logger.warn { "User not found after Spotify API call for playlist sync: ${userId.value}" }
+                return@map
+            }
+            val existingById = currentUser.playlists.associateBy { it.spotifyPlaylistId }
             val updatedPlaylists = spotifyPlaylists.map { item ->
                 val existing = existingById[item.id]
                 PlaylistInfo(
                     spotifyPlaylistId = item.id,
                     snapshotId = item.snapshotId,
-                    lastSnapshotIdSyncTime = now,
+                    lastSnapshotIdSyncTime = if (existing == null || existing.snapshotId != item.snapshotId) now else existing.lastSnapshotIdSyncTime,
                     name = item.name,
                     syncStatus = existing?.syncStatus ?: PlaylistSyncStatus.PASSIVE,
                 )
             }
             logger.info { "Synced ${updatedPlaylists.size} playlist(s) for user ${userId.value}" }
-            userRepository.upsert(user.copy(playlists = updatedPlaylists))
+            userRepository.upsert(currentUser.copy(playlists = updatedPlaylists))
         }
     }
 
