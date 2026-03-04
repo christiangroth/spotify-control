@@ -4,6 +4,7 @@ plugins {
 }
 
 dependencies {
+  implementation(project(":domain-api"))
   implementation(project(":util-starters"))
 
   implementation(enforcedPlatform(libs.quarkusBom))
