@@ -1,7 +1,9 @@
 package de.chrgroth.spotify.control.adapter.`in`.web.ui
 
 import de.chrgroth.spotify.control.domain.model.UserId
-import de.chrgroth.spotify.control.domain.port.out.DashboardRefreshPort
+import de.chrgroth.spotify.control.domain.port.out.OutgoingRequestStatsObserver
+import de.chrgroth.spotify.control.util.outbox.OutboxPartition
+import de.chrgroth.spotify.control.util.outbox.OutboxPartitionObserver
 import io.smallrye.mutiny.Multi
 import io.smallrye.mutiny.subscription.MultiEmitter
 import jakarta.enterprise.context.ApplicationScoped
@@ -9,7 +11,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 
 @ApplicationScoped
-class DashboardSseService : DashboardRefreshPort {
+class HealthSseService : OutboxPartitionObserver, OutgoingRequestStatsObserver {
 
     private val emittersByUser = ConcurrentHashMap<String, CopyOnWriteArrayList<MultiEmitter<in String>>>()
 
@@ -23,9 +25,13 @@ class DashboardSseService : DashboardRefreshPort {
         }
     }
 
-    override fun notifyUserPlaybackData(userId: UserId) = emitToUser(userId.value, "refresh-playback-data")
+    override fun onPartitionPaused(partition: OutboxPartition) = notifyAllUsers("refresh-outbox-partitions")
 
-    override fun notifyUserPlaylistMetadata(userId: UserId) = emitToUser(userId.value, "refresh-playlist-metadata")
+    override fun onPartitionActivated(partition: OutboxPartition) = notifyAllUsers("refresh-outbox-partitions")
+
+    override fun onRequestRecorded() = notifyAllUsers("refresh-outgoing-http-calls")
+
+    private fun notifyAllUsers(event: String) = emittersByUser.keys.forEach { emitToUser(it, event) }
 
     private fun emitToUser(userId: String, event: String) {
         emittersByUser[userId]?.forEach { runCatching { it.emit(event) } }
