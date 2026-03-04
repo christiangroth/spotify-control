@@ -6,6 +6,7 @@
         <h1 class="mb-4 fs-4 fw-semibold">System Health</h1>
 
         <div id="health-section">
+            <h2 class="mb-3 fs-6 fw-semibold text-uppercase" style="color:#888;letter-spacing:.05em;">Communication</h2>
             <div class="row g-3 mb-4">
                 <div class="col-12 col-sm-6 col-lg-3">
                     <div id="snippet-outgoing-http-calls" class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
@@ -60,6 +61,81 @@
                                                 {/if}
                                             </td>
                                             <td style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">{p.documentCount}</td>
+                                        </tr>
+                                        {/for}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        {/fragment}
+                    </div>
+                </div>
+            </div>
+
+            <h2 class="mb-3 fs-6 fw-semibold text-uppercase" style="color:#888;letter-spacing:.05em;">MongoDB</h2>
+            <div class="row g-3 mb-4">
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div id="snippet-mongodb-collections" class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                        {#fragment id="snippet_mongodb_collections"}
+                        <div class="card-body">
+                            <p class="card-subtitle mb-3" style="color:#888;font-size:.8rem;">Collections</p>
+                            <div class="table-responsive">
+                                <table class="table table-sm mb-0" style="color:#e0e0e0;background-color:transparent;" data-testid="mongodb-collections-table">
+                                    <thead>
+                                        <tr style="border-color:#333;">
+                                            <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Collection</th>
+                                            <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">Documents</th>
+                                            <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">Size (bytes)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {#for c in stats.mongoCollectionStats}
+                                        <tr style="border-color:#333;">
+                                            <td style="border-color:#333;color:#e0e0e0;background-color:transparent;">{c.name}</td>
+                                            <td style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">{c.documentCount}</td>
+                                            <td style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">{c.size}</td>
+                                        </tr>
+                                        {/for}
+                                    </tbody>
+                                    <tfoot>
+                                        <tr style="border-color:#333;border-top:2px solid #555;">
+                                            <td style="border-color:#333;color:#888;background-color:transparent;">Total</td>
+                                            <td style="border-color:#333;color:#888;text-align:right;background-color:transparent;">{stats.mongoCollectionDocumentTotal}</td>
+                                            <td style="border-color:#333;color:#888;text-align:right;background-color:transparent;">{stats.mongoCollectionSizeTotal}</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                        {/fragment}
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div id="snippet-mongodb-queries" class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                        {#fragment id="snippet_mongodb_queries"}
+                        <div class="card-body">
+                            <p class="card-subtitle mb-3" style="color:#888;font-size:.8rem;">Queries (Last 24h)</p>
+                            <div class="table-responsive">
+                                <table class="table table-sm mb-0" style="color:#e0e0e0;background-color:transparent;" data-testid="mongodb-queries-table">
+                                    <thead>
+                                        <tr style="border-color:#333;">
+                                            <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Query</th>
+                                            <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">Executions</th>
+                                            <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">Slow</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {#for q in stats.mongoQueryStats}
+                                        <tr style="border-color:#333;">
+                                            <td style="border-color:#333;color:#e0e0e0;background-color:transparent;">{q.name}</td>
+                                            <td style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">{q.executionCountLast24h}</td>
+                                            <td style="border-color:#333;background-color:transparent;text-align:right;">
+                                                {#if q.slowQueryCount > 0}
+                                                <span style="color:#f90;">{q.slowQueryCount}</span>
+                                                {#else}
+                                                <span style="color:#e0e0e0;">{q.slowQueryCount}</span>
+                                                {/if}
+                                            </td>
                                         </tr>
                                         {/for}
                                     </tbody>

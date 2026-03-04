@@ -42,4 +42,18 @@ class HealthResource {
     @Produces(MediaType.TEXT_HTML)
     fun snippetOutboxPartitions(): TemplateInstance =
         healthTemplate.getFragment("snippet_outbox_partitions").data("stats", healthStats.getStats())
+
+    @GET
+    @Path("/snippets/mongodb-collections")
+    @Authenticated
+    @Produces(MediaType.TEXT_HTML)
+    fun snippetMongoDbCollections(): TemplateInstance =
+        healthTemplate.getFragment("snippet_mongodb_collections").data("stats", healthStats.getStats())
+
+    @GET
+    @Path("/snippets/mongodb-queries")
+    @Authenticated
+    @Produces(MediaType.TEXT_HTML)
+    fun snippetMongoDbQueries(): TemplateInstance =
+        healthTemplate.getFragment("snippet_mongodb_queries").data("stats", healthStats.getStats())
 }

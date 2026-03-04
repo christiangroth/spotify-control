@@ -22,15 +22,19 @@ class HealthPageTests {
   }
 
   @Test
-  fun `health page displays health section`() {
+  fun `health page displays health section with communication and mongodb sub-headings`() {
     given()
       .`when`()
       .get("/ui/health")
       .then()
       .statusCode(200)
       .body(containsString("""id="health-section""""))
+      .body(containsString("Communication"))
+      .body(containsString("MongoDB"))
       .body(containsString("Outgoing HTTP Requests"))
       .body(containsString("Outbox Partitions"))
+      .body(containsString("Collections"))
+      .body(containsString("Queries (Last 24h)"))
   }
 
   @Test
@@ -88,5 +92,27 @@ class HealthPageTests {
       .statusCode(200)
       .contentType(containsString("text/html"))
       .body(containsString("Outbox Partitions"))
+  }
+
+  @Test
+  fun `health snippet endpoint for mongodb collections is available`() {
+    given()
+      .`when`()
+      .get("/ui/health/snippets/mongodb-collections")
+      .then()
+      .statusCode(200)
+      .contentType(containsString("text/html"))
+      .body(containsString("Collections"))
+  }
+
+  @Test
+  fun `health snippet endpoint for mongodb queries is available`() {
+    given()
+      .`when`()
+      .get("/ui/health/snippets/mongodb-queries")
+      .then()
+      .statusCode(200)
+      .contentType(containsString("text/html"))
+      .body(containsString("Queries (Last 24h)"))
   }
 }
