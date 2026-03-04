@@ -1,3 +1,6 @@
+# 0.16.4 - 2026.03.04
+## Bugfixes / Chore
+* fix-login-page-redirect: Fixed login page redirect — users with a valid session are now properly redirected to the dashboard when reloading or revisiting the login page. Session cookie is now persistent across browser restarts.
 # 0.16.0 - 2026.03.04
 ## New Features
 * add-mongodb-stats-health-ui: Added MongoDB collection stats (name, document count, size) and query stats (name, executions in 24h, slow query count) to the health UI, with communication and MongoDB sub-sections.

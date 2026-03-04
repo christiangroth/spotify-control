@@ -1,1 +1,0 @@
-* fix-login-page-redirect: Fixed login page redirect — users with a valid session are now properly redirected to the dashboard when reloading or revisiting the login page. Session cookie is now persistent across browser restarts.
