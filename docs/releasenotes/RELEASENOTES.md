@@ -1,3 +1,8 @@
+# 0.16.0 - 2026.03.04
+## New Features
+* add-mongodb-stats-health-ui: Added MongoDB collection stats (name, document count, size) and query stats (name, executions in 24h, slow query count) to the health UI, with communication and MongoDB sub-sections.
+## Bugfixes / Chore
+* fix-build-issue: Fix detekt TooGenericExceptionCaught in MongoStatsAdapter by catching MongoException.
 # 0.15.2 - 2026.03.04
 ## Bugfixes / Chore
 * fix-cleanup-non-tracks: Added a bugfix starter to remove non-track items (e.g. podcast episodes) from recently played history.
