@@ -110,13 +110,19 @@
             var source;
 
             function connect() {
+                console.log('[SSE] Connecting to /ui/dashboard/events...');
                 source = new EventSource('/ui/dashboard/events');
+                source.onopen = function () {
+                    console.log('[SSE] Connection established, readyState=' + source.readyState);
+                };
                 source.onmessage = function (event) {
+                    console.log('[SSE] Message received: ' + event.data);
                     if (event.data === 'refresh') {
                         window.location.reload();
                     }
                 };
                 source.onerror = function () {
+                    console.log('[SSE] Connection error, readyState=' + source.readyState + '. Closing.');
                     source.close();
                 };
             }
@@ -124,6 +130,7 @@
             connect();
 
             setInterval(function () {
+                console.log('[SSE] Polling check, readyState=' + (source ? source.readyState : 'none'));
                 if (!source || source.readyState === EventSource.CLOSED) {
                     connect();
                 }
