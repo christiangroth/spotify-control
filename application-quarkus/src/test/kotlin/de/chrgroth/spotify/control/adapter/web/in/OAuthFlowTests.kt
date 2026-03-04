@@ -87,9 +87,10 @@ class OAuthFlowTests {
             .extract()
             .response()
 
-        // Session cookie should be set
-        val sessionCookie = callbackResponse.cookie("spotify-session")
-        assert(sessionCookie != null && sessionCookie.isNotEmpty())
+        // Session cookie should be set with a positive maxAge (persistent, not session-only)
+        val sessionCookie = callbackResponse.getDetailedCookie("spotify-session")
+        assert(sessionCookie != null && sessionCookie.value.isNotEmpty())
+        assert(sessionCookie.maxAge > 0) { "Session cookie must have a positive maxAge to persist across browser restarts" }
     }
 
     @Test
