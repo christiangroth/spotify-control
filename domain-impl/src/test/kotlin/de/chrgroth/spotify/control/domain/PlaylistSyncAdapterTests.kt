@@ -54,7 +54,6 @@ class PlaylistSyncAdapterTests {
         spotifyPlaylistId = id,
         snapshotId = snapshotId,
         lastSnapshotIdSyncTime = now - 1.hours,
-        lastSnapshotChange = null,
         name = "Playlist $id",
         syncStatus = syncStatus,
     )
@@ -115,7 +114,6 @@ class PlaylistSyncAdapterTests {
         assertThat(upsertedSlot.captured.playlists).hasSize(1)
         assertThat(upsertedSlot.captured.playlists[0].spotifyPlaylistId).isEqualTo("p1")
         assertThat(upsertedSlot.captured.playlists[0].syncStatus).isEqualTo(PlaylistSyncStatus.ACTIVE)
-        assertThat(upsertedSlot.captured.playlists[0].lastSnapshotChange).isNull()
     }
 
     @Test
@@ -131,36 +129,6 @@ class PlaylistSyncAdapterTests {
         val upsertedSlot = slot<User>()
         verify { userRepository.upsert(capture(upsertedSlot)) }
         assertThat(upsertedSlot.captured.playlists[0].syncStatus).isEqualTo(PlaylistSyncStatus.PASSIVE)
-    }
-
-    @Test
-    fun `syncPlaylists sets lastSnapshotChange when snapshotId changes`() {
-        val user = buildUser(playlists = listOf(buildPlaylistInfo("p1", snapshotId = "snap-old")))
-        every { userRepository.findById(userId) } returns user
-        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
-        every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(buildSpotifyItem("p1", snapshotId = "snap-new")).right()
-        every { userRepository.upsert(any()) } just runs
-
-        adapter.syncPlaylists(userId)
-
-        val upsertedSlot = slot<User>()
-        verify { userRepository.upsert(capture(upsertedSlot)) }
-        assertThat(upsertedSlot.captured.playlists[0].lastSnapshotChange).isNotNull()
-    }
-
-    @Test
-    fun `syncPlaylists does not update lastSnapshotChange when snapshotId unchanged`() {
-        val user = buildUser(playlists = listOf(buildPlaylistInfo("p1", snapshotId = "snap-1")))
-        every { userRepository.findById(userId) } returns user
-        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
-        every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(buildSpotifyItem("p1", snapshotId = "snap-1")).right()
-        every { userRepository.upsert(any()) } just runs
-
-        adapter.syncPlaylists(userId)
-
-        val upsertedSlot = slot<User>()
-        verify { userRepository.upsert(capture(upsertedSlot)) }
-        assertThat(upsertedSlot.captured.playlists[0].lastSnapshotChange).isNull()
     }
 
     @Test

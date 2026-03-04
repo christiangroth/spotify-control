@@ -46,15 +46,10 @@ class PlaylistSyncAdapter(
             val existingById = user.playlists.associateBy { it.spotifyPlaylistId }
             val updatedPlaylists = spotifyPlaylists.map { item ->
                 val existing = existingById[item.id]
-                val snapshotChanged = existing != null && existing.snapshotId != item.snapshotId
                 PlaylistInfo(
                     spotifyPlaylistId = item.id,
                     snapshotId = item.snapshotId,
                     lastSnapshotIdSyncTime = now,
-                    lastSnapshotChange = when {
-                        snapshotChanged -> now
-                        else -> existing?.lastSnapshotChange
-                    },
                     name = item.name,
                     syncStatus = existing?.syncStatus ?: PlaylistSyncStatus.ACTIVE,
                 )

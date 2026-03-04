@@ -15,7 +15,6 @@
                     <th style="width:3rem">#</th>
                     <th style="width:2.5rem">Sync</th>
                     <th>Name</th>
-                    <th style="width:12rem">Last Change</th>
                 </tr>
             </thead>
             <tbody>
@@ -42,13 +41,6 @@
                         </button>
                     </td>
                     <td>{row.playlist.name}</td>
-                    <td class="text-secondary small">
-                        {#if row.playlist.lastSnapshotChange}
-                        {row.playlist.lastSnapshotChange}
-                        {#else}
-                        –
-                        {/if}
-                    </td>
                 </tr>
                 {/for}
             </tbody>

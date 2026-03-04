@@ -22,7 +22,6 @@ class PlaylistInfoDocument {
   lateinit var spotifyPlaylistId: String
   lateinit var snapshotId: String
   lateinit var lastSnapshotIdSyncTime: Instant
-  var lastSnapshotChange: Instant? = null
   lateinit var name: String
   lateinit var syncStatus: String
 }

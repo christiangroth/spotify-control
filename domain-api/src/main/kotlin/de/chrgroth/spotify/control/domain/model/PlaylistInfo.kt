@@ -6,7 +6,6 @@ data class PlaylistInfo(
     val spotifyPlaylistId: String,
     val snapshotId: String,
     val lastSnapshotIdSyncTime: Instant,
-    val lastSnapshotChange: Instant?,
     val name: String,
     val syncStatus: PlaylistSyncStatus,
 )

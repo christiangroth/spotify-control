@@ -68,7 +68,6 @@ class UserRepositoryAdapter : UserRepositoryPort {
         spotifyPlaylistId = spotifyPlaylistId,
         snapshotId = snapshotId,
         lastSnapshotIdSyncTime = lastSnapshotIdSyncTime.toKotlinInstant(),
-        lastSnapshotChange = lastSnapshotChange?.toKotlinInstant(),
         name = name,
         syncStatus = PlaylistSyncStatus.valueOf(syncStatus),
     )
@@ -77,7 +76,6 @@ class UserRepositoryAdapter : UserRepositoryPort {
         spotifyPlaylistId = this@toDocument.spotifyPlaylistId
         snapshotId = this@toDocument.snapshotId
         lastSnapshotIdSyncTime = this@toDocument.lastSnapshotIdSyncTime.toJavaInstant()
-        lastSnapshotChange = this@toDocument.lastSnapshotChange?.toJavaInstant()
         name = this@toDocument.name
         syncStatus = this@toDocument.syncStatus.name
     }
