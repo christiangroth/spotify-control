@@ -10,6 +10,7 @@ class DomainOutboxContractTests {
     private val allEvents: List<DomainOutboxEvent> = listOf(
         DomainOutboxEvent.FetchRecentlyPlayed(UserId("user-1")),
         DomainOutboxEvent.UpdateUserProfile(UserId("user-1")),
+        DomainOutboxEvent.SyncPlaylistInfo(UserId("user-1")),
     )
 
     @Test
@@ -27,6 +28,7 @@ class DomainOutboxContractTests {
         listOf(
             DomainOutboxEvent.FetchRecentlyPlayed(UserId(userId)),
             DomainOutboxEvent.UpdateUserProfile(UserId(userId)),
+            DomainOutboxEvent.SyncPlaylistInfo(UserId(userId)),
         ).forEach { event ->
             assertThat(event.deduplicationKey())
                 .describedAs("deduplicationKey for ${event::class.simpleName} should contain userId")
