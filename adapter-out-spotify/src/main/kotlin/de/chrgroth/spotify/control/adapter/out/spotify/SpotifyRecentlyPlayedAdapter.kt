@@ -49,7 +49,7 @@ class SpotifyRecentlyPlayedAdapter(
                 val track = item.get("track")
                 val type = track?.get("type")?.asText()
                 if (type != "track") {
-                    logger.debug { "Ignoring non-track playback event of type '$type'" }
+                    logger.info { "Ignoring non-track playback event of type '$type'" }
                     return@mapNotNull null
                 }
                 RecentlyPlayedItem(
