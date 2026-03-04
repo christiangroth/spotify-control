@@ -22,7 +22,7 @@ class HealthPageTests {
   }
 
   @Test
-  fun `health page displays health section with communication and mongodb sub-headings`() {
+  fun `health page displays health section with communication, cronjobs and mongodb sub-headings`() {
     given()
       .`when`()
       .get("/ui/health")
@@ -30,6 +30,7 @@ class HealthPageTests {
       .statusCode(200)
       .body(containsString("""id="health-section""""))
       .body(containsString("Communication"))
+      .body(containsString("Cronjobs"))
       .body(containsString("MongoDB"))
       .body(containsString("Outgoing HTTP Requests"))
       .body(containsString("Outbox Partitions"))
@@ -116,5 +117,32 @@ class HealthPageTests {
       .contentType(containsString("text/html"))
       .body(containsString("Queries (Last 24h)"))
       .body(containsString("""data-testid="mongodb-queries-table""""))
+  }
+
+  @Test
+  fun `health page displays cronjobs section with table`() {
+    given()
+      .`when`()
+      .get("/ui/health")
+      .then()
+      .statusCode(200)
+      .body(containsString("Cronjobs"))
+      .body(containsString("Scheduled Jobs"))
+      .body(containsString("""data-testid="cronjobs-table""""))
+      .body(containsString("Cron Schedule"))
+      .body(containsString("Next Execution"))
+  }
+
+  @Test
+  fun `health page contains cronjob countdown javascript`() {
+    given()
+      .`when`()
+      .get("/ui/health")
+      .then()
+      .statusCode(200)
+      .body(containsString("formatCountdown"))
+      .body(containsString("updateCronjobCountdowns"))
+      .body(containsString("data-next-execution"))
+      .body(containsString("cronjob-countdown"))
   }
 }
