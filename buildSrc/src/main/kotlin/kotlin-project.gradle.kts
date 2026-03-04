@@ -50,6 +50,10 @@ java {
   targetCompatibility = JavaVersion.VERSION_25
 }
 
+kotlin {
+  jvmToolchain(25)
+}
+
 detekt {
   buildUponDefaultConfig = true
   config.setFrom(files("${rootProject.projectDir}/detekt-config.yaml"))
