@@ -6,4 +6,5 @@ data class DayCount(
     val date: LocalDate,
     val count: Long,
     val heightPercent: Int,
+    val dateLabel: String,
 )

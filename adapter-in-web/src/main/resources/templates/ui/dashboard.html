@@ -62,16 +62,21 @@
             <div class="card mb-4" style="background-color:#1e1e1e;border-color:#333;">
                 <div class="card-body">
                     <p class="card-subtitle mb-3" style="color:#888;font-size:.8rem;">Playback Events per Day (Last 30 Days)</p>
-                    {#if stats.playbackEventsPerDay.isEmpty()}
-                    <p style="color:#888;font-size:.85rem;">No data available yet.</p>
-                    {#else}
-                    <div class="d-flex align-items-end overflow-auto" style="height:80px;gap:2px;" data-testid="histogram">
-                        {#for entry in stats.playbackEventsPerDay}
-                        <div style="height:{entry.heightPercent}%;min-height:2px;flex:1;min-width:6px;background-color:var(--spotify-green);border-radius:2px 2px 0 0;"
-                             title="{entry.date}: {entry.count}"></div>
-                        {/for}
+                    <div style="overflow-x:auto;">
+                        <div class="d-flex align-items-end" style="height:80px;gap:2px;" data-testid="histogram">
+                            {#for entry in stats.playbackEventsPerDay}
+                            <div style="height:{entry.heightPercent}%;min-height:2px;flex:1;min-width:6px;background-color:var(--spotify-green);border-radius:2px 2px 0 0;cursor:default;"
+                                 title="{entry.dateLabel}: {entry.count}"
+                                 onmouseover="this.style.opacity='0.7'"
+                                 onmouseout="this.style.opacity='1'"></div>
+                            {/for}
+                        </div>
+                        <div class="d-flex" style="gap:2px;margin-top:3px;">
+                            {#for entry in stats.playbackEventsPerDay}
+                            <div style="flex:1;min-width:6px;text-align:center;color:#888;font-size:.65rem;overflow:hidden;">{entry.dateLabel}</div>
+                            {/for}
+                        </div>
                     </div>
-                    {/if}
                 </div>
             </div>
         </div>

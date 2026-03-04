@@ -33,6 +33,7 @@ class DashboardPageTests {
       .body(containsString("""id="stats-section""""))
       .body(containsString("Total Playback Events"))
       .body(containsString("Playback Events (Last 30 Days)"))
+      .body(containsString("""data-testid="histogram""""))
   }
 
   @Test
