@@ -61,10 +61,11 @@ class PlaylistSyncAdapterTests {
         syncStatus = syncStatus,
     )
 
-    private fun buildSpotifyItem(id: String, snapshotId: String = "snap-1") = SpotifyPlaylistItem(
+    private fun buildSpotifyItem(id: String, snapshotId: String = "snap-1", ownerId: String = "user-1") = SpotifyPlaylistItem(
         id = id,
         name = "Playlist $id",
         snapshotId = snapshotId,
+        ownerId = ownerId,
     )
 
     // --- enqueueUpdates tests ---
@@ -99,6 +100,28 @@ class PlaylistSyncAdapterTests {
 
         assertThat(result.isRight()).isTrue()
         verify(exactly = 0) { spotifyPlaylist.getPlaylists(any(), any()) }
+    }
+
+    @Test
+    fun `syncPlaylists filters out playlists not owned by user`() {
+        val user = buildUser()
+        every { userRepository.findById(userId) } returns user
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(
+            buildSpotifyItem("p1", ownerId = "user-1"),
+            buildSpotifyItem("p2", ownerId = "other-user"),
+        ).right()
+        every { playlistRepository.findByUserId(userId) } returns emptyList()
+        every { playlistRepository.saveAll(any(), any()) } just runs
+        every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
+
+        val result = adapter.syncPlaylists(userId)
+
+        assertThat(result.isRight()).isTrue()
+        val savedSlot = slot<List<PlaylistInfo>>()
+        verify { playlistRepository.saveAll(userId, capture(savedSlot)) }
+        assertThat(savedSlot.captured).hasSize(1)
+        assertThat(savedSlot.captured[0].spotifyPlaylistId).isEqualTo("p1")
     }
 
     @Test

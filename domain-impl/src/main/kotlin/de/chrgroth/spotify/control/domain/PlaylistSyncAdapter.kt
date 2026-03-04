@@ -49,7 +49,7 @@ class PlaylistSyncAdapter(
             val now = Clock.System.now()
             // Re-read playlists after the Spotify API call to pick up any concurrent syncStatus changes
             val existingById = playlistRepository.findByUserId(userId).associateBy { it.spotifyPlaylistId }
-            val updatedPlaylists = spotifyPlaylists.map { item ->
+            val updatedPlaylists = spotifyPlaylists.filter { it.ownerId == userId.value }.map { item ->
                 val existing = existingById[item.id]
                 PlaylistInfo(
                     spotifyPlaylistId = item.id,
