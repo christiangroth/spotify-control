@@ -1,3 +1,6 @@
+# 0.11.2 - 2026.03.04
+## Bugfixes / Chore
+* fix-2071856-1165050559-9eb8f697-c4f3-4e2d-8967-17dee0927f82: Fixed HTTP 415 error on dashboard SSE connect by injecting SecurityIdentity via CDI instead of as method parameter.
 # 0.11.0 - 2026.03.04
 ## New Features
 * update-header-logo-and-docs: Add logo to header bar.
