@@ -1,1 +1,0 @@
-* improve-sse-handling: SSE dashboard refresh is now also triggered by changes in outgoing HTTP request metrics.
