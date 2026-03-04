@@ -1,0 +1,1 @@
+* remove-non-owned-playlists: Added bugfix starter to remove playlist metadata documents for playlists not owned by the user.
