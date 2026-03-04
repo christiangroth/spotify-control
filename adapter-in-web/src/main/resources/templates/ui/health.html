@@ -182,6 +182,17 @@
         </div>
     </div>
 
+    <style>
+        @keyframes cronjob-pulse-green {
+            0%   { background-color: transparent; }
+            30%  { background-color: rgba(30, 215, 96, 0.35); }
+            70%  { background-color: rgba(30, 215, 96, 0.35); }
+            100% { background-color: transparent; }
+        }
+        .cronjob-pulse {
+            animation: cronjob-pulse-green 1s ease-in-out forwards;
+        }
+    </style>
     <script>
         (function () {
             var source;
@@ -202,7 +213,19 @@
                     var nextExec = parseInt(row.dataset.nextExecution, 10);
                     var remaining = nextExec - Date.now();
                     var cell = row.querySelector('.cronjob-countdown');
-                    if (cell) cell.textContent = formatCountdown(remaining);
+                    if (remaining <= 0) {
+                        if (cell) cell.textContent = 'now';
+                        if (!row.dataset.pulsing) {
+                            row.dataset.pulsing = 'true';
+                            row.classList.add('cronjob-pulse');
+                            setTimeout(function () {
+                                row.classList.remove('cronjob-pulse');
+                                delete row.dataset.pulsing;
+                            }, 1000);
+                        }
+                    } else {
+                        if (cell) cell.textContent = formatCountdown(remaining);
+                    }
                 });
             }
 

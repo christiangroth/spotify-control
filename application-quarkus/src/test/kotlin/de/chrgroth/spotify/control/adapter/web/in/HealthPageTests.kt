@@ -144,5 +144,7 @@ class HealthPageTests {
       .body(containsString("updateCronjobCountdowns"))
       .body(containsString("data-next-execution"))
       .body(containsString("cronjob-countdown"))
+      .body(containsString("cronjob-pulse"))
+      .body(containsString("cronjob-pulse-green"))
   }
 }
