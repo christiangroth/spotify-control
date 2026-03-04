@@ -1,5 +1,6 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
+import com.mongodb.MongoException
 import com.mongodb.client.MongoClient
 import de.chrgroth.spotify.control.domain.model.MongoCollectionStats
 import de.chrgroth.spotify.control.domain.model.MongoQueryStats
@@ -31,7 +32,7 @@ class MongoStatsAdapter(
                         documentCount = (stats["count"] as? Number)?.toLong() ?: 0L,
                         size = (stats["size"] as? Number)?.toLong() ?: 0L,
                     )
-                } catch (e: Exception) {
+                } catch (e: MongoException) {
                     logger.warn(e) { "Failed to get stats for collection '$collectionName'" }
                     null
                 }
