@@ -65,4 +65,33 @@ class RecentlyPlayedRepositoryTests {
         assertThat(result).containsOnly(savedItem.playedAt)
         assertThat(result).doesNotContain(newPlayedAt)
     }
+
+    private fun nonTrackItem(index: Int) = RecentlyPlayedItem(
+        spotifyUserId = userId,
+        trackId = "episode-$index",
+        trackName = "Episode $index",
+        artistIds = emptyList(),
+        artistNames = emptyList(),
+        playedAt = now - index.hours,
+    )
+
+    @Test
+    fun `deleteNonTracks removes items with empty artistIds`() {
+        recentlyPlayedRepository.saveAll(listOf(item(1), nonTrackItem(2), nonTrackItem(3)))
+
+        val deleted = recentlyPlayedRepository.deleteNonTracks()
+
+        assertThat(deleted).isEqualTo(2L)
+        val remaining = recentlyPlayedRepository.findExistingPlayedAts(userId, setOf(item(1).playedAt, nonTrackItem(2).playedAt, nonTrackItem(3).playedAt))
+        assertThat(remaining).containsOnly(item(1).playedAt)
+    }
+
+    @Test
+    fun `deleteNonTracks returns zero when no non-track items exist`() {
+        recentlyPlayedRepository.saveAll(listOf(item(4), item(5)))
+
+        val deleted = recentlyPlayedRepository.deleteNonTracks()
+
+        assertThat(deleted).isEqualTo(0L)
+    }
 }
