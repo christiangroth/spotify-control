@@ -1,1 +1,0 @@
-* fix-current-build-issues: Fix Kotlin compiler warning about annotation default target for @ConfigProperty constructor parameters.

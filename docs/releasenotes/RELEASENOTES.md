@@ -1,3 +1,8 @@
+# 0.10.2 - 2026.03.04
+## New Features
+* upgrade-java-25-kotlin-2-3-10: Upgraded to Java 25 (LTS) and Kotlin 2.3.10.
+## Bugfixes / Chore
+* fix-current-build-issues: Fix Kotlin compiler warning about annotation default target for @ConfigProperty constructor parameters.
 # 0.10.1 - 2026.03.04
 ## New Features
 * fix-index-page-redirect: Redirect authenticated users from the index page to the dashboard UI when a valid session cookie is present.
