@@ -1,7 +1,7 @@
 package de.chrgroth.spotify.control.domain.port.out
 
-import de.chrgroth.spotify.control.domain.model.SpotifyRequestStats
+import de.chrgroth.spotify.control.domain.model.OutgoingRequestStats
 
-interface SpotifyRequestStatsPort {
-    fun getRequestStats(): List<SpotifyRequestStats>
+interface OutgoingRequestStatsPort {
+    fun getRequestStats(): List<OutgoingRequestStats>
 }

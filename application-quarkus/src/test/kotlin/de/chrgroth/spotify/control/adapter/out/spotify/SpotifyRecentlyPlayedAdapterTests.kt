@@ -4,7 +4,7 @@ import arrow.core.Either
 import de.chrgroth.spotify.control.domain.model.AccessToken
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.out.SpotifyRecentlyPlayedPort
-import de.chrgroth.spotify.control.domain.port.out.SpotifyRequestStatsPort
+import de.chrgroth.spotify.control.domain.port.out.OutgoingRequestStatsPort
 import io.micrometer.core.instrument.MeterRegistry
 import io.quarkus.test.junit.QuarkusTest
 import jakarta.inject.Inject
@@ -18,7 +18,7 @@ class SpotifyRecentlyPlayedAdapterTests {
     lateinit var spotifyRecentlyPlayed: SpotifyRecentlyPlayedPort
 
     @Inject
-    lateinit var spotifyRequestStats: SpotifyRequestStatsPort
+    lateinit var outgoingRequestStats: OutgoingRequestStatsPort
 
     @Inject
     lateinit var meterRegistry: MeterRegistry
@@ -50,7 +50,7 @@ class SpotifyRecentlyPlayedAdapterTests {
     fun `getRecentlyPlayed increments in-memory request counter`() {
         spotifyRecentlyPlayed.getRecentlyPlayed(UserId("test-user-a"), AccessToken("mock-access-token"))
 
-        val stats = spotifyRequestStats.getRequestStats()
+        val stats = outgoingRequestStats.getRequestStats()
         assertThat(stats).isNotEmpty
         assertThat(stats.any { it.requestCountLast24h > 0 }).isTrue
     }

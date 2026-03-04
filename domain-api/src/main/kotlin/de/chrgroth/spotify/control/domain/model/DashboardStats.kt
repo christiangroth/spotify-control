@@ -4,6 +4,6 @@ data class DashboardStats(
     val totalPlaybackEvents: Long,
     val playbackEventsLast30Days: Long,
     val playbackEventsPerDay: List<DayCount>,
-    val spotifyRequestStats: List<SpotifyRequestStats>,
+    val outgoingRequestStats: List<OutgoingRequestStats>,
     val outboxPartitions: List<OutboxPartitionStats>,
 )

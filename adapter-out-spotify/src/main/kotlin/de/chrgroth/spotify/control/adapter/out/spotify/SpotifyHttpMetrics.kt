@@ -1,7 +1,7 @@
 package de.chrgroth.spotify.control.adapter.out.spotify
 
-import de.chrgroth.spotify.control.domain.model.SpotifyRequestStats
-import de.chrgroth.spotify.control.domain.port.out.SpotifyRequestStatsPort
+import de.chrgroth.spotify.control.domain.model.OutgoingRequestStats
+import de.chrgroth.spotify.control.domain.port.out.OutgoingRequestStatsPort
 import io.micrometer.core.instrument.Gauge
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Timer
@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit
 @ApplicationScoped
 class SpotifyHttpMetrics(
     private val meterRegistry: MeterRegistry,
-) : SpotifyRequestStatsPort {
+) : OutgoingRequestStatsPort {
 
     private val timers = ConcurrentHashMap<String, Timer>()
     private val requestTimestamps = ConcurrentHashMap<String, ConcurrentLinkedDeque<Instant>>()
@@ -52,12 +52,12 @@ class SpotifyHttpMetrics(
         pruneOldEntries(deque)
     }
 
-    override fun getRequestStats(): List<SpotifyRequestStats> {
+    override fun getRequestStats(): List<OutgoingRequestStats> {
         val cutoff = Instant.now().minusSeconds(WINDOW_SECONDS)
         return requestTimestamps.entries
             .map { (host, deque) ->
                 pruneOldEntries(deque)
-                SpotifyRequestStats(
+                OutgoingRequestStats(
                     host = host,
                     requestCountLast24h = deque.count { it.isAfter(cutoff) }.toLong(),
                 )
