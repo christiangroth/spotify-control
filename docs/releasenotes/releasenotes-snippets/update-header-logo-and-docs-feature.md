@@ -5,3 +5,4 @@
 * update-header-logo-and-docs: Add outbox.md and coding-guidelines serving.
 * update-header-logo-and-docs: Remove ADR index page and related code.
 * update-header-logo-and-docs: Change ADR URL to /ui/adr/$file.md.
+* update-header-logo-and-docs: Dashboard page now uses SSE for live updates.

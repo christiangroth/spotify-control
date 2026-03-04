@@ -26,17 +26,20 @@ Every branch (except `main` and `dependabot/*` branches) **must** contain at lea
 
 **When to create a snippet:** Always create a snippet as one of the first actions when working on any branch. Do not wait until the end of the task.
 
-**How to create a snippet:** Run the appropriate Gradle task based on the type of change. **Always use the Gradle task** — it also handles the version bump automatically for non-Bugfix changes (Feature bumps the minor version, UpdateNotice bumps the major version):
+**How to create a snippet:** Run the appropriate Gradle task based on the type of change. **NEVER create snippet files manually** — always use the Gradle task, which also handles the version bump automatically:
+
+- `releasenotesCreateFeature` — new user-facing functionality; **automatically bumps the minor version**
+- `releasenotesCreateBugfix` — bugfix, chore, or documentation change; no version bump
+- `releasenotesCreateUpdateNotice` — breaking change; **automatically bumps the major version**
 
 ```bash
-
-# feature
+# feature (bumps minor version automatically, e.g. 0.10.x → 0.11.0)
 ./gradlew releasenotesCreateFeature
 
-# bugfix/chore/documentation
+# bugfix/chore/documentation (no version bump)
 ./gradlew releasenotesCreateBugfix
 
-# breaking change
+# breaking change (bumps major version automatically, e.g. 0.x.y → 1.0.0)
 ./gradlew releasenotesCreateUpdateNotice
 ```
 
