@@ -14,12 +14,15 @@ import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.minus
 import kotlinx.datetime.toLocalDateTime
+import org.eclipse.microprofile.config.inject.ConfigProperty
 
 @ApplicationScoped
 @Suppress("Unused")
 class DashboardStatsAdapter(
     private val recentlyPlayedRepository: RecentlyPlayedRepositoryPort,
     private val playlistRepository: PlaylistRepositoryPort,
+    @param:ConfigProperty(name = "dashboard.recently-played.limit", defaultValue = "13")
+    private val recentlyPlayedLimit: Int,
 ) : DashboardStatsPort {
 
     override fun getStats(userId: UserId): DashboardStats {
@@ -47,12 +50,15 @@ class DashboardStatsAdapter(
         val totalPlaylists = playlists.size.toLong()
         val syncedPlaylists = playlists.count { it.syncStatus == PlaylistSyncStatus.ACTIVE }.toLong()
 
+        val recentlyPlayedTracks = recentlyPlayedRepository.findRecentlyPlayed(userId, recentlyPlayedLimit)
+
         return DashboardStats(
             syncedPlaylists = syncedPlaylists,
             totalPlaylists = totalPlaylists,
             totalPlaybackEvents = total,
             playbackEventsLast30Days = last30Days,
             playbackEventsPerDay = perDay,
+            recentlyPlayedTracks = recentlyPlayedTracks,
         )
     }
 

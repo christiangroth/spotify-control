@@ -74,4 +74,14 @@ class DashboardResource {
     val stats = dashboardStats.getStats(userId)
     return dashboardTemplate.getFragment("snippet_playlist_metadata").data("stats", stats)
   }
+
+  @GET
+  @Path("/snippets/recently-played")
+  @Authenticated
+  @Produces(MediaType.TEXT_HTML)
+  fun snippetRecentlyPlayed(): TemplateInstance {
+    val userId = UserId(securityIdentity.principal.name)
+    val stats = dashboardStats.getStats(userId)
+    return dashboardTemplate.getFragment("snippet_recently_played").data("stats", stats)
+  }
 }
