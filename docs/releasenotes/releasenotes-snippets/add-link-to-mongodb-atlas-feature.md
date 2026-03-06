@@ -1,0 +1,1 @@
+* add-link-to-mongodb-atlas: Add link to MongoDB Atlas Data Explorer in navigation menu bar.
