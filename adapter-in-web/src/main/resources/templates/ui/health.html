@@ -239,6 +239,16 @@
                 });
             }
 
+            function formatBlockedUntil(epochMs) {
+                var d = new Date(epochMs);
+                var hours = String(d.getHours()).padStart(2, '0');
+                var minutes = String(d.getMinutes()).padStart(2, '0');
+                var day = String(d.getDate()).padStart(2, '0');
+                var month = String(d.getMonth() + 1).padStart(2, '0');
+                var year = d.getFullYear();
+                return hours + ':' + minutes + ' ' + day + '.' + month + '.' + year;
+            }
+
             function updateOutboxBlockedUntilCountdowns() {
                 document.querySelectorAll('[data-blocked-until]').forEach(function (row) {
                     var blockedUntil = parseInt(row.dataset.blockedUntil, 10);
@@ -247,14 +257,13 @@
                     if (remaining <= 0) {
                         if (cell) cell.textContent = 'now';
                     } else {
-                        if (cell) cell.textContent = formatCountdown(remaining);
+                        if (cell) cell.textContent = formatBlockedUntil(blockedUntil);
                     }
                 });
             }
 
             setInterval(updateCronjobCountdowns, 500);
             updateCronjobCountdowns();
-            setInterval(updateOutboxBlockedUntilCountdowns, 500);
             updateOutboxBlockedUntilCountdowns();
 
             function fadeUpdate(elementId, url) {

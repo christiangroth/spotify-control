@@ -113,6 +113,7 @@ class HealthPageTests {
       .get("/ui/health")
       .then()
       .statusCode(200)
+      .body(containsString("formatBlockedUntil"))
       .body(containsString("updateOutboxBlockedUntilCountdowns"))
       .body(containsString("data-blocked-until"))
       .body(containsString("outbox-blocked-until"))
