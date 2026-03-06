@@ -54,7 +54,7 @@ class SpotifyPlaylistTracksAdapter(
                 }
                 json.get("items")?.forEach { item ->
                     logger.info { "Processing item: $item" }
-                    val track = item.get("item")?.takeIf { !it.isNull } ?: return@forEach
+                    val track = item.get("track")?.takeIf { !it.isNull } ?: return@forEach
                     val type = track.get("type")?.asText()
                     if (type != "track") {
                         logger.info { "Ignoring non-track playlist item of type '$type'" }

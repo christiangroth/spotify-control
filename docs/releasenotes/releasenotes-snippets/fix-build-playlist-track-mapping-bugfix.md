@@ -1,0 +1,1 @@
+* fix-build-playlist-track-mapping: Fixed playlist track mapping to use the correct "track" JSON key when parsing playlist items from the Spotify API.
