@@ -1,3 +1,6 @@
+# 0.28.0 - 2026.03.06
+## New Features
+* design-data-collection-concept: Capture partial listens and skipped tracks to improve listening statistics.
 # 0.27.1 - 2026.03.06
 ## Bugfixes / Chore
 * fix-sync-playlist-button-ui: Fixed sync playlist button to only show for active playlists with green icon styling.
