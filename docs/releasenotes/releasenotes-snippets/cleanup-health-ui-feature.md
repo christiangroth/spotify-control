@@ -1,1 +1,1 @@
-* cleanup-health-ui: Streamlined health UI - replaced status columns with icons for outbox partitions and cronjobs, renamed cron schedule column, removed "(kb)" from MongoDB size header (added inline), and combined executions/slow columns for MongoDB queries.
+* cleanup-health-ui: Streamlined health UI.
