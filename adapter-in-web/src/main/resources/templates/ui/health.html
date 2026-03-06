@@ -275,7 +275,7 @@
                     var remaining = blockedUntil - Date.now();
                     var cell = row.querySelector('.outbox-blocked-until');
                     if (!cell) return;
-                    if (remaining <= 0) {
+                    if (remaining <= 1000) {
                         cell.textContent = 'now';
                     } else if (remaining < TWENTY_FOUR_HOURS_MS) {
                         cell.textContent = formatBlockedUntil(blockedUntil) + ' (' + formatCountdown(remaining) + ')';
