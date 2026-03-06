@@ -1,0 +1,1 @@
+* add-sync-button-to-playlist: Added a Sync button per playlist on the settings page.
