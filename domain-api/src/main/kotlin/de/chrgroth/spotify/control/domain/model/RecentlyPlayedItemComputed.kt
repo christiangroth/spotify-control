@@ -1,0 +1,13 @@
+package de.chrgroth.spotify.control.domain.model
+
+import kotlin.time.Instant
+
+data class RecentlyPlayedItemComputed(
+    val spotifyUserId: UserId,
+    val trackId: String,
+    val trackName: String,
+    val artistIds: List<String>,
+    val artistNames: List<String>,
+    val playedAt: Instant,
+    val playedMs: Long,
+)
