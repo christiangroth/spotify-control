@@ -1,0 +1,1 @@
+* enhance-dashboard-recent-tracks: Dashboard now shows the 13 most recently played tracks in a new panel.
