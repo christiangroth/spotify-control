@@ -18,14 +18,14 @@ class PlaylistDataRepositoryAdapter : PlaylistDataRepositoryPort {
     lateinit var mongoQueryMetrics: MongoQueryMetrics
 
     override fun findByUserIdAndPlaylistId(userId: UserId, playlistId: String): Playlist? =
-        mongoQueryMetrics.timed("playlist.findByUserIdAndPlaylistId") {
+        mongoQueryMetrics.timed("spotify_playlist.findByUserIdAndPlaylistId") {
             playlistDocumentRepository.findById("${userId.value}:$playlistId")?.toDomain()
         }
 
     override fun save(userId: UserId, playlist: Playlist) {
         logger.info { "Saving playlist document for playlist ${playlist.spotifyPlaylistId} (user ${userId.value}) with ${playlist.tracks.size} track(s)" }
         val document = playlist.toDocument(userId)
-        mongoQueryMetrics.timed("playlist.save") {
+        mongoQueryMetrics.timed("spotify_playlist.save") {
             playlistDocumentRepository.persistOrUpdate(document)
         }
     }

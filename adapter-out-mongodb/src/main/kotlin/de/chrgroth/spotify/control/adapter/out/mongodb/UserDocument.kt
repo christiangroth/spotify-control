@@ -4,7 +4,7 @@ import io.quarkus.mongodb.panache.common.MongoEntity
 import org.bson.codecs.pojo.annotations.BsonId
 import java.time.Instant
 
-@MongoEntity(collection = "user")
+@MongoEntity(collection = "app_user")
 class UserDocument {
 
   @BsonId

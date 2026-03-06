@@ -5,7 +5,7 @@ import org.bson.codecs.pojo.annotations.BsonId
 import org.bson.types.ObjectId
 import java.time.Instant
 
-@MongoEntity(collection = "currently_playing")
+@MongoEntity(collection = "spotify_currently_playing")
 class CurrentlyPlayingDocument {
 
   @BsonId

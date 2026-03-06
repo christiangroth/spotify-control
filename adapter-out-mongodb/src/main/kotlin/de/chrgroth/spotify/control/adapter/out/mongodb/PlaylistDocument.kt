@@ -3,7 +3,7 @@ package de.chrgroth.spotify.control.adapter.out.mongodb
 import io.quarkus.mongodb.panache.common.MongoEntity
 import org.bson.codecs.pojo.annotations.BsonId
 
-@MongoEntity(collection = "playlist")
+@MongoEntity(collection = "spotify_playlist")
 class PlaylistDocument {
 
     @BsonId

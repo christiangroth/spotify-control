@@ -112,6 +112,20 @@ Handles all inbound HTTP interactions: the web UI (Qute templates), OAuth callba
 
 Implements all repository interfaces defined in `domain-api`. Manages the MongoDB collections for users (including encrypted token storage), tracks, artists, playlists, playback events, aggregations, pending upgrades, and the outbox.
 
+#### MongoDB Collections
+
+| Collection                    | Description                                                                                           |
+|-------------------------------|-------------------------------------------------------------------------------------------------------|
+| `app_user`                    | Spotify user profile with encrypted access and refresh tokens.                                        |
+| `spotify_playlist`            | Full playlist data including all tracks.                                                              |
+| `spotify_playlist_metadata`   | Playlist metadata: name, snapshot ID, sync status.                                                    |
+| `spotify_recently_played`     | Raw recently played track events (append-only).                                                       |
+| `spotify_currently_playing`   | Currently playing track observations per user.                                                        |
+| `recently_partial_played`     | Partial play events (plays that did not complete a full track).                                       |
+| `starters`                    | One-time startup bean execution state (managed by `util-starters`).                                   |
+| `outbox`                      | Persistent outbox task queue (managed by `util-outbox`).                                              |
+| `outbox_archive`              | Archived completed/failed outbox tasks (managed by `util-outbox`).                                    |
+
 ### `adapter-out-spotify`
 
 Encapsulates all communication with the Spotify Web API. Handles token refresh, rate limiting via a token bucket (~50 requests/30s), and backoff for hidden 24h bulk limits.
@@ -245,7 +259,7 @@ Domain services (Layer 1) never depend on Quarkus or any infrastructure. Adapter
 
 - Spotify OAuth 2.0 Authorization Code Flow.
 - In the OAuth callback: the Spotify user ID is checked against `APP_ALLOWED_SPOTIFY_USER_IDS` (environment variable, comma-separated list). If the ID is not present in the list, the session is invalidated and nothing is persisted.
-- A `User` document is upserted in the `users` MongoDB collection only after a successful allow-list check. Both access and refresh tokens are stored encrypted (AES-256-GCM) using `APP_TOKEN_ENCRYPTION_KEY`.
+- A `User` document is upserted in the `app_user` MongoDB collection only after a successful allow-list check. Both access and refresh tokens are stored encrypted (AES-256-GCM) using `APP_TOKEN_ENCRYPTION_KEY`.
 - Session-based authentication for all endpoints, including action endpoints. The session stores only the Spotify user ID – never tokens.
 - `return_to` parameter stored in the session for redirect after login.
 - A CSRF `state` parameter is generated per authorization request and validated in the callback.

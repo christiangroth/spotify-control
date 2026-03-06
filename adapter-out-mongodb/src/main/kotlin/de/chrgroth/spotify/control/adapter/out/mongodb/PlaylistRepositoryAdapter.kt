@@ -20,7 +20,7 @@ class PlaylistRepositoryAdapter : PlaylistRepositoryPort {
     lateinit var mongoQueryMetrics: MongoQueryMetrics
 
     override fun findByUserId(userId: UserId): List<PlaylistInfo> =
-        mongoQueryMetrics.timed("playlist_metadata.findByUserId") {
+        mongoQueryMetrics.timed("spotify_playlist_metadata.findByUserId") {
             playlistMetadataDocumentRepository
                 .list("spotifyUserId = ?1", userId.value)
                 .map { it.toDomain() }
@@ -28,12 +28,12 @@ class PlaylistRepositoryAdapter : PlaylistRepositoryPort {
 
     override fun saveAll(userId: UserId, playlists: List<PlaylistInfo>) {
         logger.info { "Saving ${playlists.size} playlist metadata document(s) for user ${userId.value}" }
-        mongoQueryMetrics.timed("playlist_metadata.deleteByUserId") {
+        mongoQueryMetrics.timed("spotify_playlist_metadata.deleteByUserId") {
             playlistMetadataDocumentRepository.delete("spotifyUserId = ?1", userId.value)
         }
         if (playlists.isNotEmpty()) {
             val documents = playlists.map { it.toDocument(userId) }
-            mongoQueryMetrics.timed("playlist_metadata.saveAll") {
+            mongoQueryMetrics.timed("spotify_playlist_metadata.saveAll") {
                 playlistMetadataDocumentRepository.persist(documents)
             }
         }

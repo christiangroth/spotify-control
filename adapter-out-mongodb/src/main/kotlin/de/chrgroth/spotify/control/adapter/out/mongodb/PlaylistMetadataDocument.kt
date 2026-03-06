@@ -4,7 +4,7 @@ import io.quarkus.mongodb.panache.common.MongoEntity
 import org.bson.codecs.pojo.annotations.BsonId
 import java.time.Instant
 
-@MongoEntity(collection = "playlist_metadata")
+@MongoEntity(collection = "spotify_playlist_metadata")
 class PlaylistMetadataDocument {
 
   @BsonId

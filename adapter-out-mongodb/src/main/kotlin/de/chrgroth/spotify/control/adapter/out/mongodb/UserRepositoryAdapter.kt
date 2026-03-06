@@ -19,17 +19,17 @@ class UserRepositoryAdapter : UserRepositoryPort {
     lateinit var mongoQueryMetrics: MongoQueryMetrics
 
     override fun findById(spotifyUserId: UserId): User? =
-        mongoQueryMetrics.timed("user.findById") {
+        mongoQueryMetrics.timed("app_user.findById") {
             userDocumentRepository.findById(spotifyUserId.value)?.toDomain()
         }
 
     override fun findAll(): List<User> =
-        mongoQueryMetrics.timed("user.findAll") {
+        mongoQueryMetrics.timed("app_user.findAll") {
             userDocumentRepository.listAll().map { it.toDomain() }
         }
 
     override fun upsert(user: User) {
-        val existing = mongoQueryMetrics.timed("user.upsert.findById") {
+        val existing = mongoQueryMetrics.timed("app_user.upsert.findById") {
             userDocumentRepository.findById(user.spotifyUserId.value)
         }
         if (existing == null) {
@@ -46,7 +46,7 @@ class UserRepositoryAdapter : UserRepositoryPort {
         document.encryptedRefreshToken = user.encryptedRefreshToken
         document.tokenExpiresAt = user.tokenExpiresAt.toJavaInstant()
         document.lastLoginAt = user.lastLoginAt.toJavaInstant()
-        mongoQueryMetrics.timed("user.upsert.persistOrUpdate") {
+        mongoQueryMetrics.timed("app_user.upsert.persistOrUpdate") {
             userDocumentRepository.persistOrUpdate(document)
         }
     }
