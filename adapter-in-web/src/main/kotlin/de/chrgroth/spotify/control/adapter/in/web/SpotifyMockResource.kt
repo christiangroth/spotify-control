@@ -59,15 +59,29 @@ class SpotifyMockResource {
     fun playlistTracks(@PathParam("playlistId") playlistId: String): String = PLAYLIST_TRACKS_RESPONSE
 
     companion object {
-        private const val TOKEN_RESPONSE =
-            """{"access_token":"mock-access-token","refresh_token":"mock-refresh-token","expires_in":3600,"token_type":"Bearer"}"""
-        private const val REFRESH_RESPONSE =
-            """{"access_token":"mock-refreshed-access-token","expires_in":3600,"token_type":"Bearer"}"""
-        private const val RECENTLY_PLAYED_RESPONSE =
-            """{"items":[{"track":{"id":"track-1","name":"Track One","type":"track","is_local":false,"artists":[{"id":"artist-1","name":"Artist One"}]},"played_at":"2024-01-01T12:00:00.000Z"},{"track":{"id":"episode-1","name":"Podcast Episode One","type":"episode"},"played_at":"2024-01-01T11:00:00.000Z"},{"track":{"id":"local-1","name":"Local Track","type":"track","is_local":true,"artists":[{"id":"","name":"Local Artist"}]},"played_at":"2024-01-01T10:00:00.000Z"}],"next":null}"""
-        private const val PLAYLISTS_RESPONSE =
-            """{"href":"","limit":50,"next":null,"offset":0,"previous":null,"total":1,"items":[{"id":"mock-playlist-1","name":"My Playlist","snapshot_id":"mock-snapshot-1","owner":{"id":"test-user-a"}}]}"""
-        private const val PLAYLIST_TRACKS_RESPONSE =
-            """{"href":"","snapshot_id":"mock-snapshot-1","limit":50,"next":null,"offset":0,"previous":null,"total":2,"items":[{"item":{"id":"track-1","name":"Track One","type":"track","artists":[{"id":"artist-1","name":"Artist One"}]}},{"item":{"id":"episode-1","name":"Podcast Episode One","type":"episode"}}]}"""
+        private val TOKEN_RESPONSE = """
+            {"access_token":"mock-access-token","refresh_token":"mock-refresh-token","expires_in":3600,"token_type":"Bearer"}
+        """.trimIndent()
+        private val REFRESH_RESPONSE = """
+            {"access_token":"mock-refreshed-access-token","expires_in":3600,"token_type":"Bearer"}
+        """.trimIndent()
+        private val RECENTLY_PLAYED_RESPONSE = """
+            {"items":[
+              {"track":{"id":"track-1","name":"Track One","type":"track","is_local":false,"artists":[{"id":"artist-1","name":"Artist One"}]},"played_at":"2024-01-01T12:00:00.000Z"},
+              {"track":{"id":"episode-1","name":"Podcast Episode One","type":"episode"},"played_at":"2024-01-01T11:00:00.000Z"},
+              {"track":{"id":"local-1","name":"Local Track","type":"track","is_local":true,"artists":[{"id":"","name":"Local Artist"}]},"played_at":"2024-01-01T10:00:00.000Z"}
+            ],"next":null}
+        """.trimIndent()
+        private val PLAYLISTS_RESPONSE = """
+            {"href":"","limit":50,"next":null,"offset":0,"previous":null,"total":1,"items":[
+              {"id":"mock-playlist-1","name":"My Playlist","snapshot_id":"mock-snapshot-1","owner":{"id":"test-user-a"}}
+            ]}
+        """.trimIndent()
+        private val PLAYLIST_TRACKS_RESPONSE = """
+            {"href":"","snapshot_id":"mock-snapshot-1","limit":50,"next":null,"offset":0,"previous":null,"total":2,"items":[
+              {"item":{"id":"track-1","name":"Track One","type":"track","artists":[{"id":"artist-1","name":"Artist One"}]}},
+              {"item":{"id":"episode-1","name":"Podcast Episode One","type":"episode"}}
+            ]}
+        """.trimIndent()
     }
 }
