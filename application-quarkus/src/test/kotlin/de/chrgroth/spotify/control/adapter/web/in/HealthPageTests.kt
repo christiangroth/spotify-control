@@ -85,6 +85,17 @@ class HealthPageTests {
   }
 
   @Test
+  fun `health page contains grafana logs link in navbar`() {
+    given()
+      .`when`()
+      .get("/ui/health")
+      .then()
+      .statusCode(200)
+      .body(containsString("""data-testid="grafana-logs-link""""))
+      .body(containsString("https://spotifycontrolprod.grafana.net/d/sadlil-loki-apps-dashboard/quarkus-logs"))
+  }
+
+  @Test
   fun `health snippet endpoint for outgoing http calls is available`() {
     given()
       .`when`()
