@@ -96,6 +96,17 @@ class HealthPageTests {
   }
 
   @Test
+  fun `health page contains mongodb atlas link in navbar`() {
+    given()
+      .`when`()
+      .get("/ui/health")
+      .then()
+      .statusCode(200)
+      .body(containsString("""data-testid="mongodb-atlas-link""""))
+      .body(containsString("https://cloud.mongodb.com/v2/699f08e3a7adcacf36dd2d4a#/explorer"))
+  }
+
+  @Test
   fun `health snippet endpoint for outgoing http calls is available`() {
     given()
       .`when`()
