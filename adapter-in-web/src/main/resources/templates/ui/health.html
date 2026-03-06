@@ -254,7 +254,7 @@
                     var blockedUntil = parseInt(row.dataset.blockedUntil, 10);
                     var remaining = blockedUntil - Date.now();
                     var cell = row.querySelector('.outbox-blocked-until');
-                    if (remaining <= 0) {
+                    if (remaining <= 1000) {
                         if (cell) cell.textContent = 'now';
                     } else {
                         if (cell) cell.textContent = formatBlockedUntil(blockedUntil);
