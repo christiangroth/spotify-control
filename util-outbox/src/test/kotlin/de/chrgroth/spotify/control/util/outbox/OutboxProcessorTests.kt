@@ -79,7 +79,7 @@ class OutboxProcessorTests {
     }
 
     @Test
-    fun `processNext calls fail with null nextRetryAt when attempts reach maxAttempts`() {
+    fun `processNext calls fail with null nextRetryAt when attempts reach maxAttempts to trigger archiving`() {
         val task = task(attempts = 2) // maxAttempts=3, so newAttempts=3 >= maxAttempts
         every { repository.claim(partition) } returns task
         every { repository.fail(task, any(), null) } just runs

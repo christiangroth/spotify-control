@@ -84,6 +84,8 @@ class Outbox(
 
     fun findPartition(partition: OutboxPartition) = repository.findPartition(partition)
 
+    fun archiveFailedTasks() = repository.archiveFailedTasks()
+
     fun activatePartition(partition: OutboxPartition) {
         repository.activatePartition(partition)
         getOrCreatePartitionStatusGauge(partition).set(1)

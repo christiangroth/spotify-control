@@ -2,6 +2,7 @@ package de.chrgroth.spotify.control.util.outbox
 
 import com.mongodb.client.model.FindOneAndUpdateOptions
 import com.mongodb.client.model.Filters
+import com.mongodb.client.model.ReplaceOptions
 import com.mongodb.client.model.ReturnDocument
 import com.mongodb.client.model.Sorts
 import com.mongodb.client.model.Updates
@@ -84,23 +85,42 @@ class MongoOutboxRepository : OutboxRepository {
 
     override fun fail(task: OutboxTask, error: String, nextRetryAt: Instant?) {
         val now = Instant.now()
-        val newStatus = if (nextRetryAt == null) OutboxTaskStatus.FAILED.name else OutboxTaskStatus.PENDING.name
-        val updates = mutableListOf(
-            Updates.set("status", newStatus),
-            Updates.inc("attempts", 1),
-            Updates.set("updatedAt", now),
-            Updates.set("lastError", error),
-        )
-        if (nextRetryAt != null) {
-            updates.add(Updates.set("nextRetryAt", nextRetryAt))
+        if (nextRetryAt == null) {
+            val archiveDoc = OutboxArchiveDocument().apply {
+                id = task.id
+                partition = task.partition
+                eventType = task.eventType
+                deduplicationKey = task.deduplicationKey
+                payload = task.payload
+                status = OutboxTaskStatus.FAILED.name
+                attempts = task.attempts + 1
+                createdAt = task.createdAt
+                updatedAt = now
+                this.nextRetryAt = null
+                priority = task.priority.name
+                lastError = error
+                completedAt = now
+            }
+            outboxQueryMetrics.timed("outbox.fail.archive") {
+                outboxArchiveDocumentRepository.persist(archiveDoc)
+            }
+            outboxQueryMetrics.timed("outbox.fail.delete") {
+                outboxDocumentRepository.deleteById(task.id)
+            }
         } else {
-            updates.add(Updates.unset("nextRetryAt"))
-        }
-        outboxQueryMetrics.timed("outbox.fail") {
-            outboxDocumentRepository.mongoCollection().updateOne(
-                Filters.eq("_id", task.id),
-                Updates.combine(updates),
+            val updates = mutableListOf(
+                Updates.set("status", OutboxTaskStatus.PENDING.name),
+                Updates.inc("attempts", 1),
+                Updates.set("updatedAt", now),
+                Updates.set("lastError", error),
+                Updates.set("nextRetryAt", nextRetryAt),
             )
+            outboxQueryMetrics.timed("outbox.fail") {
+                outboxDocumentRepository.mongoCollection().updateOne(
+                    Filters.eq("_id", task.id),
+                    Updates.combine(updates),
+                )
+            }
         }
     }
 
@@ -231,6 +251,45 @@ class MongoOutboxRepository : OutboxRepository {
             )
         }
         return result.deletedCount
+    }
+
+    override fun archiveFailedTasks(): Long {
+        val now = Instant.now()
+        val failedDocs = outboxQueryMetrics.timed("outbox.archiveFailedTasks.find") {
+            outboxDocumentRepository.list("status = ?1", OutboxTaskStatus.FAILED.name)
+        }
+        if (failedDocs.isEmpty()) return 0L
+        var count = 0L
+        for (doc in failedDocs) {
+            val archiveDoc = OutboxArchiveDocument().apply {
+                id = doc.id
+                partition = doc.partition
+                eventType = doc.eventType
+                deduplicationKey = doc.deduplicationKey
+                payload = doc.payload
+                status = OutboxTaskStatus.FAILED.name
+                attempts = doc.attempts
+                createdAt = doc.createdAt
+                updatedAt = now
+                nextRetryAt = null
+                priority = doc.priority
+                lastError = doc.lastError
+                completedAt = now
+            }
+            outboxQueryMetrics.timed("outbox.archiveFailedTasks.archive") {
+                outboxArchiveDocumentRepository.mongoCollection().replaceOne(
+                    Filters.eq("_id", doc.id),
+                    archiveDoc,
+                    ReplaceOptions().upsert(true),
+                )
+            }
+            outboxQueryMetrics.timed("outbox.archiveFailedTasks.delete") {
+                outboxDocumentRepository.deleteById(doc.id)
+            }
+            count++
+        }
+        logger.info { "Archived $count failed outbox tasks" }
+        return count
     }
 
     private fun OutboxDocument.toTask() = OutboxTask(
