@@ -135,6 +135,19 @@ class HealthPageTests {
   }
 
   @Test
+  fun `health page lists all scheduled jobs in cronjob table`() {
+    given()
+      .`when`()
+      .get("/ui/health")
+      .then()
+      .statusCode(200)
+      .body(containsString("PlaylistSyncJob"))
+      .body(containsString("RecentlyPlayedFetchJob"))
+      .body(containsString("UserProfileUpdateJob"))
+      .body(containsString("OutboxArchiveCleanupJob"))
+  }
+
+  @Test
   fun `health page contains cronjob countdown javascript`() {
     given()
       .`when`()

@@ -16,10 +16,12 @@ class SchedulerInfoAdapterTests {
 
     @Test
     fun `active trigger produces running cronjob stats with next execution`() {
-        val triggerId = "${PlaylistSyncJob::class.java.name}#run"
+        val triggerId = "0_${PlaylistSyncJob::class.java.name}#run"
+        val methodDescription = "${PlaylistSyncJob::class.java.name}#run"
         val nextFireTime = Instant.now().plusSeconds(3600)
         val trigger = mockk<Trigger>()
         every { trigger.id } returns triggerId
+        every { trigger.methodDescription } returns methodDescription
         every { trigger.nextFireTime } returns nextFireTime
         every { scheduler.scheduledJobs } returns listOf(trigger)
         every { scheduler.isRunning } returns true
@@ -35,9 +37,11 @@ class SchedulerInfoAdapterTests {
 
     @Test
     fun `paused trigger produces non-running cronjob stats with null next execution`() {
-        val triggerId = "${PlaylistSyncJob::class.java.name}#run"
+        val triggerId = "0_${PlaylistSyncJob::class.java.name}#run"
+        val methodDescription = "${PlaylistSyncJob::class.java.name}#run"
         val trigger = mockk<Trigger>()
         every { trigger.id } returns triggerId
+        every { trigger.methodDescription } returns methodDescription
         every { trigger.nextFireTime } returns null
         every { scheduler.scheduledJobs } returns listOf(trigger)
         every { scheduler.isRunning } returns true
@@ -53,10 +57,12 @@ class SchedulerInfoAdapterTests {
 
     @Test
     fun `stopped scheduler produces non-running cronjob stats`() {
-        val triggerId = "${PlaylistSyncJob::class.java.name}#run"
+        val triggerId = "0_${PlaylistSyncJob::class.java.name}#run"
+        val methodDescription = "${PlaylistSyncJob::class.java.name}#run"
         val nextFireTime = Instant.now().plusSeconds(3600)
         val trigger = mockk<Trigger>()
         every { trigger.id } returns triggerId
+        every { trigger.methodDescription } returns methodDescription
         every { trigger.nextFireTime } returns nextFireTime
         every { scheduler.scheduledJobs } returns listOf(trigger)
         every { scheduler.isRunning } returns false
@@ -69,9 +75,22 @@ class SchedulerInfoAdapterTests {
     }
 
     @Test
-    fun `trigger without hash separator is skipped`() {
+    fun `trigger with null method description is skipped`() {
         val trigger = mockk<Trigger>()
-        every { trigger.id } returns "invalid-trigger-id"
+        every { trigger.id } returns "0_some-id"
+        every { trigger.methodDescription } returns null
+        every { scheduler.scheduledJobs } returns listOf(trigger)
+
+        val result = adapter.getCronjobStats()
+
+        assertThat(result).isEmpty()
+    }
+
+    @Test
+    fun `trigger with method description without hash separator is skipped`() {
+        val trigger = mockk<Trigger>()
+        every { trigger.id } returns "some-id"
+        every { trigger.methodDescription } returns "invalid-method-description"
         every { scheduler.scheduledJobs } returns listOf(trigger)
 
         val result = adapter.getCronjobStats()
@@ -82,7 +101,8 @@ class SchedulerInfoAdapterTests {
     @Test
     fun `trigger for unknown class is skipped`() {
         val trigger = mockk<Trigger>()
-        every { trigger.id } returns "com.example.NonExistentJob#run"
+        every { trigger.id } returns "some-id"
+        every { trigger.methodDescription } returns "com.example.NonExistentJob#run"
         every { scheduler.scheduledJobs } returns listOf(trigger)
 
         val result = adapter.getCronjobStats()
@@ -92,14 +112,18 @@ class SchedulerInfoAdapterTests {
 
     @Test
     fun `results are sorted by simpleName`() {
-        val triggerIdA = "${UserProfileUpdateJob::class.java.name}#run"
+        val triggerIdA = "0_${UserProfileUpdateJob::class.java.name}#run"
+        val methodDescriptionA = "${UserProfileUpdateJob::class.java.name}#run"
         val triggerA = mockk<Trigger>()
         every { triggerA.id } returns triggerIdA
+        every { triggerA.methodDescription } returns methodDescriptionA
         every { triggerA.nextFireTime } returns Instant.now().plusSeconds(3600)
 
-        val triggerIdB = "${PlaylistSyncJob::class.java.name}#run"
+        val triggerIdB = "1_${PlaylistSyncJob::class.java.name}#run"
+        val methodDescriptionB = "${PlaylistSyncJob::class.java.name}#run"
         val triggerB = mockk<Trigger>()
         every { triggerB.id } returns triggerIdB
+        every { triggerB.methodDescription } returns methodDescriptionB
         every { triggerB.nextFireTime } returns Instant.now().plusSeconds(7200)
 
         every { scheduler.scheduledJobs } returns listOf(triggerA, triggerB)
