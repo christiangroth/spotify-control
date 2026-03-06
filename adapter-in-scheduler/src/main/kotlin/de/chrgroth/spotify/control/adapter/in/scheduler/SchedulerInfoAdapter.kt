@@ -6,7 +6,6 @@ import io.quarkus.scheduler.Scheduled
 import io.quarkus.scheduler.Scheduler
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
-import java.time.Instant
 
 @ApplicationScoped
 @Suppress("Unused")
@@ -29,7 +28,8 @@ class SchedulerInfoAdapter(
                     CronjobStats(
                         simpleName = clazz.simpleName,
                         cronSchedule = scheduled.cron,
-                        nextExecution = trigger.nextFireTime ?: Instant.now(),
+                        nextExecution = trigger.nextFireTime,
+                        running = scheduler.isRunning && !scheduler.isPaused(trigger.id),
                     )
                 } catch (e: ReflectiveOperationException) {
                     logger.warn(e) { "Could not resolve cronjob metadata for trigger '$id'" }

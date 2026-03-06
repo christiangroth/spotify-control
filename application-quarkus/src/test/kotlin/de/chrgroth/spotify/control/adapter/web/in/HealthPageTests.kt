@@ -130,6 +130,7 @@ class HealthPageTests {
       .body(containsString("Scheduled Jobs"))
       .body(containsString("""data-testid="cronjobs-table""""))
       .body(containsString("Cron Schedule"))
+      .body(containsString("Status"))
       .body(containsString("Next Execution"))
   }
 

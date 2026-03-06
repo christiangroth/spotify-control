@@ -5,5 +5,6 @@ import java.time.Instant
 data class CronjobStats(
     val simpleName: String,
     val cronSchedule: String,
-    val nextExecution: Instant,
+    val nextExecution: Instant?,
+    val running: Boolean,
 )
