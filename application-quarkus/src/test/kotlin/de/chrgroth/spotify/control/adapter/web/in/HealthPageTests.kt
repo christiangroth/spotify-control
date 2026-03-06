@@ -105,6 +105,7 @@ class HealthPageTests {
       .contentType(containsString("text/html"))
       .body(containsString("Collections"))
       .body(containsString("""data-testid="mongodb-collections-table""""))
+      .body(containsString("Size (kb)"))
   }
 
   @Test

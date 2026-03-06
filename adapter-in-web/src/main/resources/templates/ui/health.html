@@ -126,7 +126,7 @@
                                         <tr style="border-color:#333;">
                                             <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Collection</th>
                                             <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">Documents</th>
-                                            <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">Size (bytes)</th>
+                                            <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">Size (kb)</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -134,7 +134,7 @@
                                         <tr style="border-color:#333;">
                                             <td style="border-color:#333;color:#e0e0e0;background-color:transparent;">{c.name}</td>
                                             <td style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">{c.documentCount}</td>
-                                            <td style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">{c.size}</td>
+                                            <td style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">{c.sizeKb}</td>
                                         </tr>
                                         {/for}
                                     </tbody>
@@ -142,7 +142,7 @@
                                         <tr style="border-color:#333;border-top:2px solid #555;">
                                             <td style="border-color:#333;color:#888;background-color:transparent;">Total</td>
                                             <td style="border-color:#333;color:#888;text-align:right;background-color:transparent;">{stats.mongoCollectionDocumentTotal}</td>
-                                            <td style="border-color:#333;color:#888;text-align:right;background-color:transparent;">{stats.mongoCollectionSizeTotal}</td>
+                                            <td style="border-color:#333;color:#888;text-align:right;background-color:transparent;">{stats.mongoCollectionSizeTotalKb}</td>
                                         </tr>
                                     </tfoot>
                                 </table>
