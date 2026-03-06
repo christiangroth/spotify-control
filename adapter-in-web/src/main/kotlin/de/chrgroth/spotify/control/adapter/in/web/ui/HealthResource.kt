@@ -30,6 +30,13 @@ class HealthResource {
     fun health(): TemplateInstance = healthTemplate.data("stats", healthStats.getStats())
 
     @GET
+    @Path("/snippets/cronjobs")
+    @Authenticated
+    @Produces(MediaType.TEXT_HTML)
+    fun snippetCronjobs(): TemplateInstance =
+        healthTemplate.getFragment("snippet_cronjobs").data("stats", healthStats.getStats())
+
+    @GET
     @Path("/snippets/outgoing-http-calls")
     @Authenticated
     @Produces(MediaType.TEXT_HTML)

@@ -234,4 +234,49 @@ class HealthPageTests {
       .body(containsString("cronjob-pulse"))
       .body(containsString("cronjob-pulse-green"))
   }
+
+  @Test
+  fun `health snippet endpoint for cronjobs is available`() {
+    given()
+      .`when`()
+      .get("/ui/health/snippets/cronjobs")
+      .then()
+      .statusCode(200)
+      .contentType(containsString("text/html"))
+      .body(containsString("Scheduled Jobs"))
+      .body(containsString("""data-testid="cronjobs-table""""))
+  }
+
+  @Test
+  fun `health page cronjob sort only reorders dom when order changes`() {
+    given()
+      .`when`()
+      .get("/ui/health")
+      .then()
+      .statusCode(200)
+      .body(containsString("hasChanged"))
+      .body(containsString("newOrder.forEach"))
+  }
+
+  @Test
+  fun `health page cronjob pulse animation refreshes table from server after completion`() {
+    given()
+      .`when`()
+      .get("/ui/health")
+      .then()
+      .statusCode(200)
+      .body(containsString("fadeUpdate('snippet-cronjobs', '/ui/health/snippets/cronjobs'"))
+  }
+
+  @Test
+  fun `health page cronjob sort excludes pulsing rows from reordering`() {
+    given()
+      .`when`()
+      .get("/ui/health")
+      .then()
+      .statusCode(200)
+      .body(containsString("pulsingRows"))
+      .body(containsString("sortableRows"))
+      .body(containsString("pulsingRows.concat(sortableRows)"))
+  }
 }

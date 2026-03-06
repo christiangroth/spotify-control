@@ -225,12 +225,24 @@
                 if (!tbody) return;
                 var rows = Array.from(tbody.querySelectorAll('tr'));
                 var now = Date.now();
-                rows.sort(function (a, b) {
+                var pulsingRows = [], sortableRows = [];
+                rows.forEach(function (row) {
+                    if (row.dataset.pulsing === 'true') {
+                        pulsingRows.push(row);
+                    } else {
+                        sortableRows.push(row);
+                    }
+                });
+                sortableRows.sort(function (a, b) {
                     var aVal = a.dataset.nextExecution ? parseInt(a.dataset.nextExecution, 10) - now : Infinity;
                     var bVal = b.dataset.nextExecution ? parseInt(b.dataset.nextExecution, 10) - now : Infinity;
                     return aVal - bVal;
                 });
-                rows.forEach(function (row) { tbody.appendChild(row); });
+                var newOrder = pulsingRows.concat(sortableRows);
+                var hasChanged = newOrder.some(function (row, i) { return row !== rows[i]; });
+                if (hasChanged) {
+                    newOrder.forEach(function (row) { tbody.appendChild(row); });
+                }
             }
 
             function updateCronjobCountdowns() {
@@ -247,8 +259,9 @@
                         row.dataset.pulsing = 'true';
                         row.classList.add('cronjob-pulse');
                         setTimeout(function () {
-                            row.classList.remove('cronjob-pulse');
-                            delete row.dataset.pulsing;
+                            fadeUpdate('snippet-cronjobs', '/ui/health/snippets/cronjobs', function () {
+                                updateCronjobCountdowns();
+                            });
                         }, 5000);
                     }
                 });
