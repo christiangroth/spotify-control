@@ -1,1 +1,0 @@
-* fix-cronjobs-ui-animation: Fixed cronjob table pulse animation restarting every 500ms and cronjob row not being resorted after execution.

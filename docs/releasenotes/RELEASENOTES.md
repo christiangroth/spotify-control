@@ -1,3 +1,6 @@
+# 0.19.1 - 2026.03.06
+## Bugfixes / Chore
+* fix-cronjobs-ui-animation: Fixed cronjob table pulse animation restarting every 500ms and cronjob row not being resorted after execution.
 # 0.19.0 - 2026.03.06
 ## New Features
 * move-recently-played-partition: Move recently-played fetching to its own outbox partition `to-spotify-recently-played` that never pauses on rate limits, and filter Spotify API calls using the last known playback timestamp to reduce redundant data transfer.
