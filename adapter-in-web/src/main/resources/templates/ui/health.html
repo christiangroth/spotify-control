@@ -190,7 +190,7 @@
             100% { background-color: transparent; }
         }
         .cronjob-pulse {
-            animation: cronjob-pulse-green 1s ease-in-out forwards;
+            animation: cronjob-pulse-green 5s ease-in-out forwards;
         }
     </style>
     <script>
@@ -215,21 +215,21 @@
                     var cell = row.querySelector('.cronjob-countdown');
                     if (remaining <= 0) {
                         if (cell) cell.textContent = 'now';
-                        if (!row.dataset.pulsing) {
-                            row.dataset.pulsing = 'true';
-                            row.classList.add('cronjob-pulse');
-                            setTimeout(function () {
-                                row.classList.remove('cronjob-pulse');
-                                delete row.dataset.pulsing;
-                            }, 1000);
-                        }
                     } else {
                         if (cell) cell.textContent = formatCountdown(remaining);
+                    }
+                    if (remaining < 1000 && !row.dataset.pulsing) {
+                        row.dataset.pulsing = 'true';
+                        row.classList.add('cronjob-pulse');
+                        setTimeout(function () {
+                            row.classList.remove('cronjob-pulse');
+                            delete row.dataset.pulsing;
+                        }, 5000);
                     }
                 });
             }
 
-            setInterval(updateCronjobCountdowns, 1000);
+            setInterval(updateCronjobCountdowns, 500);
             updateCronjobCountdowns();
 
             function fadeUpdate(elementId, url) {
