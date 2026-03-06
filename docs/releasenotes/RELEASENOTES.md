@@ -1,3 +1,6 @@
+# 0.17.0 - 2026.03.06
+## New Features
+* display-mongodb-collection-size: MongoDB collection sizes are now displayed in kilobytes (kb) instead of bytes.* show-blocked-until-in-outbox: Show blocked-until timestamp in outbox health when a partition is blocked.* sort-cronjobs-by-remaining-time: Cronjobs in the health UI are now sorted by remaining time until next execution (ascending).
 # 0.16.9 - 2026.03.06
 ## New Features
 * enhance-cronjob-health-overview: Health page cronjob overview now shows all scheduled jobs including paused/disabled ones, and displays a Status column indicating whether each job is active or paused.

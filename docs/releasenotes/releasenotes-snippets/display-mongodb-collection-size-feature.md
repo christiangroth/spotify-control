@@ -1,1 +1,0 @@
-* display-mongodb-collection-size: MongoDB collection sizes are now displayed in kilobytes (kb) instead of bytes.
