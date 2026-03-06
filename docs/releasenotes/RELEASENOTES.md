@@ -1,6 +1,8 @@
 # 0.17.0 - 2026.03.06
 ## New Features
-* display-mongodb-collection-size: MongoDB collection sizes are now displayed in kilobytes (kb) instead of bytes.* show-blocked-until-in-outbox: Show blocked-until timestamp in outbox health when a partition is blocked.* sort-cronjobs-by-remaining-time: Cronjobs in the health UI are now sorted by remaining time until next execution (ascending).
+* display-mongodb-collection-size: MongoDB collection sizes are now displayed in kilobytes (kb) instead of bytes.
+* show-blocked-until-in-outbox: Show blocked-until timestamp in outbox health when a partition is blocked.
+* sort-cronjobs-by-remaining-time: Cronjobs in the health UI are now sorted by remaining time until next execution (ascending).
 # 0.16.9 - 2026.03.06
 ## New Features
 * enhance-cronjob-health-overview: Health page cronjob overview now shows all scheduled jobs including paused/disabled ones, and displays a Status column indicating whether each job is active or paused.
@@ -162,7 +164,8 @@
 * implement-util-outbox-module: Add util-outbox module with outbox pattern support (MongoDB-backed task queue with retry, deduplication, and partition management).
 # 0.4.1 - 2026.02.28
 ## Bugfixes / Chore
-* add-spotify-throttling-concept: Add Spotify request throttling concept document (docs/plans/spotify-throttling.md).* create-test-concept-docs: Added test-boundaries.md concept document describing the "Test Your Boundaries" approach for the hexagonal architecture.
+* add-spotify-throttling-concept: Add Spotify request throttling concept document (docs/plans/spotify-throttling.md).
+* create-test-concept-docs: Added test-boundaries.md concept document describing the "Test Your Boundaries" approach for the hexagonal architecture.
 # 0.4.0 - 2026.02.28
 ## New Features
 * implement-recently-played-fetching: Fetch and persist recently played tracks per user with duplicate suppression.
@@ -180,7 +183,8 @@
 * implement-logging-system: Added logging across all relevant classes (info, warn, error) using KLogging.
 # 0.1.10 - 2026.02.26
 ## New Features
-* enhance-error-handling-concept: Added error handling concept document and ADR covering DomainError enum pattern and Arrow library evaluation.* implement-token-refresh: Implement Spotify OAuth 2.0 token refresh so access tokens are automatically renewed before expiry for all Spotify API calls.
+* enhance-error-handling-concept: Added error handling concept document and ADR covering DomainError enum pattern and Arrow library evaluation.
+* implement-token-refresh: Implement Spotify OAuth 2.0 token refresh so access tokens are automatically renewed before expiry for all Spotify API calls.
 # 0.1.9 - 2026.02.26
 ## New Features
 * implement-spotify-authentication: Implement Spotify OAuth 2.0 login with allow-listed users.
@@ -212,7 +216,8 @@
 * add-ssr-structures: Added slim black navigation bar showing application name and version
 * add-ssr-structures: Added dashboard page as main entry point after login
 * add-ssr-structures: Application version is rendered in the top menu bar
-* enhance-gradle-build-version: Serve application version dynamically in base template via app.build.version property injected from Gradle build.* serve-markdown-feature: Added documentation pages for architecture docs, ADRs, and release notes accessible from the nav bar
+* enhance-gradle-build-version: Serve application version dynamically in base template via app.build.version property injected from Gradle build.
+* serve-markdown-feature: Added documentation pages for architecture docs, ADRs, and release notes accessible from the nav bar
 * serve-markdown-feature: Added marked WebJar dependency for Markdown rendering
 
 # 0.0.1 - 2026.02.24
