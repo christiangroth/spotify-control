@@ -1,0 +1,1 @@
+* move-failed-outbox-tasks-to-archive: Failed outbox tasks that have exhausted all retry attempts are now moved to the archive instead of remaining in the outbox collection.

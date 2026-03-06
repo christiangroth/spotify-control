@@ -101,7 +101,7 @@ partition workers start). It resets stale `PROCESSING` tasks, then for each part
 ## Retry and Backoff
 
 Configure `RetryPolicy` with `maxAttempts` and a `backoff` delay list. After `maxAttempts` failures
-the task is marked `FAILED` and remains in the `outbox` collection for manual replay.
+the task is moved to the archive with status `FAILED`.
 
 ## Partition Pause and Resume
 
@@ -136,8 +136,8 @@ The default value is 365 days.
 
 | Collection          | Purpose                                                       |
 |---------------------|---------------------------------------------------------------|
-| `outbox`            | Active tasks (PENDING, PROCESSING, FAILED).                   |
-| `outbox_archive`    | Successfully completed tasks (audit log).                     |
+| `outbox`            | Active tasks (PENDING, PROCESSING).                           |
+| `outbox_archive`    | Completed tasks: successfully processed (DONE) and exhausted failed tasks (FAILED). |
 | `outbox_partitions` | Partition pause/resume state (created lazily on first pause). |
 
 ## Design Decisions
