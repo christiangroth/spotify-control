@@ -46,12 +46,13 @@
                                         <tr style="border-color:#333;">
                                             <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Partition</th>
                                             <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Status</th>
+                                            <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">Blocked Until</th>
                                             <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">Documents</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {#for p in stats.outboxPartitions}
-                                        <tr style="border-color:#333;">
+                                        <tr style="border-color:#333;" {#if p.blockedUntil}data-blocked-until="{p.blockedUntil.toEpochMilli()}"{/if}>
                                             <td style="border-color:#333;color:#e0e0e0;background-color:transparent;">{p.name}</td>
                                             <td style="border-color:#333;background-color:transparent;">
                                                 {#if p.status == "ACTIVE"}
@@ -60,6 +61,7 @@
                                                 <span style="color:#f90;">{p.status}</span>
                                                 {/if}
                                             </td>
+                                            <td class="outbox-blocked-until" style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">{#if p.blockedUntil}-{#else}{/if}</td>
                                             <td style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">{p.documentCount}</td>
                                         </tr>
                                         {/for}
@@ -237,8 +239,23 @@
                 });
             }
 
+            function updateOutboxBlockedUntilCountdowns() {
+                document.querySelectorAll('[data-blocked-until]').forEach(function (row) {
+                    var blockedUntil = parseInt(row.dataset.blockedUntil, 10);
+                    var remaining = blockedUntil - Date.now();
+                    var cell = row.querySelector('.outbox-blocked-until');
+                    if (remaining <= 0) {
+                        if (cell) cell.textContent = 'now';
+                    } else {
+                        if (cell) cell.textContent = formatCountdown(remaining);
+                    }
+                });
+            }
+
             setInterval(updateCronjobCountdowns, 500);
             updateCronjobCountdowns();
+            setInterval(updateOutboxBlockedUntilCountdowns, 500);
+            updateOutboxBlockedUntilCountdowns();
 
             function fadeUpdate(elementId, url) {
                 var el = document.getElementById(elementId);

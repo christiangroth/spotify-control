@@ -39,6 +39,17 @@ class HealthPageTests {
   }
 
   @Test
+  fun `health page outbox table contains blocked until column`() {
+    given()
+      .`when`()
+      .get("/ui/health")
+      .then()
+      .statusCode(200)
+      .body(containsString("""data-testid="outbox-table""""))
+      .body(containsString("Blocked Until"))
+  }
+
+  @Test
   fun `health page contains sse connection setup with reconnect interval`() {
     given()
       .`when`()
@@ -93,6 +104,18 @@ class HealthPageTests {
       .statusCode(200)
       .contentType(containsString("text/html"))
       .body(containsString("Outbox Partitions"))
+  }
+
+  @Test
+  fun `health page contains outbox blocked-until countdown javascript`() {
+    given()
+      .`when`()
+      .get("/ui/health")
+      .then()
+      .statusCode(200)
+      .body(containsString("updateOutboxBlockedUntilCountdowns"))
+      .body(containsString("data-blocked-until"))
+      .body(containsString("outbox-blocked-until"))
   }
 
   @Test
