@@ -45,6 +45,7 @@ class OutboxStartupRecovery(
                     logger.info { "Reactivated expired paused partition ${partition.key}" }
                 }
             } else {
+                outbox.activatePartition(partition)
                 outbox.signal(partition)
             }
         }

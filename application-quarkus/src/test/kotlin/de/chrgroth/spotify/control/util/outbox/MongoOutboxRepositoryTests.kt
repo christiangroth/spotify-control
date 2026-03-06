@@ -149,6 +149,19 @@ class MongoOutboxRepositoryTests {
     }
 
     @Test
+    fun `activatePartition creates ACTIVE partition document when none exists yet`() {
+        val partition = uniquePartition()
+
+        repository.activatePartition(partition)
+
+        val doc = repository.findPartition(partition)
+        assertThat(doc).isNotNull()
+        assertThat(doc!!.status).isEqualTo(OutboxPartitionStatus.ACTIVE.name)
+        assertThat(doc.statusReason).isNull()
+        assertThat(doc.pausedUntil).isNull()
+    }
+
+    @Test
     fun `findPartition returns PAUSED partition after pause`() {
         val partition = uniquePartition()
         repository.pausePartition(partition, "test reason", Instant.now().plus(Duration.ofMinutes(1)))
