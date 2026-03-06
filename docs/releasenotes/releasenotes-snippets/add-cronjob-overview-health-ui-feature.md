@@ -1,1 +1,0 @@
-* add-cronjob-overview-health-ui: Added cronjob overview to health UI showing all configured cronjobs with simple class name, cron schedule and a live countdown to the next execution.
