@@ -1,3 +1,6 @@
+# 0.16.6 - 2026.03.06
+## Bugfixes / Chore
+* fix-markdown-doc-links: Fix relative links between documentation markdown files to work both offline in the git repo and when browsed via the web UI.
 # 0.16.5 - 2026.03.06
 ## Bugfixes / Chore
 * fix-playlist-sync-sse-event: Fixed missing SSE event when toggling playlist sync status on settings UI.
