@@ -1,1 +1,1 @@
-* add-sync-button-to-playlist: Added a per-playlist Sync button on the settings page to trigger an immediate outbox sync for a specific playlist.
+* add-sync-button-to-playlist: Added a Sync button per playlist on the settings page.
