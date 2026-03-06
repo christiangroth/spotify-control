@@ -8,5 +8,5 @@ data class HealthStats(
     val cronjobStats: List<CronjobStats>,
 ) {
     val mongoCollectionDocumentTotal: Long get() = mongoCollectionStats.sumOf { it.documentCount }
-    val mongoCollectionSizeTotal: Long get() = mongoCollectionStats.sumOf { it.size }
+    val mongoCollectionSizeTotalKb: Long get() = mongoCollectionStats.sumOf { it.sizeKb }
 }
