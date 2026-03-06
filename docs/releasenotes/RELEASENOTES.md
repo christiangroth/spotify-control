@@ -1,3 +1,6 @@
+# 0.23.1 - 2026.03.06
+## Bugfixes / Chore
+* add-margin-to-menu-bar-icons: Added margin to menu bar icons for improved readability.
 # 0.23.0 - 2026.03.06
 ## New Features
 * increase-sse-animation-duration: Increased SSE update fade animation duration to 3 seconds for dashboard and health UI.
