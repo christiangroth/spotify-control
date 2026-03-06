@@ -1,3 +1,6 @@
+# 0.19.3 - 2026.03.06
+## Bugfixes / Chore
+* fix-version-bump-issue-again: Fix version bump: update in-memory project.version after writing new version to gradle.properties so that the release plugin's unSnapshotVersion task picks up the correct bumped version.
 # 0.19.2 - 2026.03.06
 ## New Features
 * update-releasenotes-plugin-version-bump: Version bump is now performed automatically before the release build based on snippet types (feature → minor, update notice → major); snippet creation tasks no longer modify gradle.properties.

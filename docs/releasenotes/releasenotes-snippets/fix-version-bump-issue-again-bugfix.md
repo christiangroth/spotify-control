@@ -1,1 +1,0 @@
-* fix-version-bump-issue-again: Fix version bump: update in-memory project.version after writing new version to gradle.properties so that the release plugin's unSnapshotVersion task picks up the correct bumped version.
