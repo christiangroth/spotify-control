@@ -80,7 +80,7 @@ tasks {
 
   val syncDocsMd by registering(Sync::class) {
     from(rootProject.layout.projectDirectory.dir("docs/arc42")) {
-      include("arc42.md", "outbox.md")
+      include("arc42.md", "outbox.md", "starters.md")
       into("arc42")
     }
     from(rootProject.layout.projectDirectory.dir("docs/adr")) {
