@@ -181,6 +181,7 @@ class HealthPageTests {
       .statusCode(200)
       .body(containsString("formatCountdown"))
       .body(containsString("updateCronjobCountdowns"))
+      .body(containsString("sortCronjobTable"))
       .body(containsString("data-next-execution"))
       .body(containsString("cronjob-countdown"))
       .body(containsString("cronjob-pulse"))
