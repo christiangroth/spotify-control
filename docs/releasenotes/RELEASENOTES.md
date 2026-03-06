@@ -1,3 +1,7 @@
+# 0.29.0 - 2026.03.06
+## New Features
+* implement-throttling-feature: Outbox partitions now support a configurable throttle interval to proactively limit outgoing request rates.
+* implement-throttling-feature: The `to-spotify` partition is throttled at one request per second to avoid Spotify rate limits.
 # 0.28.1 - 2026.03.06
 ## Bugfixes / Chore
 * fix-build-playlist-track-mapping: Fixed playlist track mapping.
