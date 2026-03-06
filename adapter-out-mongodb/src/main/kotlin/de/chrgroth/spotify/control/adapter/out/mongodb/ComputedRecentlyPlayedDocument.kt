@@ -5,8 +5,8 @@ import org.bson.codecs.pojo.annotations.BsonId
 import org.bson.types.ObjectId
 import java.time.Instant
 
-@MongoEntity(collection = "computed_recently_played")
-class ComputedRecentlyPlayedDocument {
+@MongoEntity(collection = "recently_partial_played")
+class RecentlyPartialPlayedDocument {
 
   @BsonId
   var id: ObjectId = ObjectId()
@@ -16,5 +16,5 @@ class ComputedRecentlyPlayedDocument {
   lateinit var artistIds: List<String>
   lateinit var artistNames: List<String>
   lateinit var playedAt: Instant
-  var playedMs: Long = 0L
+  var playedSeconds: Long = 0L
 }

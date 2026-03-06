@@ -244,6 +244,20 @@ class MongoOutboxRepository : OutboxRepository {
             outboxDocumentRepository.count("partition = ?1", partition.key)
         }
 
+    override fun migratePartition(fromKey: String, toPartition: OutboxPartition): Long {
+        val now = Instant.now()
+        val result = outboxQueryMetrics.timed("outbox.migratePartition") {
+            outboxDocumentRepository.mongoCollection().updateMany(
+                Filters.eq("partition", fromKey),
+                Updates.combine(
+                    Updates.set("partition", toPartition.key),
+                    Updates.set("updatedAt", now),
+                ),
+            )
+        }
+        return result.modifiedCount
+    }
+
     fun deleteArchiveEntriesOlderThan(cutoff: Instant): Long {
         val result = outboxQueryMetrics.timed("outbox_archive.deleteEntriesOlderThan") {
             outboxArchiveDocumentRepository.mongoCollection().deleteMany(

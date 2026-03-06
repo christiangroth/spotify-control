@@ -19,4 +19,5 @@ interface OutboxRepository {
     fun resetStaleProcessingTasks()
     fun countByPartition(partition: OutboxPartition): Long
     fun archiveFailedTasks(): Long
+    fun migratePartition(fromKey: String, toPartition: OutboxPartition): Long
 }

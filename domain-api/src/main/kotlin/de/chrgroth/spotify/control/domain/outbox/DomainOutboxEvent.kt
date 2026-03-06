@@ -12,7 +12,7 @@ sealed interface DomainOutboxEvent : OutboxEvent {
     data class FetchCurrentlyPlaying(val userId: UserId) : DomainOutboxEvent {
         override val key = KEY
         override fun deduplicationKey() = "$KEY:${userId.value}"
-        override val partition = DomainOutboxPartition.ToSpotifyCurrentlyPlaying
+        override val partition = DomainOutboxPartition.ToSpotifyPlayback
         override val priority = OutboxTaskPriority.HIGH
         override fun toPayload() = userId.value
 
@@ -24,7 +24,7 @@ sealed interface DomainOutboxEvent : OutboxEvent {
     data class FetchRecentlyPlayed(val userId: UserId) : DomainOutboxEvent {
         override val key = KEY
         override fun deduplicationKey() = "$KEY:${userId.value}"
-        override val partition = DomainOutboxPartition.ToSpotifyRecentlyPlayed
+        override val partition = DomainOutboxPartition.ToSpotifyPlayback
         override val priority = OutboxTaskPriority.HIGH
         override fun toPayload() = userId.value
 

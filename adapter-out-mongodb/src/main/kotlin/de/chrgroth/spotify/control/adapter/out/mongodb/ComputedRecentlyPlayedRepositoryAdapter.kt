@@ -1,8 +1,8 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
-import de.chrgroth.spotify.control.domain.model.RecentlyPlayedItemComputed
+import de.chrgroth.spotify.control.domain.model.RecentlyPartialPlayedItem
 import de.chrgroth.spotify.control.domain.model.UserId
-import de.chrgroth.spotify.control.domain.port.out.ComputedRecentlyPlayedRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.RecentlyPartialPlayedRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import kotlin.time.Instant
@@ -11,10 +11,10 @@ import kotlin.time.toKotlinInstant
 import mu.KLogging
 
 @ApplicationScoped
-class ComputedRecentlyPlayedRepositoryAdapter : ComputedRecentlyPlayedRepositoryPort {
+class RecentlyPartialPlayedRepositoryAdapter : RecentlyPartialPlayedRepositoryPort {
 
     @Inject
-    lateinit var computedRecentlyPlayedDocumentRepository: ComputedRecentlyPlayedDocumentRepository
+    lateinit var recentlyPartialPlayedDocumentRepository: RecentlyPartialPlayedDocumentRepository
 
     @Inject
     lateinit var mongoQueryMetrics: MongoQueryMetrics
@@ -22,30 +22,30 @@ class ComputedRecentlyPlayedRepositoryAdapter : ComputedRecentlyPlayedRepository
     override fun findExistingPlayedAts(userId: UserId, playedAts: Set<Instant>): Set<Instant> {
         if (playedAts.isEmpty()) return emptySet()
         val javaPlayedAts = playedAts.map { it.toJavaInstant() }
-        return mongoQueryMetrics.timed("computed_recently_played.findExistingPlayedAts") {
-            computedRecentlyPlayedDocumentRepository
+        return mongoQueryMetrics.timed("recently_partial_played.findExistingPlayedAts") {
+            recentlyPartialPlayedDocumentRepository
                 .list("spotifyUserId = ?1 and playedAt in ?2", userId.value, javaPlayedAts)
                 .map { it.playedAt.toKotlinInstant() }
                 .toSet()
         }
     }
 
-    override fun saveAll(items: List<RecentlyPlayedItemComputed>) {
+    override fun saveAll(items: List<RecentlyPartialPlayedItem>) {
         if (items.isEmpty()) return
         val documents = items.map { item ->
-            ComputedRecentlyPlayedDocument().apply {
+            RecentlyPartialPlayedDocument().apply {
                 spotifyUserId = item.spotifyUserId.value
                 trackId = item.trackId
                 trackName = item.trackName
                 artistIds = item.artistIds
                 artistNames = item.artistNames
                 playedAt = item.playedAt.toJavaInstant()
-                playedMs = item.playedMs
+                playedSeconds = item.playedSeconds
             }
         }
-        logger.info { "Saving ${documents.size} computed recently played documents" }
-        mongoQueryMetrics.timed("computed_recently_played.saveAll") {
-            computedRecentlyPlayedDocumentRepository.persist(documents)
+        logger.info { "Saving ${documents.size} recently partial played documents" }
+        mongoQueryMetrics.timed("recently_partial_played.saveAll") {
+            recentlyPartialPlayedDocumentRepository.persist(documents)
         }
     }
 
