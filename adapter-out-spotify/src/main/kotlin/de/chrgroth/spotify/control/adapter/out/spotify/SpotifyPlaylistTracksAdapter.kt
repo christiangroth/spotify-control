@@ -35,7 +35,7 @@ class SpotifyPlaylistTracksAdapter(
         return try {
             val tracks = mutableListOf<PlaylistTrack>()
             var snapshotId: String? = null
-            var nextUrl: String? = "$apiBaseUrl/v1/playlists/$playlistId/items?limit=50"
+            var nextUrl: String? = "$apiBaseUrl/v1/playlists/$playlistId/items?limit=5"
             while (nextUrl != null) {
                 val request = HttpRequest.newBuilder()
                     .uri(URI.create(nextUrl))
@@ -54,6 +54,7 @@ class SpotifyPlaylistTracksAdapter(
                     snapshotId = json.get("snapshot_id")?.asText()
                 }
                 json.get("items")?.forEach { item ->
+                    logger.info { "Processing item: $item" }
                     val track = item.get("track")?.takeIf { !it.isNull } ?: return@forEach
                     val type = track.get("type")?.asText()
                     if (type != "track") {
