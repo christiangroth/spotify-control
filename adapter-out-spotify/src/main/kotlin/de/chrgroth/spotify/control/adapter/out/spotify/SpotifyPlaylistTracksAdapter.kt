@@ -58,6 +58,11 @@ class SpotifyPlaylistTracksAdapter(
                         logger.info { "Ignoring non-track playlist item of type '$type'" }
                         return@forEach
                     }
+                    val isLocal = track.get("is_local")?.takeIf { !it.isNull }?.asBoolean() ?: false
+                    if (isLocal) {
+                        logger.info { "Ignoring local track '${track.get("name")?.asText()}'" }
+                        return@forEach
+                    }
                     tracks.add(
                         PlaylistTrack(
                             trackId = track.get("id").asText(),

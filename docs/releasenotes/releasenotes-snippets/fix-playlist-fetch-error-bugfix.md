@@ -1,0 +1,1 @@
+* fix-playlist-fetch-error: Fixed fetching playlist data failing (PLAYLIST-003) when playlist contains local tracks.
