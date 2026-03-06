@@ -20,6 +20,7 @@ class OutboxInfoAdapter(
                 name = partition.key,
                 status = info?.status ?: OutboxPartitionStatus.ACTIVE.name,
                 documentCount = repository.countByPartition(partition),
+                blockedUntil = info?.pausedUntil,
             )
         }
 }
