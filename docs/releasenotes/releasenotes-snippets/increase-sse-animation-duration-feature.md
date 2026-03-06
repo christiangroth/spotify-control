@@ -1,1 +1,0 @@
-* increase-sse-animation-duration: Increased SSE update fade animation duration to 3 seconds for dashboard and health UI.

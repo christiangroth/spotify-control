@@ -1,3 +1,6 @@
+# 0.23.0 - 2026.03.06
+## New Features
+* increase-sse-animation-duration: Increased SSE update fade animation duration to 3 seconds for dashboard and health UI.
 # 0.22.0 - 2026.03.06
 ## New Features
 * move-failed-outbox-tasks-to-archive: Failed outbox tasks that have exhausted all retry attempts are now moved to the archive instead of remaining in the outbox collection.
