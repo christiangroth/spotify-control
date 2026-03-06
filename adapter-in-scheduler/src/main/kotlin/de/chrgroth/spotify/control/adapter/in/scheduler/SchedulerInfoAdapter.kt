@@ -6,7 +6,6 @@ import io.quarkus.scheduler.Scheduled
 import io.quarkus.scheduler.Scheduler
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
-import java.time.Instant
 
 @ApplicationScoped
 @Suppress("Unused")
@@ -17,11 +16,12 @@ class SchedulerInfoAdapter(
     override fun getCronjobStats(): List<CronjobStats> =
         scheduler.scheduledJobs
             .mapNotNull { trigger ->
-                val id = trigger.id
-                val hashIdx = id.lastIndexOf('#')
+                val methodDescription = trigger.methodDescription
+                if (methodDescription.isNullOrEmpty()) return@mapNotNull null
+                val hashIdx = methodDescription.lastIndexOf('#')
                 if (hashIdx < 0) return@mapNotNull null
-                val className = id.substring(0, hashIdx)
-                val methodName = id.substring(hashIdx + 1)
+                val className = methodDescription.substring(0, hashIdx)
+                val methodName = methodDescription.substring(hashIdx + 1)
                 try {
                     val clazz = Class.forName(className)
                     val method = clazz.getDeclaredMethod(methodName)
@@ -29,10 +29,11 @@ class SchedulerInfoAdapter(
                     CronjobStats(
                         simpleName = clazz.simpleName,
                         cronSchedule = scheduled.cron,
-                        nextExecution = trigger.nextFireTime ?: Instant.now(),
+                        nextExecution = trigger.nextFireTime,
+                        running = scheduler.isRunning && !scheduler.isPaused(trigger.id),
                     )
                 } catch (e: ReflectiveOperationException) {
-                    logger.warn(e) { "Could not resolve cronjob metadata for trigger '$id'" }
+                    logger.warn(e) { "Could not resolve cronjob metadata for trigger '${trigger.id}' (method: '$methodDescription')" }
                     null
                 }
             }

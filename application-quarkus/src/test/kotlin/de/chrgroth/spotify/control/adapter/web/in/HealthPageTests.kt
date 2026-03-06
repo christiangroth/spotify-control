@@ -130,7 +130,21 @@ class HealthPageTests {
       .body(containsString("Scheduled Jobs"))
       .body(containsString("""data-testid="cronjobs-table""""))
       .body(containsString("Cron Schedule"))
+      .body(containsString("Status"))
       .body(containsString("Next Execution"))
+  }
+
+  @Test
+  fun `health page lists all scheduled jobs in cronjob table`() {
+    given()
+      .`when`()
+      .get("/ui/health")
+      .then()
+      .statusCode(200)
+      .body(containsString("PlaylistSyncJob"))
+      .body(containsString("RecentlyPlayedFetchJob"))
+      .body(containsString("UserProfileUpdateJob"))
+      .body(containsString("OutboxArchiveCleanupJob"))
   }
 
   @Test
