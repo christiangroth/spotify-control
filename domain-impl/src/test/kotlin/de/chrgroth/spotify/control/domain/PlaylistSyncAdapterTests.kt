@@ -547,6 +547,19 @@ class PlaylistSyncAdapterTests {
     }
 
     @Test
+    fun `enqueueSyncPlaylistData returns Left when playlist is not active`() {
+        val user = buildUser()
+        every { userRepository.findById(userId) } returns user
+        every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE))
+
+        val result = adapter.enqueueSyncPlaylistData(userId, "p1")
+
+        assertThat(result.isLeft()).isTrue()
+        assertThat(result.leftOrNull()).isEqualTo(PlaylistSyncError.PLAYLIST_SYNC_INACTIVE)
+        verify(exactly = 0) { outboxPort.enqueue(any()) }
+    }
+
+    @Test
     fun `enqueueSyncPlaylistData enqueues SyncPlaylistData and returns Right`() {
         val user = buildUser()
         every { userRepository.findById(userId) } returns user
