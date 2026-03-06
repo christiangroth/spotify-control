@@ -1,3 +1,6 @@
+# 0.27.1 - 2026.03.06
+## Bugfixes / Chore
+* fix-sync-playlist-button-ui: Fixed sync playlist button to only show for active playlists with green icon styling.
 # 0.27.0 - 2026.03.06
 ## New Features
 * cleanup-health-ui: Streamlined health UI.

@@ -1,1 +1,0 @@
-* fix-sync-playlist-button-ui: Fixed sync playlist button to only show for active playlists with green icon styling.
