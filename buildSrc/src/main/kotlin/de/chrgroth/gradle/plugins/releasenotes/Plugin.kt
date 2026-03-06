@@ -29,6 +29,9 @@ private const val TASK_NAME_CREATE_UPDATE_NOTICE = "releasenotesCreateUpdateNoti
 private const val TASK_NAME_GENERATE = "releasenotesGenerate"
 private const val TASK_NAME_COPY_TO_SOURCES = "releasenotesCopyToSources"
 private const val TASK_NAME_DELETE_SNIPPETS = "releasenotesDeleteSnippets"
+private const val TASK_NAME_VERSION_BUMP = "releasenotesVersionBump"
+
+private const val TASK_PATH_UN_SNAPSHOT_VERSION = ":unSnapshotVersion"
 
 class ReleasenotesPlugin : Plugin<Project> {
   private lateinit var extension: ReleasenotesExtension
@@ -96,15 +99,6 @@ class ReleasenotesPlugin : Plugin<Project> {
           extension.configurations.forEach {
             it.init(projectDir, layout.buildDirectory.asFile.get()).createFeature(currentBranchNameLastSegment)
           }
-
-          project.changeProjectVersion { mainBranchProjectVersion, currentProjectVersion ->
-            if (mainBranchProjectVersion != currentProjectVersion) {
-              logger.info("Skipping version bump because version already differs from ${extension.mainBranch} branch: $mainBranchProjectVersion vs $currentProjectVersion")
-              null
-            } else {
-              currentProjectVersion.copy(minor = currentProjectVersion.minor + 1, patch = 0)
-            }
-          }
         }
       }
 
@@ -138,14 +132,41 @@ class ReleasenotesPlugin : Plugin<Project> {
           extension.configurations.forEach {
             it.init(projectDir, layout.buildDirectory.asFile.get()).createUpdateNotice(currentBranchNameLastSegment)
           }
+        }
+      }
 
-          project.changeProjectVersion { mainBranchProjectVersion, currentProjectVersion ->
-            if (mainBranchProjectVersion.major != currentProjectVersion.major) {
-              logger.info("Skipping version bump because version major part already differs from ${extension.mainBranch} branch: $mainBranchProjectVersion vs $currentProjectVersion")
-              null
-            } else {
-              currentProjectVersion.copy(major = currentProjectVersion.major + 1, minor = 0, patch = 0)
+      tasks.register(TASK_NAME_VERSION_BUMP) {
+        group = TASK_GROUP_NAME
+
+        doLast {
+          val hasUpdateNotice = extension.configurations.any {
+            it.init(projectDir, layout.buildDirectory.asFile.get()).hasUpdateNoticeSnippets()
+          }
+          val hasFeature = extension.configurations.any {
+            it.init(projectDir, layout.buildDirectory.asFile.get()).hasFeatureSnippets()
+          }
+
+          when {
+            hasUpdateNotice -> {
+              logger.lifecycle("Found update notice snippets, performing major version bump...")
+              project.changeProjectVersion { _, currentProjectVersion ->
+                currentProjectVersion.copy(major = currentProjectVersion.major + 1, minor = 0, patch = 0)
+              }
             }
+            hasFeature -> {
+              logger.lifecycle("Found feature snippets, performing minor version bump...")
+              project.changeProjectVersion { _, currentProjectVersion ->
+                currentProjectVersion.copy(minor = currentProjectVersion.minor + 1, patch = 0)
+              }
+            }
+            else -> logger.info("No feature or update notice snippets found, skipping version bump (release plugin will handle patch bump automatically).")
+          }
+        }
+      }.let { versionBumpTask ->
+        afterEvaluate {
+          tasks.findByPath(TASK_PATH_UN_SNAPSHOT_VERSION)?.let { unSnapshotVersionTask ->
+            logger.info("Task '${unSnapshotVersionTask.path}' found, will depend on ${versionBumpTask.name}")
+            unSnapshotVersionTask.dependsOn(versionBumpTask)
           }
         }
       }
