@@ -270,6 +270,7 @@ class ReleasenotesPlugin : Plugin<Project> {
           replacement = "version=$newVersion"
         )
       )
+      project.version = newVersion.toString()
       logger.info("Bumped project version to: $newVersion")
     }
   }
