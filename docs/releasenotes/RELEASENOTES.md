@@ -1,3 +1,6 @@
+# 0.27.0 - 2026.03.06
+## New Features
+* cleanup-health-ui: Streamlined health UI.
 # 0.26.0 - 2026.03.06
 ## New Features
 * add-sync-button-to-playlist: Added a Sync button per playlist on the settings page.
