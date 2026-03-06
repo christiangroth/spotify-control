@@ -1,0 +1,1 @@
+* add-margin-to-menu-bar-icons: Added margin to menu bar icons for improved readability.
