@@ -1,0 +1,1 @@
+* implement-throttling-feature: Outbox partitions now support a configurable throttle interval; the `to-spotify` partition is throttled at one request per second to avoid Spotify rate limits.
