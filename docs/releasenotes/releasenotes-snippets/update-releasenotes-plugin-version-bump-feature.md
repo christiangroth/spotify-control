@@ -1,1 +1,0 @@
-* update-releasenotes-plugin-version-bump: Version bump is now performed automatically before the release build based on snippet types (feature → minor, update notice → major); snippet creation tasks no longer modify gradle.properties.

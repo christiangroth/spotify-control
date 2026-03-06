@@ -1,3 +1,7 @@
+# 0.19.2 - 2026.03.06
+## New Features
+* update-releasenotes-plugin-version-bump: Version bump is now performed automatically before the release build based on snippet types (feature → minor, update notice → major); snippet creation tasks no longer modify gradle.properties.
+
 # 0.19.1 - 2026.03.06
 ## Bugfixes / Chore
 * fix-cronjobs-ui-animation: Fixed cronjob table pulse animation restarting every 500ms and cronjob row not being resorted after execution.
