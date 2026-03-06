@@ -1,3 +1,6 @@
+# 0.26.0 - 2026.03.06
+## New Features
+* add-sync-button-to-playlist: Added a Sync button per playlist on the settings page.
 # 0.25.0 - 2026.03.06
 ## New Features
 * add-technical-sub-menu: Added a "Technical" dropdown sub-menu in the navigation bar, grouping Health, Loki, MongoDB, and Docs links together to reduce clutter.
