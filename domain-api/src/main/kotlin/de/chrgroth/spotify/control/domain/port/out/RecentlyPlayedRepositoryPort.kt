@@ -7,6 +7,7 @@ import kotlinx.datetime.LocalDate
 
 interface RecentlyPlayedRepositoryPort {
     fun findExistingPlayedAts(spotifyUserId: UserId, playedAts: Set<Instant>): Set<Instant>
+    fun findMostRecentPlayedAt(spotifyUserId: UserId): Instant?
     fun saveAll(items: List<RecentlyPlayedItem>)
     fun countAll(spotifyUserId: UserId): Long
     fun countSince(spotifyUserId: UserId, since: Instant): Long

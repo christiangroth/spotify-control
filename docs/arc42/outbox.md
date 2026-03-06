@@ -108,6 +108,19 @@ the task is marked `FAILED` and remains in the `outbox` collection for manual re
 Call `outbox.activatePartition(partition)` / use `OutboxRepository.pausePartition(...)` to pause.
 When paused, `OutboxRepository.claim` returns `null` for that partition.
 
+### Exception: Non-Pausing Partitions
+
+Partitions may override `pauseOnRateLimit = false` (defined in the `OutboxPartition` interface) to opt
+out of the pause-on-rate-limit behaviour. When a rate-limited response is received for such a partition:
+
+- The partition is **not** paused; other tasks continue to be processed immediately.
+- The affected task is rescheduled using the rate-limit delay (via `OutboxRepository.reschedule`).
+
+This is used by the `to-spotify-recently-played` partition to ensure that playback history is never
+missed due to a temporary rate-limit response. Because the Spotify recently-played window is limited
+to the last ~50 tracks, pausing the partition even briefly risks losing playback events that would
+age out of the Spotify API window before the partition resumes.
+
 ## Archive Cleanup
 
 `OutboxArchiveCleanupJob` runs every night at 01:00 and removes archive entries whose `completedAt`

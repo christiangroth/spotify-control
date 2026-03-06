@@ -7,6 +7,7 @@ import com.mongodb.client.model.Sorts
 import de.chrgroth.spotify.control.domain.model.RecentlyPlayedItem
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.out.RecentlyPlayedRepositoryPort
+import io.quarkus.panache.common.Sort
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import kotlin.time.Instant
@@ -35,6 +36,14 @@ class RecentlyPlayedRepositoryAdapter : RecentlyPlayedRepositoryPort {
                 .toSet()
         }
     }
+
+    override fun findMostRecentPlayedAt(spotifyUserId: UserId): Instant? =
+        mongoQueryMetrics.timed("recently_played.findMostRecentPlayedAt") {
+            recentlyPlayedDocumentRepository
+                .find("spotifyUserId = ?1", Sort.by("playedAt").descending(), spotifyUserId.value)
+                .firstResult()
+                ?.playedAt?.toKotlinInstant()
+        }
 
     override fun saveAll(items: List<RecentlyPlayedItem>) {
         if (items.isEmpty()) return

@@ -23,6 +23,11 @@ class OutboxProcessorTests {
         override val key = "test-partition"
     }
 
+    private val noPausePartition = object : OutboxPartition {
+        override val key = "test-partition-no-pause"
+        override val pauseOnRateLimit = false
+    }
+
     private fun task(attempts: Int = 0) = OutboxTask(
         id = "task-1",
         partition = partition.key,
@@ -188,5 +193,36 @@ class OutboxProcessorTests {
         assertThat(secondResult).isFalse()
 
         verify(exactly = 1) { repository.pausePartition(partition, "rate_limited", any()) }
+    }
+
+    @Test
+    fun `processNext with pauseOnRateLimit=false reschedules task without pausing partition`() {
+        val task = task(attempts = 1)
+        every { repository.claim(noPausePartition) } returns task
+        val capturedNextRetryAt = mutableListOf<Instant>()
+        every { repository.reschedule(task, capture(capturedNextRetryAt)) } just runs
+
+        val retryAfter = Duration.ofSeconds(30)
+        val result = processor.processNext(noPausePartition) { OutboxTaskResult.RateLimited(retryAfter) }
+
+        assertThat(result).isFalse()
+        verify(exactly = 0) { repository.pausePartition(any(), any(), any()) }
+        verify { repository.reschedule(task, any()) }
+        val captured = capturedNextRetryAt.first()
+        assertThat(captured).isAfter(Instant.now().plusSeconds(28))
+    }
+
+    @Test
+    fun `processNext with pauseOnRateLimit=false does not invoke onRateLimited callback`() {
+        val task = task()
+        every { repository.claim(noPausePartition) } returns task
+        every { repository.reschedule(task, any()) } just runs
+
+        val callbackInvoked = mutableListOf<OutboxPartition>()
+        val processorWithCallback = OutboxProcessor(repository, retryPolicy) { p, _ -> callbackInvoked.add(p) }
+
+        processorWithCallback.processNext(noPausePartition) { OutboxTaskResult.RateLimited(Duration.ofSeconds(30)) }
+
+        assertThat(callbackInvoked).isEmpty()
     }
 }

@@ -31,10 +31,11 @@ class SpotifyRecentlyPlayedAdapter(
     private val httpClient = HttpClient.newHttpClient()
     private val objectMapper = ObjectMapper()
 
-    override fun getRecentlyPlayed(userId: UserId, accessToken: AccessToken): Either<DomainError, List<RecentlyPlayedItem>> {
+    override fun getRecentlyPlayed(userId: UserId, accessToken: AccessToken, after: Instant?): Either<DomainError, List<RecentlyPlayedItem>> {
         return try {
+            val afterParam = after?.let { "&after=${it.toEpochMilliseconds()}" } ?: ""
             val request = HttpRequest.newBuilder()
-                .uri(URI.create("$apiBaseUrl/v1/me/player/recently-played?limit=50"))
+                .uri(URI.create("$apiBaseUrl/v1/me/player/recently-played?limit=50$afterParam"))
                 .header("Authorization", "Bearer ${accessToken.value}")
                 .GET()
                 .build()
