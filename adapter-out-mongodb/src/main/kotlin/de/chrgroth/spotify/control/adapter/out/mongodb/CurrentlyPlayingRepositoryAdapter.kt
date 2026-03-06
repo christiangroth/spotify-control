@@ -1,10 +1,12 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
 import de.chrgroth.spotify.control.domain.model.CurrentlyPlayingItem
+import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.out.CurrentlyPlayingRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import kotlin.time.toJavaInstant
+import kotlin.time.toKotlinInstant
 import mu.KLogging
 
 @ApplicationScoped
@@ -45,6 +47,36 @@ class CurrentlyPlayingRepositoryAdapter : CurrentlyPlayingRepositoryPort {
                 observedMinuteStart,
                 observedMinuteEnd,
             ) > 0
+        }
+    }
+
+    override fun findByUserId(userId: UserId): List<CurrentlyPlayingItem> =
+        mongoQueryMetrics.timed("currently_playing.findByUserId") {
+            currentlyPlayingDocumentRepository
+                .list("spotifyUserId = ?1", userId.value)
+                .map { doc ->
+                    CurrentlyPlayingItem(
+                        spotifyUserId = UserId(doc.spotifyUserId),
+                        trackId = doc.trackId,
+                        trackName = doc.trackName,
+                        artistIds = doc.artistIds,
+                        artistNames = doc.artistNames,
+                        progressMs = doc.progressMs,
+                        durationMs = doc.durationMs,
+                        isPlaying = doc.isPlaying,
+                        observedAt = doc.observedAt.toKotlinInstant(),
+                    )
+                }
+        }
+
+    override fun deleteByUserIdAndTrackIds(userId: UserId, trackIds: Set<String>) {
+        if (trackIds.isEmpty()) return
+        mongoQueryMetrics.timed("currently_playing.deleteByUserIdAndTrackIds") {
+            currentlyPlayingDocumentRepository.delete(
+                "spotifyUserId = ?1 and trackId in ?2",
+                userId.value,
+                trackIds.toList(),
+            )
         }
     }
 
