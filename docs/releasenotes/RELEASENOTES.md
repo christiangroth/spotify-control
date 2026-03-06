@@ -1,3 +1,6 @@
+# 0.28.1 - 2026.03.06
+## Bugfixes / Chore
+* fix-build-playlist-track-mapping: Fixed playlist track mapping.
 # 0.28.0 - 2026.03.06
 ## New Features
 * design-data-collection-concept: Capture partial listens and skipped tracks to improve listening statistics.
