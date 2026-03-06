@@ -1,1 +1,0 @@
-* add-link-to-grafana-logs: Added a link to Grafana Cloud Logs Dashboard in the menu bar.

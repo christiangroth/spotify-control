@@ -1,3 +1,6 @@
+# 0.20.0 - 2026.03.06
+## New Features
+* add-link-to-grafana-logs: Added a link to Grafana Cloud Logs Dashboard in the menu bar.
 # 0.19.4 - 2026.03.06
 ## Bugfixes / Chore
 * fix-fetch-playlist-data: Fixed playlist data fetch by using the /items endpoint instead of the deprecated /tracks endpoint.
