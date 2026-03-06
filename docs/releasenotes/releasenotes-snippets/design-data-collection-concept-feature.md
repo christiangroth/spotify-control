@@ -1,0 +1,1 @@
+* design-data-collection-concept: Poll currently-playing endpoint every 30 seconds to capture partial plays and skipped tracks for richer listening statistics.
