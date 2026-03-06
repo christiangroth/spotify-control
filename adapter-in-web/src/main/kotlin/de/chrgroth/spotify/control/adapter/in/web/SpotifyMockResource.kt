@@ -46,7 +46,7 @@ class SpotifyMockResource {
     fun recentlyPlayed(): String = RECENTLY_PLAYED_RESPONSE
 
     @GET
-    @Path("/v1/playlists/{playlistId}/tracks")
+    @Path("/v1/playlists/{playlistId}/items")
     @PermitAll
     @Produces(MediaType.APPLICATION_JSON)
     @Suppress("UnusedParameter")
