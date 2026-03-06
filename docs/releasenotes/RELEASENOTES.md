@@ -1,3 +1,6 @@
+# 0.16.5 - 2026.03.06
+## Bugfixes / Chore
+* fix-playlist-sync-sse-event: Fixed missing SSE event when toggling playlist sync status on settings UI.
 # 0.16.4 - 2026.03.04
 ## Bugfixes / Chore
 * fix-login-page-redirect: Fixed login page redirect — users with a valid session are now properly redirected to the dashboard when reloading or revisiting the login page. Session cookie is now persistent across browser restarts.

@@ -1,1 +1,0 @@
-* fix-playlist-sync-sse-event: Fixed missing SSE event when toggling playlist sync status on settings UI.
