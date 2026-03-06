@@ -1,3 +1,6 @@
+# 0.24.2 - 2026.03.06
+## Bugfixes / Chore
+* fix-playlist-track-sync: Fixed playlist track sync always returning 0 items.
 # 0.24.1 - 2026.03.06
 ## Bugfixes / Chore
 * ensure-outbox-partition-existence: Outbox partition documents are now always created at startup, not only when a partition is paused.

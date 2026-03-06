@@ -1,1 +1,0 @@
-* fix-playlist-track-sync: Fixed playlist track sync always returning 0 items.
