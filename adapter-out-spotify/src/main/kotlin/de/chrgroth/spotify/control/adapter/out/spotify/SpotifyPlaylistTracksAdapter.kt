@@ -25,6 +25,7 @@ import java.net.http.HttpResponse
 class SpotifyPlaylistTracksAdapter(
     @param:ConfigProperty(name = "spotify.api.base-url", defaultValue = "https://api.spotify.com")
     private val apiBaseUrl: String,
+    private val httpMetrics: SpotifyHttpMetrics,
 ) : SpotifyPlaylistTracksPort {
 
     private val httpClient = HttpClient.newHttpClient()
@@ -41,7 +42,9 @@ class SpotifyPlaylistTracksAdapter(
                     .header("Authorization", "Bearer ${accessToken.value}")
                     .GET()
                     .build()
-                val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+                val response = httpMetrics.timed(request.uri()) {
+                    httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+                }
                 val errorResult = response.checkRateLimitOrError(logger, PlaylistSyncError.PLAYLIST_TRACKS_FETCH_FAILED)
                 if (errorResult != null) return errorResult
                 val json: JsonNode = objectMapper.readTree(response.body())
