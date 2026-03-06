@@ -47,12 +47,14 @@ class SpotifyPlaylistTracksAdapter(
                 }
                 val errorResult = response.checkRateLimitOrError(logger, PlaylistSyncError.PLAYLIST_TRACKS_FETCH_FAILED)
                 if (errorResult != null) return errorResult
-                val json: JsonNode = objectMapper.readTree(response.body())
+                val responseBody = response.body()
+                logger.info { "Playlist tracks response for playlist $playlistId: $responseBody" }
+                val json: JsonNode = objectMapper.readTree(responseBody)
                 if (snapshotId == null) {
                     snapshotId = json.get("snapshot_id")?.asText()
                 }
                 json.get("items")?.forEach { item ->
-                    val track = item.get("track") ?: return@forEach
+                    val track = item.get("track")?.takeIf { !it.isNull } ?: return@forEach
                     val type = track.get("type")?.asText()
                     if (type != "track") {
                         logger.info { "Ignoring non-track playlist item of type '$type'" }
