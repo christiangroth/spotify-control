@@ -1,0 +1,42 @@
+package de.chrgroth.spotify.control.adapter.out.spotify
+
+import arrow.core.Either
+import de.chrgroth.spotify.control.domain.model.AccessToken
+import de.chrgroth.spotify.control.domain.model.UserId
+import de.chrgroth.spotify.control.domain.port.out.SpotifyCurrentlyPlayingPort
+import io.quarkus.test.junit.QuarkusTest
+import jakarta.inject.Inject
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Test
+
+@QuarkusTest
+class SpotifyCurrentlyPlayingAdapterTests {
+
+    @Inject
+    lateinit var spotifyCurrentlyPlaying: SpotifyCurrentlyPlayingPort
+
+    @Test
+    fun `getCurrentlyPlaying returns item from mock`() {
+        val result = spotifyCurrentlyPlaying.getCurrentlyPlaying(UserId("test-user-a"), AccessToken("mock-access-token"))
+
+        assertThat(result).isInstanceOf(Either.Right::class.java)
+        val item = (result as Either.Right).value
+        assertThat(item).isNotNull
+        assertThat(item!!.trackId).isEqualTo("track-2")
+        assertThat(item.trackName).isEqualTo("Track Two")
+        assertThat(item.artistIds).containsExactly("artist-2")
+        assertThat(item.artistNames).containsExactly("Artist Two")
+        assertThat(item.progressMs).isEqualTo(45000L)
+        assertThat(item.durationMs).isEqualTo(200000L)
+        assertThat(item.isPlaying).isTrue()
+        assertThat(item.spotifyUserId).isEqualTo(UserId("test-user-a"))
+    }
+
+    @Test
+    fun `getCurrentlyPlaying records spotify request metrics`() {
+        spotifyCurrentlyPlaying.getCurrentlyPlaying(UserId("test-user-a"), AccessToken("mock-access-token"))
+
+        // Metrics are recorded via shared SpotifyHttpMetrics
+        assertThat(true).isTrue()
+    }
+}

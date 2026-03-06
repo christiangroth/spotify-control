@@ -3,6 +3,7 @@ package de.chrgroth.spotify.control.domain
 import arrow.core.Either
 import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
+import de.chrgroth.spotify.control.domain.port.`in`.CurrentlyPlayingPort
 import de.chrgroth.spotify.control.domain.port.`in`.OutboxHandlerPort
 import de.chrgroth.spotify.control.domain.port.`in`.PlaylistSyncPort
 import de.chrgroth.spotify.control.domain.port.`in`.RecentlyPlayedPort
@@ -14,10 +15,27 @@ import mu.KLogging
 @ApplicationScoped
 @Suppress("Unused", "TooGenericExceptionCaught")
 class OutboxHandlerAdapter(
+    private val currentlyPlaying: CurrentlyPlayingPort,
     private val recentlyPlayed: RecentlyPlayedPort,
     private val userProfileUpdate: UserProfileUpdatePort,
     private val playlistSync: PlaylistSyncPort,
 ) : OutboxHandlerPort {
+
+    override fun handle(event: DomainOutboxEvent.FetchCurrentlyPlaying): OutboxTaskResult = try {
+        when (val result = currentlyPlaying.update(event.userId)) {
+            is Either.Right -> OutboxTaskResult.Success
+            is Either.Left -> when (val error = result.value) {
+                is SpotifyRateLimitError -> OutboxTaskResult.RateLimited(error.retryAfter)
+                else -> {
+                    logger.error { "Failed to fetch currently playing for user ${event.userId.value}: ${error.code}" }
+                    OutboxTaskResult.Failed("Failed to fetch currently playing: ${error.code}")
+                }
+            }
+        }
+    } catch (e: Exception) {
+        logger.error(e) { "Unexpected error in handle(FetchCurrentlyPlaying) for user ${event.userId.value}" }
+        OutboxTaskResult.Failed("Unexpected error in update: ${e.message}", e)
+    }
 
     override fun handle(event: DomainOutboxEvent.FetchRecentlyPlayed): OutboxTaskResult = try {
         when (val result = recentlyPlayed.update(event.userId)) {

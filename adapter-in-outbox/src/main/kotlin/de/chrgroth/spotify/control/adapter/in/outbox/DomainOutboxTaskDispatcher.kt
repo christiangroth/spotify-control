@@ -24,6 +24,7 @@ class DomainOutboxTaskDispatcher(
             return OutboxTaskResult.Failed("Unknown event type: ${task.eventType}", e)
         }
         return when (event) {
+            is DomainOutboxEvent.FetchCurrentlyPlaying -> handlerPort.handle(event)
             is DomainOutboxEvent.FetchRecentlyPlayed -> handlerPort.handle(event)
             is DomainOutboxEvent.UpdateUserProfile -> handlerPort.handle(event)
             is DomainOutboxEvent.SyncPlaylistInfo -> handlerPort.handle(event)

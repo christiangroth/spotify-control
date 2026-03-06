@@ -4,6 +4,7 @@ import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.util.outbox.OutboxTaskResult
 
 interface OutboxHandlerPort {
+    fun handle(event: DomainOutboxEvent.FetchCurrentlyPlaying): OutboxTaskResult
     fun handle(event: DomainOutboxEvent.FetchRecentlyPlayed): OutboxTaskResult
     fun handle(event: DomainOutboxEvent.UpdateUserProfile): OutboxTaskResult
     fun handle(event: DomainOutboxEvent.SyncPlaylistInfo): OutboxTaskResult

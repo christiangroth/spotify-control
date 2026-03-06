@@ -1,0 +1,53 @@
+package de.chrgroth.spotify.control.adapter.out.mongodb
+
+import de.chrgroth.spotify.control.domain.model.RecentlyPartialPlayedItem
+import de.chrgroth.spotify.control.domain.model.UserId
+import de.chrgroth.spotify.control.domain.port.out.RecentlyPartialPlayedRepositoryPort
+import jakarta.enterprise.context.ApplicationScoped
+import jakarta.inject.Inject
+import kotlin.time.Instant
+import kotlin.time.toJavaInstant
+import kotlin.time.toKotlinInstant
+import mu.KLogging
+
+@ApplicationScoped
+class RecentlyPartialPlayedRepositoryAdapter : RecentlyPartialPlayedRepositoryPort {
+
+    @Inject
+    lateinit var recentlyPartialPlayedDocumentRepository: RecentlyPartialPlayedDocumentRepository
+
+    @Inject
+    lateinit var mongoQueryMetrics: MongoQueryMetrics
+
+    override fun findExistingPlayedAts(userId: UserId, playedAts: Set<Instant>): Set<Instant> {
+        if (playedAts.isEmpty()) return emptySet()
+        val javaPlayedAts = playedAts.map { it.toJavaInstant() }
+        return mongoQueryMetrics.timed("recently_partial_played.findExistingPlayedAts") {
+            recentlyPartialPlayedDocumentRepository
+                .list("spotifyUserId = ?1 and playedAt in ?2", userId.value, javaPlayedAts)
+                .map { it.playedAt.toKotlinInstant() }
+                .toSet()
+        }
+    }
+
+    override fun saveAll(items: List<RecentlyPartialPlayedItem>) {
+        if (items.isEmpty()) return
+        val documents = items.map { item ->
+            RecentlyPartialPlayedDocument().apply {
+                spotifyUserId = item.spotifyUserId.value
+                trackId = item.trackId
+                trackName = item.trackName
+                artistIds = item.artistIds
+                artistNames = item.artistNames
+                playedAt = item.playedAt.toJavaInstant()
+                playedSeconds = item.playedSeconds
+            }
+        }
+        logger.info { "Saving ${documents.size} recently partial played documents" }
+        mongoQueryMetrics.timed("recently_partial_played.saveAll") {
+            recentlyPartialPlayedDocumentRepository.persist(documents)
+        }
+    }
+
+    companion object : KLogging()
+}

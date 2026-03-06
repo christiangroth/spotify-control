@@ -1,0 +1,1 @@
+* design-data-collection-concept: Capture partial listens and skipped tracks to improve listening statistics.
