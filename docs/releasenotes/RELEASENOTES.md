@@ -1,3 +1,6 @@
+# 0.24.1 - 2026.03.06
+## Bugfixes / Chore
+* ensure-outbox-partition-existence: Outbox partition documents are now always created at startup, not only when a partition is paused.
 # 0.24.0 - 2026.03.06
 ## New Features
 * enhance-dashboard-recent-tracks: Dashboard now shows recently played tracks in a new panel (configurable limit, default: 13 tracks).

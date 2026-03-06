@@ -1,1 +1,0 @@
-* ensure-outbox-partition-existence: Outbox partition documents are now always created at startup, not only when a partition is paused.
