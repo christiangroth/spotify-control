@@ -62,4 +62,24 @@ class DashboardSseTests {
 
         cancellable.cancel()
     }
+
+    @Test
+    fun `sse endpoint delivers refresh-recently-played event when recently played is notified`() {
+        val userId = UserId("test-user-sse-recently-played")
+        val received = CopyOnWriteArrayList<String>()
+        val latch = CountDownLatch(1)
+
+        val cancellable: Cancellable = dashboardSseService.stream(userId)
+            .subscribe().with(
+                { event: String -> received.add(event); latch.countDown() },
+                { _: Throwable -> /* ignore errors */ },
+            )
+
+        dashboardRefreshPort.notifyUserRecentlyPlayed(userId)
+
+        assertTrue(latch.await(5, TimeUnit.SECONDS), "SSE refresh event should be received within 5 seconds")
+        assertEquals(listOf("refresh-recently-played"), received.toList())
+
+        cancellable.cancel()
+    }
 }

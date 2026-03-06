@@ -100,6 +100,33 @@ class RecentlyPlayedAdapterTests {
     }
 
     @Test
+    fun `update notifies recently played when new items are persisted`() {
+        val items = listOf(item(1))
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
+        every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken, null) } returns items.right()
+        every { recentlyPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
+        every { recentlyPlayedRepository.saveAll(any()) } just runs
+
+        adapter.update(userId)
+
+        verify { dashboardRefresh.notifyUserRecentlyPlayed(userId) }
+    }
+
+    @Test
+    fun `update does not notify recently played when no new items exist`() {
+        val items = listOf(item(1))
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
+        every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken, null) } returns items.right()
+        every { recentlyPlayedRepository.findExistingPlayedAts(userId, any()) } returns setOf(items[0].playedAt)
+
+        adapter.update(userId)
+
+        verify(exactly = 0) { dashboardRefresh.notifyUserRecentlyPlayed(any()) }
+    }
+
+    @Test
     fun `update passes most recent playedAt as after cursor`() {
         val after = now - 2.hours
         val items = listOf(item(1))

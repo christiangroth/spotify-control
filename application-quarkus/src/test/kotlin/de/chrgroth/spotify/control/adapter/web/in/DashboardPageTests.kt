@@ -58,7 +58,30 @@ class DashboardPageTests {
       .statusCode(200)
       .body(containsString("refresh-playback-data"))
       .body(containsString("refresh-playlist-metadata"))
+      .body(containsString("refresh-recently-played"))
       .body(containsString("fadeUpdate"))
+  }
+
+  @Test
+  fun `dashboard page displays recently played section`() {
+    given()
+      .`when`()
+      .get("/ui/dashboard")
+      .then()
+      .statusCode(200)
+      .body(containsString("Recently Played"))
+      .body(containsString("""id="snippet-recently-played""""))
+  }
+
+  @Test
+  fun `dashboard snippet endpoint for recently played is available`() {
+    given()
+      .`when`()
+      .get("/ui/dashboard/snippets/recently-played")
+      .then()
+      .statusCode(200)
+      .contentType(containsString("text/html"))
+      .body(containsString("Recently Played"))
   }
 
   @Test
