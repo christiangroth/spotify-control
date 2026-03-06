@@ -48,6 +48,15 @@ class SpotifyPlaylistTracksAdapterTests {
     }
 
     @Test
+    fun `getPlaylistTracks filters out null track items`() {
+        val result = spotifyPlaylistTracks.getPlaylistTracks(UserId("test-user-a"), AccessToken("mock-access-token"), "mock-playlist-1")
+
+        assertThat(result).isInstanceOf(Either.Right::class.java)
+        val playlist = (result as Either.Right).value
+        assertThat(playlist.tracks).hasSize(1)
+    }
+
+    @Test
     fun `getPlaylistTracks records spotify request metrics`() {
         spotifyPlaylistTracks.getPlaylistTracks(UserId("test-user-a"), AccessToken("mock-access-token"), "mock-playlist-1")
 
