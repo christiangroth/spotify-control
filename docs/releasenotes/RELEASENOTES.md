@@ -1,3 +1,6 @@
+# 0.16.8 - 2026.03.06
+## Bugfixes / Chore
+* fix-spotify-playlist-tracks-adapter: Added missing `playlist-read-collaborative` OAuth scope to fix 403 errors when fetching tracks of collaborative playlists.
 # 0.16.7 - 2026.03.06
 ## New Features
 * add-cronjob-overview-health-ui: Added cronjob overview to health UI showing all configured cronjobs with simple class name, cron schedule and a live countdown to the next execution.

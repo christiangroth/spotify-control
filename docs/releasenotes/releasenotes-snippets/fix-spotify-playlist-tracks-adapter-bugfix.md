@@ -1,1 +1,0 @@
-* fix-spotify-playlist-tracks-adapter: Added missing `playlist-read-collaborative` OAuth scope to fix 403 errors when fetching tracks of collaborative playlists.
