@@ -1,0 +1,1 @@
+* fix-partition-blocking-issue: Fixed an issue where tasks in the to-spotify-playback partition were not executed after being rate-limited, because no delayed wakeup signal was scheduled for partitions with pauseOnRateLimit=false.

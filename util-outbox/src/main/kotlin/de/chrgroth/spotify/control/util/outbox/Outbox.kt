@@ -26,10 +26,14 @@ class Outbox(
     private val scope = CoroutineScope(Dispatchers.IO)
 
     private val processor = OutboxProcessor(repository) { partition, retryAfter ->
-        partitionObservers.forEach { it.onPartitionPaused(partition) }
+        if (partition.pauseOnRateLimit) {
+            partitionObservers.forEach { it.onPartitionPaused(partition) }
+        }
         scope.launch {
             delay(retryAfter.toMillis())
-            activatePartition(partition)
+            if (partition.pauseOnRateLimit) {
+                activatePartition(partition)
+            }
             wakeupService.signal(partition)
         }
     }
@@ -67,7 +71,9 @@ class Outbox(
                     rateLimitedCounters.getOrPut(partition.key) {
                         meterRegistry.counter("outbox_tasks_rate_limited_total", "partition", partition.key)
                     }.increment()
-                    getOrCreatePartitionStatusGauge(partition).set(0)
+                    if (partition.pauseOnRateLimit) {
+                        getOrCreatePartitionStatusGauge(partition).set(0)
+                    }
                 }
                 is OutboxTaskResult.Failed -> failedCounters.getOrPut(partition.key) {
                     meterRegistry.counter("outbox_tasks_failed_total", "partition", partition.key)
