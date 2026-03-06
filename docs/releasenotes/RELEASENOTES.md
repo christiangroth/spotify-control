@@ -1,3 +1,6 @@
+# 0.30.0 - 2026.03.06
+## New Features
+* rename-mongodb-collections: Renamed MongoDB collections to a clean naming scheme (app_user, spotify_playlist, spotify_playlist_metadata, spotify_recently_played, spotify_currently_playing). Added a one-time migration starter to rename existing collections on upgrade.
 # 0.29.0 - 2026.03.06
 ## New Features
 * implement-throttling-feature: Outbox partitions now support a configurable throttle interval to proactively limit outgoing request rates.
