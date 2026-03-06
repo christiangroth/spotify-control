@@ -1,3 +1,6 @@
+# 0.19.0 - 2026.03.06
+## New Features
+* move-recently-played-partition: Move recently-played fetching to its own outbox partition `to-spotify-recently-played` that never pauses on rate limits, and filter Spotify API calls using the last known playback timestamp to reduce redundant data transfer.
 # 0.18.0 - 2026.03.06
 ## New Features
 * simplify-blocked-until-formatting: Simplified "Blocked Until" display for outbox partitions – shows only time (HH:mm) with live countdown when less than 24h away, full date otherwise.
