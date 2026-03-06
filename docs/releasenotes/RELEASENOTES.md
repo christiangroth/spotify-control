@@ -1,3 +1,6 @@
+# 0.21.0 - 2026.03.06
+## New Features
+* add-link-to-mongodb-atlas: Add link to MongoDB Atlas Data Explorer in navigation menu bar.
 # 0.20.0 - 2026.03.06
 ## New Features
 * add-link-to-grafana-logs: Added a link to Grafana Cloud Logs Dashboard in the menu bar.
