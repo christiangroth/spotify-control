@@ -1,5 +1,6 @@
 package de.chrgroth.spotify.control.adapter.`in`.web.ui
 
+import de.chrgroth.spotify.control.domain.error.PlaylistSyncError
 import de.chrgroth.spotify.control.domain.model.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.UserId
@@ -127,9 +128,14 @@ class SettingsResource {
     val userId = UserId(securityIdentity.principal.name)
     return playlistSync.enqueueSyncPlaylistData(userId, playlistId).fold(
       ifLeft = { error ->
-        Response.status(Response.Status.NOT_FOUND)
-          .entity(mapOf("error" to "Sync enqueue failed: ${error.code}"))
-          .build()
+        when (error) {
+          PlaylistSyncError.PLAYLIST_SYNC_INACTIVE -> Response.status(Response.Status.BAD_REQUEST)
+            .entity(mapOf("error" to "Sync enqueue failed: ${error.code}"))
+            .build()
+          else -> Response.status(Response.Status.NOT_FOUND)
+            .entity(mapOf("error" to "Sync enqueue failed: ${error.code}"))
+            .build()
+        }
       },
       ifRight = { Response.ok(mapOf("status" to "ok")).build() },
     )

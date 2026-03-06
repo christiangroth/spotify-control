@@ -36,6 +36,7 @@ enum class PlaylistSyncError(override val code: String) : DomainError {
     PLAYLIST_FETCH_FAILED("PLAYLIST-001"),
     PLAYLIST_NOT_FOUND("PLAYLIST-002"),
     PLAYLIST_TRACKS_FETCH_FAILED("PLAYLIST-003"),
+    PLAYLIST_SYNC_INACTIVE("PLAYLIST-004"),
     ;
 }
 

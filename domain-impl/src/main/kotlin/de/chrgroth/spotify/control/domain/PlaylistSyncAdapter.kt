@@ -127,13 +127,18 @@ class PlaylistSyncAdapter(
             return PlaylistSyncError.PLAYLIST_NOT_FOUND.left()
         }
         val playlists = playlistRepository.findByUserId(userId)
-        playlists.find { it.spotifyPlaylistId == playlistId } ?: run {
+        val playlist = playlists.find { it.spotifyPlaylistId == playlistId } ?: run {
             logger.warn { "Playlist $playlistId not found for user ${userId.value}" }
             return PlaylistSyncError.PLAYLIST_NOT_FOUND.left()
         }
-        logger.info { "Enqueueing SyncPlaylistData for playlist $playlistId (user ${userId.value})" }
-        outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, playlistId))
-        return Unit.right()
+        return if (playlist.syncStatus != PlaylistSyncStatus.ACTIVE) {
+            logger.warn { "Playlist $playlistId is not active for user ${userId.value}, skipping sync enqueue" }
+            PlaylistSyncError.PLAYLIST_SYNC_INACTIVE.left()
+        } else {
+            logger.info { "Enqueueing SyncPlaylistData for playlist $playlistId (user ${userId.value})" }
+            outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, playlistId))
+            Unit.right()
+        }
     }
 
     companion object : KLogging()
