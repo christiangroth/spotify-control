@@ -31,7 +31,7 @@ class CurrentlyPlayingRepositoryAdapter : CurrentlyPlayingRepositoryPort {
             observedAt = item.observedAt.toJavaInstant()
         }
         logger.info { "Saving currently playing document for user ${item.spotifyUserId.value}, track ${item.trackId}" }
-        mongoQueryMetrics.timed("currently_playing.save") {
+        mongoQueryMetrics.timed("spotify_currently_playing.save") {
             currentlyPlayingDocumentRepository.persist(document)
         }
     }
@@ -39,7 +39,7 @@ class CurrentlyPlayingRepositoryAdapter : CurrentlyPlayingRepositoryPort {
     override fun existsByUserAndTrackAndObservedMinute(item: CurrentlyPlayingItem): Boolean {
         val observedMinuteStart = item.observedAt.toJavaInstant().truncatedTo(java.time.temporal.ChronoUnit.MINUTES)
         val observedMinuteEnd = observedMinuteStart.plusSeconds(SECONDS_PER_MINUTE)
-        return mongoQueryMetrics.timed("currently_playing.existsByUserAndTrackAndObservedMinute") {
+        return mongoQueryMetrics.timed("spotify_currently_playing.existsByUserAndTrackAndObservedMinute") {
             currentlyPlayingDocumentRepository.count(
                 "spotifyUserId = ?1 and trackId = ?2 and observedAt >= ?3 and observedAt < ?4",
                 item.spotifyUserId.value,
@@ -51,7 +51,7 @@ class CurrentlyPlayingRepositoryAdapter : CurrentlyPlayingRepositoryPort {
     }
 
     override fun findByUserId(userId: UserId): List<CurrentlyPlayingItem> =
-        mongoQueryMetrics.timed("currently_playing.findByUserId") {
+        mongoQueryMetrics.timed("spotify_currently_playing.findByUserId") {
             currentlyPlayingDocumentRepository
                 .list("spotifyUserId = ?1", userId.value)
                 .map { doc ->
@@ -71,7 +71,7 @@ class CurrentlyPlayingRepositoryAdapter : CurrentlyPlayingRepositoryPort {
 
     override fun deleteByUserIdAndTrackIds(userId: UserId, trackIds: Set<String>) {
         if (trackIds.isEmpty()) return
-        mongoQueryMetrics.timed("currently_playing.deleteByUserIdAndTrackIds") {
+        mongoQueryMetrics.timed("spotify_currently_playing.deleteByUserIdAndTrackIds") {
             currentlyPlayingDocumentRepository.delete(
                 "spotifyUserId = ?1 and trackId in ?2",
                 userId.value,

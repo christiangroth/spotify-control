@@ -29,7 +29,7 @@ class RecentlyPlayedRepositoryAdapter : RecentlyPlayedRepositoryPort {
     override fun findExistingPlayedAts(spotifyUserId: UserId, playedAts: Set<Instant>): Set<Instant> {
         if (playedAts.isEmpty()) return emptySet()
         val javaPlayedAts = playedAts.map { it.toJavaInstant() }
-        return mongoQueryMetrics.timed("recently_played.findExistingPlayedAts") {
+        return mongoQueryMetrics.timed("spotify_recently_played.findExistingPlayedAts") {
             recentlyPlayedDocumentRepository
                 .list("spotifyUserId = ?1 and playedAt in ?2", spotifyUserId.value, javaPlayedAts)
                 .map { it.playedAt.toKotlinInstant() }
@@ -38,7 +38,7 @@ class RecentlyPlayedRepositoryAdapter : RecentlyPlayedRepositoryPort {
     }
 
     override fun findMostRecentPlayedAt(spotifyUserId: UserId): Instant? =
-        mongoQueryMetrics.timed("recently_played.findMostRecentPlayedAt") {
+        mongoQueryMetrics.timed("spotify_recently_played.findMostRecentPlayedAt") {
             recentlyPlayedDocumentRepository
                 .find("spotifyUserId = ?1", Sort.by("playedAt").descending(), spotifyUserId.value)
                 .firstResult()
@@ -46,7 +46,7 @@ class RecentlyPlayedRepositoryAdapter : RecentlyPlayedRepositoryPort {
         }
 
     override fun findRecentlyPlayed(spotifyUserId: UserId, limit: Int): List<RecentlyPlayedItem> =
-        mongoQueryMetrics.timed("recently_played.findRecentlyPlayed") {
+        mongoQueryMetrics.timed("spotify_recently_played.findRecentlyPlayed") {
             recentlyPlayedDocumentRepository
                 .find("spotifyUserId = ?1", Sort.by("playedAt").descending(), spotifyUserId.value)
                 .page(0, limit)
@@ -76,18 +76,18 @@ class RecentlyPlayedRepositoryAdapter : RecentlyPlayedRepositoryPort {
             }
         }
         logger.info { "Saving ${documents.size} recently played documents" }
-        mongoQueryMetrics.timed("recently_played.saveAll") {
+        mongoQueryMetrics.timed("spotify_recently_played.saveAll") {
             recentlyPlayedDocumentRepository.persist(documents)
         }
     }
 
     override fun countAll(spotifyUserId: UserId): Long =
-        mongoQueryMetrics.timed("recently_played.countAll") {
+        mongoQueryMetrics.timed("spotify_recently_played.countAll") {
             recentlyPlayedDocumentRepository.count("spotifyUserId = ?1", spotifyUserId.value)
         }
 
     override fun countSince(spotifyUserId: UserId, since: Instant): Long =
-        mongoQueryMetrics.timed("recently_played.countSince") {
+        mongoQueryMetrics.timed("spotify_recently_played.countSince") {
             recentlyPlayedDocumentRepository.count(
                 "spotifyUserId = ?1 and playedAt >= ?2",
                 spotifyUserId.value,
@@ -109,7 +109,7 @@ class RecentlyPlayedRepositoryAdapter : RecentlyPlayedRepositoryPort {
             ),
             Aggregates.sort(Sorts.ascending("_id")),
         )
-        return mongoQueryMetrics.timed("recently_played.countPerDaySince") {
+        return mongoQueryMetrics.timed("spotify_recently_played.countPerDaySince") {
             recentlyPlayedDocumentRepository.mongoCollection()
                 .aggregate(pipeline, Document::class.java)
                 .map { doc ->
@@ -122,7 +122,7 @@ class RecentlyPlayedRepositoryAdapter : RecentlyPlayedRepositoryPort {
     }
 
     override fun deleteNonTracks(): Long =
-        mongoQueryMetrics.timed("recently_played.deleteNonTracks") {
+        mongoQueryMetrics.timed("spotify_recently_played.deleteNonTracks") {
             recentlyPlayedDocumentRepository.delete("artistIds = ?1 and artistNames = ?2", emptyList<String>(), emptyList<String>())
         }
 

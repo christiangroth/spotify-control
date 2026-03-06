@@ -1,0 +1,1 @@
+* rename-mongodb-collections: Renamed MongoDB collections to a clean naming scheme (app_user, spotify_playlist, spotify_playlist_metadata, spotify_recently_played, spotify_currently_playing). Added a one-time migration starter to rename existing collections on upgrade.
