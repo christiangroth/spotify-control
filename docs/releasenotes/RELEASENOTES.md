@@ -1,3 +1,6 @@
+# 0.25.0 - 2026.03.06
+## New Features
+* add-technical-sub-menu: Added a "Technical" dropdown sub-menu in the navigation bar, grouping Health, Loki, MongoDB, and Docs links together to reduce clutter.
 # 0.24.2 - 2026.03.06
 ## Bugfixes / Chore
 * fix-playlist-track-sync: Fixed playlist track sync always returning 0 items.
