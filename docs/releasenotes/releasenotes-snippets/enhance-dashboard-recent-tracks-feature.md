@@ -1,1 +1,1 @@
-* enhance-dashboard-recent-tracks: Dashboard now shows the 13 most recently played tracks in a new panel.
+* enhance-dashboard-recent-tracks: Dashboard now shows recently played tracks in a new panel (configurable limit, default: 13 tracks).

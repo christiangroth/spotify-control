@@ -82,7 +82,7 @@
                                     <div style="overflow:hidden;">
                                         <div class="fw-semibold text-truncate" style="color:#fff;font-size:.85rem;">{track.trackName}</div>
                                         {! TODO: replace placeholder with actual album name once albumName is available in RecentlyPlayedItem !}
-                                        <div class="text-truncate" style="color:#888;font-size:.75rem;">Unknown Album &bull; {track.artistNames[0]}</div>
+                                        <div class="text-truncate" style="color:#888;font-size:.75rem;">Unknown Album &bull; {#if track.artistNames.empty}Unknown Artist{#else}{track.artistNames.get(0)}{/if}</div>
                                     </div>
                                 </li>
                                 {/for}
