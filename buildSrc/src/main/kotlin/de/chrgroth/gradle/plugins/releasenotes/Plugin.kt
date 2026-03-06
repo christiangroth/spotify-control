@@ -149,24 +149,14 @@ class ReleasenotesPlugin : Plugin<Project> {
           when {
             hasUpdateNotice -> {
               logger.lifecycle("Found update notice snippets, performing major version bump...")
-              project.changeProjectVersion { mainBranchProjectVersion, currentProjectVersion ->
-                if (mainBranchProjectVersion.major != currentProjectVersion.major) {
-                  logger.info("Skipping version bump because version major part already differs from ${extension.mainBranch} branch: $mainBranchProjectVersion vs $currentProjectVersion")
-                  null
-                } else {
-                  currentProjectVersion.copy(major = currentProjectVersion.major + 1, minor = 0, patch = 0)
-                }
+              project.changeProjectVersion { _, currentProjectVersion ->
+                currentProjectVersion.copy(major = currentProjectVersion.major + 1, minor = 0, patch = 0)
               }
             }
             hasFeature -> {
               logger.lifecycle("Found feature snippets, performing minor version bump...")
-              project.changeProjectVersion { mainBranchProjectVersion, currentProjectVersion ->
-                if (mainBranchProjectVersion != currentProjectVersion) {
-                  logger.info("Skipping version bump because version already differs from ${extension.mainBranch} branch: $mainBranchProjectVersion vs $currentProjectVersion")
-                  null
-                } else {
-                  currentProjectVersion.copy(minor = currentProjectVersion.minor + 1, patch = 0)
-                }
+              project.changeProjectVersion { _, currentProjectVersion ->
+                currentProjectVersion.copy(minor = currentProjectVersion.minor + 1, patch = 0)
               }
             }
             else -> logger.info("No feature or update notice snippets found, skipping version bump (release plugin will handle patch bump automatically).")
