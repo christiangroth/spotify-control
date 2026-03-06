@@ -8,6 +8,7 @@ import de.chrgroth.spotify.control.domain.error.PlaylistSyncError
 import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
+import de.chrgroth.spotify.control.domain.port.`in`.CurrentlyPlayingPort
 import de.chrgroth.spotify.control.domain.port.`in`.PlaylistSyncPort
 import de.chrgroth.spotify.control.domain.port.`in`.RecentlyPlayedPort
 import de.chrgroth.spotify.control.domain.port.`in`.UserProfileUpdatePort
@@ -21,16 +22,58 @@ import java.time.Duration
 
 class OutboxHandlerAdapterTests {
 
+    private val currentlyPlaying: CurrentlyPlayingPort = mockk()
     private val recentlyPlayed: RecentlyPlayedPort = mockk()
     private val userProfileUpdate: UserProfileUpdatePort = mockk()
     private val playlistSync: PlaylistSyncPort = mockk()
 
-    private val adapter = OutboxHandlerAdapter(recentlyPlayed, userProfileUpdate, playlistSync)
+    private val adapter = OutboxHandlerAdapter(currentlyPlaying, recentlyPlayed, userProfileUpdate, playlistSync)
 
     private val userId = UserId("user-1")
+    private val currentlyPlayingEvent = DomainOutboxEvent.FetchCurrentlyPlaying(userId)
     private val fetchEvent = DomainOutboxEvent.FetchRecentlyPlayed(userId)
     private val updateEvent = DomainOutboxEvent.UpdateUserProfile(userId)
     private val syncEvent = DomainOutboxEvent.SyncPlaylistInfo(userId)
+
+    @Test
+    fun `handle FetchCurrentlyPlaying delegates to CurrentlyPlayingPort successfully`() {
+        every { currentlyPlaying.update(userId) } returns Unit.right()
+
+        val result = adapter.handle(currentlyPlayingEvent)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.Success::class.java)
+        verify { currentlyPlaying.update(userId) }
+    }
+
+    @Test
+    fun `handle FetchCurrentlyPlaying returns Failed on domain error`() {
+        every { currentlyPlaying.update(userId) } returns PlaybackError.CURRENTLY_PLAYING_FETCH_FAILED.left()
+
+        val result = adapter.handle(currentlyPlayingEvent)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.Failed::class.java)
+        assertThat((result as OutboxTaskResult.Failed).message).contains(PlaybackError.CURRENTLY_PLAYING_FETCH_FAILED.code)
+    }
+
+    @Test
+    fun `handle FetchCurrentlyPlaying returns RateLimited on SpotifyRateLimitError`() {
+        val retryAfter = Duration.ofSeconds(30)
+        every { currentlyPlaying.update(userId) } returns SpotifyRateLimitError(retryAfter).left()
+
+        val result = adapter.handle(currentlyPlayingEvent)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.RateLimited::class.java)
+        assertThat((result as OutboxTaskResult.RateLimited).retryAfter).isEqualTo(retryAfter)
+    }
+
+    @Test
+    fun `handle FetchCurrentlyPlaying returns Failed on unexpected exception`() {
+        every { currentlyPlaying.update(userId) } throws RuntimeException("connection error")
+
+        val result = adapter.handle(currentlyPlayingEvent)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.Failed::class.java)
+    }
 
     @Test
     fun `handle FetchRecentlyPlayed delegates to RecentlyPlayedPort successfully`() {

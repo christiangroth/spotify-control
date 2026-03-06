@@ -29,6 +29,7 @@ enum class TokenError(override val code: String) : DomainError {
 
 enum class PlaybackError(override val code: String) : DomainError {
     RECENTLY_PLAYED_FETCH_FAILED("PLAY-001"),
+    CURRENTLY_PLAYING_FETCH_FAILED("PLAY-002"),
     ;
 }
 

@@ -40,6 +40,18 @@ class DomainOutboxTaskDispatcherTests {
     )
 
     @Test
+    fun `FetchCurrentlyPlaying dispatches to handle(FetchCurrentlyPlaying)`() {
+        val event = DomainOutboxEvent.FetchCurrentlyPlaying(userIdObj)
+        val task = buildTask(DomainOutboxEvent.FetchCurrentlyPlaying.KEY, userId)
+        every { handlerPort.handle(event) } returns OutboxTaskResult.Success
+
+        val result = subject.dispatch(task)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.Success::class.java)
+        verify { handlerPort.handle(event) }
+    }
+
+    @Test
     fun `FetchRecentlyPlayed dispatches to handle(FetchRecentlyPlayed)`() {
         val event = DomainOutboxEvent.FetchRecentlyPlayed(userIdObj)
         val task = buildTask(DomainOutboxEvent.FetchRecentlyPlayed.KEY, userId)

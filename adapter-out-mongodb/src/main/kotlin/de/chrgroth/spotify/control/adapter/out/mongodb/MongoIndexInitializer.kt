@@ -15,12 +15,20 @@ class MongoIndexInitializer {
     @Inject
     lateinit var recentlyPlayedDocumentRepository: RecentlyPlayedDocumentRepository
 
+    @Inject
+    lateinit var currentlyPlayingDocumentRepository: CurrentlyPlayingDocumentRepository
+
     fun onStartup(@Observes event: StartupEvent) {
         logger.info { "Ensuring MongoDB indexes..." }
 
         recentlyPlayedDocumentRepository.mongoCollection().createIndex(
             Document("spotifyUserId", 1).append("playedAt", 1),
             IndexOptions().name("spotifyUserId_1_playedAt_1"),
+        )
+
+        currentlyPlayingDocumentRepository.mongoCollection().createIndex(
+            Document("spotifyUserId", 1).append("trackId", 1).append("observedAt", 1),
+            IndexOptions().name("spotifyUserId_1_trackId_1_observedAt_1"),
         )
 
         logger.info { "MongoDB indexes ready." }
