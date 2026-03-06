@@ -1,3 +1,6 @@
+# 0.24.0 - 2026.03.06
+## New Features
+* enhance-dashboard-recent-tracks: Dashboard now shows recently played tracks in a new panel (configurable limit, default: 13 tracks).
 # 0.23.1 - 2026.03.06
 ## Bugfixes / Chore
 * add-margin-to-menu-bar-icons: Added margin to menu bar icons for improved readability.
