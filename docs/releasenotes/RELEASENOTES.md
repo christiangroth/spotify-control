@@ -1,3 +1,6 @@
+# 0.18.0 - 2026.03.06
+## New Features
+* simplify-blocked-until-formatting: Simplified "Blocked Until" display for outbox partitions – shows only time (HH:mm) with live countdown when less than 24h away, full date otherwise.
 # 0.17.0 - 2026.03.06
 ## New Features
 * display-mongodb-collection-size: MongoDB collection sizes are now displayed in kilobytes (kb) instead of bytes.
