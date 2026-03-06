@@ -198,7 +198,7 @@ class HealthPageTests {
       .contentType(containsString("text/html"))
       .body(containsString("Collections"))
       .body(containsString("""data-testid="mongodb-collections-table""""))
-      .body(containsString("Size (kb)"))
+      .body(containsString("Size"))
   }
 
   @Test
@@ -223,8 +223,7 @@ class HealthPageTests {
       .body(containsString("Cronjobs"))
       .body(containsString("Scheduled Jobs"))
       .body(containsString("""data-testid="cronjobs-table""""))
-      .body(containsString("Cron Schedule"))
-      .body(containsString("Status"))
+      .body(containsString("Schedule"))
       .body(containsString("Next Execution"))
   }
 
@@ -300,5 +299,50 @@ class HealthPageTests {
       .body(containsString("pulsingRows"))
       .body(containsString("sortableRows"))
       .body(containsString("pulsingRows.concat(sortableRows)"))
+  }
+
+  @Test
+  fun `health page outbox table uses icon before partition name instead of status column`() {
+    given()
+      .`when`()
+      .get("/ui/health")
+      .then()
+      .statusCode(200)
+      .body(containsString("""data-testid="outbox-table""""))
+      .body(containsString("fill=\"#1db954\""))
+      .body(containsString("vertical-align:middle"))
+  }
+
+  @Test
+  fun `health page cronjob table uses icon before job name instead of status column`() {
+    given()
+      .`when`()
+      .get("/ui/health")
+      .then()
+      .statusCode(200)
+      .body(containsString("""data-testid="cronjobs-table""""))
+      .body(containsString("fill=\"#1db954\""))
+      .body(containsString("vertical-align:middle"))
+  }
+
+  @Test
+  fun `health page mongodb collections size column shows kb after value`() {
+    given()
+      .`when`()
+      .get("/ui/health/snippets/mongodb-collections")
+      .then()
+      .statusCode(200)
+      .body(containsString(" kb</td>"))
+  }
+
+  @Test
+  fun `health page mongodb queries table shows combined slow and total executions column`() {
+    given()
+      .`when`()
+      .get("/ui/health/snippets/mongodb-queries")
+      .then()
+      .statusCode(200)
+      .body(containsString("""data-testid="mongodb-queries-table""""))
+      .body(containsString("Executions"))
   }
 }

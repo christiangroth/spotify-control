@@ -45,7 +45,6 @@
                                     <thead>
                                         <tr style="border-color:#333;">
                                             <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Partition</th>
-                                            <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Status</th>
                                             <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">Blocked Until</th>
                                             <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">Documents</th>
                                         </tr>
@@ -53,15 +52,19 @@
                                     <tbody>
                                         {#for p in stats.outboxPartitions}
                                         <tr style="border-color:#333;" {#if p.blockedUntil}data-blocked-until="{p.blockedUntil.toEpochMilli()}"{/if}>
-                                            <td style="border-color:#333;color:#e0e0e0;background-color:transparent;">{p.name}</td>
-                                            <td style="border-color:#333;background-color:transparent;">
+                                            <td style="border-color:#333;color:#e0e0e0;background-color:transparent;">
                                                 {#if p.status == "ACTIVE"}
-                                                <span style="color:var(--spotify-green);">{p.status}</span>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#1db954" viewBox="0 0 16 16" style="vertical-align:middle;margin-right:4px;">
+                                                    <use href="#icon-check-circle"/>
+                                                </svg>
                                                 {#else}
-                                                <span style="color:#f90;">{p.status}</span>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#dc3545" viewBox="0 0 16 16" style="vertical-align:middle;margin-right:4px;">
+                                                    <use href="#icon-x-circle"/>
+                                                </svg>
                                                 {/if}
+                                                {p.name}
                                             </td>
-                                            <td class="outbox-blocked-until" style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">{#if p.blockedUntil}-{#else}{/if}</td>
+                                            <td class="outbox-blocked-until" style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">-</td>
                                             <td style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">{p.documentCount}</td>
                                         </tr>
                                         {/for}
@@ -86,23 +89,26 @@
                                     <thead>
                                         <tr style="border-color:#333;">
                                             <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Job</th>
-                                            <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Cron Schedule</th>
-                                            <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Status</th>
+                                            <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Schedule</th>
                                             <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">Next Execution</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {#for job in stats.cronjobStats}
                                         <tr style="border-color:#333;" {#if job.nextExecution}data-next-execution="{job.nextExecution.toEpochMilli()}"{/if}>
-                                            <td style="border-color:#333;color:#e0e0e0;background-color:transparent;">{job.simpleName}</td>
-                                            <td style="border-color:#333;color:#e0e0e0;background-color:transparent;">{job.cronSchedule}</td>
-                                            <td style="border-color:#333;background-color:transparent;">
+                                            <td style="border-color:#333;color:#e0e0e0;background-color:transparent;">
                                                 {#if job.running}
-                                                <span style="color:var(--spotify-green);">active</span>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#1db954" viewBox="0 0 16 16" style="vertical-align:middle;margin-right:4px;">
+                                                    <use href="#icon-check-circle"/>
+                                                </svg>
                                                 {#else}
-                                                <span style="color:#f90;">paused</span>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#dc3545" viewBox="0 0 16 16" style="vertical-align:middle;margin-right:4px;">
+                                                    <use href="#icon-x-circle"/>
+                                                </svg>
                                                 {/if}
+                                                {job.simpleName}
                                             </td>
+                                            <td style="border-color:#333;color:#e0e0e0;background-color:transparent;">{job.cronSchedule}</td>
                                             <td class="cronjob-countdown" style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">{#if job.nextExecution}-{#else}N/A{/if}</td>
                                         </tr>
                                         {/for}
@@ -128,7 +134,7 @@
                                         <tr style="border-color:#333;">
                                             <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Collection</th>
                                             <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">Documents</th>
-                                            <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">Size (kb)</th>
+                                            <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">Size</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -136,7 +142,7 @@
                                         <tr style="border-color:#333;">
                                             <td style="border-color:#333;color:#e0e0e0;background-color:transparent;">{c.name}</td>
                                             <td style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">{c.documentCount}</td>
-                                            <td style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">{c.sizeKb}</td>
+                                            <td style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">{c.sizeKb} kb</td>
                                         </tr>
                                         {/for}
                                     </tbody>
@@ -144,7 +150,7 @@
                                         <tr style="border-color:#333;border-top:2px solid #555;">
                                             <td style="border-color:#333;color:#888;background-color:transparent;">Total</td>
                                             <td style="border-color:#333;color:#888;text-align:right;background-color:transparent;">{stats.mongoCollectionDocumentTotal}</td>
-                                            <td style="border-color:#333;color:#888;text-align:right;background-color:transparent;">{stats.mongoCollectionSizeTotalKb}</td>
+                                            <td style="border-color:#333;color:#888;text-align:right;background-color:transparent;">{stats.mongoCollectionSizeTotalKb} kb</td>
                                         </tr>
                                     </tfoot>
                                 </table>
@@ -164,20 +170,19 @@
                                         <tr style="border-color:#333;">
                                             <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Query</th>
                                             <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">Executions</th>
-                                            <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">Slow</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {#for q in stats.mongoQueryStats}
                                         <tr style="border-color:#333;">
                                             <td style="border-color:#333;color:#e0e0e0;background-color:transparent;">{q.name}</td>
-                                            <td style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">{q.executionCountLast24h}</td>
                                             <td style="border-color:#333;background-color:transparent;text-align:right;">
                                                 {#if q.slowQueryCount > 0}
                                                 <span style="color:#f90;">{q.slowQueryCount}</span>
                                                 {#else}
                                                 <span style="color:#e0e0e0;">{q.slowQueryCount}</span>
                                                 {/if}
+                                                <span style="color:#e0e0e0;"> / {q.executionCountLast24h}</span>
                                             </td>
                                         </tr>
                                         {/for}
