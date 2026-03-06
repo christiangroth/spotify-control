@@ -86,7 +86,8 @@ class RecentlyPlayedAdapterTests {
     fun `update persists new tracks`() {
         val items = listOf(item(1), item(2))
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
-        every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken) } returns items.right()
+        every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
+        every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken, null) } returns items.right()
         every { recentlyPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
         every { recentlyPlayedRepository.saveAll(any()) } just runs
 
@@ -99,10 +100,26 @@ class RecentlyPlayedAdapterTests {
     }
 
     @Test
+    fun `update passes most recent playedAt as after cursor`() {
+        val after = now - 2.hours
+        val items = listOf(item(1))
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns after
+        every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken, after) } returns items.right()
+        every { recentlyPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
+        every { recentlyPlayedRepository.saveAll(any()) } just runs
+
+        adapter.update(userId)
+
+        verify { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken, after) }
+    }
+
+    @Test
     fun `update skips duplicate tracks`() {
         val items = listOf(item(1), item(2))
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
-        every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken) } returns items.right()
+        every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
+        every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken, null) } returns items.right()
         every { recentlyPlayedRepository.findExistingPlayedAts(userId, any()) } returns setOf(items[0].playedAt)
         every { recentlyPlayedRepository.saveAll(any()) } just runs
 
@@ -118,7 +135,8 @@ class RecentlyPlayedAdapterTests {
     fun `update does not call saveAll when all tracks are duplicates`() {
         val items = listOf(item(1))
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
-        every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken) } returns items.right()
+        every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
+        every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken, null) } returns items.right()
         every { recentlyPlayedRepository.findExistingPlayedAts(userId, any()) } returns setOf(items[0].playedAt)
 
         adapter.update(userId)
@@ -129,7 +147,8 @@ class RecentlyPlayedAdapterTests {
     @Test
     fun `update does not call saveAll when no tracks returned`() {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
-        every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken) } returns emptyList<RecentlyPlayedItem>().right()
+        every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
+        every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken, null) } returns emptyList<RecentlyPlayedItem>().right()
         every { recentlyPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
 
         adapter.update(userId)
@@ -140,7 +159,8 @@ class RecentlyPlayedAdapterTests {
     @Test
     fun `update returns Left on domain error`() {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
-        every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken) } returns PlaybackError.RECENTLY_PLAYED_FETCH_FAILED.left()
+        every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
+        every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken, null) } returns PlaybackError.RECENTLY_PLAYED_FETCH_FAILED.left()
 
         val result = adapter.update(userId)
 

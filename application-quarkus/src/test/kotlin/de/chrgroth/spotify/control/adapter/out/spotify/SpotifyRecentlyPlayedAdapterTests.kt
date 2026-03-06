@@ -8,6 +8,7 @@ import de.chrgroth.spotify.control.domain.port.out.OutgoingRequestStatsPort
 import io.micrometer.core.instrument.MeterRegistry
 import io.quarkus.test.junit.QuarkusTest
 import jakarta.inject.Inject
+import kotlin.time.Instant
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -38,12 +39,32 @@ class SpotifyRecentlyPlayedAdapterTests {
     }
 
     @Test
+    fun `getRecentlyPlayed with after parameter returns items from mock`() {
+        val after = Instant.parse("2024-01-01T00:00:00Z")
+        val result = spotifyRecentlyPlayed.getRecentlyPlayed(UserId("test-user-a"), AccessToken("mock-access-token"), after)
+
+        assertThat(result).isInstanceOf(Either.Right::class.java)
+        val items = (result as Either.Right).value
+        assertThat(items).hasSize(1)
+        assertThat(items[0].trackId).isEqualTo("track-1")
+    }
+
+    @Test
     fun `getRecentlyPlayed filters out podcast episodes`() {
         val result = spotifyRecentlyPlayed.getRecentlyPlayed(UserId("test-user-a"), AccessToken("mock-access-token"))
 
         assertThat(result).isInstanceOf(Either.Right::class.java)
         val items = (result as Either.Right).value
         assertThat(items.none { it.trackId == "episode-1" }).isTrue
+    }
+
+    @Test
+    fun `getRecentlyPlayed filters out local tracks`() {
+        val result = spotifyRecentlyPlayed.getRecentlyPlayed(UserId("test-user-a"), AccessToken("mock-access-token"))
+
+        assertThat(result).isInstanceOf(Either.Right::class.java)
+        val items = (result as Either.Right).value
+        assertThat(items.none { it.trackId == "local-1" }).isTrue
     }
 
     @Test

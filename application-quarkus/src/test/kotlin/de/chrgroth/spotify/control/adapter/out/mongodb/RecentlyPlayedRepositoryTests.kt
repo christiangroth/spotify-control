@@ -31,6 +31,21 @@ class RecentlyPlayedRepositoryTests {
     )
 
     @Test
+    fun `findMostRecentPlayedAt returns most recent playedAt`() {
+        recentlyPlayedRepository.saveAll(listOf(item(1), item(2), item(3)))
+
+        val mostRecent = recentlyPlayedRepository.findMostRecentPlayedAt(userId)
+
+        assertThat(mostRecent).isEqualTo(item(1).playedAt)
+    }
+
+    @Test
+    fun `findMostRecentPlayedAt returns null when no items exist`() {
+        val result = recentlyPlayedRepository.findMostRecentPlayedAt(userId)
+        assertThat(result).isNull()
+    }
+
+    @Test
     fun `saveAll persists items and findExistingPlayedAts returns their playedAt values`() {
         val items = listOf(item(1), item(2))
         recentlyPlayedRepository.saveAll(items)

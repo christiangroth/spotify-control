@@ -26,10 +26,15 @@ class OutboxProcessor(
                 true
             }
             is OutboxTaskResult.RateLimited -> {
-                val pausedUntil = Instant.now().plus(result.retryAfter)
-                repository.pausePartition(partition, "rate_limited", pausedUntil)
-                repository.reschedule(task, pausedUntil)
-                onRateLimited(partition, result.retryAfter)
+                if (partition.pauseOnRateLimit) {
+                    val pausedUntil = Instant.now().plus(result.retryAfter)
+                    repository.pausePartition(partition, "rate_limited", pausedUntil)
+                    repository.reschedule(task, pausedUntil)
+                    onRateLimited(partition, result.retryAfter)
+                } else {
+                    val nextRetryAt = Instant.now().plus(result.retryAfter)
+                    repository.reschedule(task, nextRetryAt)
+                }
                 false
             }
             is OutboxTaskResult.Failed -> {

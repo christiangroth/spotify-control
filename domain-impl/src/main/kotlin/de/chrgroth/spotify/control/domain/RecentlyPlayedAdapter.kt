@@ -37,7 +37,8 @@ class RecentlyPlayedAdapter(
 
     override fun update(userId: UserId): Either<DomainError, Unit> {
         val accessToken = spotifyAccessToken.getValidAccessToken(userId)
-        return spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken).flatMap { tracks ->
+        val after = recentlyPlayedRepository.findMostRecentPlayedAt(userId)
+        return spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken, after).flatMap { tracks ->
             val playedAts = tracks.map { it.playedAt }.toSet()
             val existingPlayedAts = recentlyPlayedRepository.findExistingPlayedAts(userId, playedAts)
             val newItems = tracks.filter { it.playedAt !in existingPlayedAts }
