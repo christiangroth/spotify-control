@@ -115,8 +115,55 @@ class HealthPageTests {
       .statusCode(200)
       .body(containsString("formatBlockedUntil"))
       .body(containsString("updateOutboxBlockedUntilCountdowns"))
+      .body(containsString("startOutboxBlockedUntilInterval"))
+      .body(containsString("outboxBlockedUntilInterval"))
       .body(containsString("data-blocked-until"))
       .body(containsString("outbox-blocked-until"))
+  }
+
+  @Test
+  fun `health page outbox blocked-until uses dd-MM-yyyy HH-mm format for dates beyond 24h`() {
+    given()
+      .`when`()
+      .get("/ui/health")
+      .then()
+      .statusCode(200)
+      .body(containsString("TWENTY_FOUR_HOURS_MS"))
+      .body(containsString("day + '.' + month + '.' + year + ' ' + hours + ':' + minutes"))
+  }
+
+  @Test
+  fun `health page outbox blocked-until shows countdown in braces when less than 24h away`() {
+    given()
+      .`when`()
+      .get("/ui/health")
+      .then()
+      .statusCode(200)
+      .body(containsString("formatCountdown(remaining)"))
+      .body(containsString("formatBlockedUntil(blockedUntil) + ' (' + formatCountdown(remaining) + ')'"))
+  }
+
+  @Test
+  fun `health page outbox blocked-until interval is started and managed with 500ms`() {
+    given()
+      .`when`()
+      .get("/ui/health")
+      .then()
+      .statusCode(200)
+      .body(containsString("setInterval(updateOutboxBlockedUntilCountdowns, 500)"))
+      .body(containsString("clearInterval(outboxBlockedUntilInterval)"))
+  }
+
+  @Test
+  fun `health page outbox interval is cleared before sse snippet replacement`() {
+    given()
+      .`when`()
+      .get("/ui/health")
+      .then()
+      .statusCode(200)
+      .body(containsString("refresh-outbox-partitions"))
+      .body(containsString("startOutboxBlockedUntilInterval"))
+      .body(containsString("clearInterval"))
   }
 
   @Test
