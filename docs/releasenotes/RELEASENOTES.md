@@ -1,3 +1,6 @@
+# 0.19.4 - 2026.03.06
+## Bugfixes / Chore
+* fix-fetch-playlist-data: Fixed playlist data fetch by using the /items endpoint instead of the deprecated /tracks endpoint.
 # 0.19.3 - 2026.03.06
 ## Bugfixes / Chore
 * fix-version-bump-issue-again: Fix version bump: update in-memory project.version after writing new version to gradle.properties so that the release plugin's unSnapshotVersion task picks up the correct bumped version.
