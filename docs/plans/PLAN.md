@@ -6,11 +6,7 @@ Stand: 2026.03.03
 
 *Ziel: Lokale Kopie der relevanten Playlists.*
 
-- Playlist-Auswahl im Admin (`included_in_sync`)
 - Initialer Playlist-Sync (Tracks, Artists, Alben) – gedrosselt via Outbox
-- Snapshot-ID-Check Job (alle 15 Min)
-- `GET /v1/me/playlists` für effizienten Batch-Check
-- Onboarding-Flow: erster Login → direkt zur Playlist-Auswahl
 
 **Nach Phase 2 hast du einen lokalen Spiegel deiner Playlists.**
 
