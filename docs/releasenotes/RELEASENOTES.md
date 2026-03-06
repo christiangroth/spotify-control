@@ -1,3 +1,6 @@
+# 0.16.9 - 2026.03.06
+## New Features
+* enhance-cronjob-health-overview: Health page cronjob overview now shows all scheduled jobs including paused/disabled ones, and displays a Status column indicating whether each job is active or paused.
 # 0.16.8 - 2026.03.06
 ## Bugfixes / Chore
 * fix-spotify-playlist-tracks-adapter: Added missing `playlist-read-collaborative` OAuth scope to fix 403 errors when fetching tracks of collaborative playlists.
