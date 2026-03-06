@@ -27,8 +27,6 @@ class DashboardSseService : DashboardRefreshPort {
 
     override fun notifyUserPlaylistMetadata(userId: UserId) = emitToUser(userId.value, "refresh-playlist-metadata")
 
-    override fun notifyUserRecentlyPlayed(userId: UserId) = emitToUser(userId.value, "refresh-recently-played")
-
     private fun emitToUser(userId: String, event: String) {
         emittersByUser[userId]?.forEach { runCatching { it.emit(event) } }
     }

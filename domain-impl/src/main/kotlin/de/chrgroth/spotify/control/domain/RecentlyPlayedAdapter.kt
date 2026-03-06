@@ -46,7 +46,6 @@ class RecentlyPlayedAdapter(
                 logger.info { "Persisting ${newItems.size} new recently played items for user: ${userId.value}" }
                 recentlyPlayedRepository.saveAll(newItems)
                 dashboardRefresh.notifyUserPlaybackData(userId)
-                dashboardRefresh.notifyUserRecentlyPlayed(userId)
             }
             Unit.right()
         }

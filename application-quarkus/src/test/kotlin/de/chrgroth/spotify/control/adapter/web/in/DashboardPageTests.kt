@@ -58,7 +58,6 @@ class DashboardPageTests {
       .statusCode(200)
       .body(containsString("refresh-playback-data"))
       .body(containsString("refresh-playlist-metadata"))
-      .body(containsString("refresh-recently-played"))
       .body(containsString("fadeUpdate"))
   }
 

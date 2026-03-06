@@ -100,7 +100,7 @@ class RecentlyPlayedAdapterTests {
     }
 
     @Test
-    fun `update notifies recently played when new items are persisted`() {
+    fun `update notifies playback data when new items are persisted`() {
         val items = listOf(item(1))
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
@@ -110,11 +110,11 @@ class RecentlyPlayedAdapterTests {
 
         adapter.update(userId)
 
-        verify { dashboardRefresh.notifyUserRecentlyPlayed(userId) }
+        verify { dashboardRefresh.notifyUserPlaybackData(userId) }
     }
 
     @Test
-    fun `update does not notify recently played when no new items exist`() {
+    fun `update does not notify playback data when no new items exist`() {
         val items = listOf(item(1))
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
@@ -123,7 +123,7 @@ class RecentlyPlayedAdapterTests {
 
         adapter.update(userId)
 
-        verify(exactly = 0) { dashboardRefresh.notifyUserRecentlyPlayed(any()) }
+        verify(exactly = 0) { dashboardRefresh.notifyUserPlaybackData(any()) }
     }
 
     @Test
