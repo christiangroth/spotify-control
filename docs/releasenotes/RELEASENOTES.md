@@ -1,3 +1,6 @@
+# 0.22.0 - 2026.03.06
+## New Features
+* move-failed-outbox-tasks-to-archive: Failed outbox tasks that have exhausted all retry attempts are now moved to the archive instead of remaining in the outbox collection.
 # 0.21.0 - 2026.03.06
 ## New Features
 * add-link-to-mongodb-atlas: Add link to MongoDB Atlas Data Explorer in navigation menu bar.
