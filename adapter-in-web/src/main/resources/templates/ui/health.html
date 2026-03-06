@@ -218,6 +218,19 @@
                     + String(seconds).padStart(2, '0');
             }
 
+            function sortCronjobTable() {
+                var tbody = document.querySelector('[data-testid="cronjobs-table"] tbody');
+                if (!tbody) return;
+                var rows = Array.from(tbody.querySelectorAll('tr'));
+                var now = Date.now();
+                rows.sort(function (a, b) {
+                    var aVal = a.dataset.nextExecution ? parseInt(a.dataset.nextExecution, 10) - now : Infinity;
+                    var bVal = b.dataset.nextExecution ? parseInt(b.dataset.nextExecution, 10) - now : Infinity;
+                    return aVal - bVal;
+                });
+                rows.forEach(function (row) { tbody.appendChild(row); });
+            }
+
             function updateCronjobCountdowns() {
                 document.querySelectorAll('[data-next-execution]').forEach(function (row) {
                     var nextExec = parseInt(row.dataset.nextExecution, 10);
@@ -237,6 +250,7 @@
                         }, 5000);
                     }
                 });
+                sortCronjobTable();
             }
 
             function formatBlockedUntil(epochMs) {

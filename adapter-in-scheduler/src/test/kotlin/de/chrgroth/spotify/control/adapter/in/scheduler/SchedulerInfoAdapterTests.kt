@@ -111,38 +111,30 @@ class SchedulerInfoAdapterTests {
     }
 
     @Test
-    fun `results are sorted by next execution time ascending with nulls last`() {
+    fun `results are sorted by simpleName`() {
         val triggerIdA = "0_${UserProfileUpdateJob::class.java.name}#run"
         val methodDescriptionA = "${UserProfileUpdateJob::class.java.name}#run"
         val triggerA = mockk<Trigger>()
         every { triggerA.id } returns triggerIdA
         every { triggerA.methodDescription } returns methodDescriptionA
-        every { triggerA.nextFireTime } returns Instant.now().plusSeconds(7200)
+        every { triggerA.nextFireTime } returns Instant.now().plusSeconds(3600)
 
         val triggerIdB = "1_${PlaylistSyncJob::class.java.name}#run"
         val methodDescriptionB = "${PlaylistSyncJob::class.java.name}#run"
         val triggerB = mockk<Trigger>()
         every { triggerB.id } returns triggerIdB
         every { triggerB.methodDescription } returns methodDescriptionB
-        every { triggerB.nextFireTime } returns Instant.now().plusSeconds(3600)
+        every { triggerB.nextFireTime } returns Instant.now().plusSeconds(7200)
 
-        val triggerIdC = "2_${RecentlyPlayedFetchJob::class.java.name}#run"
-        val methodDescriptionC = "${RecentlyPlayedFetchJob::class.java.name}#run"
-        val triggerC = mockk<Trigger>()
-        every { triggerC.id } returns triggerIdC
-        every { triggerC.methodDescription } returns methodDescriptionC
-        every { triggerC.nextFireTime } returns null
-
-        every { scheduler.scheduledJobs } returns listOf(triggerA, triggerB, triggerC)
+        every { scheduler.scheduledJobs } returns listOf(triggerA, triggerB)
         every { scheduler.isRunning } returns true
         every { scheduler.isPaused(any()) } returns false
 
         val result = adapter.getCronjobStats()
 
-        assertThat(result).hasSize(3)
+        assertThat(result).hasSize(2)
         assertThat(result[0].simpleName).isEqualTo("PlaylistSyncJob")
         assertThat(result[1].simpleName).isEqualTo("UserProfileUpdateJob")
-        assertThat(result[2].simpleName).isEqualTo("RecentlyPlayedFetchJob")
     }
 
     @Test
