@@ -10,4 +10,5 @@ interface PlaylistSyncPort {
     fun syncPlaylists(userId: UserId): Either<DomainError, Unit>
     fun syncPlaylistData(userId: UserId, playlistId: String): Either<DomainError, Unit>
     fun updateSyncStatus(userId: UserId, playlistId: String, syncStatus: PlaylistSyncStatus): Either<DomainError, Unit>
+    fun enqueueSyncPlaylistData(userId: UserId, playlistId: String): Either<DomainError, Unit>
 }

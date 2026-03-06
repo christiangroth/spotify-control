@@ -118,4 +118,20 @@ class SettingsResource {
       ifRight = { Response.ok(mapOf("status" to "ok")).build() },
     )
   }
+
+  @POST
+  @Authenticated
+  @Path("/playlists/{playlistId}/sync")
+  @Produces(MediaType.APPLICATION_JSON)
+  fun syncPlaylist(@PathParam("playlistId") playlistId: String): Response {
+    val userId = UserId(securityIdentity.principal.name)
+    return playlistSync.enqueueSyncPlaylistData(userId, playlistId).fold(
+      ifLeft = { error ->
+        Response.status(Response.Status.NOT_FOUND)
+          .entity(mapOf("error" to "Sync enqueue failed: ${error.code}"))
+          .build()
+      },
+      ifRight = { Response.ok(mapOf("status" to "ok")).build() },
+    )
+  }
 }

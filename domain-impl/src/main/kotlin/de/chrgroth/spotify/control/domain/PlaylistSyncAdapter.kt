@@ -121,5 +121,20 @@ class PlaylistSyncAdapter(
         return Unit.right()
     }
 
+    override fun enqueueSyncPlaylistData(userId: UserId, playlistId: String): Either<DomainError, Unit> {
+        userRepository.findById(userId) ?: run {
+            logger.warn { "User not found for playlist data sync enqueue: ${userId.value}" }
+            return PlaylistSyncError.PLAYLIST_NOT_FOUND.left()
+        }
+        val playlists = playlistRepository.findByUserId(userId)
+        playlists.find { it.spotifyPlaylistId == playlistId } ?: run {
+            logger.warn { "Playlist $playlistId not found for user ${userId.value}" }
+            return PlaylistSyncError.PLAYLIST_NOT_FOUND.left()
+        }
+        logger.info { "Enqueueing SyncPlaylistData for playlist $playlistId (user ${userId.value})" }
+        outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, playlistId))
+        return Unit.right()
+    }
+
     companion object : KLogging()
 }

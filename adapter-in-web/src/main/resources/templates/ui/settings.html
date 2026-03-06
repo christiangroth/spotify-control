@@ -19,6 +19,7 @@
                     <th style="width:2.5rem">Sync</th>
                     <th>Name</th>
                     <th style="width:14rem">Last Sync</th>
+                    <th style="width:2.5rem"></th>
                 </tr>
             </thead>
             <tbody>
@@ -46,6 +47,19 @@
                     </td>
                     <td>{row.playlist.name}</td>
                     <td class="text-secondary small">{row.lastSnapshotIdSyncTimeFormatted}</td>
+                    <td>
+                        <button
+                            class="btn btn-link p-0 border-0 sync-playlist-btn"
+                            data-playlist-id="{row.playlist.spotifyPlaylistId}"
+                            title="Sync this playlist now"
+                            aria-label="Sync playlist {row.playlist.name}"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                                <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/>
+                                <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/>
+                            </svg>
+                        </button>
+                    </td>
                 </tr>
                 {/for}
             </tbody>
@@ -108,6 +122,35 @@
                 })
                 .catch(function(err) {
                     showBanner('Request failed: ' + err.message, 'danger');
+                });
+            });
+        });
+
+        document.querySelectorAll('.sync-playlist-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                const playlistId = this.getAttribute('data-playlist-id');
+                const button = this;
+                button.disabled = true;
+                fetch('/ui/settings/playlists/' + encodeURIComponent(playlistId) + '/sync', {
+                    method: 'POST'
+                })
+                .then(function(response) {
+                    return response.json().then(function(data) {
+                        return { ok: response.ok, data: data };
+                    });
+                })
+                .then(function(result) {
+                    if (result.ok) {
+                        showBanner('Playlist sync enqueued successfully.', 'success');
+                    } else {
+                        showBanner('Failed to enqueue playlist sync: ' + (result.data.error || 'Unknown error'), 'danger');
+                    }
+                })
+                .catch(function(err) {
+                    showBanner('Request failed: ' + err.message, 'danger');
+                })
+                .finally(function() {
+                    button.disabled = false;
                 });
             });
         });

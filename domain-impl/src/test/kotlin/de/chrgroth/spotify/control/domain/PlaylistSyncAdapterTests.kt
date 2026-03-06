@@ -519,4 +519,43 @@ class PlaylistSyncAdapterTests {
         assertThat(result.isRight()).isTrue()
         verify(exactly = 1) { dashboardRefresh.notifyUserPlaylistMetadata(userId) }
     }
+
+    // --- enqueueSyncPlaylistData tests ---
+
+    @Test
+    fun `enqueueSyncPlaylistData returns Left when user not found`() {
+        every { userRepository.findById(userId) } returns null
+
+        val result = adapter.enqueueSyncPlaylistData(userId, "p1")
+
+        assertThat(result.isLeft()).isTrue()
+        assertThat(result.leftOrNull()).isEqualTo(PlaylistSyncError.PLAYLIST_NOT_FOUND)
+        verify(exactly = 0) { outboxPort.enqueue(any()) }
+    }
+
+    @Test
+    fun `enqueueSyncPlaylistData returns Left when playlist not found`() {
+        val user = buildUser()
+        every { userRepository.findById(userId) } returns user
+        every { playlistRepository.findByUserId(userId) } returns emptyList()
+
+        val result = adapter.enqueueSyncPlaylistData(userId, "p1")
+
+        assertThat(result.isLeft()).isTrue()
+        assertThat(result.leftOrNull()).isEqualTo(PlaylistSyncError.PLAYLIST_NOT_FOUND)
+        verify(exactly = 0) { outboxPort.enqueue(any()) }
+    }
+
+    @Test
+    fun `enqueueSyncPlaylistData enqueues SyncPlaylistData and returns Right`() {
+        val user = buildUser()
+        every { userRepository.findById(userId) } returns user
+        every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1"))
+        every { outboxPort.enqueue(any()) } just runs
+
+        val result = adapter.enqueueSyncPlaylistData(userId, "p1")
+
+        assertThat(result.isRight()).isTrue()
+        verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, "p1")) }
+    }
 }
