@@ -1,0 +1,1 @@
+* add-technical-sub-menu: Added a "Technical" dropdown sub-menu in the navigation bar, grouping Health, Loki, MongoDB, and Docs links together to reduce clutter.
