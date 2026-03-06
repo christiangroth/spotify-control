@@ -37,7 +37,7 @@ class SchedulerInfoAdapter(
                     null
                 }
             }
-            .sortedBy { it.simpleName }
+            .sortedWith(compareBy(nullsLast()) { it.nextExecution })
             .toList()
 
     companion object : KLogging()
