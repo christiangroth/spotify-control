@@ -4,6 +4,7 @@ import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.OutboxHandlerPort
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import java.time.Duration
 
 class DomainOutboxContractTests {
 
@@ -62,5 +63,17 @@ class DomainOutboxContractTests {
                 .describedAs("OutboxHandlerPort should have method 'handle(${eventClass.simpleName})'")
                 .isTrue()
         }
+    }
+
+    @Test
+    fun `ToSpotify partition is throttled at one request per second`() {
+        assertThat(DomainOutboxPartition.ToSpotify.throttleInterval)
+            .isEqualTo(Duration.ofSeconds(1))
+    }
+
+    @Test
+    fun `ToSpotifyPlayback partition has no throttle interval`() {
+        assertThat(DomainOutboxPartition.ToSpotifyPlayback.throttleInterval)
+            .isNull()
     }
 }

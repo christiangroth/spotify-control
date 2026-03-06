@@ -13,6 +13,7 @@ The `util-outbox` module provides a persistent, reliable task queue backed by Mo
 | **Payload**          | String data passed to the handler (e.g. `userId`).                                               |
 | **Deduplication key** | A unique string per logical operation within a partition. Duplicate enqueues are silently skipped. |
 | **Priority**         | `NORMAL` (default) or `HIGH`. HIGH-priority tasks are always claimed before NORMAL tasks.        |
+| **Throttle interval** | Optional minimum delay between consecutive task dispatches within a partition (see [Throttling](#throttling)). |
 
 ## Module Inventory
 
@@ -121,6 +122,26 @@ missed due to a temporary rate-limit response. Because the Spotify recently-play
 to the last ~50 tracks, pausing the partition even briefly risks losing playback events that would
 age out of the Spotify API window before the partition resumes.
 
+## Throttling
+
+Partitions may declare a `throttleInterval: Duration` to proactively limit the rate at which tasks
+are dispatched.  When set, the partition worker inserts a fixed delay **after each successfully
+claimed task** before attempting to claim the next one.  This prevents Spotify rate-limiting by
+keeping the outgoing request rate below the API quota.
+
+The `to-spotify` partition is configured with a throttle interval of **1 second per request**:
+
+```kotlin
+data object ToSpotify : DomainOutboxPartition {
+    override val key = "to-spotify"
+    override val throttleInterval: Duration = Duration.ofSeconds(1)
+}
+```
+
+The `to-spotify-playback` partition has no throttle interval (defaults to `null`) because
+playback-history fetches are time-sensitive and must not be delayed beyond the Spotify
+recently-played window.
+
 ## Archive Cleanup
 
 `OutboxArchiveCleanupJob` runs every night at 01:00 and removes archive entries whose `completedAt`
@@ -151,3 +172,4 @@ The default value is 365 days.
 | Absent partition document = ACTIVE | Lazy creation on first pause | Existing deployments need no migration; only paused partitions need a document. |
 | Priority via enum name ordering | `HIGH` < `NORMAL` alphabetically (ascending sort) | Avoids a numeric mapping; enum names are self-documenting. |
 | `Outbox` facade in `util-outbox` | Encapsulates `OutboxRepository` + `OutboxWakeupService` | Adapters depend on a single bean; wakeup signalling is co-located with enqueue. |
+| Throttle interval in `OutboxPartition` | Per-partition `Duration?` property (default `null`) | Each partition can declare its own rate budget; the worker applies the delay without coupling throttling logic to the processor or repository. |
