@@ -5,6 +5,7 @@ import arrow.core.right
 import de.chrgroth.spotify.control.domain.error.AuthError
 import de.chrgroth.spotify.control.domain.error.PlaybackError
 import de.chrgroth.spotify.control.domain.error.PlaylistSyncError
+import de.chrgroth.spotify.control.domain.error.SpotifyForbiddenError
 import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
@@ -64,6 +65,16 @@ class OutboxHandlerAdapterTests {
     }
 
     @Test
+    fun `handle FetchRecentlyPlayed returns Failed on SpotifyForbiddenError`() {
+        every { recentlyPlayed.update(userId) } returns SpotifyForbiddenError.left()
+
+        val result = adapter.handle(fetchEvent)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.Failed::class.java)
+        assertThat((result as OutboxTaskResult.Failed).message).contains(SpotifyForbiddenError.code)
+    }
+
+    @Test
     fun `handle FetchRecentlyPlayed returns Failed on unexpected exception`() {
         every { recentlyPlayed.update(userId) } throws RuntimeException("connection error")
 
@@ -101,6 +112,16 @@ class OutboxHandlerAdapterTests {
 
         assertThat(result).isInstanceOf(OutboxTaskResult.RateLimited::class.java)
         assertThat((result as OutboxTaskResult.RateLimited).retryAfter).isEqualTo(retryAfter)
+    }
+
+    @Test
+    fun `handle UpdateUserProfile returns Failed on SpotifyForbiddenError`() {
+        every { userProfileUpdate.update(userId) } returns SpotifyForbiddenError.left()
+
+        val result = adapter.handle(updateEvent)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.Failed::class.java)
+        assertThat((result as OutboxTaskResult.Failed).message).contains(SpotifyForbiddenError.code)
     }
 
     @Test
@@ -144,6 +165,16 @@ class OutboxHandlerAdapterTests {
     }
 
     @Test
+    fun `handle SyncPlaylistInfo returns Failed on SpotifyForbiddenError`() {
+        every { playlistSync.syncPlaylists(userId) } returns SpotifyForbiddenError.left()
+
+        val result = adapter.handle(syncEvent)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.Failed::class.java)
+        assertThat((result as OutboxTaskResult.Failed).message).contains(SpotifyForbiddenError.code)
+    }
+
+    @Test
     fun `handle SyncPlaylistInfo returns Failed on unexpected exception`() {
         every { playlistSync.syncPlaylists(userId) } throws RuntimeException("connection error")
 
@@ -183,6 +214,16 @@ class OutboxHandlerAdapterTests {
 
         assertThat(result).isInstanceOf(OutboxTaskResult.RateLimited::class.java)
         assertThat((result as OutboxTaskResult.RateLimited).retryAfter).isEqualTo(retryAfter)
+    }
+
+    @Test
+    fun `handle SyncPlaylistData returns Failed on SpotifyForbiddenError`() {
+        every { playlistSync.syncPlaylistData(userId, "playlist-1") } returns SpotifyForbiddenError.left()
+
+        val result = adapter.handle(syncPlaylistDataEvent)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.Failed::class.java)
+        assertThat((result as OutboxTaskResult.Failed).message).contains(SpotifyForbiddenError.code)
     }
 
     @Test
