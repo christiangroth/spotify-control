@@ -3,8 +3,12 @@ package de.chrgroth.spotify.control.adapter.out.spotify
 import arrow.core.Either
 import arrow.core.left
 import arrow.core.right
-import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.kotlinModule
+import de.chrgroth.spotify.control.adapter.out.spotify.api.model.CursorPagingPlayHistoryObject
+import de.chrgroth.spotify.control.adapter.out.spotify.api.model.PlayHistoryObject
+import de.chrgroth.spotify.control.adapter.out.spotify.api.model.TrackObject
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.PlaybackError
 import de.chrgroth.spotify.control.domain.model.AccessToken
@@ -29,7 +33,11 @@ class SpotifyRecentlyPlayedAdapter(
 ) : SpotifyRecentlyPlayedPort {
 
     private val httpClient = HttpClient.newHttpClient()
-    private val objectMapper = ObjectMapper()
+    private val objectMapper = ObjectMapper().apply {
+        registerModule(kotlinModule())
+        configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+        configure(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_AS_NULL, true)
+    }
 
     override fun getRecentlyPlayed(userId: UserId, accessToken: AccessToken, after: Instant?): Either<DomainError, List<RecentlyPlayedItem>> {
         return try {
@@ -47,37 +55,39 @@ class SpotifyRecentlyPlayedAdapter(
                 }
                 val errorResult = response.checkRateLimitOrError(logger, PlaybackError.RECENTLY_PLAYED_FETCH_FAILED)
                 if (errorResult != null) return errorResult
-                val json: JsonNode = objectMapper.readTree(response.body())
-                val items = json.get("items")
-                if (items != null) {
-                    items.mapNotNullTo(allItems) { item ->
-                        val track = item.get("track")
-                        val type = track?.get("type")?.asText()
-                        if (type != "track") {
-                            logger.info { "Ignoring non-track playback event of type '$type'" }
-                            return@mapNotNullTo null
-                        }
-                        val isLocal = track.get("is_local")?.takeIf { !it.isNull }?.asBoolean() ?: false
-                        if (isLocal) {
-                            logger.info { "Ignoring local track '${track.get("name")?.asText()}'" }
-                            return@mapNotNullTo null
-                        }
-                        RecentlyPlayedItem(
-                            spotifyUserId = userId,
-                            trackId = track.get("id").asText(),
-                            trackName = track.get("name").asText(),
-                            artistIds = track.get("artists").map { it.get("id").asText() },
-                            artistNames = track.get("artists").map { it.get("name").asText() },
-                            playedAt = Instant.parse(item.get("played_at").asText()),
-                        )
-                    }
-                }
-                nextUrl = json.get("next")?.takeIf { !it.isNull }?.asText()
+                val page = objectMapper.readValue(response.body(), CursorPagingPlayHistoryObject::class.java)
+                page.items?.mapNotNullTo(allItems) { mapHistoryItem(userId, it) }
+                nextUrl = page.next
             }
             allItems.right()
         } catch (e: Exception) {
             logger.error(e) { "Unexpected error during recently played fetch" }
             PlaybackError.RECENTLY_PLAYED_FETCH_FAILED.left()
+        }
+    }
+
+    private fun mapHistoryItem(
+        userId: UserId,
+        historyItem: PlayHistoryObject,
+    ): RecentlyPlayedItem? {
+        val track = historyItem.track ?: return null
+        return when {
+            track.type != TrackObject.Type.TRACK -> {
+                logger.info { "Ignoring non-track playback event of type '${track.type?.value}'" }
+                null
+            }
+            track.isLocal == true -> {
+                logger.info { "Ignoring local track '${track.name}'" }
+                null
+            }
+            else -> RecentlyPlayedItem(
+                spotifyUserId = userId,
+                trackId = track.id ?: "",
+                trackName = track.name ?: "",
+                artistIds = track.artists?.mapNotNull { it.id } ?: emptyList(),
+                artistNames = track.artists?.mapNotNull { it.name } ?: emptyList(),
+                playedAt = Instant.parse(historyItem.playedAt ?: ""),
+            )
         }
     }
 

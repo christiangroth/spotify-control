@@ -3,8 +3,10 @@ package de.chrgroth.spotify.control.adapter.out.spotify
 import arrow.core.Either
 import arrow.core.left
 import arrow.core.right
-import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.kotlinModule
+import de.chrgroth.spotify.control.adapter.out.spotify.api.model.PagingPlaylistObject
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.PlaylistSyncError
 import de.chrgroth.spotify.control.domain.model.AccessToken
@@ -27,7 +29,10 @@ class SpotifyPlaylistAdapter(
 ) : SpotifyPlaylistPort {
 
     private val httpClient = HttpClient.newHttpClient()
-    private val objectMapper = ObjectMapper()
+    private val objectMapper = ObjectMapper().apply {
+        registerModule(kotlinModule())
+        configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+    }
 
     override fun getPlaylists(userId: UserId, accessToken: AccessToken): Either<DomainError, List<SpotifyPlaylistItem>> {
         return try {
@@ -42,18 +47,18 @@ class SpotifyPlaylistAdapter(
                 val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
                 val errorResult = response.checkRateLimitOrError(logger, PlaylistSyncError.PLAYLIST_FETCH_FAILED)
                 if (errorResult != null) return errorResult
-                val json: JsonNode = objectMapper.readTree(response.body())
-                json.get("items")?.forEach { item ->
+                val page = objectMapper.readValue(response.body(), PagingPlaylistObject::class.java)
+                page.items.forEach { playlist ->
                     items.add(
                         SpotifyPlaylistItem(
-                            id = item.get("id").asText(),
-                            name = item.get("name").asText(),
-                            snapshotId = item.get("snapshot_id").asText(),
-                            ownerId = item.get("owner").get("id").asText(),
+                            id = playlist.id ?: "",
+                            name = playlist.name ?: "",
+                            snapshotId = playlist.snapshotId ?: "",
+                            ownerId = playlist.owner?.id ?: "",
                         ),
                     )
                 }
-                nextUrl = json.get("next")?.takeIf { !it.isNull }?.asText()
+                nextUrl = page.next
             }
             items.right()
         } catch (e: Exception) {

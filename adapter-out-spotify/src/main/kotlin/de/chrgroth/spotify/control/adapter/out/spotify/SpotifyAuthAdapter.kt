@@ -3,8 +3,10 @@ package de.chrgroth.spotify.control.adapter.out.spotify
 import arrow.core.Either
 import arrow.core.left
 import arrow.core.right
-import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.kotlinModule
+import de.chrgroth.spotify.control.adapter.out.spotify.api.model.PrivateUserObject
 import de.chrgroth.spotify.control.domain.error.AuthError
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.model.AccessToken
@@ -41,7 +43,10 @@ class SpotifyAuthAdapter(
 ) : SpotifyAuthPort {
 
     private val httpClient = HttpClient.newHttpClient()
-    private val objectMapper = ObjectMapper()
+    private val objectMapper = ObjectMapper().apply {
+        registerModule(kotlinModule())
+        configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+    }
 
     override fun exchangeCode(code: String): Either<DomainError, SpotifyTokens> {
         return try {
@@ -72,10 +77,10 @@ class SpotifyAuthAdapter(
             }
             val errorResult = response.checkRateLimitOrError(logger, AuthError.PROFILE_FETCH_FAILED)
             if (errorResult != null) return errorResult
-            val json: JsonNode = objectMapper.readTree(response.body())
+            val user = objectMapper.readValue(response.body(), PrivateUserObject::class.java)
             SpotifyProfile(
-                id = SpotifyProfileId(json.get("id").asText()),
-                displayName = json.get("display_name").asText(),
+                id = SpotifyProfileId(user.id ?: ""),
+                displayName = user.displayName ?: "",
             ).right()
         } catch (e: Exception) {
             logger.error(e) { "Unexpected error during profile fetch" }
@@ -99,7 +104,7 @@ class SpotifyAuthAdapter(
         }
     }
 
-    private fun postTokenEndpoint(body: String): JsonNode? {
+    private fun postTokenEndpoint(body: String): com.fasterxml.jackson.databind.JsonNode? {
         val credentials = Base64.getEncoder().encodeToString("$clientId:$clientSecret".toByteArray())
         val request = HttpRequest.newBuilder()
             .uri(URI.create("$accountsBaseUrl/api/token"))

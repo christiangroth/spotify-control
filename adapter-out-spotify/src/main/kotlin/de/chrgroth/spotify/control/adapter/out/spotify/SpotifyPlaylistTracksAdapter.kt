@@ -3,8 +3,11 @@ package de.chrgroth.spotify.control.adapter.out.spotify
 import arrow.core.Either
 import arrow.core.left
 import arrow.core.right
-import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.kotlinModule
+import de.chrgroth.spotify.control.adapter.out.spotify.api.model.PagingPlaylistTrackObject
+import de.chrgroth.spotify.control.adapter.out.spotify.api.model.TrackObject
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.PlaylistSyncError
 import de.chrgroth.spotify.control.domain.model.AccessToken
@@ -29,7 +32,11 @@ class SpotifyPlaylistTracksAdapter(
 ) : SpotifyPlaylistTracksPort {
 
     private val httpClient = HttpClient.newHttpClient()
-    private val objectMapper = ObjectMapper()
+    private val objectMapper = ObjectMapper().apply {
+        registerModule(kotlinModule())
+        configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+        configure(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_AS_NULL, true)
+    }
 
     override fun getPlaylistTracks(userId: UserId, accessToken: AccessToken, playlistId: String): Either<DomainError, Playlist> {
         return try {
@@ -47,27 +54,27 @@ class SpotifyPlaylistTracksAdapter(
                 }
                 val errorResult = response.checkRateLimitOrError(logger, PlaylistSyncError.PLAYLIST_TRACKS_FETCH_FAILED)
                 if (errorResult != null) return errorResult
-                val json: JsonNode = objectMapper.readTree(response.body())
+                val page = objectMapper.readValue(response.body(), PagingPlaylistTrackObject::class.java)
                 if (snapshotId == null) {
-                    snapshotId = json.get("snapshot_id")?.asText()
+                    snapshotId = page.snapshotId
                 }
-                json.get("items")?.forEach { item ->
-                    val track = item.get("track") ?: return@forEach
-                    val type = track.get("type")?.asText()
-                    if (type != "track") {
-                        logger.info { "Ignoring non-track playlist item of type '$type'" }
+                page.items.forEach { item ->
+                    val track = item.item ?: return@forEach
+                    val type = track.type
+                    if (type != TrackObject.Type.TRACK) {
+                        logger.info { "Ignoring non-track playlist item of type '${track.type?.value}'" }
                         return@forEach
                     }
                     tracks.add(
                         PlaylistTrack(
-                            trackId = track.get("id").asText(),
-                            trackName = track.get("name").asText(),
-                            artistIds = track.get("artists").map { it.get("id").asText() },
-                            artistNames = track.get("artists").map { it.get("name").asText() },
+                            trackId = track.id ?: "",
+                            trackName = track.name ?: "",
+                            artistIds = track.artists?.mapNotNull { it.id } ?: emptyList(),
+                            artistNames = track.artists?.mapNotNull { it.name } ?: emptyList(),
                         ),
                     )
                 }
-                nextUrl = json.get("next")?.takeIf { !it.isNull }?.asText()
+                nextUrl = page.next
             }
             Playlist(
                 spotifyPlaylistId = playlistId,

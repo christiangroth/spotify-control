@@ -1,0 +1,1 @@
+* switch-to-spotify-openapi: Added Spotify Web API OpenAPI spec and generate models for Spotify API responses.
