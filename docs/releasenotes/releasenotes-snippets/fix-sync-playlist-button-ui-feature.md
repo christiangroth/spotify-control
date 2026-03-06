@@ -1,1 +1,0 @@
-* fix-sync-playlist-button-ui: Sync playlist button is now only shown for active playlists, styled in green to match other items, and blocked on the backend for inactive playlists.
