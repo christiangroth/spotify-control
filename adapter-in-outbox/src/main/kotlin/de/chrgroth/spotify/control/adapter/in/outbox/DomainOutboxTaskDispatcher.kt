@@ -31,6 +31,8 @@ class DomainOutboxTaskDispatcher(
             is DomainOutboxEvent.SyncPlaylistData -> handlerPort.handle(event)
             is DomainOutboxEvent.RebuildPlaybackData -> handlerPort.handle(event)
             is DomainOutboxEvent.AppendPlaybackData -> handlerPort.handle(event)
+            is DomainOutboxEvent.EnrichArtistData -> handlerPort.handle(event)
+            is DomainOutboxEvent.EnrichTrackData -> handlerPort.handle(event)
         }
     }
 }

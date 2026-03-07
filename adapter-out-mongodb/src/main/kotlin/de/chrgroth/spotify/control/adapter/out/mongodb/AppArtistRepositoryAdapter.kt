@@ -1,5 +1,8 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
+import com.mongodb.client.model.Filters
+import com.mongodb.client.model.UpdateOptions
+import com.mongodb.client.model.Updates
 import de.chrgroth.spotify.control.domain.model.AppArtist
 import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
@@ -18,10 +21,20 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
     override fun upsertAll(items: List<AppArtist>) {
         if (items.isEmpty()) return
         logger.info { "Upserting ${items.size} app_artist documents" }
-        items.forEach { item ->
-            val document = item.toDocument()
-            mongoQueryMetrics.timed("app_artist.upsertAll") {
-                appArtistDocumentRepository.persistOrUpdate(document)
+        val collection = appArtistDocumentRepository.mongoCollection()
+        val upsertOptions = UpdateOptions().upsert(true)
+        mongoQueryMetrics.timed("app_artist.upsertAll") {
+            items.forEach { item ->
+                collection.updateOne(
+                    Filters.eq("_id", item.artistId),
+                    Updates.combine(
+                        Updates.set("artistName", item.artistName),
+                        // $setOnInsert ensures genres are only set on new documents,
+                        // never overwriting genres already populated by enrichment
+                        Updates.setOnInsert("genres", item.genres),
+                    ),
+                    upsertOptions,
+                )
             }
         }
     }
@@ -35,17 +48,25 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
         }
     }
 
+    override fun findNeedingGenreEnrichment(): List<AppArtist> =
+        mongoQueryMetrics.timed("app_artist.findNeedingGenreEnrichment") {
+            appArtistDocumentRepository.list("genres = []").map { it.toDomain() }
+        }
+
+    override fun updateGenres(artistId: String, genres: List<String>) {
+        mongoQueryMetrics.timed("app_artist.updateGenres") {
+            appArtistDocumentRepository.mongoCollection().updateOne(
+                Filters.eq("_id", artistId),
+                Updates.set("genres", genres),
+            )
+        }
+    }
+
     private fun AppArtistDocument.toDomain() = AppArtist(
         artistId = id,
         artistName = artistName,
         genres = genres,
     )
-
-    private fun AppArtist.toDocument() = AppArtistDocument().apply {
-        id = this@toDocument.artistId
-        artistName = this@toDocument.artistName
-        genres = this@toDocument.genres
-    }
 
     companion object : KLogging()
 }

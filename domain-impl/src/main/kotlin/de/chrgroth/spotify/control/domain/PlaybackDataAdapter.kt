@@ -64,11 +64,14 @@ class PlaybackDataAdapter(
         }
 
         appArtistRepository.upsertAll(buildArtists(recentlyPlayed, partialPlayed))
-        // TODO: upsert app_album entries once albumId is available from Spotify track data
         appTrackRepository.upsertAll(buildTracks(recentlyPlayed, partialPlayed))
 
         logger.info { "Persisting ${newPlaybackItems.size} new app_playback items for user: ${userId.value}" }
         appPlaybackRepository.saveAll(newPlaybackItems)
+
+        // Enqueue enrichment events so Spotify is called to fill in genres and album details
+        outboxPort.enqueue(DomainOutboxEvent.EnrichArtistData(userId))
+        outboxPort.enqueue(DomainOutboxEvent.EnrichTrackData(userId))
     }
 
     private fun buildPlaybackItems(

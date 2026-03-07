@@ -93,6 +93,28 @@ sealed interface DomainOutboxEvent : OutboxEvent {
         }
     }
 
+    data class EnrichArtistData(val userId: UserId) : DomainOutboxEvent {
+        override val key = KEY
+        override fun deduplicationKey() = "$KEY:${userId.value}"
+        override val partition = DomainOutboxPartition.ToSpotify
+        override fun toPayload() = userId.value
+
+        companion object {
+            const val KEY = "EnrichArtistData"
+        }
+    }
+
+    data class EnrichTrackData(val userId: UserId) : DomainOutboxEvent {
+        override val key = KEY
+        override fun deduplicationKey() = "$KEY:${userId.value}"
+        override val partition = DomainOutboxPartition.ToSpotify
+        override fun toPayload() = userId.value
+
+        companion object {
+            const val KEY = "EnrichTrackData"
+        }
+    }
+
     companion object {
         fun fromKey(key: String, payload: String): DomainOutboxEvent = when (key) {
             FetchCurrentlyPlaying.KEY -> FetchCurrentlyPlaying(UserId(payload))
@@ -102,6 +124,8 @@ sealed interface DomainOutboxEvent : OutboxEvent {
             SyncPlaylistData.KEY -> SyncPlaylistData.fromPayload(payload)
             RebuildPlaybackData.KEY -> RebuildPlaybackData(UserId(payload))
             AppendPlaybackData.KEY -> AppendPlaybackData(UserId(payload))
+            EnrichArtistData.KEY -> EnrichArtistData(UserId(payload))
+            EnrichTrackData.KEY -> EnrichTrackData(UserId(payload))
             else -> throw IllegalArgumentException("Unknown outbox event type: $key")
         }
     }

@@ -3,6 +3,7 @@ package de.chrgroth.spotify.control.domain
 import arrow.core.left
 import arrow.core.right
 import de.chrgroth.spotify.control.domain.error.AuthError
+import de.chrgroth.spotify.control.domain.error.EnrichmentError
 import de.chrgroth.spotify.control.domain.error.PlaybackError
 import de.chrgroth.spotify.control.domain.error.PlaylistSyncError
 import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
@@ -10,6 +11,7 @@ import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.CurrentlyPlayingPort
 import de.chrgroth.spotify.control.domain.port.`in`.PlaybackDataPort
+import de.chrgroth.spotify.control.domain.port.`in`.PlaybackEnrichmentPort
 import de.chrgroth.spotify.control.domain.port.`in`.PlaylistSyncPort
 import de.chrgroth.spotify.control.domain.port.`in`.RecentlyPlayedPort
 import de.chrgroth.spotify.control.domain.port.`in`.UserProfileUpdatePort
@@ -28,8 +30,9 @@ class OutboxHandlerAdapterTests {
     private val userProfileUpdate: UserProfileUpdatePort = mockk()
     private val playlistSync: PlaylistSyncPort = mockk()
     private val playbackData: PlaybackDataPort = mockk()
+    private val playbackEnrichment: PlaybackEnrichmentPort = mockk()
 
-    private val adapter = OutboxHandlerAdapter(currentlyPlaying, recentlyPlayed, userProfileUpdate, playlistSync, playbackData)
+    private val adapter = OutboxHandlerAdapter(currentlyPlaying, recentlyPlayed, userProfileUpdate, playlistSync, playbackData, playbackEnrichment)
 
     private val userId = UserId("user-1")
     private val currentlyPlayingEvent = DomainOutboxEvent.FetchCurrentlyPlaying(userId)
@@ -277,6 +280,86 @@ class OutboxHandlerAdapterTests {
         every { playbackData.appendPlaybackData(userId) } throws RuntimeException("db error")
 
         val result = adapter.handle(appendEvent)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.Failed::class.java)
+    }
+
+    private val enrichArtistEvent = DomainOutboxEvent.EnrichArtistData(userId)
+
+    @Test
+    fun `handle EnrichArtistData delegates to PlaybackEnrichmentPort successfully`() {
+        every { playbackEnrichment.enrichArtistData(userId) } returns Unit.right()
+
+        val result = adapter.handle(enrichArtistEvent)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.Success::class.java)
+        verify { playbackEnrichment.enrichArtistData(userId) }
+    }
+
+    @Test
+    fun `handle EnrichArtistData returns RateLimited on rate limit error`() {
+        val retryAfter = Duration.ofSeconds(30)
+        every { playbackEnrichment.enrichArtistData(userId) } returns SpotifyRateLimitError(retryAfter).left()
+
+        val result = adapter.handle(enrichArtistEvent)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.RateLimited::class.java)
+    }
+
+    @Test
+    fun `handle EnrichArtistData returns Failed on domain error`() {
+        every { playbackEnrichment.enrichArtistData(userId) } returns EnrichmentError.ARTIST_DETAILS_FETCH_FAILED.left()
+
+        val result = adapter.handle(enrichArtistEvent)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.Failed::class.java)
+    }
+
+    @Test
+    fun `handle EnrichArtistData returns Failed on unexpected exception`() {
+        every { playbackEnrichment.enrichArtistData(userId) } throws RuntimeException("api error")
+
+        val result = adapter.handle(enrichArtistEvent)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.Failed::class.java)
+    }
+
+    private val enrichTrackEvent = DomainOutboxEvent.EnrichTrackData(userId)
+
+    @Test
+    fun `handle EnrichTrackData delegates to PlaybackEnrichmentPort successfully`() {
+        every { playbackEnrichment.enrichTrackData(userId) } returns Unit.right()
+
+        val result = adapter.handle(enrichTrackEvent)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.Success::class.java)
+        verify { playbackEnrichment.enrichTrackData(userId) }
+    }
+
+    @Test
+    fun `handle EnrichTrackData returns RateLimited on rate limit error`() {
+        val retryAfter = Duration.ofSeconds(30)
+        every { playbackEnrichment.enrichTrackData(userId) } returns SpotifyRateLimitError(retryAfter).left()
+
+        val result = adapter.handle(enrichTrackEvent)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.RateLimited::class.java)
+    }
+
+    @Test
+    fun `handle EnrichTrackData returns Failed on domain error`() {
+        every { playbackEnrichment.enrichTrackData(userId) } returns EnrichmentError.TRACK_DETAILS_FETCH_FAILED.left()
+
+        val result = adapter.handle(enrichTrackEvent)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.Failed::class.java)
+    }
+
+    @Test
+    fun `handle EnrichTrackData returns Failed on unexpected exception`() {
+        every { playbackEnrichment.enrichTrackData(userId) } throws RuntimeException("api error")
+
+        val result = adapter.handle(enrichTrackEvent)
 
         assertThat(result).isInstanceOf(OutboxTaskResult.Failed::class.java)
     }

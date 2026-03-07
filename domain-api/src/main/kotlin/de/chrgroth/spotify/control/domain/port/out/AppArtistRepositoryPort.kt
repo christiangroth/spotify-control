@@ -5,4 +5,6 @@ import de.chrgroth.spotify.control.domain.model.AppArtist
 interface AppArtistRepositoryPort {
     fun upsertAll(items: List<AppArtist>)
     fun findByArtistIds(artistIds: Set<String>): List<AppArtist>
+    fun findNeedingGenreEnrichment(): List<AppArtist>
+    fun updateGenres(artistId: String, genres: List<String>)
 }

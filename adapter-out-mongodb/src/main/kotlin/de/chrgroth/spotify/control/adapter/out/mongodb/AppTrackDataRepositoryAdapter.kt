@@ -1,5 +1,8 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
+import com.mongodb.client.model.Filters
+import com.mongodb.client.model.UpdateOptions
+import com.mongodb.client.model.Updates
 import de.chrgroth.spotify.control.domain.model.AppTrack
 import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
@@ -18,10 +21,22 @@ class AppTrackRepositoryAdapter : AppTrackRepositoryPort {
     override fun upsertAll(items: List<AppTrack>) {
         if (items.isEmpty()) return
         logger.info { "Upserting ${items.size} app_track documents" }
-        items.forEach { item ->
-            val document = item.toDocument()
-            mongoQueryMetrics.timed("app_track.upsertAll") {
-                appTrackDocumentRepository.persistOrUpdate(document)
+        val collection = appTrackDocumentRepository.mongoCollection()
+        val upsertOptions = UpdateOptions().upsert(true)
+        mongoQueryMetrics.timed("app_track.upsertAll") {
+            items.forEach { item ->
+                collection.updateOne(
+                    Filters.eq("_id", item.trackId),
+                    Updates.combine(
+                        Updates.set("trackTitle", item.trackTitle),
+                        Updates.set("artistId", item.artistId),
+                        Updates.set("additionalArtistIds", item.additionalArtistIds),
+                        // $setOnInsert ensures albumId is only set on new documents,
+                        // never overwriting albumId already populated by enrichment
+                        Updates.setOnInsert("albumId", item.albumId),
+                    ),
+                    upsertOptions,
+                )
             }
         }
     }
@@ -35,6 +50,20 @@ class AppTrackRepositoryAdapter : AppTrackRepositoryPort {
         }
     }
 
+    override fun findNeedingAlbumEnrichment(): List<AppTrack> =
+        mongoQueryMetrics.timed("app_track.findNeedingAlbumEnrichment") {
+            appTrackDocumentRepository.list("albumId is null").map { it.toDomain() }
+        }
+
+    override fun updateAlbumId(trackId: String, albumId: String) {
+        mongoQueryMetrics.timed("app_track.updateAlbumId") {
+            appTrackDocumentRepository.mongoCollection().updateOne(
+                Filters.eq("_id", trackId),
+                Updates.set("albumId", albumId),
+            )
+        }
+    }
+
     private fun AppTrackDocument.toDomain() = AppTrack(
         trackId = id,
         trackTitle = trackTitle,
@@ -42,14 +71,6 @@ class AppTrackRepositoryAdapter : AppTrackRepositoryPort {
         artistId = artistId,
         additionalArtistIds = additionalArtistIds,
     )
-
-    private fun AppTrack.toDocument() = AppTrackDocument().apply {
-        id = this@toDocument.trackId
-        trackTitle = this@toDocument.trackTitle
-        albumId = this@toDocument.albumId
-        artistId = this@toDocument.artistId
-        additionalArtistIds = this@toDocument.additionalArtistIds
-    }
 
     companion object : KLogging()
 }

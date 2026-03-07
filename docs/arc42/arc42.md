@@ -198,9 +198,14 @@ For each convertible session, a `RecentlyPartialPlayedItem` is created with the 
 Raw playback data from `spotify_recently_played` and `recently_partial_played` is processed into the normalised `app_*` collections by `PlaybackDataAdapter`. There are two modes:
 
 **Append (triggered automatically):** After new raw data arrives, `AppendPlaybackData` is enqueued on the `domain` partition. The adapter fetches all source items newer than the most recent `app_playback` entry for the user, deduplicates against existing `app_playback` timestamps, then:
-1. Upserts artist metadata into `app_artist` (artistId, artistName).
-2. Upserts track metadata into `app_track` (trackId, trackTitle, artistId, additionalArtistIds, albumId).
+1. Upserts artist metadata into `app_artist` (artistId, artistName) — genres are preserved if already enriched.
+2. Upserts track metadata into `app_track` (trackId, trackTitle, artistId, additionalArtistIds) — albumId is preserved if already enriched.
 3. Appends new entries to `app_playback` (userId, playedAt, trackId, secondsPlayed).
+4. Enqueues `EnrichArtistData` and `EnrichTrackData` on the `to-spotify` partition to fill in missing metadata.
+
+**Enrich (auto-enqueued after each append):**
+- `EnrichArtistData`: queries all `app_artist` documents with empty genres, batch-fetches from `GET /v1/artists?ids=...`, and updates genres.
+- `EnrichTrackData`: queries all `app_track` documents with null albumId, batch-fetches from `GET /v1/tracks?ids=...`, updates albumId in `app_track`, and upserts `app_album` (albumTitle, imageLink).
 
 **Rebuild (user-triggered from Settings):** Deletes all `app_playback` entries for the user and re-runs the Append logic from scratch over all source data.
 
@@ -325,7 +330,7 @@ All Spotify API operations and domain-level async tasks are routed through a per
 
 | Partition          | Event Types                                                                                      |
 |--------------------|--------------------------------------------------------------------------------------------------|
-| `to-spotify`       | `UpdateUserProfile`, `SyncPlaylistInfo`, `SyncPlaylistData`                                     |
+| `to-spotify`       | `UpdateUserProfile`, `SyncPlaylistInfo`, `SyncPlaylistData`, `EnrichArtistData`, `EnrichTrackData` |
 | `to-spotify-playback` | `FetchCurrentlyPlaying`, `FetchRecentlyPlayed`                                               |
 | `domain`           | `RebuildPlaybackData`, `AppendPlaybackData`                                                      |
 
