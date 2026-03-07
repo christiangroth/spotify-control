@@ -47,7 +47,7 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
 
     override fun findByPlaybackProcessingStatus(status: ArtistPlaybackProcessingStatus): List<AppArtist> =
         mongoQueryMetrics.timed("app_artist.findByPlaybackProcessingStatus") {
-            appArtistDocumentRepository.list("playbackProcessingStatus = ?1", status.name).map { it.toDomain() }
+            appArtistDocumentRepository.list("playbackProcessingStatus = ?1", status).map { it.toDomain() }
         }
 
     override fun findByArtistIds(artistIds: Set<String>): List<AppArtist> {
@@ -88,9 +88,7 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
         genres = genres,
         imageLink = imageLink,
         lastEnrichmentDate = lastEnrichmentDate?.toKotlinInstant(),
-        playbackProcessingStatus = runCatching {
-            ArtistPlaybackProcessingStatus.valueOf(playbackProcessingStatus)
-        }.getOrDefault(ArtistPlaybackProcessingStatus.UNDECIDED),
+        playbackProcessingStatus = playbackProcessingStatus,
     )
 
     companion object : KLogging()

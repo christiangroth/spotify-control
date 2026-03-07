@@ -1,5 +1,6 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
+import de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus
 import io.quarkus.mongodb.panache.common.MongoEntity
 import org.bson.codecs.pojo.annotations.BsonId
 import java.time.Instant
@@ -13,5 +14,5 @@ class AppArtistDocument {
     var genres: List<String> = emptyList()
     var imageLink: String? = null
     var lastEnrichmentDate: Instant? = null
-    var playbackProcessingStatus: String = "UNDECIDED"
+    var playbackProcessingStatus: ArtistPlaybackProcessingStatus = ArtistPlaybackProcessingStatus.UNDECIDED
 }
