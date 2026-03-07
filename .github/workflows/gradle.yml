@@ -15,8 +15,6 @@ jobs:
           distribution: 'temurin'
       - uses: gradle/actions/setup-gradle@v5
       - run: ./gradlew --stacktrace build
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   provision-grafana-dashboard:
     runs-on: ubuntu-latest
@@ -71,8 +69,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - run: ./gradlew --stacktrace release -x test -x testNative -x koverHtmlReport -x koverVerify
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: |
           export DOCKER_TAG=$(docker images ghcr.io/christiangroth/spotify-control/quarkus --format "{{.Tag}} {{.CreatedAt}}" | sort -rk 2 | awk 'NR==1{print $1}')
           echo "DOCKER_TAG=$DOCKER_TAG" >> $GITHUB_ENV
