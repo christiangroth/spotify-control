@@ -1,3 +1,6 @@
+# 0.30.1 - 2026.03.07
+## Bugfixes / Chore
+* fix-partition-blocking-issue: Fixed an issue where tasks in the to-spotify-playback partition were not executed after being rate-limited, because no delayed wakeup signal was scheduled for partitions with pauseOnRateLimit=false.
 # 0.30.0 - 2026.03.06
 ## New Features
 * rename-mongodb-collections: Renamed MongoDB collections to a clean naming scheme (app_user, spotify_playlist, spotify_playlist_metadata, spotify_recently_played, spotify_currently_playing). Added a one-time migration starter to rename existing collections on upgrade.
