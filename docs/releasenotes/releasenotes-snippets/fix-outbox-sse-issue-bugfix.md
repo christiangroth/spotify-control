@@ -1,0 +1,1 @@
+* fix-outbox-sse-issue: Fixed outbox SSE not updating the health UI when tasks are enqueued.
