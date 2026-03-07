@@ -1,3 +1,6 @@
+# 0.32.0 - 2026.03.07
+## New Features
+* add-github-link-menu: Added GitHub repository link (Code) to the technical dropdown menu in the navigation bar.
 # 0.31.0 - 2026.03.07
 ## New Features
 * create-grafana-metrics-dashboard: Added Grafana metrics dashboard covering JVM, logging, HTTP server/client, outbox, scheduler and starters.
