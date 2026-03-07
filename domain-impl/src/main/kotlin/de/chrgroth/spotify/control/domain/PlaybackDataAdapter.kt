@@ -50,7 +50,9 @@ class PlaybackDataAdapter(
                 userId = item.spotifyUserId,
                 playedAt = item.playedAt,
                 trackId = item.trackId,
-                // TODO: populate secondsPlayed from track duration once available in spotify_recently_played
+                // TODO: populate secondsPlayed from spotify_recently_played track duration once
+                //  Spotify track detail data is fetched and stored (currently not available).
+                //  Items from recently_played represent fully played tracks; duration is unknown here.
                 secondsPlayed = 0L,
             )
         } + partialPlayed.map { item ->

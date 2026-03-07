@@ -2,6 +2,11 @@
 
 package de.chrgroth.spotify.control.domain.model
 
+/**
+ * Processed track metadata, shared across all users to avoid duplication in app_playback.
+ * Fields not yet available from current data sources are nullable with TODO markers for
+ * future population once additional Spotify API data (track, album, artist detail) is fetched.
+ */
 data class AppTrackData(
     val trackId: String,
     // TODO: populate albumId from Spotify track data when available
