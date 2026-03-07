@@ -101,6 +101,30 @@ class DomainOutboxTaskDispatcherTests {
     }
 
     @Test
+    fun `RebuildPlaybackData dispatches to handle(RebuildPlaybackData)`() {
+        val event = DomainOutboxEvent.RebuildPlaybackData(userIdObj)
+        val task = buildTask(DomainOutboxEvent.RebuildPlaybackData.KEY, userId)
+        every { handlerPort.handle(event) } returns OutboxTaskResult.Success
+
+        val result = subject.dispatch(task)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.Success::class.java)
+        verify { handlerPort.handle(event) }
+    }
+
+    @Test
+    fun `AppendPlaybackData dispatches to handle(AppendPlaybackData)`() {
+        val event = DomainOutboxEvent.AppendPlaybackData(userIdObj)
+        val task = buildTask(DomainOutboxEvent.AppendPlaybackData.KEY, userId)
+        every { handlerPort.handle(event) } returns OutboxTaskResult.Success
+
+        val result = subject.dispatch(task)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.Success::class.java)
+        verify { handlerPort.handle(event) }
+    }
+
+    @Test
     fun `unknown event type returns Failed result`() {
         val task = buildTask("UnknownEvent", "payload")
 

@@ -71,6 +71,28 @@ sealed interface DomainOutboxEvent : OutboxEvent {
         }
     }
 
+    data class RebuildPlaybackData(val userId: UserId) : DomainOutboxEvent {
+        override val key = KEY
+        override fun deduplicationKey() = "$KEY:${userId.value}"
+        override val partition = DomainOutboxPartition.Domain
+        override fun toPayload() = userId.value
+
+        companion object {
+            const val KEY = "RebuildPlaybackData"
+        }
+    }
+
+    data class AppendPlaybackData(val userId: UserId) : DomainOutboxEvent {
+        override val key = KEY
+        override fun deduplicationKey() = "$KEY:${userId.value}"
+        override val partition = DomainOutboxPartition.Domain
+        override fun toPayload() = userId.value
+
+        companion object {
+            const val KEY = "AppendPlaybackData"
+        }
+    }
+
     companion object {
         fun fromKey(key: String, payload: String): DomainOutboxEvent = when (key) {
             FetchCurrentlyPlaying.KEY -> FetchCurrentlyPlaying(UserId(payload))
@@ -78,6 +100,8 @@ sealed interface DomainOutboxEvent : OutboxEvent {
             UpdateUserProfile.KEY -> UpdateUserProfile(UserId(payload))
             SyncPlaylistInfo.KEY -> SyncPlaylistInfo(UserId(payload))
             SyncPlaylistData.KEY -> SyncPlaylistData.fromPayload(payload)
+            RebuildPlaybackData.KEY -> RebuildPlaybackData(UserId(payload))
+            AppendPlaybackData.KEY -> AppendPlaybackData(UserId(payload))
             else -> throw IllegalArgumentException("Unknown outbox event type: $key")
         }
     }

@@ -4,6 +4,7 @@ import de.chrgroth.spotify.control.domain.error.PlaylistSyncError
 import de.chrgroth.spotify.control.domain.model.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.UserId
+import de.chrgroth.spotify.control.domain.port.`in`.PlaybackDataPort
 import de.chrgroth.spotify.control.domain.port.`in`.PlaylistSyncPort
 import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
@@ -48,6 +49,9 @@ class SettingsResource {
 
   @Inject
   private lateinit var playlistSync: PlaylistSyncPort
+
+  @Inject
+  private lateinit var playbackData: PlaybackDataPort
 
   @GET
   @Authenticated
@@ -139,5 +143,15 @@ class SettingsResource {
       },
       ifRight = { Response.ok(mapOf("status" to "ok")).build() },
     )
+  }
+
+  @POST
+  @Authenticated
+  @Path("/playback/rebuild")
+  @Produces(MediaType.APPLICATION_JSON)
+  fun rebuildPlaybackData(): Response {
+    val userId = UserId(securityIdentity.principal.name)
+    playbackData.enqueueRebuild(userId)
+    return Response.ok(mapOf("status" to "ok")).build()
   }
 }

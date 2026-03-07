@@ -67,6 +67,12 @@
             </tbody>
         </table>
         {/if}
+
+        <hr class="my-4" style="border-color:#333;">
+
+        <h2 class="fs-5 fw-semibold mb-2">Playback Data</h2>
+        <p class="text-secondary small mb-3">Rebuild all processed playback data (app_playback and app_track_data) from scratch by reprocessing the raw Spotify data. Use this if your playback stats appear incomplete or outdated.</p>
+        <button id="rebuild-playback-btn" class="btn btn-spotify btn-sm">Recreate Playback Data</button>
     </div>
     <script>
         document.getElementById('sync-now-btn').addEventListener('click', function() {
@@ -154,6 +160,30 @@
                 .finally(function() {
                     button.disabled = false;
                 });
+            });
+        });
+
+        document.getElementById('rebuild-playback-btn').addEventListener('click', function() {
+            const btn = this;
+            btn.disabled = true;
+            fetch('/ui/settings/playback/rebuild', { method: 'POST' })
+            .then(function(response) {
+                return response.json().then(function(data) {
+                    return { ok: response.ok, data: data };
+                });
+            })
+            .then(function(result) {
+                if (result.ok) {
+                    showBanner('Playback data rebuild enqueued successfully.', 'success');
+                } else {
+                    showBanner('Rebuild failed: ' + (result.data.error || 'Unknown error'), 'danger');
+                }
+            })
+            .catch(function(err) {
+                showBanner('Request failed: ' + err.message, 'danger');
+            })
+            .finally(function() {
+                btn.disabled = false;
             });
         });
 

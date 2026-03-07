@@ -63,6 +63,29 @@ class RecentlyPlayedRepositoryAdapter : RecentlyPlayedRepositoryPort {
                 }
         }
 
+    override fun findSince(spotifyUserId: UserId, since: Instant?): List<RecentlyPlayedItem> =
+        mongoQueryMetrics.timed("spotify_recently_played.findSince") {
+            val query = if (since != null) {
+                recentlyPlayedDocumentRepository.list(
+                    "spotifyUserId = ?1 and playedAt > ?2",
+                    spotifyUserId.value,
+                    since.toJavaInstant(),
+                )
+            } else {
+                recentlyPlayedDocumentRepository.list("spotifyUserId = ?1", spotifyUserId.value)
+            }
+            query.map { doc ->
+                RecentlyPlayedItem(
+                    spotifyUserId = UserId(doc.spotifyUserId),
+                    trackId = doc.trackId,
+                    trackName = doc.trackName,
+                    artistIds = doc.artistIds,
+                    artistNames = doc.artistNames,
+                    playedAt = doc.playedAt.toKotlinInstant(),
+                )
+            }
+        }
+
     override fun saveAll(items: List<RecentlyPlayedItem>) {
         if (items.isEmpty()) return
         val documents = items.map { item ->

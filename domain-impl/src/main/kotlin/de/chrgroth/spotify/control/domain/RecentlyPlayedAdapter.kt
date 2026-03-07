@@ -60,6 +60,7 @@ class RecentlyPlayedAdapter(
             val computedCount = convertPartialPlays(userId, tracks.map { it.trackId }.toSet())
             if (newItems.isNotEmpty() || computedCount > 0) {
                 dashboardRefresh.notifyUserPlaybackData(userId)
+                outboxPort.enqueue(DomainOutboxEvent.AppendPlaybackData(userId))
             }
             Unit.right()
         }

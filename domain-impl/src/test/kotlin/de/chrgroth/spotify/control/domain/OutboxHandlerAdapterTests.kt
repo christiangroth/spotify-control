@@ -9,6 +9,7 @@ import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.CurrentlyPlayingPort
+import de.chrgroth.spotify.control.domain.port.`in`.PlaybackDataPort
 import de.chrgroth.spotify.control.domain.port.`in`.PlaylistSyncPort
 import de.chrgroth.spotify.control.domain.port.`in`.RecentlyPlayedPort
 import de.chrgroth.spotify.control.domain.port.`in`.UserProfileUpdatePort
@@ -26,8 +27,9 @@ class OutboxHandlerAdapterTests {
     private val recentlyPlayed: RecentlyPlayedPort = mockk()
     private val userProfileUpdate: UserProfileUpdatePort = mockk()
     private val playlistSync: PlaylistSyncPort = mockk()
+    private val playbackData: PlaybackDataPort = mockk()
 
-    private val adapter = OutboxHandlerAdapter(currentlyPlaying, recentlyPlayed, userProfileUpdate, playlistSync)
+    private val adapter = OutboxHandlerAdapter(currentlyPlaying, recentlyPlayed, userProfileUpdate, playlistSync, playbackData)
 
     private val userId = UserId("user-1")
     private val currentlyPlayingEvent = DomainOutboxEvent.FetchCurrentlyPlaying(userId)
@@ -233,6 +235,48 @@ class OutboxHandlerAdapterTests {
         every { playlistSync.syncPlaylistData(userId, "playlist-1") } throws RuntimeException("connection error")
 
         val result = adapter.handle(syncPlaylistDataEvent)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.Failed::class.java)
+    }
+
+    private val rebuildEvent = DomainOutboxEvent.RebuildPlaybackData(userId)
+
+    @Test
+    fun `handle RebuildPlaybackData delegates to PlaybackDataPort successfully`() {
+        every { playbackData.rebuildPlaybackData(userId) } returns Unit
+
+        val result = adapter.handle(rebuildEvent)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.Success::class.java)
+        verify { playbackData.rebuildPlaybackData(userId) }
+    }
+
+    @Test
+    fun `handle RebuildPlaybackData returns Failed on unexpected exception`() {
+        every { playbackData.rebuildPlaybackData(userId) } throws RuntimeException("db error")
+
+        val result = adapter.handle(rebuildEvent)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.Failed::class.java)
+    }
+
+    private val appendEvent = DomainOutboxEvent.AppendPlaybackData(userId)
+
+    @Test
+    fun `handle AppendPlaybackData delegates to PlaybackDataPort successfully`() {
+        every { playbackData.appendPlaybackData(userId) } returns Unit
+
+        val result = adapter.handle(appendEvent)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.Success::class.java)
+        verify { playbackData.appendPlaybackData(userId) }
+    }
+
+    @Test
+    fun `handle AppendPlaybackData returns Failed on unexpected exception`() {
+        every { playbackData.appendPlaybackData(userId) } throws RuntimeException("db error")
+
+        val result = adapter.handle(appendEvent)
 
         assertThat(result).isInstanceOf(OutboxTaskResult.Failed::class.java)
     }
