@@ -1,0 +1,1 @@
+* create-grafana-metrics-dashboard: Added Grafana dashboard with panels for JVM, logging, HTTP server/client, outbox, scheduler, and starter metrics.
