@@ -227,7 +227,7 @@ Build the application as a Quarkus native Docker image, push to the GitHub Conta
 ### Release Process
 
 - **Release plugin** – `net.researchgate.release` manages version bumping and Git tagging
-- **Releasenotes plugin** – custom Gradle plugin (`de.chrgroth.gradle.plugins.releasenotes`) maintained in the standalone `gradle-plugin-releasenotes` project and included as a composite build; auto-registers its tasks and integrates with the release plugin; on release it collects snippets, generates a new section in `docs/releasenotes/RELEASENOTES.md`, copies it back to sources, and deletes the consumed snippets – all committed as part of the release
+- **Release-Notes plugin** – custom Gradle plugin (`de.chrgroth.gradle.plugins.release-notes`) maintained in https://github.com/christiangroth/gradle-release-notes-plugin
 - **CI/CD** – the GitHub Actions workflow (`gradle.yml`) runs `./gradlew build` on every push; runs `./gradlew release` only on pushes to `main`; after release, the Docker stack file is copied to the VPS via SCP and the stack is deployed via SSH
 - **Snippet requirement** – every branch that is not `main` or `dependabot/*` **must** contain at least one release note snippet in `docs/releasenotes/releasenotes-snippets/`; the build fails without it. Create snippets with the corresponding Gradle tasks (`releasenotesCreateFeature`, `releasenotesCreateBugfix`, …); filenames follow the pattern `{branch-last-segment}-{type}.md`
 

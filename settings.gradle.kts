@@ -1,8 +1,20 @@
-pluginManagement {
-  includeBuild("gradle-plugin-releasenotes")
-}
-
 rootProject.name = "spotify-control"
+
+pluginManagement  {
+  repositories {
+    maven {
+      url = uri("https://maven.pkg.github.com/christiangroth/gradle-release-notes-plugin")
+      credentials {
+        username = providers.gradleProperty("gpr.user").orNull
+          ?: System.getenv("GITHUB_ACTOR")
+        password = providers.gradleProperty("gpr.token").orNull
+          ?: System.getenv("GITHUB_TOKEN")
+      }
+    }
+  }
+  mavenCentral() // ← ggf. nötig
+  gradlePluginPortal()
+}
 
 include("adapter-in-outbox")
 include("adapter-in-scheduler")
