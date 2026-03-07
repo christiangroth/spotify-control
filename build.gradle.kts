@@ -7,7 +7,7 @@ plugins {
   alias(libs.plugins.versionCatalogUpdate)
 
   alias(libs.plugins.release)
-  id("de.chrgroth.gradle.plugins.release-notes") version "1.0.0"
+  id("de.chrgroth.gradle.release-notes") version "1.0.1"
 
   id("dev.iurysouza.modulegraph") version "0.13.0"
 }
