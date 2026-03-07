@@ -1,13 +1,9 @@
 package de.chrgroth.spotify.control.adapter.`in`.web.ui
 
-import de.chrgroth.spotify.control.domain.error.ArtistSettingsError
 import de.chrgroth.spotify.control.domain.error.PlaylistSyncError
-import de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus
 import de.chrgroth.spotify.control.domain.model.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.UserId
-import de.chrgroth.spotify.control.domain.port.`in`.ArtistSettingsPort
-import de.chrgroth.spotify.control.domain.port.`in`.PlaybackDataPort
 import de.chrgroth.spotify.control.domain.port.`in`.PlaylistSyncPort
 import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
@@ -32,14 +28,14 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.time.toJavaInstant
 
-@Path("/ui/settings")
+@Path("/ui/settings/playlist")
 @ApplicationScoped
 @Suppress("Unused")
-class SettingsResource {
+class PlaylistSettingsResource {
 
   @Inject
-  @Location("ui/settings.html")
-  private lateinit var settingsTemplate: Template
+  @Location("ui/settings/playlist.html")
+  private lateinit var playlistTemplate: Template
 
   @Inject
   private lateinit var securityIdentity: SecurityIdentity
@@ -53,16 +49,10 @@ class SettingsResource {
   @Inject
   private lateinit var playlistSync: PlaylistSyncPort
 
-  @Inject
-  private lateinit var playbackData: PlaybackDataPort
-
-  @Inject
-  private lateinit var artistSettings: ArtistSettingsPort
-
   @GET
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun settings(): TemplateInstance {
+  fun playlist(): TemplateInstance {
     val userId = UserId(securityIdentity.principal.name)
     val user = userRepository.findById(userId)
     val sortedPlaylists = playlistRepository.findByUserId(userId).sortedBy { it.name }
@@ -73,13 +63,9 @@ class SettingsResource {
         playlist = playlist,
       )
     }
-    val allArtists = artistSettings.findAllArtists().sortedBy { it.artistName }
-    return settingsTemplate
+    return playlistTemplate
       .data("displayName", user?.displayName ?: userId.value)
       .data("rows", rows)
-      .data("undecidedArtists", allArtists.filter { it.playbackProcessingStatus == ArtistPlaybackProcessingStatus.UNDECIDED })
-      .data("activeArtists", allArtists.filter { it.playbackProcessingStatus == ArtistPlaybackProcessingStatus.ACTIVE })
-      .data("inactiveArtists", allArtists.filter { it.playbackProcessingStatus == ArtistPlaybackProcessingStatus.INACTIVE })
   }
 
   data class PlaylistRow(val lineNumber: String, val playlist: PlaylistInfo) {
@@ -96,7 +82,7 @@ class SettingsResource {
 
   @PUT
   @Authenticated
-  @Path("/playlists/{playlistId}/sync-status")
+  @Path("/{playlistId}/sync-status")
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
   fun updateSyncStatus(
@@ -120,7 +106,7 @@ class SettingsResource {
 
   @POST
   @Authenticated
-  @Path("/playlists/sync")
+  @Path("/sync")
   @Produces(MediaType.APPLICATION_JSON)
   fun syncNow(): Response {
     val userId = UserId(securityIdentity.principal.name)
@@ -136,7 +122,7 @@ class SettingsResource {
 
   @POST
   @Authenticated
-  @Path("/playlists/{playlistId}/sync")
+  @Path("/{playlistId}/sync")
   @Produces(MediaType.APPLICATION_JSON)
   fun syncPlaylist(@PathParam("playlistId") playlistId: String): Response {
     val userId = UserId(securityIdentity.principal.name)
@@ -154,45 +140,4 @@ class SettingsResource {
       ifRight = { Response.ok(mapOf("status" to "ok")).build() },
     )
   }
-
-  @POST
-  @Authenticated
-  @Path("/playback/rebuild")
-  @Produces(MediaType.APPLICATION_JSON)
-  fun rebuildPlaybackData(): Response {
-    val userId = UserId(securityIdentity.principal.name)
-    playbackData.enqueueRebuild(userId)
-    return Response.ok(mapOf("status" to "ok")).build()
-  }
-
-  @PUT
-  @Authenticated
-  @Path("/artists/{artistId}/status")
-  @Consumes(MediaType.APPLICATION_JSON)
-  @Produces(MediaType.APPLICATION_JSON)
-  fun updateArtistStatus(
-    @PathParam("artistId") artistId: String,
-    request: ArtistStatusRequest,
-  ): Response {
-    val userId = UserId(securityIdentity.principal.name)
-    val status = ArtistPlaybackProcessingStatus.entries.find { it.name == request.status }
-      ?: return Response.status(Response.Status.BAD_REQUEST)
-        .entity(mapOf("error" to "Invalid artist status: ${request.status}"))
-        .build()
-    return artistSettings.updateArtistPlaybackProcessingStatus(artistId, status, userId).fold(
-      ifLeft = { error ->
-        when (error) {
-          ArtistSettingsError.ARTIST_NOT_FOUND -> Response.status(Response.Status.NOT_FOUND)
-            .entity(mapOf("error" to "Artist not found: $artistId"))
-            .build()
-          else -> Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-            .entity(mapOf("error" to "Update failed: ${error.code}"))
-            .build()
-        }
-      },
-      ifRight = { Response.ok(mapOf("status" to status.name)).build() },
-    )
-  }
-
-  data class ArtistStatusRequest(val status: String = "")
 }
