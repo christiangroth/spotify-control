@@ -1,0 +1,1 @@
+* fix-currently-playing-permission: Added missing `user-read-currently-playing` OAuth scope so the currently playing endpoint can be accessed.
