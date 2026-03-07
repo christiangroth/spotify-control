@@ -58,4 +58,4 @@ It provides smarter playlist management than Spotify itself, personal listening 
 
 ## License
 
-Private project – not open for public use.
+[MIT](LICENSE)
