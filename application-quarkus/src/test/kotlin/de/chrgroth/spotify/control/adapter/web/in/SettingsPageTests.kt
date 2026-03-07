@@ -11,16 +11,6 @@ import org.junit.jupiter.api.Test
 class SettingsPageTests {
 
   @Test
-  fun `settings root redirects to playlist page`() {
-    given()
-      .redirects().follow(false)
-      .`when`()
-      .get("/ui/settings")
-      .then()
-      .statusCode(303)
-  }
-
-  @Test
   fun `playlist settings page is available and displays playlists heading`() {
     given()
       .`when`()

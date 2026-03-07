@@ -124,7 +124,7 @@
                 const newStatus = this.getAttribute('data-new-status');
                 const button = this;
                 button.disabled = true;
-                fetch('/ui/settings/artists/' + encodeURIComponent(artistId) + '/status', {
+                fetch('/ui/settings/playback/artists/' + encodeURIComponent(artistId) + '/status', {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ status: newStatus })
