@@ -7,5 +7,5 @@ import de.chrgroth.spotify.control.domain.model.SpotifyTrackDetails
 import de.chrgroth.spotify.control.domain.model.UserId
 
 interface SpotifyTrackDetailsPort {
-    fun getTracks(userId: UserId, accessToken: AccessToken, trackIds: List<String>): Either<DomainError, List<SpotifyTrackDetails>>
+    fun getTrack(userId: UserId, accessToken: AccessToken, trackId: String): Either<DomainError, SpotifyTrackDetails?>
 }

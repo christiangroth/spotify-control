@@ -27,50 +27,51 @@ class PlaybackEnrichmentAdapter(
     private val appAlbumRepository: AppAlbumRepositoryPort,
 ) : PlaybackEnrichmentPort {
 
-    override fun enrichArtistData(userId: UserId): Either<DomainError, Unit> {
-        val artistsToEnrich = appArtistRepository.findNeedingGenreEnrichment()
-        if (artistsToEnrich.isEmpty()) {
-            logger.info { "No artists need genre enrichment" }
+    override fun enrichArtistDetails(artistId: String, userId: UserId): Either<DomainError, Unit> {
+        val existing = appArtistRepository.findByArtistIds(setOf(artistId)).firstOrNull()
+        if (existing != null && existing.genres.isNotEmpty()) {
+            logger.debug { "Artist $artistId already has genres, skipping enrichment" }
             return Unit.right()
         }
-        logger.info { "Enriching ${artistsToEnrich.size} artists with genre data using token for user ${userId.value}" }
+        logger.info { "Fetching genre details for artist $artistId (user ${userId.value})" }
         val accessToken = spotifyAccessToken.getValidAccessToken(userId)
-        return spotifyArtistDetails.getArtists(userId, accessToken, artistsToEnrich.map { it.artistId })
-            .flatMap { details ->
-                details.forEach { detail ->
+        return spotifyArtistDetails.getArtist(userId, accessToken, artistId)
+            .flatMap { detail ->
+                if (detail != null) {
                     appArtistRepository.updateGenres(detail.artistId, detail.genres)
+                    logger.info { "Updated genres for artist $artistId: ${detail.genres}" }
+                } else {
+                    logger.warn { "No data returned from Spotify for artist $artistId" }
                 }
-                logger.info { "Updated genres for ${details.size} artists" }
                 Unit.right()
             }
     }
 
-    override fun enrichTrackData(userId: UserId): Either<DomainError, Unit> {
-        val tracksToEnrich = appTrackRepository.findNeedingAlbumEnrichment()
-        if (tracksToEnrich.isEmpty()) {
-            logger.info { "No tracks need album enrichment" }
+    override fun enrichTrackDetails(trackId: String, userId: UserId): Either<DomainError, Unit> {
+        val existing = appTrackRepository.findByTrackIds(setOf(trackId)).firstOrNull()
+        if (existing != null && existing.albumId != null) {
+            logger.debug { "Track $trackId already has albumId, skipping enrichment" }
             return Unit.right()
         }
-        logger.info { "Enriching ${tracksToEnrich.size} tracks with album data using token for user ${userId.value}" }
+        logger.info { "Fetching album details for track $trackId (user ${userId.value})" }
         val accessToken = spotifyAccessToken.getValidAccessToken(userId)
-        return spotifyTrackDetails.getTracks(userId, accessToken, tracksToEnrich.map { it.trackId })
-            .flatMap { details ->
-                val albums = details.mapNotNull { detail ->
-                    detail.albumId.let { albumId ->
-                        AppAlbum(
-                            albumId = albumId,
-                            albumTitle = detail.albumTitle,
-                            imageLink = detail.albumImageUrl,
-                        )
-                    }
-                }
-                if (albums.isNotEmpty()) {
-                    appAlbumRepository.upsertAll(albums)
-                }
-                details.forEach { detail ->
+        return spotifyTrackDetails.getTrack(userId, accessToken, trackId)
+            .flatMap { detail ->
+                if (detail != null) {
+                    appAlbumRepository.upsertAll(
+                        listOf(
+                            AppAlbum(
+                                albumId = detail.albumId,
+                                albumTitle = detail.albumTitle,
+                                imageLink = detail.albumImageUrl,
+                            ),
+                        ),
+                    )
                     appTrackRepository.updateAlbumId(detail.trackId, detail.albumId)
+                    logger.info { "Updated albumId for track $trackId → album ${detail.albumId}" }
+                } else {
+                    logger.warn { "No data returned from Spotify for track $trackId" }
                 }
-                logger.info { "Updated albumId for ${details.size} tracks and upserted ${albums.size} app_album entries" }
                 Unit.right()
             }
     }

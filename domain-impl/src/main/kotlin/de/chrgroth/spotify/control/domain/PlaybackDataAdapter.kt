@@ -63,15 +63,19 @@ class PlaybackDataAdapter(
             return
         }
 
-        appArtistRepository.upsertAll(buildArtists(recentlyPlayed, partialPlayed))
-        appTrackRepository.upsertAll(buildTracks(recentlyPlayed, partialPlayed))
+        val artists = buildArtists(recentlyPlayed, partialPlayed)
+        val tracks = buildTracks(recentlyPlayed, partialPlayed)
+        appArtistRepository.upsertAll(artists)
+        appTrackRepository.upsertAll(tracks)
 
         logger.info { "Persisting ${newPlaybackItems.size} new app_playback items for user: ${userId.value}" }
         appPlaybackRepository.saveAll(newPlaybackItems)
 
-        // Enqueue enrichment events so Spotify is called to fill in genres and album details
-        outboxPort.enqueue(DomainOutboxEvent.EnrichArtistData(userId))
-        outboxPort.enqueue(DomainOutboxEvent.EnrichTrackData(userId))
+        // Enqueue one enrichment event per artist/track — each goes through the to-spotify outbox
+        // partition (throttled) so every Spotify API call is properly rate-limited.
+        // The deduplication key per entity ensures no duplicate events are queued.
+        artists.forEach { artist -> outboxPort.enqueue(DomainOutboxEvent.EnrichArtistDetails(artist.artistId, userId)) }
+        tracks.forEach { track -> outboxPort.enqueue(DomainOutboxEvent.EnrichTrackDetails(track.trackId, userId)) }
     }
 
     private fun buildPlaybackItems(

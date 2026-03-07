@@ -284,22 +284,24 @@ class OutboxHandlerAdapterTests {
         assertThat(result).isInstanceOf(OutboxTaskResult.Failed::class.java)
     }
 
-    private val enrichArtistEvent = DomainOutboxEvent.EnrichArtistData(userId)
+    private val artistId = "artist-1"
+    private val trackId = "track-1"
+    private val enrichArtistEvent = DomainOutboxEvent.EnrichArtistDetails(artistId, userId)
 
     @Test
-    fun `handle EnrichArtistData delegates to PlaybackEnrichmentPort successfully`() {
-        every { playbackEnrichment.enrichArtistData(userId) } returns Unit.right()
+    fun `handle EnrichArtistDetails delegates to PlaybackEnrichmentPort successfully`() {
+        every { playbackEnrichment.enrichArtistDetails(artistId, userId) } returns Unit.right()
 
         val result = adapter.handle(enrichArtistEvent)
 
         assertThat(result).isInstanceOf(OutboxTaskResult.Success::class.java)
-        verify { playbackEnrichment.enrichArtistData(userId) }
+        verify { playbackEnrichment.enrichArtistDetails(artistId, userId) }
     }
 
     @Test
-    fun `handle EnrichArtistData returns RateLimited on rate limit error`() {
+    fun `handle EnrichArtistDetails returns RateLimited on rate limit error`() {
         val retryAfter = Duration.ofSeconds(30)
-        every { playbackEnrichment.enrichArtistData(userId) } returns SpotifyRateLimitError(retryAfter).left()
+        every { playbackEnrichment.enrichArtistDetails(artistId, userId) } returns SpotifyRateLimitError(retryAfter).left()
 
         val result = adapter.handle(enrichArtistEvent)
 
@@ -307,8 +309,8 @@ class OutboxHandlerAdapterTests {
     }
 
     @Test
-    fun `handle EnrichArtistData returns Failed on domain error`() {
-        every { playbackEnrichment.enrichArtistData(userId) } returns EnrichmentError.ARTIST_DETAILS_FETCH_FAILED.left()
+    fun `handle EnrichArtistDetails returns Failed on domain error`() {
+        every { playbackEnrichment.enrichArtistDetails(artistId, userId) } returns EnrichmentError.ARTIST_DETAILS_FETCH_FAILED.left()
 
         val result = adapter.handle(enrichArtistEvent)
 
@@ -316,30 +318,30 @@ class OutboxHandlerAdapterTests {
     }
 
     @Test
-    fun `handle EnrichArtistData returns Failed on unexpected exception`() {
-        every { playbackEnrichment.enrichArtistData(userId) } throws RuntimeException("api error")
+    fun `handle EnrichArtistDetails returns Failed on unexpected exception`() {
+        every { playbackEnrichment.enrichArtistDetails(artistId, userId) } throws RuntimeException("api error")
 
         val result = adapter.handle(enrichArtistEvent)
 
         assertThat(result).isInstanceOf(OutboxTaskResult.Failed::class.java)
     }
 
-    private val enrichTrackEvent = DomainOutboxEvent.EnrichTrackData(userId)
+    private val enrichTrackEvent = DomainOutboxEvent.EnrichTrackDetails(trackId, userId)
 
     @Test
-    fun `handle EnrichTrackData delegates to PlaybackEnrichmentPort successfully`() {
-        every { playbackEnrichment.enrichTrackData(userId) } returns Unit.right()
+    fun `handle EnrichTrackDetails delegates to PlaybackEnrichmentPort successfully`() {
+        every { playbackEnrichment.enrichTrackDetails(trackId, userId) } returns Unit.right()
 
         val result = adapter.handle(enrichTrackEvent)
 
         assertThat(result).isInstanceOf(OutboxTaskResult.Success::class.java)
-        verify { playbackEnrichment.enrichTrackData(userId) }
+        verify { playbackEnrichment.enrichTrackDetails(trackId, userId) }
     }
 
     @Test
-    fun `handle EnrichTrackData returns RateLimited on rate limit error`() {
+    fun `handle EnrichTrackDetails returns RateLimited on rate limit error`() {
         val retryAfter = Duration.ofSeconds(30)
-        every { playbackEnrichment.enrichTrackData(userId) } returns SpotifyRateLimitError(retryAfter).left()
+        every { playbackEnrichment.enrichTrackDetails(trackId, userId) } returns SpotifyRateLimitError(retryAfter).left()
 
         val result = adapter.handle(enrichTrackEvent)
 
@@ -347,8 +349,8 @@ class OutboxHandlerAdapterTests {
     }
 
     @Test
-    fun `handle EnrichTrackData returns Failed on domain error`() {
-        every { playbackEnrichment.enrichTrackData(userId) } returns EnrichmentError.TRACK_DETAILS_FETCH_FAILED.left()
+    fun `handle EnrichTrackDetails returns Failed on domain error`() {
+        every { playbackEnrichment.enrichTrackDetails(trackId, userId) } returns EnrichmentError.TRACK_DETAILS_FETCH_FAILED.left()
 
         val result = adapter.handle(enrichTrackEvent)
 
@@ -356,8 +358,8 @@ class OutboxHandlerAdapterTests {
     }
 
     @Test
-    fun `handle EnrichTrackData returns Failed on unexpected exception`() {
-        every { playbackEnrichment.enrichTrackData(userId) } throws RuntimeException("api error")
+    fun `handle EnrichTrackDetails returns Failed on unexpected exception`() {
+        every { playbackEnrichment.enrichTrackDetails(trackId, userId) } throws RuntimeException("api error")
 
         val result = adapter.handle(enrichTrackEvent)
 

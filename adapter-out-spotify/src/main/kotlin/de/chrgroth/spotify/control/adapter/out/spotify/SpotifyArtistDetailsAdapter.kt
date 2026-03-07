@@ -30,44 +30,34 @@ class SpotifyArtistDetailsAdapter(
     private val httpClient = HttpClient.newHttpClient()
     private val objectMapper = ObjectMapper()
 
-    override fun getArtists(
+    override fun getArtist(
         userId: UserId,
         accessToken: AccessToken,
-        artistIds: List<String>,
-    ): Either<DomainError, List<SpotifyArtistDetails>> {
-        if (artistIds.isEmpty()) return emptyList<SpotifyArtistDetails>().right()
+        artistId: String,
+    ): Either<DomainError, SpotifyArtistDetails?> {
         return try {
-            val results = mutableListOf<SpotifyArtistDetails>()
-            artistIds.chunked(BATCH_SIZE).forEach { batch ->
-                val ids = batch.joinToString(",")
-                val request = HttpRequest.newBuilder()
-                    .uri(URI.create("$apiBaseUrl/v1/artists?ids=$ids"))
-                    .header("Authorization", "Bearer ${accessToken.value}")
-                    .GET()
-                    .build()
-                val response = httpMetrics.timed(request.uri()) {
-                    httpClient.send(request, HttpResponse.BodyHandlers.ofString())
-                }
-                val errorResult = response.checkRateLimitOrError(logger, EnrichmentError.ARTIST_DETAILS_FETCH_FAILED)
-                if (errorResult != null) return errorResult
-                val json: JsonNode = objectMapper.readTree(response.body())
-                json.get("artists")?.mapNotNullTo(results) { artist ->
-                    if (artist.isNull) return@mapNotNullTo null
-                    SpotifyArtistDetails(
-                        artistId = artist.get("id").asText(),
-                        name = artist.get("name").asText(),
-                        genres = artist.get("genres")?.map { it.asText() } ?: emptyList(),
-                    )
-                }
+            val request = HttpRequest.newBuilder()
+                .uri(URI.create("$apiBaseUrl/v1/artists/$artistId"))
+                .header("Authorization", "Bearer ${accessToken.value}")
+                .GET()
+                .build()
+            val response = httpMetrics.timed(request.uri()) {
+                httpClient.send(request, HttpResponse.BodyHandlers.ofString())
             }
-            results.right()
+            val errorResult = response.checkRateLimitOrError(logger, EnrichmentError.ARTIST_DETAILS_FETCH_FAILED)
+            if (errorResult != null) return errorResult
+            val json: JsonNode = objectMapper.readTree(response.body())
+            if (json.isNull || !json.has("id")) return null.right()
+            SpotifyArtistDetails(
+                artistId = json.get("id").asText(),
+                name = json.get("name").asText(),
+                genres = json.get("genres")?.map { it.asText() } ?: emptyList(),
+            ).right()
         } catch (e: Exception) {
-            logger.error(e) { "Unexpected error fetching artist details for user ${userId.value}" }
+            logger.error(e) { "Unexpected error fetching artist details for artist $artistId (user ${userId.value})" }
             EnrichmentError.ARTIST_DETAILS_FETCH_FAILED.left()
         }
     }
 
-    companion object : KLogging() {
-        private const val BATCH_SIZE = 50
-    }
+    companion object : KLogging()
 }

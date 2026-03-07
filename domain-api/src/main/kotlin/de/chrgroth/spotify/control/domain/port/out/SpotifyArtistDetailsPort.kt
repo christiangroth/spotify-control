@@ -7,5 +7,5 @@ import de.chrgroth.spotify.control.domain.model.SpotifyArtistDetails
 import de.chrgroth.spotify.control.domain.model.UserId
 
 interface SpotifyArtistDetailsPort {
-    fun getArtists(userId: UserId, accessToken: AccessToken, artistIds: List<String>): Either<DomainError, List<SpotifyArtistDetails>>
+    fun getArtist(userId: UserId, accessToken: AccessToken, artistId: String): Either<DomainError, SpotifyArtistDetails?>
 }

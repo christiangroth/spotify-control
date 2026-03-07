@@ -11,6 +11,6 @@ interface OutboxHandlerPort {
     fun handle(event: DomainOutboxEvent.SyncPlaylistData): OutboxTaskResult
     fun handle(event: DomainOutboxEvent.RebuildPlaybackData): OutboxTaskResult
     fun handle(event: DomainOutboxEvent.AppendPlaybackData): OutboxTaskResult
-    fun handle(event: DomainOutboxEvent.EnrichArtistData): OutboxTaskResult
-    fun handle(event: DomainOutboxEvent.EnrichTrackData): OutboxTaskResult
+    fun handle(event: DomainOutboxEvent.EnrichArtistDetails): OutboxTaskResult
+    fun handle(event: DomainOutboxEvent.EnrichTrackDetails): OutboxTaskResult
 }

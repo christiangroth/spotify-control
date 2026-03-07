@@ -48,11 +48,6 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
         }
     }
 
-    override fun findNeedingGenreEnrichment(): List<AppArtist> =
-        mongoQueryMetrics.timed("app_artist.findNeedingGenreEnrichment") {
-            appArtistDocumentRepository.list("genres = []").map { it.toDomain() }
-        }
-
     override fun updateGenres(artistId: String, genres: List<String>) {
         mongoQueryMetrics.timed("app_artist.updateGenres") {
             appArtistDocumentRepository.mongoCollection().updateOne(

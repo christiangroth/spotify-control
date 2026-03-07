@@ -93,25 +93,52 @@ sealed interface DomainOutboxEvent : OutboxEvent {
         }
     }
 
-    data class EnrichArtistData(val userId: UserId) : DomainOutboxEvent {
+    /**
+     * Fetches genres for a single artist from the Spotify API and updates app_artist.
+     * Deduplication is by artistId only (artist data is shared across users).
+     * payload = "$artistId:${userId.value}"
+     */
+    data class EnrichArtistDetails(val artistId: String, val userId: UserId) : DomainOutboxEvent {
         override val key = KEY
-        override fun deduplicationKey() = "$KEY:${userId.value}"
+        override fun deduplicationKey() = "$KEY:$artistId"
         override val partition = DomainOutboxPartition.ToSpotify
-        override fun toPayload() = userId.value
+        override fun toPayload() = "$artistId:${userId.value}"
 
         companion object {
-            const val KEY = "EnrichArtistData"
+            const val KEY = "EnrichArtistDetails"
+            fun fromPayload(payload: String): EnrichArtistDetails {
+                val colonIndex = payload.indexOf(':')
+                require(colonIndex > 0 && colonIndex < payload.length - 1) { "Invalid EnrichArtistDetails payload: $payload" }
+                return EnrichArtistDetails(
+                    artistId = payload.substring(0, colonIndex),
+                    userId = UserId(payload.substring(colonIndex + 1)),
+                )
+            }
         }
     }
 
-    data class EnrichTrackData(val userId: UserId) : DomainOutboxEvent {
+    /**
+     * Fetches track/album details for a single track from the Spotify API,
+     * updates app_track.albumId, and upserts the app_album entry.
+     * Deduplication is by trackId only (track data is shared across users).
+     * payload = "$trackId:${userId.value}"
+     */
+    data class EnrichTrackDetails(val trackId: String, val userId: UserId) : DomainOutboxEvent {
         override val key = KEY
-        override fun deduplicationKey() = "$KEY:${userId.value}"
+        override fun deduplicationKey() = "$KEY:$trackId"
         override val partition = DomainOutboxPartition.ToSpotify
-        override fun toPayload() = userId.value
+        override fun toPayload() = "$trackId:${userId.value}"
 
         companion object {
-            const val KEY = "EnrichTrackData"
+            const val KEY = "EnrichTrackDetails"
+            fun fromPayload(payload: String): EnrichTrackDetails {
+                val colonIndex = payload.indexOf(':')
+                require(colonIndex > 0 && colonIndex < payload.length - 1) { "Invalid EnrichTrackDetails payload: $payload" }
+                return EnrichTrackDetails(
+                    trackId = payload.substring(0, colonIndex),
+                    userId = UserId(payload.substring(colonIndex + 1)),
+                )
+            }
         }
     }
 
@@ -124,8 +151,8 @@ sealed interface DomainOutboxEvent : OutboxEvent {
             SyncPlaylistData.KEY -> SyncPlaylistData.fromPayload(payload)
             RebuildPlaybackData.KEY -> RebuildPlaybackData(UserId(payload))
             AppendPlaybackData.KEY -> AppendPlaybackData(UserId(payload))
-            EnrichArtistData.KEY -> EnrichArtistData(UserId(payload))
-            EnrichTrackData.KEY -> EnrichTrackData(UserId(payload))
+            EnrichArtistDetails.KEY -> EnrichArtistDetails.fromPayload(payload)
+            EnrichTrackDetails.KEY -> EnrichTrackDetails.fromPayload(payload)
             else -> throw IllegalArgumentException("Unknown outbox event type: $key")
         }
     }

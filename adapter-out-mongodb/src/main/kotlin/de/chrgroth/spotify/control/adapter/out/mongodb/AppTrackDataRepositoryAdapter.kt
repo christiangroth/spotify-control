@@ -50,11 +50,6 @@ class AppTrackRepositoryAdapter : AppTrackRepositoryPort {
         }
     }
 
-    override fun findNeedingAlbumEnrichment(): List<AppTrack> =
-        mongoQueryMetrics.timed("app_track.findNeedingAlbumEnrichment") {
-            appTrackDocumentRepository.list("albumId is null").map { it.toDomain() }
-        }
-
     override fun updateAlbumId(trackId: String, albumId: String) {
         mongoQueryMetrics.timed("app_track.updateAlbumId") {
             appTrackDocumentRepository.mongoCollection().updateOne(

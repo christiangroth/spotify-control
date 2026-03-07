@@ -30,49 +30,40 @@ class SpotifyTrackDetailsAdapter(
     private val httpClient = HttpClient.newHttpClient()
     private val objectMapper = ObjectMapper()
 
-    override fun getTracks(
+    override fun getTrack(
         userId: UserId,
         accessToken: AccessToken,
-        trackIds: List<String>,
-    ): Either<DomainError, List<SpotifyTrackDetails>> {
-        if (trackIds.isEmpty()) return emptyList<SpotifyTrackDetails>().right()
+        trackId: String,
+    ): Either<DomainError, SpotifyTrackDetails?> {
         return try {
-            val results = mutableListOf<SpotifyTrackDetails>()
-            trackIds.chunked(BATCH_SIZE).forEach { batch ->
-                val ids = batch.joinToString(",")
-                val request = HttpRequest.newBuilder()
-                    .uri(URI.create("$apiBaseUrl/v1/tracks?ids=$ids"))
-                    .header("Authorization", "Bearer ${accessToken.value}")
-                    .GET()
-                    .build()
-                val response = httpMetrics.timed(request.uri()) {
-                    httpClient.send(request, HttpResponse.BodyHandlers.ofString())
-                }
-                val errorResult = response.checkRateLimitOrError(logger, EnrichmentError.TRACK_DETAILS_FETCH_FAILED)
-                if (errorResult != null) return errorResult
-                val json: JsonNode = objectMapper.readTree(response.body())
-                json.get("tracks")?.mapNotNullTo(results) { track ->
-                    if (track.isNull) return@mapNotNullTo null
-                    val album = track.get("album")
-                    SpotifyTrackDetails(
-                        trackId = track.get("id").asText(),
-                        albumId = album?.get("id")?.asText() ?: return@mapNotNullTo null,
-                        albumTitle = album.get("name")?.asText(),
-                        albumImageUrl = album.get("images")
-                            ?.firstOrNull()
-                            ?.get("url")
-                            ?.asText(),
-                    )
-                }
+            val request = HttpRequest.newBuilder()
+                .uri(URI.create("$apiBaseUrl/v1/tracks/$trackId"))
+                .header("Authorization", "Bearer ${accessToken.value}")
+                .GET()
+                .build()
+            val response = httpMetrics.timed(request.uri()) {
+                httpClient.send(request, HttpResponse.BodyHandlers.ofString())
             }
-            results.right()
+            val errorResult = response.checkRateLimitOrError(logger, EnrichmentError.TRACK_DETAILS_FETCH_FAILED)
+            if (errorResult != null) return errorResult
+            parseTrackDetails(objectMapper.readTree(response.body())).right()
         } catch (e: Exception) {
-            logger.error(e) { "Unexpected error fetching track details for user ${userId.value}" }
+            logger.error(e) { "Unexpected error fetching track details for track $trackId (user ${userId.value})" }
             EnrichmentError.TRACK_DETAILS_FETCH_FAILED.left()
         }
     }
 
-    companion object : KLogging() {
-        private const val BATCH_SIZE = 50
+    private fun parseTrackDetails(json: JsonNode): SpotifyTrackDetails? {
+        if (json.isNull || !json.has("id")) return null
+        val album = json.get("album")
+        val albumId = album?.get("id")?.asText() ?: return null
+        return SpotifyTrackDetails(
+            trackId = json.get("id").asText(),
+            albumId = albumId,
+            albumTitle = album.get("name")?.asText(),
+            albumImageUrl = album.get("images")?.firstOrNull()?.get("url")?.asText(),
+        )
     }
+
+    companion object : KLogging()
 }

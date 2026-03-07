@@ -121,35 +121,35 @@ class OutboxHandlerAdapter(
         OutboxTaskResult.Failed("Unexpected error in append: ${e.message}", e)
     }
 
-    override fun handle(event: DomainOutboxEvent.EnrichArtistData): OutboxTaskResult = try {
-        when (val result = playbackEnrichment.enrichArtistData(event.userId)) {
+    override fun handle(event: DomainOutboxEvent.EnrichArtistDetails): OutboxTaskResult = try {
+        when (val result = playbackEnrichment.enrichArtistDetails(event.artistId, event.userId)) {
             is Either.Right -> OutboxTaskResult.Success
             is Either.Left -> when (val error = result.value) {
                 is SpotifyRateLimitError -> OutboxTaskResult.RateLimited(error.retryAfter)
                 else -> {
-                    logger.error { "Failed to enrich artist data for user ${event.userId.value}: ${error.code}" }
-                    OutboxTaskResult.Failed("Failed to enrich artist data: ${error.code}")
+                    logger.error { "Failed to enrich artist ${event.artistId} for user ${event.userId.value}: ${error.code}" }
+                    OutboxTaskResult.Failed("Failed to enrich artist: ${error.code}")
                 }
             }
         }
     } catch (e: Exception) {
-        logger.error(e) { "Unexpected error in handle(EnrichArtistData) for user ${event.userId.value}" }
+        logger.error(e) { "Unexpected error in handle(EnrichArtistDetails) for artist ${event.artistId} (user ${event.userId.value})" }
         OutboxTaskResult.Failed("Unexpected error in enrich: ${e.message}", e)
     }
 
-    override fun handle(event: DomainOutboxEvent.EnrichTrackData): OutboxTaskResult = try {
-        when (val result = playbackEnrichment.enrichTrackData(event.userId)) {
+    override fun handle(event: DomainOutboxEvent.EnrichTrackDetails): OutboxTaskResult = try {
+        when (val result = playbackEnrichment.enrichTrackDetails(event.trackId, event.userId)) {
             is Either.Right -> OutboxTaskResult.Success
             is Either.Left -> when (val error = result.value) {
                 is SpotifyRateLimitError -> OutboxTaskResult.RateLimited(error.retryAfter)
                 else -> {
-                    logger.error { "Failed to enrich track data for user ${event.userId.value}: ${error.code}" }
-                    OutboxTaskResult.Failed("Failed to enrich track data: ${error.code}")
+                    logger.error { "Failed to enrich track ${event.trackId} for user ${event.userId.value}: ${error.code}" }
+                    OutboxTaskResult.Failed("Failed to enrich track: ${error.code}")
                 }
             }
         }
     } catch (e: Exception) {
-        logger.error(e) { "Unexpected error in handle(EnrichTrackData) for user ${event.userId.value}" }
+        logger.error(e) { "Unexpected error in handle(EnrichTrackDetails) for track ${event.trackId} (user ${event.userId.value})" }
         OutboxTaskResult.Failed("Unexpected error in enrich: ${e.message}", e)
     }
 
