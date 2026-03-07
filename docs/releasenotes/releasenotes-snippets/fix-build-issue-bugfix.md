@@ -1,0 +1,1 @@
+* fix-build-issue: Fix Detekt MaxLineLength violation in OAuthResource by splitting the scopes string across multiple lines.
