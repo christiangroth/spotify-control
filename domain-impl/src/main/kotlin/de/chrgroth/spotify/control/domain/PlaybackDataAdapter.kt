@@ -116,10 +116,12 @@ class PlaybackDataAdapter(
     private fun buildTracks(
         recentlyPlayed: List<RecentlyPlayedItem>,
         partialPlayed: List<RecentlyPartialPlayedItem>,
-    ) = (recentlyPlayed.map { item ->
-        AppTrack(trackId = item.trackId, trackTitle = item.trackName, artistId = item.artistIds.firstOrNull(), additionalArtistIds = item.artistIds.drop(1))
-    } + partialPlayed.map { item ->
-        AppTrack(trackId = item.trackId, trackTitle = item.trackName, artistId = item.artistIds.firstOrNull(), additionalArtistIds = item.artistIds.drop(1))
+    ) = (recentlyPlayed.mapNotNull { item ->
+        val artistId = item.artistIds.firstOrNull() ?: return@mapNotNull null
+        AppTrack(trackId = item.trackId, trackTitle = item.trackName, artistId = artistId, additionalArtistIds = item.artistIds.drop(1))
+    } + partialPlayed.mapNotNull { item ->
+        val artistId = item.artistIds.firstOrNull() ?: return@mapNotNull null
+        AppTrack(trackId = item.trackId, trackTitle = item.trackName, artistId = artistId, additionalArtistIds = item.artistIds.drop(1))
     }).distinctBy { it.trackId }
 
     companion object : KLogging()

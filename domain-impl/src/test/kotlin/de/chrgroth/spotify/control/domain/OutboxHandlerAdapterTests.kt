@@ -365,4 +365,45 @@ class OutboxHandlerAdapterTests {
 
         assertThat(result).isInstanceOf(OutboxTaskResult.Failed::class.java)
     }
+
+    private val albumId = "album-1"
+    private val enrichAlbumEvent = DomainOutboxEvent.EnrichAlbumDetails(albumId, userId)
+
+    @Test
+    fun `handle EnrichAlbumDetails delegates to PlaybackEnrichmentPort successfully`() {
+        every { playbackEnrichment.enrichAlbumDetails(albumId, userId) } returns Unit.right()
+
+        val result = adapter.handle(enrichAlbumEvent)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.Success::class.java)
+        verify { playbackEnrichment.enrichAlbumDetails(albumId, userId) }
+    }
+
+    @Test
+    fun `handle EnrichAlbumDetails returns RateLimited on rate limit error`() {
+        val retryAfter = Duration.ofSeconds(30)
+        every { playbackEnrichment.enrichAlbumDetails(albumId, userId) } returns SpotifyRateLimitError(retryAfter).left()
+
+        val result = adapter.handle(enrichAlbumEvent)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.RateLimited::class.java)
+    }
+
+    @Test
+    fun `handle EnrichAlbumDetails returns Failed on domain error`() {
+        every { playbackEnrichment.enrichAlbumDetails(albumId, userId) } returns EnrichmentError.ALBUM_DETAILS_FETCH_FAILED.left()
+
+        val result = adapter.handle(enrichAlbumEvent)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.Failed::class.java)
+    }
+
+    @Test
+    fun `handle EnrichAlbumDetails returns Failed on unexpected exception`() {
+        every { playbackEnrichment.enrichAlbumDetails(albumId, userId) } throws RuntimeException("api error")
+
+        val result = adapter.handle(enrichAlbumEvent)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.Failed::class.java)
+    }
 }

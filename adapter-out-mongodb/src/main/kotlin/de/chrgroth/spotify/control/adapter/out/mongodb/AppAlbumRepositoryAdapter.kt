@@ -1,5 +1,8 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
+import com.mongodb.client.model.Filters
+import com.mongodb.client.model.UpdateOptions
+import com.mongodb.client.model.Updates
 import de.chrgroth.spotify.control.domain.model.AppAlbum
 import de.chrgroth.spotify.control.domain.port.out.AppAlbumRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
@@ -17,11 +20,20 @@ class AppAlbumRepositoryAdapter : AppAlbumRepositoryPort {
 
     override fun upsertAll(items: List<AppAlbum>) {
         if (items.isEmpty()) return
-        logger.info { "Upserting ${items.size} app_album documents" }
-        items.forEach { item ->
-            val document = item.toDocument()
-            mongoQueryMetrics.timed("app_album.upsertAll") {
-                appAlbumDocumentRepository.persistOrUpdate(document)
+        val collection = appAlbumDocumentRepository.mongoCollection()
+        val upsertOptions = UpdateOptions().upsert(true)
+        mongoQueryMetrics.timed("app_album.upsertAll") {
+            items.forEach { item ->
+                collection.updateOne(
+                    Filters.eq("_id", item.albumId),
+                    Updates.combine(
+                        Updates.setOnInsert("albumTitle", item.albumTitle),
+                        Updates.setOnInsert("imageLink", item.imageLink),
+                        Updates.setOnInsert("genres", item.genres),
+                        Updates.setOnInsert("artistId", item.artistId),
+                    ),
+                    upsertOptions,
+                )
             }
         }
     }
@@ -35,19 +47,27 @@ class AppAlbumRepositoryAdapter : AppAlbumRepositoryPort {
         }
     }
 
+    override fun updateEnrichmentData(albumId: String, albumTitle: String?, imageLink: String?, genres: List<String>, artistId: String?) {
+        mongoQueryMetrics.timed("app_album.updateEnrichmentData") {
+            appAlbumDocumentRepository.mongoCollection().updateOne(
+                Filters.eq("_id", albumId),
+                Updates.combine(
+                    Updates.set("albumTitle", albumTitle),
+                    Updates.set("imageLink", imageLink),
+                    Updates.set("genres", genres),
+                    Updates.set("artistId", artistId),
+                ),
+            )
+        }
+    }
+
     private fun AppAlbumDocument.toDomain() = AppAlbum(
         albumId = id,
         albumTitle = albumTitle,
         imageLink = imageLink,
         genres = genres,
+        artistId = artistId,
     )
-
-    private fun AppAlbum.toDocument() = AppAlbumDocument().apply {
-        id = this@toDocument.albumId
-        albumTitle = this@toDocument.albumTitle
-        imageLink = this@toDocument.imageLink
-        genres = this@toDocument.genres
-    }
 
     companion object : KLogging()
 }

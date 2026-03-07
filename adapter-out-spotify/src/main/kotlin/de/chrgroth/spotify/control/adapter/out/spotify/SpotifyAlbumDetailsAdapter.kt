@@ -8,9 +8,9 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.EnrichmentError
 import de.chrgroth.spotify.control.domain.model.AccessToken
-import de.chrgroth.spotify.control.domain.model.SpotifyTrackDetails
+import de.chrgroth.spotify.control.domain.model.SpotifyAlbumDetails
 import de.chrgroth.spotify.control.domain.model.UserId
-import de.chrgroth.spotify.control.domain.port.out.SpotifyTrackDetailsPort
+import de.chrgroth.spotify.control.domain.port.out.SpotifyAlbumDetailsPort
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
 import org.eclipse.microprofile.config.inject.ConfigProperty
@@ -21,44 +21,46 @@ import java.net.http.HttpResponse
 
 @ApplicationScoped
 @Suppress("Unused", "TooGenericExceptionCaught")
-class SpotifyTrackDetailsAdapter(
+class SpotifyAlbumDetailsAdapter(
     @param:ConfigProperty(name = "spotify.api.base-url", defaultValue = "https://api.spotify.com")
     private val apiBaseUrl: String,
     private val httpMetrics: SpotifyHttpMetrics,
-) : SpotifyTrackDetailsPort {
+) : SpotifyAlbumDetailsPort {
 
     private val httpClient = HttpClient.newHttpClient()
     private val objectMapper = ObjectMapper()
 
-    override fun getTrack(
+    override fun getAlbum(
         userId: UserId,
         accessToken: AccessToken,
-        trackId: String,
-    ): Either<DomainError, SpotifyTrackDetails?> {
+        albumId: String,
+    ): Either<DomainError, SpotifyAlbumDetails?> {
         return try {
             val request = HttpRequest.newBuilder()
-                .uri(URI.create("$apiBaseUrl/v1/tracks/$trackId"))
+                .uri(URI.create("$apiBaseUrl/v1/albums/$albumId"))
                 .header("Authorization", "Bearer ${accessToken.value}")
                 .GET()
                 .build()
             val response = httpMetrics.timed(request.uri()) {
                 httpClient.send(request, HttpResponse.BodyHandlers.ofString())
             }
-            val errorResult = response.checkRateLimitOrError(logger, EnrichmentError.TRACK_DETAILS_FETCH_FAILED)
+            val errorResult = response.checkRateLimitOrError(logger, EnrichmentError.ALBUM_DETAILS_FETCH_FAILED)
             if (errorResult != null) return errorResult
-            parseTrackDetails(objectMapper.readTree(response.body())).right()
+            parseAlbumDetails(objectMapper.readTree(response.body())).right()
         } catch (e: Exception) {
-            logger.error(e) { "Unexpected error fetching track details for track $trackId (user ${userId.value})" }
-            EnrichmentError.TRACK_DETAILS_FETCH_FAILED.left()
+            logger.error(e) { "Unexpected error fetching album details for album $albumId (user ${userId.value})" }
+            EnrichmentError.ALBUM_DETAILS_FETCH_FAILED.left()
         }
     }
 
-    private fun parseTrackDetails(json: JsonNode): SpotifyTrackDetails? {
+    private fun parseAlbumDetails(json: JsonNode): SpotifyAlbumDetails? {
         if (json.isNull || !json.has("id")) return null
-        val albumId = json.get("album")?.get("id")?.asText() ?: return null
-        return SpotifyTrackDetails(
-            trackId = json.get("id").asText(),
-            albumId = albumId,
+        return SpotifyAlbumDetails(
+            albumId = json.get("id").asText(),
+            albumTitle = json.get("name")?.asText(),
+            imageLink = json.get("images")?.firstOrNull()?.get("url")?.asText(),
+            genres = json.get("genres")?.map { it.asText() } ?: emptyList(),
+            artistId = json.get("artists")?.firstOrNull()?.get("id")?.asText(),
         )
     }
 

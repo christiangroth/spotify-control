@@ -10,4 +10,5 @@ class AppArtistDocument {
     lateinit var id: String  // Set to artistId value; maps to MongoDB _id
     lateinit var artistName: String
     var genres: List<String> = emptyList()
+    var imageLink: String? = null
 }

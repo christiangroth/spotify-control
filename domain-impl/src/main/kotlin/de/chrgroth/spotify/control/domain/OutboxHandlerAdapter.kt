@@ -153,5 +153,21 @@ class OutboxHandlerAdapter(
         OutboxTaskResult.Failed("Unexpected error in enrich: ${e.message}", e)
     }
 
+    override fun handle(event: DomainOutboxEvent.EnrichAlbumDetails): OutboxTaskResult = try {
+        when (val result = playbackEnrichment.enrichAlbumDetails(event.albumId, event.userId)) {
+            is Either.Right -> OutboxTaskResult.Success
+            is Either.Left -> when (val error = result.value) {
+                is SpotifyRateLimitError -> OutboxTaskResult.RateLimited(error.retryAfter)
+                else -> {
+                    logger.error { "Failed to enrich album ${event.albumId} for user ${event.userId.value}: ${error.code}" }
+                    OutboxTaskResult.Failed("Failed to enrich album: ${error.code}")
+                }
+            }
+        }
+    } catch (e: Exception) {
+        logger.error(e) { "Unexpected error in handle(EnrichAlbumDetails) for album ${event.albumId} (user ${event.userId.value})" }
+        OutboxTaskResult.Failed("Unexpected error in enrich: ${e.message}", e)
+    }
+
     companion object : KLogging()
 }

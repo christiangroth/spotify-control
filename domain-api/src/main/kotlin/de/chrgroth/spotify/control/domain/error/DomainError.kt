@@ -36,6 +36,7 @@ enum class PlaybackError(override val code: String) : DomainError {
 enum class EnrichmentError(override val code: String) : DomainError {
     ARTIST_DETAILS_FETCH_FAILED("ENRICH-001"),
     TRACK_DETAILS_FETCH_FAILED("ENRICH-002"),
+    ALBUM_DETAILS_FETCH_FAILED("ENRICH-003"),
     ;
 }
 

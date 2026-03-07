@@ -20,7 +20,6 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
 
     override fun upsertAll(items: List<AppArtist>) {
         if (items.isEmpty()) return
-        logger.info { "Upserting ${items.size} app_artist documents" }
         val collection = appArtistDocumentRepository.mongoCollection()
         val upsertOptions = UpdateOptions().upsert(true)
         mongoQueryMetrics.timed("app_artist.upsertAll") {
@@ -29,9 +28,8 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
                     Filters.eq("_id", item.artistId),
                     Updates.combine(
                         Updates.set("artistName", item.artistName),
-                        // $setOnInsert ensures genres are only set on new documents,
-                        // never overwriting genres already populated by enrichment
                         Updates.setOnInsert("genres", item.genres),
+                        Updates.setOnInsert("imageLink", item.imageLink),
                     ),
                     upsertOptions,
                 )
@@ -48,11 +46,14 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
         }
     }
 
-    override fun updateGenres(artistId: String, genres: List<String>) {
-        mongoQueryMetrics.timed("app_artist.updateGenres") {
+    override fun updateEnrichmentData(artistId: String, genres: List<String>, imageLink: String?) {
+        mongoQueryMetrics.timed("app_artist.updateEnrichmentData") {
             appArtistDocumentRepository.mongoCollection().updateOne(
                 Filters.eq("_id", artistId),
-                Updates.set("genres", genres),
+                Updates.combine(
+                    Updates.set("genres", genres),
+                    Updates.set("imageLink", imageLink),
+                ),
             )
         }
     }
@@ -61,6 +62,7 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
         artistId = id,
         artistName = artistName,
         genres = genres,
+        imageLink = imageLink,
     )
 
     companion object : KLogging()

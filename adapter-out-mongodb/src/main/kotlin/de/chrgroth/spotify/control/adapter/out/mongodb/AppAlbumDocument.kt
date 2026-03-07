@@ -11,4 +11,5 @@ class AppAlbumDocument {
     var albumTitle: String? = null
     var imageLink: String? = null
     var genres: List<String> = emptyList()
+    var artistId: String? = null
 }

@@ -198,14 +198,15 @@ For each convertible session, a `RecentlyPartialPlayedItem` is created with the 
 Raw playback data from `spotify_recently_played` and `recently_partial_played` is processed into the normalised `app_*` collections by `PlaybackDataAdapter`. There are two modes:
 
 **Append (triggered automatically):** After new raw data arrives, `AppendPlaybackData` is enqueued on the `domain` partition. The adapter fetches all source items newer than the most recent `app_playback` entry for the user, deduplicates against existing `app_playback` timestamps, then:
-1. Upserts artist metadata into `app_artist` (artistId, artistName) — genres are preserved if already enriched.
+1. Upserts artist metadata into `app_artist` (artistId, artistName) — enriched genres and imageLink are preserved on re-encounter.
 2. Upserts track metadata into `app_track` (trackId, trackTitle, artistId, additionalArtistIds) — albumId is preserved if already enriched.
-3. Appends new entries to `app_playback` (userId, playedAt, trackId, secondsPlayed).
+3. Appends new entries to `app_playback` (userId, playedAt, trackId, secondsPlayed). The document `_id` is a composite of `${userId}:${playedAt.toEpochMilli()}:${trackId}` for natural deduplication.
 4. Enqueues one `EnrichArtistDetails(artistId, userId)` per artist and one `EnrichTrackDetails(trackId, userId)` per track on the `to-spotify` partition. Deduplication by entity ID ensures no duplicate pending events.
 
 **Enrich (auto-enqueued after each append, one event per entity on `to-spotify`):**
-- `EnrichArtistDetails(artistId, userId)`: skipped if genres are already populated; otherwise calls `GET /v1/artists/{id}` and updates `app_artist.genres`.
-- `EnrichTrackDetails(trackId, userId)`: skipped if albumId is already populated; otherwise calls `GET /v1/tracks/{id}`, updates `app_track.albumId`, and upserts `app_album` (albumTitle, imageLink).
+- `EnrichArtistDetails(artistId, userId)`: skipped if genres are already populated; otherwise calls `GET /v1/artists/{id}` and updates `app_artist` with genres and imageLink.
+- `EnrichTrackDetails(trackId, userId)`: skipped if albumId is already populated; otherwise calls `GET /v1/tracks/{id}`, updates `app_track.albumId`, creates a stub `app_album` entry, and enqueues `EnrichAlbumDetails(albumId, userId)`.
+- `EnrichAlbumDetails(albumId, userId)`: skipped if albumTitle is already populated; otherwise calls `GET /v1/albums/{id}` and updates `app_album` with albumTitle, imageLink, genres, and artistId (main artist).
 
 **Rebuild (user-triggered from Settings):** Deletes all `app_playback` entries for the user and re-runs the Append logic from scratch over all source data.
 
@@ -330,7 +331,7 @@ All Spotify API operations and domain-level async tasks are routed through a per
 
 | Partition          | Event Types                                                                                      |
 |--------------------|--------------------------------------------------------------------------------------------------|
-| `to-spotify`       | `UpdateUserProfile`, `SyncPlaylistInfo`, `SyncPlaylistData`, `EnrichArtistDetails`, `EnrichTrackDetails` |
+| `to-spotify`       | `UpdateUserProfile`, `SyncPlaylistInfo`, `SyncPlaylistData`, `EnrichArtistDetails`, `EnrichTrackDetails`, `EnrichAlbumDetails` |
 | `to-spotify-playback` | `FetchCurrentlyPlaying`, `FetchRecentlyPlayed`                                               |
 | `domain`           | `RebuildPlaybackData`, `AppendPlaybackData`                                                      |
 

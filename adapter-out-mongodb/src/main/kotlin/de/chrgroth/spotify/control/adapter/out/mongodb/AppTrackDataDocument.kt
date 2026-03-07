@@ -10,6 +10,6 @@ class AppTrackDocument {
     lateinit var id: String  // Set to trackId value; maps to MongoDB _id
     lateinit var trackTitle: String
     var albumId: String? = null
-    var artistId: String? = null
+    lateinit var artistId: String
     var additionalArtistIds: List<String> = emptyList()
 }

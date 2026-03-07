@@ -20,7 +20,6 @@ class AppTrackRepositoryAdapter : AppTrackRepositoryPort {
 
     override fun upsertAll(items: List<AppTrack>) {
         if (items.isEmpty()) return
-        logger.info { "Upserting ${items.size} app_track documents" }
         val collection = appTrackDocumentRepository.mongoCollection()
         val upsertOptions = UpdateOptions().upsert(true)
         mongoQueryMetrics.timed("app_track.upsertAll") {
@@ -31,8 +30,6 @@ class AppTrackRepositoryAdapter : AppTrackRepositoryPort {
                         Updates.set("trackTitle", item.trackTitle),
                         Updates.set("artistId", item.artistId),
                         Updates.set("additionalArtistIds", item.additionalArtistIds),
-                        // $setOnInsert ensures albumId is only set on new documents,
-                        // never overwriting albumId already populated by enrichment
                         Updates.setOnInsert("albumId", item.albumId),
                     ),
                     upsertOptions,

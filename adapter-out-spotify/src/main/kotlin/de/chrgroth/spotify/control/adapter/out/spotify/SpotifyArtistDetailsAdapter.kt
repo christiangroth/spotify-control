@@ -52,6 +52,7 @@ class SpotifyArtistDetailsAdapter(
                 artistId = json.get("id").asText(),
                 name = json.get("name").asText(),
                 genres = json.get("genres")?.map { it.asText() } ?: emptyList(),
+                imageLink = json.get("images")?.firstOrNull()?.get("url")?.asText(),
             ).right()
         } catch (e: Exception) {
             logger.error(e) { "Unexpected error fetching artist details for artist $artistId (user ${userId.value})" }

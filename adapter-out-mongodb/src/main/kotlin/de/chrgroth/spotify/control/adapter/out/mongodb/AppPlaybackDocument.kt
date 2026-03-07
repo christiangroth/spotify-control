@@ -2,14 +2,18 @@ package de.chrgroth.spotify.control.adapter.out.mongodb
 
 import io.quarkus.mongodb.panache.common.MongoEntity
 import org.bson.codecs.pojo.annotations.BsonId
-import org.bson.types.ObjectId
 import java.time.Instant
 
 @MongoEntity(collection = "app_playback")
 class AppPlaybackDocument {
 
+    /**
+     * Combined key: "${spotifyUserId}:${playedAt.toEpochMilli()}:${trackId}"
+     * A user can only play one track at any given moment, so the combination of
+     * user + playedAt + trackId is a natural unique identifier for a playback event.
+     */
     @BsonId
-    var id: ObjectId = ObjectId()
+    lateinit var id: String
     lateinit var spotifyUserId: String
     lateinit var playedAt: Instant
     lateinit var trackId: String
