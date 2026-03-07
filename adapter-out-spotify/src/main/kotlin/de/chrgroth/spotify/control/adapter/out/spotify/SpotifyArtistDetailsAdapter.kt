@@ -8,7 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.EnrichmentError
 import de.chrgroth.spotify.control.domain.model.AccessToken
-import de.chrgroth.spotify.control.domain.model.SpotifyArtistDetails
+import de.chrgroth.spotify.control.domain.model.AppArtist
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.out.SpotifyArtistDetailsPort
 import jakarta.enterprise.context.ApplicationScoped
@@ -34,7 +34,7 @@ class SpotifyArtistDetailsAdapter(
         userId: UserId,
         accessToken: AccessToken,
         artistId: String,
-    ): Either<DomainError, SpotifyArtistDetails?> {
+    ): Either<DomainError, AppArtist?> {
         return try {
             val request = HttpRequest.newBuilder()
                 .uri(URI.create("$apiBaseUrl/v1/artists/$artistId"))
@@ -48,9 +48,9 @@ class SpotifyArtistDetailsAdapter(
             if (errorResult != null) return errorResult
             val json: JsonNode = objectMapper.readTree(response.body())
             if (json.isNull || !json.has("id")) return null.right()
-            SpotifyArtistDetails(
+            AppArtist(
                 artistId = json.get("id").asText(),
-                name = json.get("name").asText(),
+                artistName = json.get("name").asText(),
                 genres = json.get("genres")?.map { it.asText() } ?: emptyList(),
                 imageLink = json.get("images")?.firstOrNull()?.get("url")?.asText(),
             ).right()

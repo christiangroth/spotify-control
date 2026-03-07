@@ -8,7 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.EnrichmentError
 import de.chrgroth.spotify.control.domain.model.AccessToken
-import de.chrgroth.spotify.control.domain.model.SpotifyAlbumDetails
+import de.chrgroth.spotify.control.domain.model.AppAlbum
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAlbumDetailsPort
 import jakarta.enterprise.context.ApplicationScoped
@@ -34,7 +34,7 @@ class SpotifyAlbumDetailsAdapter(
         userId: UserId,
         accessToken: AccessToken,
         albumId: String,
-    ): Either<DomainError, SpotifyAlbumDetails?> {
+    ): Either<DomainError, AppAlbum?> {
         return try {
             val request = HttpRequest.newBuilder()
                 .uri(URI.create("$apiBaseUrl/v1/albums/$albumId"))
@@ -53,9 +53,9 @@ class SpotifyAlbumDetailsAdapter(
         }
     }
 
-    private fun parseAlbumDetails(json: JsonNode): SpotifyAlbumDetails? {
+    private fun parseAlbumDetails(json: JsonNode): AppAlbum? {
         if (json.isNull || !json.has("id")) return null
-        return SpotifyAlbumDetails(
+        return AppAlbum(
             albumId = json.get("id").asText(),
             albumTitle = json.get("name")?.asText(),
             imageLink = json.get("images")?.firstOrNull()?.get("url")?.asText(),

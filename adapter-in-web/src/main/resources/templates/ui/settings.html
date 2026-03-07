@@ -75,10 +75,9 @@
         <button id="rebuild-playback-btn" class="btn btn-spotify btn-sm">Recreate Playback Data</button>
     </div>
     <script>
-        document.getElementById('sync-now-btn').addEventListener('click', function() {
-            const btn = this;
+        function postWithButton(btn, url, successMsg, errorPrefix) {
             btn.disabled = true;
-            fetch('/ui/settings/playlists/sync', { method: 'POST' })
+            fetch(url, { method: 'POST' })
             .then(function(response) {
                 return response.json().then(function(data) {
                     return { ok: response.ok, data: data };
@@ -86,9 +85,9 @@
             })
             .then(function(result) {
                 if (result.ok) {
-                    showBanner('Sync started successfully.', 'success');
+                    showBanner(successMsg, 'success');
                 } else {
-                    showBanner('Sync failed: ' + (result.data.error || 'Unknown error'), 'danger');
+                    showBanner(errorPrefix + ': ' + (result.data.error || 'Unknown error'), 'danger');
                 }
             })
             .catch(function(err) {
@@ -97,6 +96,10 @@
             .finally(function() {
                 btn.disabled = false;
             });
+        }
+
+        document.getElementById('sync-now-btn').addEventListener('click', function() {
+            postWithButton(this, '/ui/settings/playlists/sync', 'Sync started successfully.', 'Sync failed');
         });
 
         document.querySelectorAll('.sync-toggle').forEach(function(btn) {
@@ -137,54 +140,17 @@
         document.querySelectorAll('.sync-playlist-btn').forEach(function(btn) {
             btn.addEventListener('click', function() {
                 const playlistId = this.getAttribute('data-playlist-id');
-                const button = this;
-                button.disabled = true;
-                fetch('/ui/settings/playlists/' + encodeURIComponent(playlistId) + '/sync', {
-                    method: 'POST'
-                })
-                .then(function(response) {
-                    return response.json().then(function(data) {
-                        return { ok: response.ok, data: data };
-                    });
-                })
-                .then(function(result) {
-                    if (result.ok) {
-                        showBanner('Playlist sync enqueued successfully.', 'success');
-                    } else {
-                        showBanner('Failed to enqueue playlist sync: ' + (result.data.error || 'Unknown error'), 'danger');
-                    }
-                })
-                .catch(function(err) {
-                    showBanner('Request failed: ' + err.message, 'danger');
-                })
-                .finally(function() {
-                    button.disabled = false;
-                });
+                postWithButton(
+                    this,
+                    '/ui/settings/playlists/' + encodeURIComponent(playlistId) + '/sync',
+                    'Playlist sync enqueued successfully.',
+                    'Failed to enqueue playlist sync'
+                );
             });
         });
 
         document.getElementById('rebuild-playback-btn').addEventListener('click', function() {
-            const btn = this;
-            btn.disabled = true;
-            fetch('/ui/settings/playback/rebuild', { method: 'POST' })
-            .then(function(response) {
-                return response.json().then(function(data) {
-                    return { ok: response.ok, data: data };
-                });
-            })
-            .then(function(result) {
-                if (result.ok) {
-                    showBanner('Playback data rebuild enqueued successfully.', 'success');
-                } else {
-                    showBanner('Rebuild failed: ' + (result.data.error || 'Unknown error'), 'danger');
-                }
-            })
-            .catch(function(err) {
-                showBanner('Request failed: ' + err.message, 'danger');
-            })
-            .finally(function() {
-                btn.disabled = false;
-            });
+            postWithButton(this, '/ui/settings/playback/rebuild', 'Playback data rebuild enqueued successfully.', 'Rebuild failed');
         });
 
         function showBanner(message, type) {

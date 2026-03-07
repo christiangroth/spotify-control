@@ -34,8 +34,8 @@ class PlaybackEnrichmentAdapter(
 
     override fun enrichArtistDetails(artistId: String, userId: UserId): Either<DomainError, Unit> {
         val existing = appArtistRepository.findByArtistIds(setOf(artistId)).firstOrNull()
-        if (existing != null && existing.genres.isNotEmpty()) {
-            logger.debug { "Artist $artistId already has genres, skipping enrichment" }
+        if (existing?.lastEnrichmentDate != null) {
+            logger.debug { "Artist $artistId already enriched, skipping" }
             return Unit.right()
         }
         logger.info { "Fetching genre details for artist $artistId (user ${userId.value})" }
@@ -54,21 +54,21 @@ class PlaybackEnrichmentAdapter(
 
     override fun enrichTrackDetails(trackId: String, userId: UserId): Either<DomainError, Unit> {
         val existing = appTrackRepository.findByTrackIds(setOf(trackId)).firstOrNull()
-        if (existing != null && existing.albumId != null) {
-            logger.debug { "Track $trackId already has albumId, skipping enrichment" }
+        if (existing?.lastEnrichmentDate != null) {
+            logger.debug { "Track $trackId already enriched, skipping" }
             return Unit.right()
         }
         logger.info { "Fetching album id for track $trackId (user ${userId.value})" }
         val accessToken = spotifyAccessToken.getValidAccessToken(userId)
         return spotifyTrackDetails.getTrack(userId, accessToken, trackId)
-            .flatMap { detail ->
-                if (detail != null) {
+            .flatMap { albumId ->
+                if (albumId != null) {
                     // Create stub album entry so it can be found; details filled by EnrichAlbumDetails
-                    appAlbumRepository.upsertAll(listOf(AppAlbum(albumId = detail.albumId)))
-                    appTrackRepository.updateAlbumId(detail.trackId, detail.albumId)
+                    appAlbumRepository.upsertAll(listOf(AppAlbum(albumId = albumId)))
+                    appTrackRepository.updateAlbumId(trackId, albumId)
                     // Enqueue album detail enrichment on to-spotify partition
-                    outboxPort.enqueue(DomainOutboxEvent.EnrichAlbumDetails(detail.albumId, userId))
-                    logger.info { "Updated albumId for track $trackId → album ${detail.albumId}" }
+                    outboxPort.enqueue(DomainOutboxEvent.EnrichAlbumDetails(albumId, userId))
+                    logger.info { "Updated albumId for track $trackId → album $albumId" }
                 } else {
                     logger.warn { "No data returned from Spotify for track $trackId" }
                 }
@@ -78,8 +78,8 @@ class PlaybackEnrichmentAdapter(
 
     override fun enrichAlbumDetails(albumId: String, userId: UserId): Either<DomainError, Unit> {
         val existing = appAlbumRepository.findByAlbumIds(setOf(albumId)).firstOrNull()
-        if (existing != null && existing.albumTitle != null) {
-            logger.debug { "Album $albumId already has albumTitle, skipping enrichment" }
+        if (existing?.lastEnrichmentDate != null) {
+            logger.debug { "Album $albumId already enriched, skipping" }
             return Unit.right()
         }
         logger.info { "Fetching album details for album $albumId (user ${userId.value})" }

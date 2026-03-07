@@ -8,7 +8,6 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.EnrichmentError
 import de.chrgroth.spotify.control.domain.model.AccessToken
-import de.chrgroth.spotify.control.domain.model.SpotifyTrackDetails
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.out.SpotifyTrackDetailsPort
 import jakarta.enterprise.context.ApplicationScoped
@@ -34,7 +33,7 @@ class SpotifyTrackDetailsAdapter(
         userId: UserId,
         accessToken: AccessToken,
         trackId: String,
-    ): Either<DomainError, SpotifyTrackDetails?> {
+    ): Either<DomainError, String?> {
         return try {
             val request = HttpRequest.newBuilder()
                 .uri(URI.create("$apiBaseUrl/v1/tracks/$trackId"))
@@ -46,20 +45,16 @@ class SpotifyTrackDetailsAdapter(
             }
             val errorResult = response.checkRateLimitOrError(logger, EnrichmentError.TRACK_DETAILS_FETCH_FAILED)
             if (errorResult != null) return errorResult
-            parseTrackDetails(objectMapper.readTree(response.body())).right()
+            parseAlbumId(objectMapper.readTree(response.body())).right()
         } catch (e: Exception) {
             logger.error(e) { "Unexpected error fetching track details for track $trackId (user ${userId.value})" }
             EnrichmentError.TRACK_DETAILS_FETCH_FAILED.left()
         }
     }
 
-    private fun parseTrackDetails(json: JsonNode): SpotifyTrackDetails? {
+    private fun parseAlbumId(json: JsonNode): String? {
         if (json.isNull || !json.has("id")) return null
-        val albumId = json.get("album")?.get("id")?.asText() ?: return null
-        return SpotifyTrackDetails(
-            trackId = json.get("id").asText(),
-            albumId = albumId,
-        )
+        return json.get("album")?.get("id")?.asText()
     }
 
     companion object : KLogging()
