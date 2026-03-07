@@ -4,7 +4,7 @@ import de.chrgroth.spotify.control.adapter.`in`.web.ui.HealthSseService
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
 import de.chrgroth.spotify.control.domain.port.out.OutgoingRequestStatsObserver
-import de.chrgroth.spotify.control.util.outbox.OutboxPartitionObserver
+import de.chrgroth.outbox.OutboxPartitionObserver
 import io.quarkus.test.junit.QuarkusTest
 import io.smallrye.mutiny.subscription.Cancellable
 import jakarta.inject.Inject
