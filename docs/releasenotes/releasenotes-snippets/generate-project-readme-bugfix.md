@@ -1,1 +1,0 @@
-* generate-project-readme: Added project README with overview, quick start, and links to existing documentation.
