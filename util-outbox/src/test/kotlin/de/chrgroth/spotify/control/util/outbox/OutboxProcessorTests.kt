@@ -213,7 +213,7 @@ class OutboxProcessorTests {
     }
 
     @Test
-    fun `processNext with pauseOnRateLimit=false does not invoke onRateLimited callback`() {
+    fun `processNext with pauseOnRateLimit=false invokes onRateLimited callback for delayed wakeup`() {
         val task = task()
         every { repository.claim(noPausePartition) } returns task
         every { repository.reschedule(task, any()) } just runs
@@ -223,6 +223,6 @@ class OutboxProcessorTests {
 
         processorWithCallback.processNext(noPausePartition) { OutboxTaskResult.RateLimited(Duration.ofSeconds(30)) }
 
-        assertThat(callbackInvoked).isEmpty()
+        assertThat(callbackInvoked).containsExactly(noPausePartition)
     }
 }
