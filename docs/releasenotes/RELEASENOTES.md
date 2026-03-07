@@ -1,3 +1,7 @@
+# 0.35.2 - 2026.03.07
+## Bugfixes / Chore
+* extract-releasenotes-plugin: Extracted the release-notes plugin from buildSrc into a standalone Gradle plugin project to allow publishing as an external dependency.
+
 # 0.35.1 - 2026.03.07
 ## Bugfixes / Chore
 * add-missing-mongodb-indexes: Added missing MongoDB indexes to improve query performance.* fix-outbox-sse-issue: Fixed outbox SSE not updating the health UI when tasks are enqueued.
