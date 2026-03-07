@@ -4,6 +4,8 @@ plugins {
 }
 
 dependencies {
+  api(project(":util-outbox-api"))
+
   implementation(enforcedPlatform(libs.quarkusBom))
   implementation("io.quarkus:quarkus-arc")
   implementation("io.quarkus:quarkus-micrometer")

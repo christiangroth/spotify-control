@@ -74,7 +74,7 @@ spotify-control interacts with the following external systems:
 | Web UI                | Quarkus Qute SSR, htmx, Bootstrap 5, Server-Sent Events |
 | Scheduled jobs        | Quarkus scheduler                                       |
 | Internal event bus    | CDI Events (in-process)                                 |
-| Async task queue      | Persistent Outbox (`util-outbox`)                       |
+| Async task queue      | Persistent Outbox (`util-outbox-api` + `util-outbox-impl`)          |
 
 # Solution Strategy
 
@@ -101,7 +101,8 @@ The system is composed of the following Gradle modules:
 | `application-quarkus`   | Quarkus application bundling and configuration                                        |
 | `domain-api`            | Ports (interfaces) – defines the contracts between domain and adapters                |
 | `domain-impl`           | Domain services, domain objects, CDI events                                           |
-| `util-outbox`           | Outbox implementation (package `de.chrgroth.outbox`; prepared for extraction as a separate external module) |
+| `util-outbox-api`       | Outbox API contracts: interfaces, enums, and data types (package `de.chrgroth.outbox`; prepared for extraction as a separate external module) |
+| `util-outbox-impl`      | Outbox Quarkus/MongoDB implementation (package `de.chrgroth.outbox`; prepared for extraction as a separate external module)                   |
 | `util-starters`         | One-time startup bean infrastructure (designed to be extractable as a separate external module) |
 
 ### `adapter-in-web`
@@ -123,8 +124,8 @@ Implements all repository interfaces defined in `domain-api`. Manages the MongoD
 | `spotify_currently_playing`   | Currently playing track observations per user.                                                        |
 | `recently_partial_played`     | Partial play events (plays that did not complete a full track).                                       |
 | `starters`                    | One-time startup bean execution state (managed by `util-starters`).                                   |
-| `outbox`                      | Persistent outbox task queue (managed by `util-outbox`).                                              |
-| `outbox_archive`              | Archived completed/failed outbox tasks (managed by `util-outbox`).                                    |
+| `outbox`                      | Persistent outbox task queue (managed by `util-outbox-impl`).                                         |
+| `outbox_archive`              | Archived completed/failed outbox tasks (managed by `util-outbox-impl`).                               |
 
 ### `adapter-out-spotify`
 
@@ -138,9 +139,11 @@ Sends notifications via a Slack Incoming Webhook, including album upgrade notifi
 
 Contains the core business logic: playback enrichment, aggregation computation, genre derivation and override handling, playlist invariant enforcement, album upgrade matching, and duplicate detection.
 
-### `util-outbox`
+### `util-outbox-api` and `util-outbox-impl`
 
-A self-contained outbox implementation (package `de.chrgroth.outbox`) providing: persistent task storage (MongoDB), atomic claim via `findOneAndUpdate`, at-least-once delivery with configurable retry backoff, partition-level pause/resume, task deduplication, priority-based ordering, and a conflated `Channel<Unit>` per partition for event-driven wakeup. Prepared for extraction as a standalone external library. See [outbox.md](outbox.md) for architecture details and usage guidance.
+`util-outbox-api` defines the outbox contracts (package `de.chrgroth.outbox`): `OutboxPartition`, `OutboxEvent`, `OutboxRepository`, `OutboxTask`, `OutboxTaskDispatcher`, `OutboxTaskResult`, `RetryPolicy`, and the associated enums and data types. Domain-facing modules depend only on this API module.
+
+`util-outbox-impl` provides the Quarkus/MongoDB implementation (package `de.chrgroth.outbox`): persistent task storage, atomic claim via `findOneAndUpdate`, at-least-once delivery with configurable retry backoff, partition-level pause/resume, task deduplication, priority-based ordering, and a conflated `Channel<Unit>` per partition for event-driven wakeup. Infrastructure modules depend on this impl module. See [outbox.md](outbox.md) for architecture details and usage guidance.
 
 ### `adapter-in-starter`
 
