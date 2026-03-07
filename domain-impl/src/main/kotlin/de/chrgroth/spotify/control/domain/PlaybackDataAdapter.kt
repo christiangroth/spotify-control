@@ -10,9 +10,7 @@ import de.chrgroth.spotify.control.domain.model.RecentlyPlayedItem
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.PlaybackDataPort
-import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppPlaybackRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.RecentlyPartialPlayedRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.RecentlyPlayedRepositoryPort
@@ -25,8 +23,7 @@ class PlaybackDataAdapter(
     private val recentlyPlayedRepository: RecentlyPlayedRepositoryPort,
     private val recentlyPartialPlayedRepository: RecentlyPartialPlayedRepositoryPort,
     private val appPlaybackRepository: AppPlaybackRepositoryPort,
-    private val appTrackRepository: AppTrackRepositoryPort,
-    private val appArtistRepository: AppArtistRepositoryPort,
+    private val appEnrichmentService: AppEnrichmentService,
     private val outboxPort: OutboxPort,
 ) : PlaybackDataPort {
 
@@ -65,17 +62,12 @@ class PlaybackDataAdapter(
 
         val artists = buildArtists(recentlyPlayed, partialPlayed)
         val tracks = buildTracks(recentlyPlayed, partialPlayed)
-        appArtistRepository.upsertAll(artists)
-        appTrackRepository.upsertAll(tracks)
 
         logger.info { "Persisting ${newPlaybackItems.size} new app_playback items for user: ${userId.value}" }
         appPlaybackRepository.saveAll(newPlaybackItems)
 
-        // Enqueue one enrichment event per artist/track — each goes through the to-spotify outbox
-        // partition (throttled) so every Spotify API call is properly rate-limited.
-        // The deduplication key per entity ensures no duplicate events are queued.
-        artists.forEach { artist -> outboxPort.enqueue(DomainOutboxEvent.EnrichArtistDetails(artist.artistId, userId)) }
-        tracks.forEach { track -> outboxPort.enqueue(DomainOutboxEvent.EnrichTrackDetails(track.trackId, userId)) }
+        // Upsert entity stubs and enqueue the full three-stage enrichment pipeline.
+        appEnrichmentService.upsertAndEnqueueEnrichment(artists, tracks, userId)
     }
 
     private fun buildPlaybackItems(
