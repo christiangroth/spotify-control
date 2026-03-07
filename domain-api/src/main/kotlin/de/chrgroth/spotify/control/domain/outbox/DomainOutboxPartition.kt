@@ -14,7 +14,12 @@ sealed interface DomainOutboxPartition : OutboxPartition {
         override val pauseOnRateLimit = false
     }
 
+    data object Domain : DomainOutboxPartition {
+        override val key = "domain"
+        override val pauseOnRateLimit = false
+    }
+
     companion object {
-        val all: List<DomainOutboxPartition> = listOf(ToSpotify, ToSpotifyPlayback)
+        val all: List<DomainOutboxPartition> = listOf(ToSpotify, ToSpotifyPlayback, Domain)
     }
 }

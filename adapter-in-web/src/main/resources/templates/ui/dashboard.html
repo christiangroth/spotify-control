@@ -95,6 +95,64 @@
                     </div>
                     {/fragment}
                 </div>
+                <div id="snippet-listening-stats" class="col-12 col-sm-6">
+                    {#fragment id="snippet_listening_stats"}
+                    <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                        <div class="card-body">
+                            <p class="card-subtitle mb-3" style="color:#888;font-size:.8rem;">Listening Stats (Last 30 Days)</p>
+                            <p class="mb-3" style="color:#fff;font-size:.85rem;" data-testid="listened-minutes">
+                                <span style="color:var(--spotify-green);font-weight:600;">{stats.listeningStats.listenedMinutesLast30Days}</span>
+                                <span style="color:#888;"> minutes listened</span>
+                            </p>
+                            <div class="mb-3">
+                                <p class="mb-1" style="color:#888;font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;">Top Tracks</p>
+                                {#if stats.listeningStats.topTracksLast30Days.empty}
+                                <p style="color:#888;font-size:.8rem;">No data yet.</p>
+                                {#else}
+                                <ul class="list-unstyled mb-0" data-testid="top-tracks-list">
+                                    {#for entry in stats.listeningStats.topTracksLast30Days}
+                                    <li class="d-flex justify-content-between mb-1">
+                                        <span class="text-truncate me-2" style="color:#fff;font-size:.82rem;">{entry.name}</span>
+                                        <span style="color:#888;font-size:.78rem;white-space:nowrap;">{entry.totalMinutes} min</span>
+                                    </li>
+                                    {/for}
+                                </ul>
+                                {/if}
+                            </div>
+                            <div class="mb-3">
+                                <p class="mb-1" style="color:#888;font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;">Top Artists</p>
+                                {#if stats.listeningStats.topArtistsLast30Days.empty}
+                                <p style="color:#888;font-size:.8rem;">No data yet.</p>
+                                {#else}
+                                <ul class="list-unstyled mb-0" data-testid="top-artists-list">
+                                    {#for entry in stats.listeningStats.topArtistsLast30Days}
+                                    <li class="d-flex justify-content-between mb-1">
+                                        <span class="text-truncate me-2" style="color:#fff;font-size:.82rem;">{entry.name}</span>
+                                        <span style="color:#888;font-size:.78rem;white-space:nowrap;">{entry.totalMinutes} min</span>
+                                    </li>
+                                    {/for}
+                                </ul>
+                                {/if}
+                            </div>
+                            <div>
+                                <p class="mb-1" style="color:#888;font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;">Top Genres</p>
+                                {#if stats.listeningStats.topGenresLast30Days.empty}
+                                <p style="color:#888;font-size:.8rem;">No data yet.</p>
+                                {#else}
+                                <ul class="list-unstyled mb-0" data-testid="top-genres-list">
+                                    {#for entry in stats.listeningStats.topGenresLast30Days}
+                                    <li class="d-flex justify-content-between mb-1">
+                                        <span class="text-truncate me-2" style="color:#fff;font-size:.82rem;">{entry.name}</span>
+                                        <span style="color:#888;font-size:.78rem;white-space:nowrap;">{entry.totalMinutes} min</span>
+                                    </li>
+                                    {/for}
+                                </ul>
+                                {/if}
+                            </div>
+                        </div>
+                    </div>
+                    {/fragment}
+                </div>
             </div>
         </div>
     </div>
@@ -111,6 +169,7 @@
                         fadeUpdate('snippet-playback-data', '/ui/dashboard/snippets/playback-data');
                         fadeUpdate('snippet-playback-histogram', '/ui/dashboard/snippets/playback-histogram');
                         fadeUpdate('snippet-recently-played', '/ui/dashboard/snippets/recently-played');
+                        fadeUpdate('snippet-listening-stats', '/ui/dashboard/snippets/listening-stats');
                     } else if (event.data === 'refresh-playlist-metadata') {
                         fadeUpdate('snippet-playlist-metadata', '/ui/dashboard/snippets/playlist-metadata');
                     }

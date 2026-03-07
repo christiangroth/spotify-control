@@ -40,7 +40,7 @@ class RecentlyPlayedAdapterTests {
     private val recentlyPlayedRepository: RecentlyPlayedRepositoryPort = mockk()
     private val currentlyPlayingRepository: CurrentlyPlayingRepositoryPort = mockk(relaxed = true)
     private val recentlyPartialPlayedRepository: RecentlyPartialPlayedRepositoryPort = mockk(relaxed = true)
-    private val outboxPort: OutboxPort = mockk()
+    private val outboxPort: OutboxPort = mockk(relaxed = true)
     private val dashboardRefresh: DashboardRefreshPort = mockk(relaxed = true)
 
     private val adapter = RecentlyPlayedAdapter(

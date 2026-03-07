@@ -29,6 +29,8 @@ class HealthSseService : OutboxPartitionObserver, OutgoingRequestStatsObserver {
 
     override fun onPartitionActivated(partition: OutboxPartition) = notifyAllUsers("refresh-outbox-partitions")
 
+    override fun onTaskEnqueued(partition: OutboxPartition) = notifyAllUsers("refresh-outbox-partitions")
+
     override fun onRequestRecorded() = notifyAllUsers("refresh-outgoing-http-calls")
 
     private fun notifyAllUsers(event: String) = emittersByUser.keys.toList().forEach { emitToUser(it, event) }

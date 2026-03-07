@@ -1,3 +1,25 @@
+# 0.35.2 - 2026.03.07
+## Bugfixes / Chore
+* extract-releasenotes-plugin: Extracted the release-notes plugin from buildSrc into a standalone Gradle plugin project to allow publishing as an external dependency.
+
+# 0.35.1 - 2026.03.07
+## Bugfixes / Chore
+* add-missing-mongodb-indexes: Added missing MongoDB indexes to improve query performance.* fix-outbox-sse-issue: Fixed outbox SSE not updating the health UI when tasks are enqueued.
+# 0.35.0 - 2026.03.07
+## New Features
+* ignore-artists-for-app-playback: Artists can now be ignored for playback processing. Setting an artist to inactive removes their playback data; reactivating triggers a rebuild. Settings UI shows artists in three columns: undecided, active, and inactive.
+# 0.34.0 - 2026.03.07
+## New Features
+* add-listening-stats-dashboard: Added listening stats panel to the dashboard showing listened minutes, top 3 tracks, top 3 artists, and top 3 genres for the last 30 days, ranked by listening duration.
+# 0.33.0 - 2026.03.07
+## New Features
+* process-spotify-playback-data: Process Spotify playback data into new app_playback collection combining spotify_recently_played and recently_partial_played
+* process-spotify-playback-data: Introduce app_track, app_artist, and app_album collections to deduplicate track metadata
+* process-spotify-playback-data: Add Recreate Playback Data button on settings page to rebuild processed playback data from scratch
+* process-spotify-playback-data: Dashboard stats (totals, histogram, recently played tracks) now sourced from app_ collections
+# 0.32.0 - 2026.03.07
+## New Features
+* add-github-link-menu: Added GitHub repository link (Code) to the technical dropdown menu in the navigation bar.
 # 0.31.0 - 2026.03.07
 ## New Features
 * create-grafana-metrics-dashboard: Added Grafana metrics dashboard covering JVM, logging, HTTP server/client, outbox, scheduler and starters.

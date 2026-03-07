@@ -1,9 +1,13 @@
 package de.chrgroth.spotify.control.adapter.`in`.web.ui
 
+import de.chrgroth.spotify.control.domain.error.ArtistSettingsError
 import de.chrgroth.spotify.control.domain.error.PlaylistSyncError
+import de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus
 import de.chrgroth.spotify.control.domain.model.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.UserId
+import de.chrgroth.spotify.control.domain.port.`in`.ArtistSettingsPort
+import de.chrgroth.spotify.control.domain.port.`in`.PlaybackDataPort
 import de.chrgroth.spotify.control.domain.port.`in`.PlaylistSyncPort
 import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
@@ -49,6 +53,12 @@ class SettingsResource {
   @Inject
   private lateinit var playlistSync: PlaylistSyncPort
 
+  @Inject
+  private lateinit var playbackData: PlaybackDataPort
+
+  @Inject
+  private lateinit var artistSettings: ArtistSettingsPort
+
   @GET
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
@@ -63,9 +73,13 @@ class SettingsResource {
         playlist = playlist,
       )
     }
+    val allArtists = artistSettings.findAllArtists().sortedBy { it.artistName }
     return settingsTemplate
       .data("displayName", user?.displayName ?: userId.value)
       .data("rows", rows)
+      .data("undecidedArtists", allArtists.filter { it.playbackProcessingStatus == ArtistPlaybackProcessingStatus.UNDECIDED })
+      .data("activeArtists", allArtists.filter { it.playbackProcessingStatus == ArtistPlaybackProcessingStatus.ACTIVE })
+      .data("inactiveArtists", allArtists.filter { it.playbackProcessingStatus == ArtistPlaybackProcessingStatus.INACTIVE })
   }
 
   data class PlaylistRow(val lineNumber: String, val playlist: PlaylistInfo) {
@@ -140,4 +154,45 @@ class SettingsResource {
       ifRight = { Response.ok(mapOf("status" to "ok")).build() },
     )
   }
+
+  @POST
+  @Authenticated
+  @Path("/playback/rebuild")
+  @Produces(MediaType.APPLICATION_JSON)
+  fun rebuildPlaybackData(): Response {
+    val userId = UserId(securityIdentity.principal.name)
+    playbackData.enqueueRebuild(userId)
+    return Response.ok(mapOf("status" to "ok")).build()
+  }
+
+  @PUT
+  @Authenticated
+  @Path("/artists/{artistId}/status")
+  @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON)
+  fun updateArtistStatus(
+    @PathParam("artistId") artistId: String,
+    request: ArtistStatusRequest,
+  ): Response {
+    val userId = UserId(securityIdentity.principal.name)
+    val status = ArtistPlaybackProcessingStatus.entries.find { it.name == request.status }
+      ?: return Response.status(Response.Status.BAD_REQUEST)
+        .entity(mapOf("error" to "Invalid artist status: ${request.status}"))
+        .build()
+    return artistSettings.updateArtistPlaybackProcessingStatus(artistId, status, userId).fold(
+      ifLeft = { error ->
+        when (error) {
+          ArtistSettingsError.ARTIST_NOT_FOUND -> Response.status(Response.Status.NOT_FOUND)
+            .entity(mapOf("error" to "Artist not found: $artistId"))
+            .build()
+          else -> Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+            .entity(mapOf("error" to "Update failed: ${error.code}"))
+            .build()
+        }
+      },
+      ifRight = { Response.ok(mapOf("status" to status.name)).build() },
+    )
+  }
+
+  data class ArtistStatusRequest(val status: String = "")
 }

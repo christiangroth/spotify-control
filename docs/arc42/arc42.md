@@ -123,6 +123,10 @@ Implements all repository interfaces defined in `domain-api`. Manages the MongoD
 | `spotify_recently_played`     | Raw recently played track events (append-only).                                                       |
 | `spotify_currently_playing`   | Currently playing track observations per user.                                                        |
 | `recently_partial_played`     | Partial play events (plays that did not complete a full track).                                       |
+| `app_playback`                | Processed playback events combining `spotify_recently_played` and `recently_partial_played`.          |
+| `app_track`                   | Deduplicated track metadata: title, main artist reference, additional artist references, album reference, lastEnrichmentDate. |
+| `app_artist`                  | Deduplicated artist metadata: name, genres, imageLink, lastEnrichmentDate, playbackProcessingStatus (UNDECIDED/ACTIVE/INACTIVE). |
+| `app_album`                   | Deduplicated album metadata: title, cover image, genres, main artist reference, lastEnrichmentDate.                           |
 | `starters`                    | One-time startup bean execution state (managed by `util-starters-impl`).                                   |
 | `outbox`                      | Persistent outbox task queue (managed by `util-outbox`).                                              |
 | `outbox_archive`              | Archived completed/failed outbox tasks (managed by `util-outbox`).                                    |
@@ -176,12 +180,71 @@ Match found (track name + artist, single/EP → album)
 
 ```
 PlaybackPollJob (every 5 min)
-    → writes PollRecentlyPlayed event to outbox (spotify partition)
-    → adapter-out-spotify fetches recently_played (max 50 tracks)
-    → raw events stored in playback_events_raw (append-only)
-    → EnrichPlaybackEvents event written to outbox (domain partition)
-    → enrichment service produces playback_events_enriched
+    → FetchCurrentlyPlaying (to-spotify-playback partition)
+        → Spotify GET /v1/me/player → stored in spotify_currently_playing
+    → FetchRecentlyPlayed (to-spotify-playback partition)
+        → Spotify GET /v1/me/player/recently-played → new items stored in spotify_recently_played
+        → convert partial plays (see below) → new items stored in recently_partial_played
+        → if any new data: enqueue AppendPlaybackData (domain partition)
 ```
+
+## Currently Playing → Partial Play Conversion
+
+The `spotify_currently_playing` collection accumulates observations of what the user is listening to right now. After each `FetchRecentlyPlayed`, observations are grouped into contiguous play sessions per track. A session is convertible when:
+
+- The track does not appear in the latest `recently_played` response (i.e. it was not played to completion).
+- It is not the most recently observed non-completed session (which may still be active).
+- The maximum observed progress exceeds the configured minimum (default: 25 seconds).
+
+For each convertible session, a `RecentlyPartialPlayedItem` is created with the observed play duration and written to `recently_partial_played`. Converted and completed track observations are then deleted from `spotify_currently_playing`.
+
+## Playback Data Processing Flow
+
+Raw playback data from `spotify_recently_played` and `recently_partial_played` is processed into the normalised `app_*` collections by `PlaybackDataAdapter`. There are two modes:
+
+**Append (triggered automatically):** After new raw data arrives, `AppendPlaybackData` is enqueued on the `domain` partition. The adapter first loads all artists with `INACTIVE` playback processing status, then filters raw playback items to skip tracks whose primary artist is inactive. For remaining items it fetches all source items newer than the most recent `app_playback` entry for the user, deduplicates against existing `app_playback` timestamps, then:
+1. Upserts artist metadata into `app_artist` (artistId, artistName) — enriched genres and imageLink are preserved on re-encounter.
+2. Upserts track metadata into `app_track` (trackId, trackTitle, artistId, additionalArtistIds) — albumId is preserved if already enriched.
+3. Appends new entries to `app_playback` (userId, playedAt, trackId, secondsPlayed). The document `_id` is a composite of `${userId}:${playedAt.toEpochMilli()}:${trackId}` for natural deduplication.
+4. Enqueues one `EnrichArtistDetails(artistId, userId)` per artist and one `EnrichTrackDetails(trackId, userId)` per track on the `to-spotify` partition. Deduplication by entity ID ensures no duplicate pending events.
+
+**Enrich (auto-enqueued after each append, one event per entity on `to-spotify`):**
+- `EnrichArtistDetails(artistId, userId)`: skipped if genres are already populated; otherwise calls `GET /v1/artists/{id}` and updates `app_artist` with genres and imageLink.
+- `EnrichTrackDetails(trackId, userId)`: skipped if albumId is already populated; otherwise calls `GET /v1/tracks/{id}`, updates `app_track.albumId`, creates a stub `app_album` entry, and enqueues `EnrichAlbumDetails(albumId, userId)`.
+- `EnrichAlbumDetails(albumId, userId)`: skipped if albumTitle is already populated; otherwise calls `GET /v1/albums/{id}` and updates `app_album` with albumTitle, imageLink, genres, and artistId (main artist).
+
+**Rebuild (user-triggered from Settings):** Deletes all `app_playback` entries for the user and re-runs the Append logic from scratch over all source data.
+
+```
+AppendPlaybackData (domain partition)
+    since = app_playback.findMostRecentPlayedAt(userId)
+    recentlyPlayed  = spotify_recently_played.findSince(userId, since)
+    partialPlayed   = recently_partial_played.findSince(userId, since)
+    → filter out items where primary artistId has playbackProcessingStatus=INACTIVE
+    → deduplicate by playedAt against existing app_playback entries
+    → upsertAll(app_artist)
+    → upsertAll(app_track)
+    → saveAll(app_playback)
+    // TODO: upsertAll(app_album) once albumId is available from Spotify track data
+
+RebuildPlaybackData (domain partition)
+    → deleteAllByUserId(app_playback)
+    → AppendPlaybackData(userId) [since=null → processes all source data]
+```
+
+## Artist Playback Processing
+
+The Settings page allows users to control which artists are included in playback processing via three statuses stored on `app_artist.playbackProcessingStatus`:
+
+| Status      | Description                                                                                               |
+|-------------|-----------------------------------------------------------------------------------------------------------|
+| `UNDECIDED` | Default for newly discovered artists. Treated identically to `ACTIVE` during processing.                 |
+| `ACTIVE`    | Artist tracks are included in playback processing.                                                       |
+| `INACTIVE`  | Artist tracks are excluded. All existing `app_playback` entries for the artist's tracks are deleted on transition to this status. |
+
+When an artist is set from `INACTIVE` back to `ACTIVE` or `UNDECIDED`, a `RebuildPlaybackData` event is enqueued for all users so that previously excluded playback records are recreated.
+
+The `EnrichArtistDetailsStarter` runs once at startup and enqueues `EnrichArtistDetails` for all artists that are missing enrichment data (no `lastEnrichmentDate`), ensuring the artist images and genres needed by the Settings UI are populated.
 
 ## Playlist Sync Flow
 
@@ -232,7 +295,7 @@ Build the application as a Quarkus native Docker image, push to the GitHub Conta
 ### Release Process
 
 - **Release plugin** – `net.researchgate.release` manages version bumping and Git tagging
-- **Releasenotes plugin** – custom Gradle plugin implemented in `buildSrc` (`de.chrgroth.gradle.plugins.releasenotes`); auto-registers its tasks and integrates with the release plugin; on release it collects snippets, generates a new section in `docs/releasenotes/RELEASENOTES.md`, copies it back to sources, and deletes the consumed snippets – all committed as part of the release
+- **Release-Notes plugin** – custom Gradle plugin (`de.chrgroth.gradle.plugins.release-notes`) maintained in https://github.com/christiangroth/gradle-release-notes-plugin
 - **CI/CD** – the GitHub Actions workflow (`gradle.yml`) runs `./gradlew build` on every push; runs `./gradlew release` only on pushes to `main`; after release, the Docker stack file is copied to the VPS via SCP and the stack is deployed via SSH
 - **Snippet requirement** – every branch that is not `main` or `dependabot/*` **must** contain at least one release note snippet in `docs/releasenotes/releasenotes-snippets/`; the build fails without it. Create snippets with the corresponding Gradle tasks (`releasenotesCreateFeature`, `releasenotesCreateBugfix`, …); filenames follow the pattern `{branch-last-segment}-{type}.md`
 
@@ -286,10 +349,11 @@ All Spotify API operations and domain-level async tasks are routed through a per
 
 **Partitions and event types:**
 
-| Partition | Event Types                                                                                                                                |
-|-----------|--------------------------------------------------------------------------------------------------------------------------------------------|
-| `spotify` | `SyncPlaylist`, `SyncTrack`, `SyncArtist`, `PushPlaylistEdit`, `PollRecentlyPlayed`                                                        |
-| `domain`  | `EnrichPlaybackEvents`, `RecomputeAggregations`, `ApplyGenreOverride`, `SyncPlaylistInvariant`, `CheckAlbumUpgrades`, `ApplyAlbumUpgrade`  |
+| Partition          | Event Types                                                                                      |
+|--------------------|--------------------------------------------------------------------------------------------------|
+| `to-spotify`       | `UpdateUserProfile`, `SyncPlaylistInfo`, `SyncPlaylistData`, `EnrichArtistDetails`, `EnrichTrackDetails`, `EnrichAlbumDetails` |
+| `to-spotify-playback` | `FetchCurrentlyPlaying`, `FetchRecentlyPlayed`                                               |
+| `domain`           | `RebuildPlaybackData`, `AppendPlaybackData`                                                      |
 
 Successfully processed events are moved to `outbox_archive` (audit log). Internal triggers between services use CDI events (not the outbox).
 
@@ -303,11 +367,12 @@ Spotify provides genres only at the artist level. Genres are derived from the ar
 
 ## Scheduler Jobs
 
-| Job                | Interval        | Outbox Event                               |
-|--------------------|-----------------|--------------------------------------------|
-| `PlaybackPollJob`  | every 5 min     | `PollRecentlyPlayed`                       |
-| `PlaylistCheckJob` | every 15 min    | `SyncPlaylist` (only on snapshot change)   |
-| `AggregationJob`   | nightly         | `RecomputeAggregations`                    |
+| Job                          | Interval           | Outbox Event(s)                                                       |
+|------------------------------|--------------------|-----------------------------------------------------------------------|
+| `CurrentlyPlayingFetchJob`   | every 20 seconds   | `FetchCurrentlyPlaying` (per user)                                    |
+| `RecentlyPlayedFetchJob`     | every 10 minutes   | `FetchRecentlyPlayed` (per user) → auto-enqueues `AppendPlaybackData` |
+| `PlaylistSyncJob`            | hourly (at :30)    | `SyncPlaylistInfo` (per user)                                         |
+| `UserProfileUpdateJob`       | daily at 04:00     | `UpdateUserProfile` (per user)                                        |
 
 All scheduler jobs skip execution via `skipExecutionIf = StarterSkipPredicate::class` until all starters have completed successfully.
 
