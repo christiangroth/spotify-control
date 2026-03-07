@@ -1,1 +1,0 @@
-* add-missing-mongodb-indexes: Added missing MongoDB indexes to improve query performance.

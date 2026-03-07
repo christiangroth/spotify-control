@@ -1,3 +1,6 @@
+# 0.35.1 - 2026.03.07
+## Bugfixes / Chore
+* add-missing-mongodb-indexes: Added missing MongoDB indexes to improve query performance.* fix-outbox-sse-issue: Fixed outbox SSE not updating the health UI when tasks are enqueued.
 # 0.35.0 - 2026.03.07
 ## New Features
 * ignore-artists-for-app-playback: Artists can now be ignored for playback processing. Setting an artist to inactive removes their playback data; reactivating triggers a rebuild. Settings UI shows artists in three columns: undecided, active, and inactive.
