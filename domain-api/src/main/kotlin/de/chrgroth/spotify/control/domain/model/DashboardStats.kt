@@ -7,4 +7,5 @@ data class DashboardStats(
     val playbackEventsLast30Days: Long,
     val playbackEventsPerDay: List<DayCount>,
     val recentlyPlayedTracks: List<RecentlyPlayedItem>,
+    val listeningStats: ListeningStats,
 )
