@@ -1,3 +1,9 @@
+# 0.31.0 - 2026.03.07
+## New Features
+* create-grafana-metrics-dashboard: Added Grafana metrics dashboard covering JVM, logging, HTTP server/client, outbox, scheduler and starters.
+* create-grafana-metrics-dashboard: Added Loki logs dashboard for structured log exploration in Grafana Cloud.
+* create-grafana-metrics-dashboard: CI job provisions the metrics dashboard to Grafana Cloud after each release.
+* create-grafana-metrics-dashboard: Added Logs and Metrics links with Grafana logo to the technical menu in the navigation bar.
 # 0.30.2 - 2026.03.07
 ## Bugfixes / Chore
 * fix-build-issue: Fix Detekt MaxLineLength violation in OAuthResource by splitting the scopes string across multiple lines.* fix-currently-playing-permission: Added missing `user-read-currently-playing` OAuth scope so the currently playing endpoint can be accessed.
