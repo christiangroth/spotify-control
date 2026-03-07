@@ -7,6 +7,7 @@ import de.chrgroth.spotify.control.domain.model.AppAlbum
 import de.chrgroth.spotify.control.domain.port.out.AppAlbumRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
+import kotlin.time.toKotlinInstant
 import mu.KLogging
 
 @ApplicationScoped
@@ -48,6 +49,7 @@ class AppAlbumRepositoryAdapter : AppAlbumRepositoryPort {
     }
 
     override fun updateEnrichmentData(albumId: String, albumTitle: String?, imageLink: String?, genres: List<String>, artistId: String?) {
+        val now = java.time.Instant.now()
         mongoQueryMetrics.timed("app_album.updateEnrichmentData") {
             appAlbumDocumentRepository.mongoCollection().updateOne(
                 Filters.eq("_id", albumId),
@@ -56,6 +58,7 @@ class AppAlbumRepositoryAdapter : AppAlbumRepositoryPort {
                     Updates.set("imageLink", imageLink),
                     Updates.set("genres", genres),
                     Updates.set("artistId", artistId),
+                    Updates.set("lastEnrichmentDate", now),
                 ),
             )
         }
@@ -67,6 +70,7 @@ class AppAlbumRepositoryAdapter : AppAlbumRepositoryPort {
         imageLink = imageLink,
         genres = genres,
         artistId = artistId,
+        lastEnrichmentDate = lastEnrichmentDate?.toKotlinInstant(),
     )
 
     companion object : KLogging()

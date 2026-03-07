@@ -7,6 +7,7 @@ import de.chrgroth.spotify.control.domain.model.AppTrack
 import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
+import kotlin.time.toKotlinInstant
 import mu.KLogging
 
 @ApplicationScoped
@@ -48,10 +49,14 @@ class AppTrackRepositoryAdapter : AppTrackRepositoryPort {
     }
 
     override fun updateAlbumId(trackId: String, albumId: String) {
+        val now = java.time.Instant.now()
         mongoQueryMetrics.timed("app_track.updateAlbumId") {
             appTrackDocumentRepository.mongoCollection().updateOne(
                 Filters.eq("_id", trackId),
-                Updates.set("albumId", albumId),
+                Updates.combine(
+                    Updates.set("albumId", albumId),
+                    Updates.set("lastEnrichmentDate", now),
+                ),
             )
         }
     }
@@ -62,6 +67,7 @@ class AppTrackRepositoryAdapter : AppTrackRepositoryPort {
         albumId = albumId,
         artistId = artistId,
         additionalArtistIds = additionalArtistIds,
+        lastEnrichmentDate = lastEnrichmentDate?.toKotlinInstant(),
     )
 
     companion object : KLogging()

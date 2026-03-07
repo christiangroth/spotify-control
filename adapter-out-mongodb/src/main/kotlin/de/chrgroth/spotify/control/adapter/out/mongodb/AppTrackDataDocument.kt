@@ -2,6 +2,7 @@ package de.chrgroth.spotify.control.adapter.out.mongodb
 
 import io.quarkus.mongodb.panache.common.MongoEntity
 import org.bson.codecs.pojo.annotations.BsonId
+import java.time.Instant
 
 @MongoEntity(collection = "app_track")
 class AppTrackDocument {
@@ -12,4 +13,5 @@ class AppTrackDocument {
     var albumId: String? = null
     lateinit var artistId: String
     var additionalArtistIds: List<String> = emptyList()
+    var lastEnrichmentDate: Instant? = null
 }

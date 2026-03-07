@@ -2,6 +2,7 @@ package de.chrgroth.spotify.control.adapter.out.mongodb
 
 import io.quarkus.mongodb.panache.common.MongoEntity
 import org.bson.codecs.pojo.annotations.BsonId
+import java.time.Instant
 
 @MongoEntity(collection = "app_artist")
 class AppArtistDocument {
@@ -11,4 +12,5 @@ class AppArtistDocument {
     lateinit var artistName: String
     var genres: List<String> = emptyList()
     var imageLink: String? = null
+    var lastEnrichmentDate: Instant? = null
 }

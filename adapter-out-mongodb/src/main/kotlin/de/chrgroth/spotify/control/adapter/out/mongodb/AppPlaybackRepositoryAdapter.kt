@@ -30,7 +30,7 @@ class AppPlaybackRepositoryAdapter : AppPlaybackRepositoryPort {
         if (items.isEmpty()) return
         val documents = items.map { item ->
             AppPlaybackDocument().apply {
-                id = "${item.userId.value}:${item.playedAt.toEpochMilliseconds()}:${item.trackId}"
+                id = "${item.userId.value}:${item.playedAt.toEpochMilliseconds()}"
                 spotifyUserId = item.userId.value
                 playedAt = item.playedAt.toJavaInstant()
                 trackId = item.trackId

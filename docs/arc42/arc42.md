@@ -123,9 +123,9 @@ Implements all repository interfaces defined in `domain-api`. Manages the MongoD
 | `spotify_currently_playing`   | Currently playing track observations per user.                                                        |
 | `recently_partial_played`     | Partial play events (plays that did not complete a full track).                                       |
 | `app_playback`                | Processed playback events combining `spotify_recently_played` and `recently_partial_played`.          |
-| `app_track`                   | Deduplicated track metadata: title, main artist reference, additional artist references, album reference. |
-| `app_artist`                  | Deduplicated artist metadata: name, genres.                                                           |
-| `app_album`                   | Deduplicated album metadata: title, cover image, genres.                                              |
+| `app_track`                   | Deduplicated track metadata: title, main artist reference, additional artist references, album reference, lastEnrichmentDate. |
+| `app_artist`                  | Deduplicated artist metadata: name, genres, imageLink, lastEnrichmentDate.                                                    |
+| `app_album`                   | Deduplicated album metadata: title, cover image, genres, main artist reference, lastEnrichmentDate.                           |
 | `starters`                    | One-time startup bean execution state (managed by `util-starters`).                                   |
 | `outbox`                      | Persistent outbox task queue (managed by `util-outbox`).                                              |
 | `outbox_archive`              | Archived completed/failed outbox tasks (managed by `util-outbox`).                                    |
