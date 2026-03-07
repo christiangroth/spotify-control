@@ -71,7 +71,7 @@
     </div>
     <script>
         document.getElementById('sync-now-btn').addEventListener('click', function() {
-            postWithButton(this, '/ui/settings/playlists/sync', 'Sync started successfully.', 'Sync failed');
+            postWithButton(this, '/ui/settings/playlist/sync', 'Sync started successfully.', 'Sync failed');
         });
 
         document.querySelectorAll('.sync-toggle').forEach(function(btn) {
@@ -81,7 +81,7 @@
                 const newStatus = currentStatus === 'ACTIVE' ? 'PASSIVE' : 'ACTIVE';
                 const button = this;
 
-                fetch('/ui/settings/playlists/' + encodeURIComponent(playlistId) + '/sync-status', {
+                fetch('/ui/settings/playlist/' + encodeURIComponent(playlistId) + '/sync-status', {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ syncStatus: newStatus })
@@ -114,7 +114,7 @@
                 const playlistId = this.getAttribute('data-playlist-id');
                 postWithButton(
                     this,
-                    '/ui/settings/playlists/' + encodeURIComponent(playlistId) + '/sync',
+                    '/ui/settings/playlist/' + encodeURIComponent(playlistId) + '/sync',
                     'Playlist sync enqueued successfully.',
                     'Failed to enqueue playlist sync'
                 );

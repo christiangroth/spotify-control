@@ -23,7 +23,7 @@ import jakarta.ws.rs.Produces
 import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
 
-@Path("/ui/settings")
+@Path("/ui/settings/playback")
 @ApplicationScoped
 @Suppress("Unused")
 class PlaybackSettingsResource {
@@ -46,7 +46,6 @@ class PlaybackSettingsResource {
 
   @GET
   @Authenticated
-  @Path("/playback")
   @Produces(MediaType.TEXT_HTML)
   fun playback(): TemplateInstance {
     val userId = UserId(securityIdentity.principal.name)
@@ -61,7 +60,7 @@ class PlaybackSettingsResource {
 
   @POST
   @Authenticated
-  @Path("/playback/rebuild")
+  @Path("/rebuild")
   @Produces(MediaType.APPLICATION_JSON)
   fun rebuildPlaybackData(): Response {
     val userId = UserId(securityIdentity.principal.name)
@@ -71,7 +70,7 @@ class PlaybackSettingsResource {
 
   @PUT
   @Authenticated
-  @Path("/playback/artists/{artistId}/status")
+  @Path("/artists/{artistId}/status")
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
   fun updateArtistStatus(
