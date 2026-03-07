@@ -6,6 +6,10 @@ The `util-starters` module provides a mechanism for **one-time startup beans** t
 
 Starters are **never executed** in `dev` or `test` profiles. In those environments the completion flag is set immediately so the Quarkus scheduler is not blocked.
 
+## Module Coordinates
+
+The `util-starters` module is a self-contained library published under group `de.chrgroth.starters`. All classes live in the `de.chrgroth.starters` package.
+
 ## Module Inventory
 
 | Class / Interface             | Role                                                                                                          |
@@ -72,6 +76,8 @@ All starters SUCCEEDED?
 All `@Scheduled` jobs in `adapter-in-scheduler` are annotated with `skipExecutionIf = StarterSkipPredicate::class`. The Quarkus scheduler calls `StarterSkipPredicate.test()` before each trigger; it returns `true` (skip) while `StarterCompletionFlag.isCompleted()` is `false`.
 
 ```kotlin
+import de.chrgroth.starters.StarterSkipPredicate
+
 @Scheduled(cron = "0 0/10 * * * ?", skipExecutionIf = StarterSkipPredicate::class)
 fun run() { ... }
 ```
@@ -107,6 +113,8 @@ fun run() { ... }
 
 ```kotlin
 // adapter-in-starter
+import de.chrgroth.starters.Starter
+
 @ApplicationScoped
 class AddMissingGenreFieldMigration(
     private val recentlyPlayedRepository: RecentlyPlayedRepositoryPort,

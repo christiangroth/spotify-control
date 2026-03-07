@@ -1,4 +1,4 @@
-package de.chrgroth.spotify.control.util.starters
+package de.chrgroth.starters
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.mockk.every

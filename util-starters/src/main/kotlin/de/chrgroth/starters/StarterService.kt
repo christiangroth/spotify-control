@@ -1,4 +1,4 @@
-package de.chrgroth.spotify.control.util.starters
+package de.chrgroth.starters
 
 import io.micrometer.core.instrument.Gauge
 import io.micrometer.core.instrument.MeterRegistry

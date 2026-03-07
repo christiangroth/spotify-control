@@ -1,4 +1,4 @@
-package de.chrgroth.spotify.control.util.starters
+package de.chrgroth.starters
 
 import jakarta.enterprise.context.ApplicationScoped
 import java.util.concurrent.atomic.AtomicBoolean

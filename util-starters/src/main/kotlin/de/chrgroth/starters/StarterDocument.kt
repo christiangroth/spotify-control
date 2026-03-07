@@ -1,4 +1,4 @@
-package de.chrgroth.spotify.control.util.starters
+package de.chrgroth.starters
 
 import io.quarkus.mongodb.panache.common.MongoEntity
 import org.bson.codecs.pojo.annotations.BsonId

@@ -5,7 +5,7 @@ import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyPlaylistPort
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
-import de.chrgroth.spotify.control.util.starters.Starter
+import de.chrgroth.starters.Starter
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
 

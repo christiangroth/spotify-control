@@ -1,4 +1,4 @@
-package de.chrgroth.spotify.control.util.starters
+package de.chrgroth.starters
 
 import io.quarkus.runtime.LaunchMode
 import io.quarkus.runtime.StartupEvent

@@ -102,7 +102,7 @@ The system is composed of the following Gradle modules:
 | `domain-api`            | Ports (interfaces) – defines the contracts between domain and adapters                |
 | `domain-impl`           | Domain services, domain objects, CDI events                                           |
 | `util-outbox`           | Outbox implementation (designed to be extractable as a separate external module)      |
-| `util-starters`         | One-time startup bean infrastructure (designed to be extractable as a separate external module) |
+| `util-starters`         | One-time startup bean infrastructure (`de.chrgroth.starters` package; published as a standalone library with group `de.chrgroth.starters`) |
 
 ### `adapter-in-web`
 
@@ -148,7 +148,7 @@ Contains concrete `Starter` implementations acting as inbound adapters: they rec
 
 ### `util-starters`
 
-A self-contained one-time startup bean infrastructure providing: `Starter` interface, persistent state tracking (MongoDB `starters` collection), execution history, profile-aware startup observer, Quarkus scheduler integration via a named `SkipPredicate`, and Micrometer metrics. Starters execute exactly once in `NORMAL` (prod) mode and are skipped in `dev`/`test`. See [starters.md](starters.md) for architecture details and usage guidance.
+A self-contained one-time startup bean infrastructure providing: `Starter` interface, persistent state tracking (MongoDB `starters` collection), execution history, profile-aware startup observer, Quarkus scheduler integration via a named `SkipPredicate`, and Micrometer metrics. Starters execute exactly once in `NORMAL` (prod) mode and are skipped in `dev`/`test`. All classes are in the `de.chrgroth.starters` package and published under group `de.chrgroth.starters`. See [starters.md](starters.md) for architecture details and usage guidance.
 
 ## Level 2
 

@@ -1,4 +1,4 @@
-package de.chrgroth.spotify.control.util.starters
+package de.chrgroth.starters
 
 import io.quarkus.scheduler.Scheduled
 import io.quarkus.scheduler.ScheduledExecution
