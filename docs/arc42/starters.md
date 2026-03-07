@@ -6,6 +6,15 @@ The `util-starters` module provides a mechanism for **one-time startup beans** t
 
 Starters are **never executed** in `dev` or `test` profiles. In those environments the completion flag is set immediately so the Quarkus scheduler is not blocked.
 
+## Module Coordinates
+
+The starter library is split into two modules, both in the `de.chrgroth.starters` package under group `de.chrgroth.starters`:
+
+| Module               | Artifact               | Contents                                                                                           |
+|----------------------|------------------------|----------------------------------------------------------------------------------------------------|
+| `util-starters-api`  | `util-starters-api`    | `Starter`, `StarterStatus`, `StarterCompletionFlag`, `StarterSkipPredicate`                        |
+| `util-starters-impl` | `util-starters-impl`   | `StarterDocument`, `StarterDocumentRepository`, `StarterExecutionDocument`, `StarterService`, `StarterStartup` |
+
 ## Module Inventory
 
 | Class / Interface             | Role                                                                                                          |
@@ -72,6 +81,8 @@ All starters SUCCEEDED?
 All `@Scheduled` jobs in `adapter-in-scheduler` are annotated with `skipExecutionIf = StarterSkipPredicate::class`. The Quarkus scheduler calls `StarterSkipPredicate.test()` before each trigger; it returns `true` (skip) while `StarterCompletionFlag.isCompleted()` is `false`.
 
 ```kotlin
+import de.chrgroth.starters.StarterSkipPredicate
+
 @Scheduled(cron = "0 0/10 * * * ?", skipExecutionIf = StarterSkipPredicate::class)
 fun run() { ... }
 ```
@@ -96,17 +107,20 @@ fun run() { ... }
 
 ## Architecture Placement
 
-`util-starters` follows the same self-contained utility module pattern as `util-outbox`:
+The starter library follows the same api/impl split pattern as `domain-api`/`domain-impl`:
 
 | Module               | Responsibility                                                                                        |
 |----------------------|-------------------------------------------------------------------------------------------------------|
-| `util-starters`      | Core infrastructure: `Starter` interface, MongoDB documents, service, startup observer, metrics.      |
-| `adapter-in-starter` | Concrete starter implementations acting as inbound adapters: receive a startup trigger from `util-starters` and call into the domain via port interfaces. |
+| `util-starters-api`  | Public contract: `Starter` interface, `StarterStatus`, `StarterCompletionFlag`, `StarterSkipPredicate`. Consumed by `adapter-in-starter` and `adapter-in-scheduler`. |
+| `util-starters-impl` | Infrastructure: MongoDB persistence, execution orchestration, startup observer, metrics. Consumed only by `application-quarkus`. |
+| `adapter-in-starter` | Concrete starter implementations acting as inbound adapters: receive a startup trigger from `util-starters-impl` and call into the domain via port interfaces. |
 
 ## Defining a Starter
 
 ```kotlin
 // adapter-in-starter
+import de.chrgroth.starters.Starter
+
 @ApplicationScoped
 class AddMissingGenreFieldMigration(
     private val recentlyPlayedRepository: RecentlyPlayedRepositoryPort,

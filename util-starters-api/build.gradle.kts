@@ -1,12 +1,12 @@
 plugins {
   id("kotlin-project")
   alias(libs.plugins.allopen)
+  `maven-publish`
 }
 
-dependencies {
-  implementation(project(":domain-api"))
-  implementation(project(":util-starters-api"))
+group = "de.chrgroth.starters"
 
+dependencies {
   implementation(enforcedPlatform(libs.quarkusBom))
   implementation("io.quarkus:quarkus-arc")
   implementation("io.quarkus:quarkus-scheduler")
