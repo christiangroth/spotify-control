@@ -1,3 +1,6 @@
+# 0.34.0 - 2026.03.07
+## New Features
+* add-listening-stats-dashboard: Added listening stats panel to the dashboard showing listened minutes, top 3 tracks, top 3 artists, and top 3 genres for the last 30 days, ranked by listening duration.
 # 0.33.0 - 2026.03.07
 ## New Features
 * process-spotify-playback-data: Process Spotify playback data into new app_playback collection combining spotify_recently_played and recently_partial_played
