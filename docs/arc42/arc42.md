@@ -102,7 +102,8 @@ The system is composed of the following Gradle modules:
 | `domain-api`            | Ports (interfaces) – defines the contracts between domain and adapters                |
 | `domain-impl`           | Domain services, domain objects, CDI events                                           |
 | `util-outbox`           | Outbox implementation (designed to be extractable as a separate external module)      |
-| `util-starters`         | One-time startup bean infrastructure (`de.chrgroth.starters` package; published as a standalone library with group `de.chrgroth.starters`) |
+| `util-starters-api`     | One-time startup bean public API: `Starter` interface, `StarterStatus`, `StarterCompletionFlag`, `StarterSkipPredicate` (`de.chrgroth.starters` package; published as a standalone library with group `de.chrgroth.starters`) |
+| `util-starters-impl`    | One-time startup bean infrastructure: MongoDB persistence, `StarterService`, `StarterStartup` observer, Micrometer metrics (depends on `util-starters-api`) |
 
 ### `adapter-in-web`
 
@@ -122,7 +123,7 @@ Implements all repository interfaces defined in `domain-api`. Manages the MongoD
 | `spotify_recently_played`     | Raw recently played track events (append-only).                                                       |
 | `spotify_currently_playing`   | Currently playing track observations per user.                                                        |
 | `recently_partial_played`     | Partial play events (plays that did not complete a full track).                                       |
-| `starters`                    | One-time startup bean execution state (managed by `util-starters`).                                   |
+| `starters`                    | One-time startup bean execution state (managed by `util-starters-impl`).                                   |
 | `outbox`                      | Persistent outbox task queue (managed by `util-outbox`).                                              |
 | `outbox_archive`              | Archived completed/failed outbox tasks (managed by `util-outbox`).                                    |
 
@@ -144,11 +145,15 @@ A self-contained outbox implementation providing: persistent task storage (Mongo
 
 ### `adapter-in-starter`
 
-Contains concrete `Starter` implementations acting as inbound adapters: they receive a startup trigger from `util-starters` and call into the domain via port interfaces. Currently contains `HelloWorldStarter` as a demo implementation.
+Contains concrete `Starter` implementations acting as inbound adapters: they receive a startup trigger from `util-starters-impl` and call into the domain via port interfaces. Currently contains `HelloWorldStarter` as a demo implementation.
 
-### `util-starters`
+### `util-starters-api`
 
-A self-contained one-time startup bean infrastructure providing: `Starter` interface, persistent state tracking (MongoDB `starters` collection), execution history, profile-aware startup observer, Quarkus scheduler integration via a named `SkipPredicate`, and Micrometer metrics. Starters execute exactly once in `NORMAL` (prod) mode and are skipped in `dev`/`test`. All classes are in the `de.chrgroth.starters` package and published under group `de.chrgroth.starters`. See [starters.md](starters.md) for architecture details and usage guidance.
+The public API of the one-time startup bean library: `Starter` interface, `StarterStatus` enum, `StarterCompletionFlag` CDI bean, and `StarterSkipPredicate`. All in the `de.chrgroth.starters` package, published under group `de.chrgroth.starters`. Consumed by `adapter-in-starter` (implements `Starter`) and `adapter-in-scheduler` (references `StarterSkipPredicate`).
+
+### `util-starters-impl`
+
+Infrastructure implementation of the starter library: MongoDB persistence (`StarterDocument`, `StarterDocumentRepository`, `StarterExecutionDocument`), execution orchestration (`StarterService`), startup observer (`StarterStartup`), and Micrometer metrics. Depends on `util-starters-api`. See [starters.md](starters.md) for architecture details and usage guidance.
 
 ## Level 2
 

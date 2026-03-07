@@ -8,7 +8,12 @@ Starters are **never executed** in `dev` or `test` profiles. In those environmen
 
 ## Module Coordinates
 
-The `util-starters` module is a self-contained library published under group `de.chrgroth.starters`. All classes live in the `de.chrgroth.starters` package.
+The starter library is split into two modules, both in the `de.chrgroth.starters` package under group `de.chrgroth.starters`:
+
+| Module               | Artifact               | Contents                                                                                           |
+|----------------------|------------------------|----------------------------------------------------------------------------------------------------|
+| `util-starters-api`  | `util-starters-api`    | `Starter`, `StarterStatus`, `StarterCompletionFlag`, `StarterSkipPredicate`                        |
+| `util-starters-impl` | `util-starters-impl`   | `StarterDocument`, `StarterDocumentRepository`, `StarterExecutionDocument`, `StarterService`, `StarterStartup` |
 
 ## Module Inventory
 
@@ -102,12 +107,13 @@ fun run() { ... }
 
 ## Architecture Placement
 
-`util-starters` follows the same self-contained utility module pattern as `util-outbox`:
+The starter library follows the same api/impl split pattern as `domain-api`/`domain-impl`:
 
 | Module               | Responsibility                                                                                        |
 |----------------------|-------------------------------------------------------------------------------------------------------|
-| `util-starters`      | Core infrastructure: `Starter` interface, MongoDB documents, service, startup observer, metrics.      |
-| `adapter-in-starter` | Concrete starter implementations acting as inbound adapters: receive a startup trigger from `util-starters` and call into the domain via port interfaces. |
+| `util-starters-api`  | Public contract: `Starter` interface, `StarterStatus`, `StarterCompletionFlag`, `StarterSkipPredicate`. Consumed by `adapter-in-starter` and `adapter-in-scheduler`. |
+| `util-starters-impl` | Infrastructure: MongoDB persistence, execution orchestration, startup observer, metrics. Consumed only by `application-quarkus`. |
+| `adapter-in-starter` | Concrete starter implementations acting as inbound adapters: receive a startup trigger from `util-starters-impl` and call into the domain via port interfaces. |
 
 ## Defining a Starter
 
