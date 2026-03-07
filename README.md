@@ -44,6 +44,7 @@ It provides smarter playlist management than Spotify itself, personal listening 
 | [Release Notes](docs/releasenotes/RELEASENOTES.md) | Version history |
 | [Coding Guidelines – Architect](docs/coding-guidelines/role-architect.md) | Architectural conventions |
 | [Coding Guidelines – Backend](docs/coding-guidelines/role-backend-developer.md) | Backend coding conventions |
+| [Coding Guidelines – Frontend](docs/coding-guidelines/role-frontend-developer.md) | Frontend coding conventions |
 
 ## Building & Testing
 
