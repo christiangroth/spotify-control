@@ -1,0 +1,1 @@
+* ignore-artists-for-app-playback: Artists can now be ignored for playback processing. Setting an artist to inactive removes their playback data; reactivating triggers a rebuild. Settings UI shows artists in three columns: undecided, active, and inactive.

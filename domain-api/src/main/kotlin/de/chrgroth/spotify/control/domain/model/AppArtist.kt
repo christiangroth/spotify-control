@@ -13,4 +13,5 @@ data class AppArtist(
     val genres: List<String> = emptyList(),
     val imageLink: String? = null,
     val lastEnrichmentDate: Instant? = null,
+    val playbackProcessingStatus: ArtistPlaybackProcessingStatus = ArtistPlaybackProcessingStatus.UNDECIDED,
 )

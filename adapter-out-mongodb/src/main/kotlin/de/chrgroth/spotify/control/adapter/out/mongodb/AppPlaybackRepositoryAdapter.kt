@@ -50,6 +50,14 @@ class AppPlaybackRepositoryAdapter : AppPlaybackRepositoryPort {
         }
     }
 
+    override fun deleteAllByTrackIds(trackIds: Set<String>) {
+        if (trackIds.isEmpty()) return
+        logger.info { "Deleting all app_playback documents for ${trackIds.size} track(s)" }
+        mongoQueryMetrics.timed("app_playback.deleteAllByTrackIds") {
+            appPlaybackDocumentRepository.delete("trackId in ?1", trackIds.toList())
+        }
+    }
+
     override fun findMostRecentPlayedAt(userId: UserId): Instant? =
         mongoQueryMetrics.timed("app_playback.findMostRecentPlayedAt") {
             appPlaybackDocumentRepository
