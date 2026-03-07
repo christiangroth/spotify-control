@@ -1,3 +1,7 @@
+pluginManagement {
+  includeBuild("gradle-plugin-releasenotes")
+}
+
 rootProject.name = "spotify-control"
 
 include("adapter-in-outbox")
