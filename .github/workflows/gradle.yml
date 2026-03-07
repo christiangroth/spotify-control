@@ -19,7 +19,7 @@ jobs:
   provision-grafana-dashboard:
     runs-on: ubuntu-latest
     if: ${{ github.ref == 'refs/heads/main' }}
-    needs: build
+    needs: release
     steps:
       - uses: actions/checkout@v4
       - name: Provision Grafana dashboard
