@@ -30,6 +30,7 @@ The outbox is split into two modules: `util-outbox-api` (pure API contracts) and
 | `OutboxError`                | Error value returned by the dispatch function on failure.                            |
 | `RetryPolicy`                | Configures `maxAttempts` and the `backoff` delay list.                               |
 | `OutboxRepository`           | Interface for all repository operations (claim, complete, fail, enqueue, …).         |
+| `Outbox`                     | Interface; primary facade for enqueuing, processing, and managing partitions.        |
 | `OutboxTaskDispatcher`       | Interface implemented by adapters to handle dispatched tasks per partition.          |
 | `OutboxTaskResult`           | Sealed result type: `Success`, `Failed`, `RateLimited`.                              |
 | `OutboxPartitionInfo`        | Data snapshot of a partition's status and pause state.                               |
@@ -40,7 +41,7 @@ The outbox is split into two modules: `util-outbox-api` (pure API contracts) and
 | Class / Interface            | Role                                                                                 |
 |------------------------------|--------------------------------------------------------------------------------------|
 | `MongoOutboxRepository`      | MongoDB-backed `@ApplicationScoped` implementation of `OutboxRepository`.            |
-| `Outbox`                     | Facade combining `OutboxRepository` and `OutboxWakeupService`; primary entry point for adapters. |
+| `OutboxImpl`                 | `@ApplicationScoped` implementation of `Outbox`; combines `OutboxRepository`, `OutboxWakeupService`, and metrics. |
 | `OutboxProcessor`            | Orchestrates claim → dispatch → complete/fail for one task at a time.                |
 | `OutboxWakeupService`        | Holds a `Channel<Unit>(CONFLATED)` per partition; signals partition workers.         |
 | `OutboxDocument`             | Panache entity mapped to the `outbox` MongoDB collection.                            |
@@ -78,7 +79,7 @@ sealed interface DomainOutboxEvent : OutboxEvent {
 ## Enqueueing Tasks
 
 Enqueue via `OutboxPort` (in `domain-api`), implemented by `OutboxPortAdapter` in `adapter-out-outbox`,
-which delegates to the `Outbox` facade in `util-outbox-impl`:
+which delegates to the `Outbox` facade (implemented by `OutboxImpl`) in `util-outbox-impl`:
 
 ```kotlin
 outboxPort.enqueue(DomainOutboxEvent.FetchRecentlyPlayed(userId))
@@ -182,5 +183,5 @@ The default value is 365 days.
 | Single `OutboxEvent` interface | Combines event type key + deduplication key | Reduces the number of types callers must implement; payload class owns the dedup logic naturally. |
 | Absent partition document = ACTIVE | Lazy creation on first pause | Existing deployments need no migration; only paused partitions need a document. |
 | Priority via enum name ordering | `HIGH` < `NORMAL` alphabetically (ascending sort) | Avoids a numeric mapping; enum names are self-documenting. |
-| `Outbox` facade in `util-outbox-impl` | Encapsulates `OutboxRepository` + `OutboxWakeupService` | Adapters depend on a single bean; wakeup signalling is co-located with enqueue. |
+| `Outbox` interface / `OutboxImpl` in `util-outbox-impl` | Encapsulates `OutboxRepository` + `OutboxWakeupService` | Adapters depend on the `Outbox` interface from `util-outbox-api`; wakeup signalling is co-located with enqueue. |
 | Throttle interval in `OutboxPartition` | Per-partition `Duration?` property (default `null`) | Each partition can declare its own rate budget; the worker applies the delay without coupling throttling logic to the processor or repository. |

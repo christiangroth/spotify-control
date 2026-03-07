@@ -16,12 +16,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @ApplicationScoped
-class Outbox(
+class OutboxImpl(
     private val repository: OutboxRepository,
     private val wakeupService: OutboxWakeupService,
     private val meterRegistry: MeterRegistry,
     @param:Any private val partitionObservers: Instance<OutboxPartitionObserver>,
-) {
+) : Outbox {
 
     private val scope = CoroutineScope(Dispatchers.IO)
 
@@ -44,11 +44,11 @@ class Outbox(
     private val rateLimitedCounters = ConcurrentHashMap<String, Counter>()
     private val partitionStatusGauges = ConcurrentHashMap<String, AtomicInteger>()
 
-    fun enqueue(
+    override fun enqueue(
         partition: OutboxPartition,
         event: OutboxEvent,
         payload: String,
-        priority: OutboxTaskPriority = OutboxTaskPriority.NORMAL,
+        priority: OutboxTaskPriority,
     ): Boolean {
         val inserted = repository.enqueue(partition, event, payload, priority)
         if (inserted) {
@@ -60,7 +60,7 @@ class Outbox(
         return inserted
     }
 
-    fun processNext(partition: OutboxPartition, dispatch: (OutboxTask) -> OutboxTaskResult): Boolean =
+    override fun processNext(partition: OutboxPartition, dispatch: (OutboxTask) -> OutboxTaskResult): Boolean =
         processor.processNext(partition) { task ->
             val result = dispatch(task)
             when (result) {
@@ -82,17 +82,17 @@ class Outbox(
             result
         }
 
-    fun signal(partition: OutboxPartition) = wakeupService.signal(partition)
+    override fun signal(partition: OutboxPartition) = wakeupService.signal(partition)
 
-    fun getOrCreateChannel(partition: OutboxPartition) = wakeupService.getOrCreate(partition)
+    override fun getOrCreateChannel(partition: OutboxPartition) = wakeupService.getOrCreate(partition)
 
-    fun resetStaleProcessingTasks() = repository.resetStaleProcessingTasks()
+    override fun resetStaleProcessingTasks() = repository.resetStaleProcessingTasks()
 
-    fun findPartition(partition: OutboxPartition) = repository.findPartition(partition)
+    override fun findPartition(partition: OutboxPartition) = repository.findPartition(partition)
 
-    fun archiveFailedTasks() = repository.archiveFailedTasks()
+    override fun archiveFailedTasks() = repository.archiveFailedTasks()
 
-    fun activatePartition(partition: OutboxPartition) {
+    override fun activatePartition(partition: OutboxPartition) {
         repository.activatePartition(partition)
         getOrCreatePartitionStatusGauge(partition).set(1)
         partitionObservers.forEach { it.onPartitionActivated(partition) }

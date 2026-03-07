@@ -5,7 +5,6 @@ plugins {
 
 dependencies {
   implementation(project(":domain-api"))
-  implementation(project(":util-outbox-impl"))
 
   implementation(enforcedPlatform(libs.quarkusBom))
   implementation("io.quarkus:quarkus-arc")
