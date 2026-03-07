@@ -6,7 +6,7 @@ pluginManagement {
         username = providers.gradleProperty("gpr.user").orNull
           ?: System.getenv("GITHUB_ACTOR")
         password = providers.gradleProperty("gpr.token").orNull
-          ?: System.getenv("GITHUB_TOKEN")
+          ?: System.getenv("GHCR_PAT")
       }
     }
     mavenCentral()
