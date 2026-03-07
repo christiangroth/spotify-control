@@ -475,6 +475,18 @@
           "refId": "B",
           "instant": false,
           "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "jvm_memory_max_bytes{job=\"spotify_control\",area=\"nonheap\"}",
+          "instant": false,
+          "legendFormat": "{{id}} max",
+          "range": true,
+          "refId": "C"
         }
       ],
       "title": "Non-Heap Memory Used",
@@ -867,7 +879,7 @@
               }
             ]
           },
-          "unit": "short"
+          "unit": "ops"
         },
         "overrides": []
       },
@@ -1479,7 +1491,7 @@
           "range": true
         }
       ],
-      "title": "Spotify API Tracked Hosts (last 24h)",
+      "title": "Spotify API Tracked Hosts",
       "type": "stat"
     },
     {
@@ -1758,7 +1770,7 @@
               }
             ]
           },
-          "unit": "short"
+          "unit": "ops"
         },
         "overrides": []
       },
@@ -1858,7 +1870,7 @@
               }
             ]
           },
-          "unit": "short"
+          "unit": "ops"
         },
         "overrides": []
       },
@@ -1918,7 +1930,23 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": [],
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "Active",
+                  "color": "green",
+                  "index": 0
+                },
+                "0": {
+                  "text": "Paused",
+                  "color": "red",
+                  "index": 1
+                }
+              }
+            }
+          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1970,7 +1998,7 @@
           "range": true
         }
       ],
-      "title": "Partition Status (1=active, 0=paused)",
+      "title": "Partition Status",
       "type": "stat"
     },
     {
@@ -2320,7 +2348,23 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": [],
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "Succeeded",
+                  "color": "green",
+                  "index": 0
+                },
+                "0": {
+                  "text": "Failed",
+                  "color": "red",
+                  "index": 1
+                }
+              }
+            }
+          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -2372,12 +2416,12 @@
           "range": true
         }
       ],
-      "title": "Starter Overall Status (1=succeeded, 0=failed)",
+      "title": "Starter Overall Status",
       "type": "stat"
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 38,
+  "schemaVersion": 42,
   "tags": [
     "quarkus",
     "spotify-control"
