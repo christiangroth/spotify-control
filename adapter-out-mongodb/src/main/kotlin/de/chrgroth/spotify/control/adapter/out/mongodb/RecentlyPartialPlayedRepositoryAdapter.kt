@@ -30,6 +30,30 @@ class RecentlyPartialPlayedRepositoryAdapter : RecentlyPartialPlayedRepositoryPo
         }
     }
 
+    override fun findSince(userId: UserId, since: Instant?): List<RecentlyPartialPlayedItem> =
+        mongoQueryMetrics.timed("recently_partial_played.findSince") {
+            val query = if (since != null) {
+                recentlyPartialPlayedDocumentRepository.list(
+                    "spotifyUserId = ?1 and playedAt > ?2",
+                    userId.value,
+                    since.toJavaInstant(),
+                )
+            } else {
+                recentlyPartialPlayedDocumentRepository.list("spotifyUserId = ?1", userId.value)
+            }
+            query.map { doc ->
+                RecentlyPartialPlayedItem(
+                    spotifyUserId = UserId(doc.spotifyUserId),
+                    trackId = doc.trackId,
+                    trackName = doc.trackName,
+                    artistIds = doc.artistIds,
+                    artistNames = doc.artistNames,
+                    playedAt = doc.playedAt.toKotlinInstant(),
+                    playedSeconds = doc.playedSeconds,
+                )
+            }
+        }
+
     override fun saveAll(items: List<RecentlyPartialPlayedItem>) {
         if (items.isEmpty()) return
         val documents = items.map { item ->

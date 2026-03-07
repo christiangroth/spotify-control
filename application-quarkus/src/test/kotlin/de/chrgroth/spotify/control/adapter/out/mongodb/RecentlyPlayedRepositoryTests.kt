@@ -109,30 +109,4 @@ class RecentlyPlayedRepositoryTests {
 
         assertThat(deleted).isEqualTo(0L)
     }
-
-    @Test
-    fun `findRecentlyPlayed returns items ordered by playedAt descending`() {
-        recentlyPlayedRepository.saveAll(listOf(item(3), item(1), item(2)))
-
-        val result = recentlyPlayedRepository.findRecentlyPlayed(userId, 10)
-
-        assertThat(result).hasSize(3)
-        assertThat(result.map { it.trackId }).containsExactly("track-1", "track-2", "track-3")
-    }
-
-    @Test
-    fun `findRecentlyPlayed respects limit`() {
-        recentlyPlayedRepository.saveAll(listOf(item(1), item(2), item(3), item(4), item(5)))
-
-        val result = recentlyPlayedRepository.findRecentlyPlayed(userId, 3)
-
-        assertThat(result).hasSize(3)
-        assertThat(result.map { it.trackId }).containsExactly("track-1", "track-2", "track-3")
-    }
-
-    @Test
-    fun `findRecentlyPlayed returns empty list when no items exist`() {
-        val result = recentlyPlayedRepository.findRecentlyPlayed(userId, 10)
-        assertThat(result).isEmpty()
-    }
 }

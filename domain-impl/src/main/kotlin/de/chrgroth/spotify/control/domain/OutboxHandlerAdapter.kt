@@ -5,6 +5,8 @@ import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.CurrentlyPlayingPort
 import de.chrgroth.spotify.control.domain.port.`in`.OutboxHandlerPort
+import de.chrgroth.spotify.control.domain.port.`in`.PlaybackDataPort
+import de.chrgroth.spotify.control.domain.port.`in`.PlaybackEnrichmentPort
 import de.chrgroth.spotify.control.domain.port.`in`.PlaylistSyncPort
 import de.chrgroth.spotify.control.domain.port.`in`.RecentlyPlayedPort
 import de.chrgroth.spotify.control.domain.port.`in`.UserProfileUpdatePort
@@ -19,6 +21,8 @@ class OutboxHandlerAdapter(
     private val recentlyPlayed: RecentlyPlayedPort,
     private val userProfileUpdate: UserProfileUpdatePort,
     private val playlistSync: PlaylistSyncPort,
+    private val playbackData: PlaybackDataPort,
+    private val playbackEnrichment: PlaybackEnrichmentPort,
 ) : OutboxHandlerPort {
 
     override fun handle(event: DomainOutboxEvent.FetchCurrentlyPlaying): OutboxTaskResult = try {
@@ -99,6 +103,70 @@ class OutboxHandlerAdapter(
     } catch (e: Exception) {
         logger.error(e) { "Unexpected error in handle(SyncPlaylistData) for playlist ${event.playlistId} (user ${event.userId.value})" }
         OutboxTaskResult.Failed("Unexpected error in sync: ${e.message}", e)
+    }
+
+    override fun handle(event: DomainOutboxEvent.RebuildPlaybackData): OutboxTaskResult = try {
+        playbackData.rebuildPlaybackData(event.userId)
+        OutboxTaskResult.Success
+    } catch (e: Exception) {
+        logger.error(e) { "Unexpected error in handle(RebuildPlaybackData) for user ${event.userId.value}" }
+        OutboxTaskResult.Failed("Unexpected error in rebuild: ${e.message}", e)
+    }
+
+    override fun handle(event: DomainOutboxEvent.AppendPlaybackData): OutboxTaskResult = try {
+        playbackData.appendPlaybackData(event.userId)
+        OutboxTaskResult.Success
+    } catch (e: Exception) {
+        logger.error(e) { "Unexpected error in handle(AppendPlaybackData) for user ${event.userId.value}" }
+        OutboxTaskResult.Failed("Unexpected error in append: ${e.message}", e)
+    }
+
+    override fun handle(event: DomainOutboxEvent.EnrichArtistDetails): OutboxTaskResult = try {
+        when (val result = playbackEnrichment.enrichArtistDetails(event.artistId, event.userId)) {
+            is Either.Right -> OutboxTaskResult.Success
+            is Either.Left -> when (val error = result.value) {
+                is SpotifyRateLimitError -> OutboxTaskResult.RateLimited(error.retryAfter)
+                else -> {
+                    logger.error { "Failed to enrich artist ${event.artistId} for user ${event.userId.value}: ${error.code}" }
+                    OutboxTaskResult.Failed("Failed to enrich artist: ${error.code}")
+                }
+            }
+        }
+    } catch (e: Exception) {
+        logger.error(e) { "Unexpected error in handle(EnrichArtistDetails) for artist ${event.artistId} (user ${event.userId.value})" }
+        OutboxTaskResult.Failed("Unexpected error in enrich: ${e.message}", e)
+    }
+
+    override fun handle(event: DomainOutboxEvent.EnrichTrackDetails): OutboxTaskResult = try {
+        when (val result = playbackEnrichment.enrichTrackDetails(event.trackId, event.userId)) {
+            is Either.Right -> OutboxTaskResult.Success
+            is Either.Left -> when (val error = result.value) {
+                is SpotifyRateLimitError -> OutboxTaskResult.RateLimited(error.retryAfter)
+                else -> {
+                    logger.error { "Failed to enrich track ${event.trackId} for user ${event.userId.value}: ${error.code}" }
+                    OutboxTaskResult.Failed("Failed to enrich track: ${error.code}")
+                }
+            }
+        }
+    } catch (e: Exception) {
+        logger.error(e) { "Unexpected error in handle(EnrichTrackDetails) for track ${event.trackId} (user ${event.userId.value})" }
+        OutboxTaskResult.Failed("Unexpected error in enrich: ${e.message}", e)
+    }
+
+    override fun handle(event: DomainOutboxEvent.EnrichAlbumDetails): OutboxTaskResult = try {
+        when (val result = playbackEnrichment.enrichAlbumDetails(event.albumId, event.userId)) {
+            is Either.Right -> OutboxTaskResult.Success
+            is Either.Left -> when (val error = result.value) {
+                is SpotifyRateLimitError -> OutboxTaskResult.RateLimited(error.retryAfter)
+                else -> {
+                    logger.error { "Failed to enrich album ${event.albumId} for user ${event.userId.value}: ${error.code}" }
+                    OutboxTaskResult.Failed("Failed to enrich album: ${error.code}")
+                }
+            }
+        }
+    } catch (e: Exception) {
+        logger.error(e) { "Unexpected error in handle(EnrichAlbumDetails) for album ${event.albumId} (user ${event.userId.value})" }
+        OutboxTaskResult.Failed("Unexpected error in enrich: ${e.message}", e)
     }
 
     companion object : KLogging()

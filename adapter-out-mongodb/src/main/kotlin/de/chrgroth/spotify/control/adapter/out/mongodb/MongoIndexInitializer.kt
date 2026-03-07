@@ -21,6 +21,9 @@ class MongoIndexInitializer {
     @Inject
     lateinit var recentlyPartialPlayedDocumentRepository: RecentlyPartialPlayedDocumentRepository
 
+    @Inject
+    lateinit var appPlaybackDocumentRepository: AppPlaybackDocumentRepository
+
     fun onStartup(@Observes event: StartupEvent) {
         logger.info { "Ensuring MongoDB indexes..." }
 
@@ -37,6 +40,11 @@ class MongoIndexInitializer {
         recentlyPartialPlayedDocumentRepository.mongoCollection().createIndex(
             Document("spotifyUserId", 1).append("playedAt", 1),
             IndexOptions().name("rpp_spotifyUserId_1_playedAt_1"),
+        )
+
+        appPlaybackDocumentRepository.mongoCollection().createIndex(
+            Document("spotifyUserId", 1).append("playedAt", 1),
+            IndexOptions().name("app_playback_spotifyUserId_1_playedAt_1"),
         )
 
         logger.info { "MongoDB indexes ready." }

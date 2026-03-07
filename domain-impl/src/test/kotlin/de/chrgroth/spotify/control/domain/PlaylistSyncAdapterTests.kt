@@ -13,6 +13,8 @@ import de.chrgroth.spotify.control.domain.model.SpotifyPlaylistItem
 import de.chrgroth.spotify.control.domain.model.User
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
+import de.chrgroth.spotify.control.domain.model.AppArtist
+import de.chrgroth.spotify.control.domain.model.AppTrack
 import de.chrgroth.spotify.control.domain.port.out.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
@@ -43,11 +45,12 @@ class PlaylistSyncAdapterTests {
     private val spotifyPlaylistTracks: SpotifyPlaylistTracksPort = mockk()
     private val outboxPort: OutboxPort = mockk()
     private val dashboardRefresh: DashboardRefreshPort = mockk()
+    private val appEnrichmentService: AppEnrichmentService = mockk()
 
     private val adapter = PlaylistSyncAdapter(
         userRepository, playlistRepository, playlistDataRepository,
         spotifyAccessToken, spotifyPlaylist, spotifyPlaylistTracks,
-        outboxPort, dashboardRefresh,
+        outboxPort, dashboardRefresh, appEnrichmentService,
     )
 
     private val userId = UserId("user-1")
@@ -437,11 +440,41 @@ class PlaylistSyncAdapterTests {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { spotifyPlaylistTracks.getPlaylistTracks(userId, accessToken, "p1") } returns playlist.right()
         every { playlistDataRepository.save(userId, playlist) } just runs
+        every { appEnrichmentService.upsertAndEnqueueEnrichment(any(), any(), any()) } just runs
 
         val result = adapter.syncPlaylistData(userId, "p1")
 
         assertThat(result.isRight()).isTrue()
         verify { playlistDataRepository.save(userId, playlist) }
+    }
+
+    @Test
+    fun `syncPlaylistData enqueues enrichment for playlist tracks and artists`() {
+        val user = buildUser()
+        val playlist = buildPlaylist("p1")
+        every { userRepository.findById(userId) } returns user
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { spotifyPlaylistTracks.getPlaylistTracks(userId, accessToken, "p1") } returns playlist.right()
+        every { playlistDataRepository.save(userId, playlist) } just runs
+        every { appEnrichmentService.upsertAndEnqueueEnrichment(any(), any(), any()) } just runs
+
+        adapter.syncPlaylistData(userId, "p1")
+
+        verify {
+            appEnrichmentService.upsertAndEnqueueEnrichment(
+                match { artists: List<AppArtist> ->
+                    artists.size == 1 && artists[0].artistId == "artist-1" && artists[0].artistName == "Artist One"
+                },
+                match { tracks: List<AppTrack> ->
+                    tracks.size == 1 &&
+                        tracks[0].trackId == "track-1" &&
+                        tracks[0].trackTitle == "Track One" &&
+                        tracks[0].artistId == "artist-1" &&
+                        tracks[0].additionalArtistIds.isEmpty()
+                },
+                userId,
+            )
+        }
     }
 
     @Test

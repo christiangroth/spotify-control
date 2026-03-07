@@ -3,10 +3,13 @@ package de.chrgroth.spotify.control.domain
 import de.chrgroth.spotify.control.domain.model.DashboardStats
 import de.chrgroth.spotify.control.domain.model.DayCount
 import de.chrgroth.spotify.control.domain.model.PlaylistSyncStatus
+import de.chrgroth.spotify.control.domain.model.RecentlyPlayedItem
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.DashboardStatsPort
+import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.AppPlaybackRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.RecentlyPlayedRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
@@ -19,7 +22,9 @@ import org.eclipse.microprofile.config.inject.ConfigProperty
 @ApplicationScoped
 @Suppress("Unused")
 class DashboardStatsAdapter(
-    private val recentlyPlayedRepository: RecentlyPlayedRepositoryPort,
+    private val appPlaybackRepository: AppPlaybackRepositoryPort,
+    private val appTrackRepository: AppTrackRepositoryPort,
+    private val appArtistRepository: AppArtistRepositoryPort,
     private val playlistRepository: PlaylistRepositoryPort,
     @param:ConfigProperty(name = "dashboard.recently-played.limit", defaultValue = "13")
     private val recentlyPlayedLimit: Int,
@@ -28,9 +33,9 @@ class DashboardStatsAdapter(
     override fun getStats(userId: UserId): DashboardStats {
         val since = Clock.System.now() - STATS_DAYS.days
 
-        val total = recentlyPlayedRepository.countAll(userId)
-        val last30Days = recentlyPlayedRepository.countSince(userId, since)
-        val rawPerDay = recentlyPlayedRepository.countPerDaySince(userId, since)
+        val total = appPlaybackRepository.countAll(userId)
+        val last30Days = appPlaybackRepository.countSince(userId, since)
+        val rawPerDay = appPlaybackRepository.countPerDaySince(userId, since)
 
         val countByDate = rawPerDay.toMap()
         val today = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
@@ -50,7 +55,26 @@ class DashboardStatsAdapter(
         val totalPlaylists = playlists.size.toLong()
         val syncedPlaylists = playlists.count { it.syncStatus == PlaylistSyncStatus.ACTIVE }.toLong()
 
-        val recentlyPlayedTracks = recentlyPlayedRepository.findRecentlyPlayed(userId, recentlyPlayedLimit)
+        val recentPlaybackItems = appPlaybackRepository.findRecentlyPlayed(userId, recentlyPlayedLimit)
+        val trackIds = recentPlaybackItems.map { it.trackId }.toSet()
+        val trackMap = appTrackRepository.findByTrackIds(trackIds).associateBy { it.trackId }
+        val allArtistIds = trackMap.values.flatMap { track ->
+            listOfNotNull(track.artistId) + track.additionalArtistIds
+        }.toSet()
+        val artistMap = appArtistRepository.findByArtistIds(allArtistIds).associateBy { it.artistId }
+        val recentlyPlayedTracks = recentPlaybackItems.map { playback ->
+            val track = trackMap[playback.trackId]
+            val trackArtistIds = listOfNotNull(track?.artistId) + (track?.additionalArtistIds ?: emptyList())
+            val artistNames = trackArtistIds.mapNotNull { artistMap[it]?.artistName }
+            RecentlyPlayedItem(
+                spotifyUserId = playback.userId,
+                trackId = playback.trackId,
+                trackName = track?.trackTitle ?: playback.trackId,
+                artistIds = trackArtistIds,
+                artistNames = artistNames,
+                playedAt = playback.playedAt,
+            )
+        }
 
         return DashboardStats(
             syncedPlaylists = syncedPlaylists,

@@ -14,6 +14,8 @@ class DomainOutboxContractTests {
         DomainOutboxEvent.UpdateUserProfile(UserId("user-1")),
         DomainOutboxEvent.SyncPlaylistInfo(UserId("user-1")),
         DomainOutboxEvent.SyncPlaylistData(UserId("user-1"), "playlist-1"),
+        DomainOutboxEvent.RebuildPlaybackData(UserId("user-1")),
+        DomainOutboxEvent.AppendPlaybackData(UserId("user-1")),
     )
 
     @Test
@@ -34,6 +36,8 @@ class DomainOutboxContractTests {
             DomainOutboxEvent.UpdateUserProfile(UserId(userId)),
             DomainOutboxEvent.SyncPlaylistInfo(UserId(userId)),
             DomainOutboxEvent.SyncPlaylistData(UserId(userId), "playlist-abc"),
+            DomainOutboxEvent.RebuildPlaybackData(UserId(userId)),
+            DomainOutboxEvent.AppendPlaybackData(UserId(userId)),
         ).forEach { event ->
             assertThat(event.deduplicationKey())
                 .describedAs("deduplicationKey for ${event::class.simpleName} should contain userId")
@@ -74,6 +78,12 @@ class DomainOutboxContractTests {
     @Test
     fun `ToSpotifyPlayback partition has no throttle interval`() {
         assertThat(DomainOutboxPartition.ToSpotifyPlayback.throttleInterval)
+            .isNull()
+    }
+
+    @Test
+    fun `Domain partition has no throttle interval`() {
+        assertThat(DomainOutboxPartition.Domain.throttleInterval)
             .isNull()
     }
 }
