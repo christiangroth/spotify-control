@@ -1,6 +1,4 @@
-rootProject.name = "spotify-control"
-
-pluginManagement  {
+pluginManagement {
   repositories {
     maven {
       url = uri("https://maven.pkg.github.com/christiangroth/gradle-release-notes-plugin")
@@ -11,10 +9,12 @@ pluginManagement  {
           ?: System.getenv("GITHUB_TOKEN")
       }
     }
+    mavenCentral()
+    gradlePluginPortal()
   }
-  mavenCentral() // ← ggf. nötig
-  gradlePluginPortal()
 }
+
+rootProject.name = "spotify-control"
 
 include("adapter-in-outbox")
 include("adapter-in-scheduler")
