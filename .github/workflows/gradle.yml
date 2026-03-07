@@ -16,6 +16,36 @@ jobs:
       - uses: gradle/actions/setup-gradle@v5
       - run: ./gradlew --stacktrace build
 
+  provision-grafana-dashboard:
+    runs-on: ubuntu-latest
+    if: ${{ github.ref == 'refs/heads/main' }}
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      - name: Provision Grafana dashboard
+        env:
+          GRAFANA_CLOUD_URL: ${{ secrets.GRAFANA_CLOUD_URL }}
+          GRAFANA_CLOUD_SA_TOKEN: ${{ secrets.GRAFANA_CLOUD_SA_TOKEN }}
+        run: |
+          if [ -z "$GRAFANA_CLOUD_URL" ] || [ -z "$GRAFANA_CLOUD_SA_TOKEN" ]; then
+            echo "Error: GRAFANA_CLOUD_URL and GRAFANA_CLOUD_SA_TOKEN secrets must be set" >&2
+            exit 1
+          fi
+          dashboard_file="monitoring/grafana/quarkus-metrics.json"
+          if [ ! -f "$dashboard_file" ]; then
+            echo "Error: Dashboard file not found: $dashboard_file" >&2
+            exit 1
+          fi
+          payload=$(jq -n \
+            --argjson dashboard "$(cat "$dashboard_file")" \
+            --arg message "Provisioned by GitHub Actions (commit ${{ github.sha }})" \
+            '{dashboard: $dashboard, overwrite: true, message: $message}')
+          curl --fail-with-body -s -X POST \
+            "$GRAFANA_CLOUD_URL/api/dashboards/db" \
+            -H "Authorization: Bearer $GRAFANA_CLOUD_SA_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$payload"
+
   release:
     runs-on: ubuntu-latest
     if: ${{ github.ref == 'refs/heads/main' }}
