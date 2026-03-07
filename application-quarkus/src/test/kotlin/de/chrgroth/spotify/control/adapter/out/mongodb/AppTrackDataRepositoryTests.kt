@@ -1,7 +1,7 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
-import de.chrgroth.spotify.control.domain.model.AppTrackData
-import de.chrgroth.spotify.control.domain.port.out.AppTrackDataRepositoryPort
+import de.chrgroth.spotify.control.domain.model.AppTrack
+import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
 import io.quarkus.test.junit.QuarkusTest
 import jakarta.inject.Inject
 import org.assertj.core.api.Assertions.assertThat
@@ -12,37 +12,36 @@ import java.util.UUID
 class AppTrackDataRepositoryTests {
 
     @Inject
-    lateinit var appTrackDataRepository: AppTrackDataRepositoryPort
+    lateinit var appTrackRepository: AppTrackRepositoryPort
 
-    private fun trackData(suffix: String) = AppTrackData(
+    private fun trackData(suffix: String) = AppTrack(
         trackId = "track-$suffix-${UUID.randomUUID()}",
-        artistIds = listOf("artist-$suffix"),
         trackTitle = "Track $suffix",
-        artistNames = listOf("Artist $suffix"),
+        artistId = "artist-$suffix",
     )
 
     @Test
     fun `upsertAll persists new items and findByTrackIds returns them`() {
         val item = trackData("new")
-        appTrackDataRepository.upsertAll(listOf(item))
+        appTrackRepository.upsertAll(listOf(item))
 
-        val result = appTrackDataRepository.findByTrackIds(setOf(item.trackId))
+        val result = appTrackRepository.findByTrackIds(setOf(item.trackId))
 
         assertThat(result).hasSize(1)
         assertThat(result[0].trackId).isEqualTo(item.trackId)
         assertThat(result[0].trackTitle).isEqualTo(item.trackTitle)
-        assertThat(result[0].artistNames).containsExactlyElementsOf(item.artistNames)
+        assertThat(result[0].artistId).isEqualTo(item.artistId)
     }
 
     @Test
     fun `upsertAll updates existing items when trackId matches`() {
         val original = trackData("update")
-        appTrackDataRepository.upsertAll(listOf(original))
+        appTrackRepository.upsertAll(listOf(original))
 
         val updated = original.copy(trackTitle = "Updated Title")
-        appTrackDataRepository.upsertAll(listOf(updated))
+        appTrackRepository.upsertAll(listOf(updated))
 
-        val result = appTrackDataRepository.findByTrackIds(setOf(original.trackId))
+        val result = appTrackRepository.findByTrackIds(setOf(original.trackId))
 
         assertThat(result).hasSize(1)
         assertThat(result[0].trackTitle).isEqualTo("Updated Title")
@@ -50,13 +49,13 @@ class AppTrackDataRepositoryTests {
 
     @Test
     fun `findByTrackIds returns empty list for unknown trackIds`() {
-        val result = appTrackDataRepository.findByTrackIds(setOf("unknown-track-id-${UUID.randomUUID()}"))
+        val result = appTrackRepository.findByTrackIds(setOf("unknown-track-id-${UUID.randomUUID()}"))
         assertThat(result).isEmpty()
     }
 
     @Test
     fun `findByTrackIds returns empty list for empty input`() {
-        val result = appTrackDataRepository.findByTrackIds(emptySet())
+        val result = appTrackRepository.findByTrackIds(emptySet())
         assertThat(result).isEmpty()
     }
 }

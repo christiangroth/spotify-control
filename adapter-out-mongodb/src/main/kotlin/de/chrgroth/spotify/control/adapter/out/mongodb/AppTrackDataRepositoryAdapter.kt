@@ -1,60 +1,54 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
-import de.chrgroth.spotify.control.domain.model.AppTrackData
-import de.chrgroth.spotify.control.domain.port.out.AppTrackDataRepositoryPort
+import de.chrgroth.spotify.control.domain.model.AppTrack
+import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import mu.KLogging
 
 @ApplicationScoped
-class AppTrackDataRepositoryAdapter : AppTrackDataRepositoryPort {
+class AppTrackRepositoryAdapter : AppTrackRepositoryPort {
 
     @Inject
-    lateinit var appTrackDataDocumentRepository: AppTrackDataDocumentRepository
+    lateinit var appTrackDocumentRepository: AppTrackDocumentRepository
 
     @Inject
     lateinit var mongoQueryMetrics: MongoQueryMetrics
 
-    override fun upsertAll(items: List<AppTrackData>) {
+    override fun upsertAll(items: List<AppTrack>) {
         if (items.isEmpty()) return
-        logger.info { "Upserting ${items.size} app_track_data documents" }
+        logger.info { "Upserting ${items.size} app_track documents" }
         items.forEach { item ->
             val document = item.toDocument()
-            mongoQueryMetrics.timed("app_track_data.upsertAll") {
-                appTrackDataDocumentRepository.persistOrUpdate(document)
+            mongoQueryMetrics.timed("app_track.upsertAll") {
+                appTrackDocumentRepository.persistOrUpdate(document)
             }
         }
     }
 
-    override fun findByTrackIds(trackIds: Set<String>): List<AppTrackData> {
+    override fun findByTrackIds(trackIds: Set<String>): List<AppTrack> {
         if (trackIds.isEmpty()) return emptyList()
-        return mongoQueryMetrics.timed("app_track_data.findByTrackIds") {
+        return mongoQueryMetrics.timed("app_track.findByTrackIds") {
             trackIds.mapNotNull { trackId ->
-                appTrackDataDocumentRepository.findById(trackId)?.toDomain()
+                appTrackDocumentRepository.findById(trackId)?.toDomain()
             }
         }
     }
 
-    private fun AppTrackDataDocument.toDomain() = AppTrackData(
+    private fun AppTrackDocument.toDomain() = AppTrack(
         trackId = id,
-        albumId = albumId,
-        artistIds = artistIds,
         trackTitle = trackTitle,
-        albumTitle = albumTitle,
-        artistNames = artistNames,
-        genres = genres,
-        imageLink = imageLink,
+        albumId = albumId,
+        artistId = artistId,
+        additionalArtistIds = additionalArtistIds,
     )
 
-    private fun AppTrackData.toDocument() = AppTrackDataDocument().apply {
+    private fun AppTrack.toDocument() = AppTrackDocument().apply {
         id = this@toDocument.trackId
-        albumId = this@toDocument.albumId
-        artistIds = this@toDocument.artistIds
         trackTitle = this@toDocument.trackTitle
-        albumTitle = this@toDocument.albumTitle
-        artistNames = this@toDocument.artistNames
-        genres = this@toDocument.genres
-        imageLink = this@toDocument.imageLink
+        albumId = this@toDocument.albumId
+        artistId = this@toDocument.artistId
+        additionalArtistIds = this@toDocument.additionalArtistIds
     }
 
     companion object : KLogging()

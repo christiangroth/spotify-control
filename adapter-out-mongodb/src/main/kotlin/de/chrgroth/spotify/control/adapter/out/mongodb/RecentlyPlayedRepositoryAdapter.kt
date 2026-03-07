@@ -1,9 +1,5 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
-import com.mongodb.client.model.Accumulators
-import com.mongodb.client.model.Aggregates
-import com.mongodb.client.model.Filters
-import com.mongodb.client.model.Sorts
 import de.chrgroth.spotify.control.domain.model.RecentlyPlayedItem
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.out.RecentlyPlayedRepositoryPort
@@ -13,9 +9,7 @@ import jakarta.inject.Inject
 import kotlin.time.Instant
 import kotlin.time.toJavaInstant
 import kotlin.time.toKotlinInstant
-import kotlinx.datetime.LocalDate
 import mu.KLogging
-import org.bson.Document
 
 @ApplicationScoped
 class RecentlyPlayedRepositoryAdapter : RecentlyPlayedRepositoryPort {
@@ -43,24 +37,6 @@ class RecentlyPlayedRepositoryAdapter : RecentlyPlayedRepositoryPort {
                 .find("spotifyUserId = ?1", Sort.by("playedAt").descending(), spotifyUserId.value)
                 .firstResult()
                 ?.playedAt?.toKotlinInstant()
-        }
-
-    override fun findRecentlyPlayed(spotifyUserId: UserId, limit: Int): List<RecentlyPlayedItem> =
-        mongoQueryMetrics.timed("spotify_recently_played.findRecentlyPlayed") {
-            recentlyPlayedDocumentRepository
-                .find("spotifyUserId = ?1", Sort.by("playedAt").descending(), spotifyUserId.value)
-                .page(0, limit)
-                .list()
-                .map { doc ->
-                    RecentlyPlayedItem(
-                        spotifyUserId = UserId(doc.spotifyUserId),
-                        trackId = doc.trackId,
-                        trackName = doc.trackName,
-                        artistIds = doc.artistIds,
-                        artistNames = doc.artistNames,
-                        playedAt = doc.playedAt.toKotlinInstant(),
-                    )
-                }
         }
 
     override fun findSince(spotifyUserId: UserId, since: Instant?): List<RecentlyPlayedItem> =
@@ -104,46 +80,6 @@ class RecentlyPlayedRepositoryAdapter : RecentlyPlayedRepositoryPort {
         }
     }
 
-    override fun countAll(spotifyUserId: UserId): Long =
-        mongoQueryMetrics.timed("spotify_recently_played.countAll") {
-            recentlyPlayedDocumentRepository.count("spotifyUserId = ?1", spotifyUserId.value)
-        }
-
-    override fun countSince(spotifyUserId: UserId, since: Instant): Long =
-        mongoQueryMetrics.timed("spotify_recently_played.countSince") {
-            recentlyPlayedDocumentRepository.count(
-                "spotifyUserId = ?1 and playedAt >= ?2",
-                spotifyUserId.value,
-                since.toJavaInstant(),
-            )
-        }
-
-    override fun countPerDaySince(spotifyUserId: UserId, since: Instant): List<Pair<LocalDate, Long>> {
-        val pipeline = listOf(
-            Aggregates.match(
-                Filters.and(
-                    Filters.eq("spotifyUserId", spotifyUserId.value),
-                    Filters.gte("playedAt", since.toJavaInstant()),
-                ),
-            ),
-            Aggregates.group(
-                Document("\$dateToString", Document("format", "%Y-%m-%d").append("date", "\$playedAt")),
-                Accumulators.sum("count", 1),
-            ),
-            Aggregates.sort(Sorts.ascending("_id")),
-        )
-        return mongoQueryMetrics.timed("spotify_recently_played.countPerDaySince") {
-            recentlyPlayedDocumentRepository.mongoCollection()
-                .aggregate(pipeline, Document::class.java)
-                .map { doc ->
-                    val dateStr = doc.getString("_id")
-                    val count = (doc["count"] as? Int)?.toLong() ?: doc.getLong("count") ?: 0L
-                    LocalDate.parse(dateStr) to count
-                }
-                .toList()
-        }
-    }
-
     override fun deleteNonTracks(): Long =
         mongoQueryMetrics.timed("spotify_recently_played.deleteNonTracks") {
             recentlyPlayedDocumentRepository.delete("artistIds = ?1 and artistNames = ?2", emptyList<String>(), emptyList<String>())
@@ -151,3 +87,4 @@ class RecentlyPlayedRepositoryAdapter : RecentlyPlayedRepositoryPort {
 
     companion object : KLogging()
 }
+

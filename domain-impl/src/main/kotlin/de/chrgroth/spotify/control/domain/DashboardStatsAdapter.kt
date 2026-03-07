@@ -6,8 +6,9 @@ import de.chrgroth.spotify.control.domain.model.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.RecentlyPlayedItem
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.DashboardStatsPort
+import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppPlaybackRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.AppTrackDataRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 import kotlin.time.Clock
@@ -22,7 +23,8 @@ import org.eclipse.microprofile.config.inject.ConfigProperty
 @Suppress("Unused")
 class DashboardStatsAdapter(
     private val appPlaybackRepository: AppPlaybackRepositoryPort,
-    private val appTrackDataRepository: AppTrackDataRepositoryPort,
+    private val appTrackRepository: AppTrackRepositoryPort,
+    private val appArtistRepository: AppArtistRepositoryPort,
     private val playlistRepository: PlaylistRepositoryPort,
     @param:ConfigProperty(name = "dashboard.recently-played.limit", defaultValue = "13")
     private val recentlyPlayedLimit: Int,
@@ -55,15 +57,21 @@ class DashboardStatsAdapter(
 
         val recentPlaybackItems = appPlaybackRepository.findRecentlyPlayed(userId, recentlyPlayedLimit)
         val trackIds = recentPlaybackItems.map { it.trackId }.toSet()
-        val trackDataMap = appTrackDataRepository.findByTrackIds(trackIds).associateBy { it.trackId }
+        val trackMap = appTrackRepository.findByTrackIds(trackIds).associateBy { it.trackId }
+        val allArtistIds = trackMap.values.flatMap { track ->
+            listOfNotNull(track.artistId) + track.additionalArtistIds
+        }.toSet()
+        val artistMap = appArtistRepository.findByArtistIds(allArtistIds).associateBy { it.artistId }
         val recentlyPlayedTracks = recentPlaybackItems.map { playback ->
-            val trackData = trackDataMap[playback.trackId]
+            val track = trackMap[playback.trackId]
+            val trackArtistIds = listOfNotNull(track?.artistId) + (track?.additionalArtistIds ?: emptyList())
+            val artistNames = trackArtistIds.mapNotNull { artistMap[it]?.artistName }
             RecentlyPlayedItem(
                 spotifyUserId = playback.userId,
                 trackId = playback.trackId,
-                trackName = trackData?.trackTitle ?: playback.trackId,
-                artistIds = trackData?.artistIds ?: emptyList(),
-                artistNames = trackData?.artistNames ?: emptyList(),
+                trackName = track?.trackTitle ?: playback.trackId,
+                artistIds = trackArtistIds,
+                artistNames = artistNames,
                 playedAt = playback.playedAt,
             )
         }
