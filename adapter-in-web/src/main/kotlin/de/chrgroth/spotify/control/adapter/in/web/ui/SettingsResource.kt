@@ -27,6 +27,7 @@ import jakarta.ws.rs.PathParam
 import jakarta.ws.rs.Produces
 import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
+import java.net.URI
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -38,8 +39,12 @@ import kotlin.time.toJavaInstant
 class SettingsResource {
 
   @Inject
-  @Location("ui/settings.html")
-  private lateinit var settingsTemplate: Template
+  @Location("ui/settings/playlist.html")
+  private lateinit var playlistTemplate: Template
+
+  @Inject
+  @Location("ui/settings/playback.html")
+  private lateinit var playbackTemplate: Template
 
   @Inject
   private lateinit var securityIdentity: SecurityIdentity
@@ -62,7 +67,13 @@ class SettingsResource {
   @GET
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun settings(): TemplateInstance {
+  fun settings(): Response = Response.seeOther(URI.create("/ui/settings/playlist")).build()
+
+  @GET
+  @Authenticated
+  @Path("/playlist")
+  @Produces(MediaType.TEXT_HTML)
+  fun playlist(): TemplateInstance {
     val userId = UserId(securityIdentity.principal.name)
     val user = userRepository.findById(userId)
     val sortedPlaylists = playlistRepository.findByUserId(userId).sortedBy { it.name }
@@ -73,10 +84,21 @@ class SettingsResource {
         playlist = playlist,
       )
     }
-    val allArtists = artistSettings.findAllArtists().sortedBy { it.artistName }
-    return settingsTemplate
+    return playlistTemplate
       .data("displayName", user?.displayName ?: userId.value)
       .data("rows", rows)
+  }
+
+  @GET
+  @Authenticated
+  @Path("/playback")
+  @Produces(MediaType.TEXT_HTML)
+  fun playback(): TemplateInstance {
+    val userId = UserId(securityIdentity.principal.name)
+    val user = userRepository.findById(userId)
+    val allArtists = artistSettings.findAllArtists().sortedBy { it.artistName }
+    return playbackTemplate
+      .data("displayName", user?.displayName ?: userId.value)
       .data("undecidedArtists", allArtists.filter { it.playbackProcessingStatus == ArtistPlaybackProcessingStatus.UNDECIDED })
       .data("activeArtists", allArtists.filter { it.playbackProcessingStatus == ArtistPlaybackProcessingStatus.ACTIVE })
       .data("inactiveArtists", allArtists.filter { it.playbackProcessingStatus == ArtistPlaybackProcessingStatus.INACTIVE })
