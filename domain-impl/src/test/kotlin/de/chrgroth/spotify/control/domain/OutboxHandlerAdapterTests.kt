@@ -12,7 +12,7 @@ import de.chrgroth.spotify.control.domain.port.`in`.CurrentlyPlayingPort
 import de.chrgroth.spotify.control.domain.port.`in`.PlaylistSyncPort
 import de.chrgroth.spotify.control.domain.port.`in`.RecentlyPlayedPort
 import de.chrgroth.spotify.control.domain.port.`in`.UserProfileUpdatePort
-import de.chrgroth.spotify.control.util.outbox.OutboxTaskResult
+import de.chrgroth.outbox.OutboxTaskResult
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

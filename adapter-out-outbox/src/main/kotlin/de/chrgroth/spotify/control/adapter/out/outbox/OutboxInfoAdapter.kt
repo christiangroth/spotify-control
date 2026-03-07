@@ -3,8 +3,8 @@ package de.chrgroth.spotify.control.adapter.out.outbox
 import de.chrgroth.spotify.control.domain.model.OutboxPartitionStats
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
 import de.chrgroth.spotify.control.domain.port.out.OutboxInfoPort
-import de.chrgroth.spotify.control.util.outbox.OutboxPartitionStatus
-import de.chrgroth.spotify.control.util.outbox.OutboxRepository
+import de.chrgroth.outbox.OutboxPartitionStatus
+import de.chrgroth.outbox.OutboxRepository
 import jakarta.enterprise.context.ApplicationScoped
 
 @ApplicationScoped

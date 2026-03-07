@@ -1,6 +1,6 @@
 package de.chrgroth.spotify.control.domain.outbox
 
-import de.chrgroth.spotify.control.util.outbox.OutboxPartition
+import de.chrgroth.outbox.OutboxPartition
 import java.time.Duration
 
 sealed interface DomainOutboxPartition : OutboxPartition {

@@ -101,7 +101,7 @@ The system is composed of the following Gradle modules:
 | `application-quarkus`   | Quarkus application bundling and configuration                                        |
 | `domain-api`            | Ports (interfaces) – defines the contracts between domain and adapters                |
 | `domain-impl`           | Domain services, domain objects, CDI events                                           |
-| `util-outbox`           | Outbox implementation (designed to be extractable as a separate external module)      |
+| `util-outbox`           | Outbox implementation (package `de.chrgroth.outbox`; prepared for extraction as a separate external module) |
 | `util-starters`         | One-time startup bean infrastructure (designed to be extractable as a separate external module) |
 
 ### `adapter-in-web`
@@ -140,7 +140,7 @@ Contains the core business logic: playback enrichment, aggregation computation, 
 
 ### `util-outbox`
 
-A self-contained outbox implementation providing: persistent task storage (MongoDB), atomic claim via `findOneAndUpdate`, at-least-once delivery with configurable retry backoff, partition-level pause/resume, task deduplication, priority-based ordering, and a conflated `Channel<Unit>` per partition for event-driven wakeup. Designed to be potentially extracted as a standalone library. See [outbox.md](outbox.md) for architecture details and usage guidance.
+A self-contained outbox implementation (package `de.chrgroth.outbox`) providing: persistent task storage (MongoDB), atomic claim via `findOneAndUpdate`, at-least-once delivery with configurable retry backoff, partition-level pause/resume, task deduplication, priority-based ordering, and a conflated `Channel<Unit>` per partition for event-driven wakeup. Prepared for extraction as a standalone external library. See [outbox.md](outbox.md) for architecture details and usage guidance.
 
 ### `adapter-in-starter`
 

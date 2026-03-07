@@ -1,7 +1,7 @@
 package de.chrgroth.spotify.control.adapter.`in`.starter
 
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
-import de.chrgroth.spotify.control.util.outbox.OutboxRepository
+import de.chrgroth.outbox.OutboxRepository
 import de.chrgroth.spotify.control.util.starters.Starter
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging

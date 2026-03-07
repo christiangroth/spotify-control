@@ -2,7 +2,7 @@ package de.chrgroth.spotify.control.adapter.out.outbox
 
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
-import de.chrgroth.spotify.control.util.outbox.Outbox
+import de.chrgroth.outbox.Outbox
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
 

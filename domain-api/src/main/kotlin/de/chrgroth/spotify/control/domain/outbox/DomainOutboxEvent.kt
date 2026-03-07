@@ -1,8 +1,8 @@
 package de.chrgroth.spotify.control.domain.outbox
 
 import de.chrgroth.spotify.control.domain.model.UserId
-import de.chrgroth.spotify.control.util.outbox.OutboxEvent
-import de.chrgroth.spotify.control.util.outbox.OutboxTaskPriority
+import de.chrgroth.outbox.OutboxEvent
+import de.chrgroth.outbox.OutboxTaskPriority
 
 sealed interface DomainOutboxEvent : OutboxEvent {
     val partition: DomainOutboxPartition
