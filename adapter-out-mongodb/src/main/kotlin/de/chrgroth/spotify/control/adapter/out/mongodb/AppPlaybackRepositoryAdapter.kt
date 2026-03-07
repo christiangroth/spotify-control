@@ -125,5 +125,19 @@ class AppPlaybackRepositoryAdapter : AppPlaybackRepositoryPort {
                 }
         }
 
+    override fun findAllSince(userId: UserId, since: Instant): List<AppPlaybackItem> =
+        mongoQueryMetrics.timed("app_playback.findAllSince") {
+            appPlaybackDocumentRepository
+                .list("spotifyUserId = ?1 and playedAt >= ?2", userId.value, since.toJavaInstant())
+                .map { doc ->
+                    AppPlaybackItem(
+                        userId = UserId(doc.spotifyUserId),
+                        playedAt = doc.playedAt.toKotlinInstant(),
+                        trackId = doc.trackId,
+                        secondsPlayed = doc.secondsPlayed,
+                    )
+                }
+        }
+
     companion object : KLogging()
 }
