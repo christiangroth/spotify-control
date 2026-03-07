@@ -2,8 +2,8 @@ package de.chrgroth.spotify.control.adapter.`in`.web.ui
 
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.out.OutgoingRequestStatsObserver
-import de.chrgroth.spotify.control.util.outbox.OutboxPartition
-import de.chrgroth.spotify.control.util.outbox.OutboxPartitionObserver
+import de.chrgroth.outbox.OutboxPartition
+import de.chrgroth.outbox.OutboxPartitionObserver
 import io.smallrye.mutiny.Multi
 import io.smallrye.mutiny.subscription.MultiEmitter
 import jakarta.enterprise.context.ApplicationScoped
