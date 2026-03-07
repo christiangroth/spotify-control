@@ -1,3 +1,6 @@
+# 0.30.2 - 2026.03.07
+## Bugfixes / Chore
+* fix-build-issue: Fix Detekt MaxLineLength violation in OAuthResource by splitting the scopes string across multiple lines.* fix-currently-playing-permission: Added missing `user-read-currently-playing` OAuth scope so the currently playing endpoint can be accessed.
 # 0.30.1 - 2026.03.07
 ## Bugfixes / Chore
 * fix-partition-blocking-issue: Fixed an issue where tasks in the to-spotify-playback partition were not executed after being rate-limited, because no delayed wakeup signal was scheduled for partitions with pauseOnRateLimit=false.
