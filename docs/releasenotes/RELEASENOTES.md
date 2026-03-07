@@ -1,3 +1,6 @@
+# 0.35.0 - 2026.03.07
+## New Features
+* ignore-artists-for-app-playback: Artists can now be ignored for playback processing. Setting an artist to inactive removes their playback data; reactivating triggers a rebuild. Settings UI shows artists in three columns: undecided, active, and inactive.
 # 0.34.0 - 2026.03.07
 ## New Features
 * add-listening-stats-dashboard: Added listening stats panel to the dashboard showing listened minutes, top 3 tracks, top 3 artists, and top 3 genres for the last 30 days, ranked by listening duration.
