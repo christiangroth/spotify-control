@@ -40,7 +40,15 @@ class OAuthResource {
 
     private val stateStore = ConcurrentHashMap<String, Long>()
 
-    private val scopes = "user-read-currently-playing user-read-recently-played playlist-read-private playlist-read-collaborative playlist-modify-public playlist-modify-private user-read-private"
+    private val scopes = listOf(
+        "user-read-currently-playing",
+        "user-read-recently-played",
+        "playlist-read-private",
+        "playlist-read-collaborative",
+        "playlist-modify-public",
+        "playlist-modify-private",
+        "user-read-private",
+    ).joinToString(" ")
 
     @GET
     @PermitAll
