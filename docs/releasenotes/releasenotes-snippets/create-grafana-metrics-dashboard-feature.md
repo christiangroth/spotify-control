@@ -1,1 +1,1 @@
-* create-grafana-metrics-dashboard: Added Grafana dashboard with panels for JVM, logging, HTTP server/client, outbox, scheduler, and starter metrics.
+* create-grafana-metrics-dashboard: Added Grafana metrics dashboard (JVM, logging, HTTP server/client, outbox, scheduler, starters) and Loki logs dashboard; CI job provisions the metrics dashboard to Grafana Cloud after each release.
