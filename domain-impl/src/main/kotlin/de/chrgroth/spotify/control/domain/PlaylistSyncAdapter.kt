@@ -5,11 +5,15 @@ import arrow.core.left
 import arrow.core.right
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.PlaylistSyncError
+import de.chrgroth.spotify.control.domain.model.AppArtist
+import de.chrgroth.spotify.control.domain.model.AppTrack
 import de.chrgroth.spotify.control.domain.model.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.PlaylistSyncPort
+import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.PlaylistDataRepositoryPort
@@ -33,6 +37,8 @@ class PlaylistSyncAdapter(
     private val spotifyPlaylistTracks: SpotifyPlaylistTracksPort,
     private val outboxPort: OutboxPort,
     private val dashboardRefresh: DashboardRefreshPort,
+    private val appArtistRepository: AppArtistRepositoryPort,
+    private val appTrackRepository: AppTrackRepositoryPort,
 ) : PlaylistSyncPort {
 
     override fun enqueueUpdates() {
@@ -93,6 +99,37 @@ class PlaylistSyncAdapter(
         return spotifyPlaylistTracks.getPlaylistTracks(userId, accessToken, playlistId).map { playlist ->
             logger.info { "Synced ${playlist.tracks.size} track(s) for playlist $playlistId (user ${userId.value})" }
             playlistDataRepository.save(userId, playlist)
+
+            // Upsert stub app_artist and app_track entries for each playlist track so
+            // enrichment handlers can update them (they skip if already fully enriched).
+            val artistStubs = playlist.tracks
+                .flatMap { track -> track.artistIds.zip(track.artistNames) }
+                .distinctBy { (artistId, _) -> artistId }
+                .map { (artistId, artistName) -> AppArtist(artistId = artistId, artistName = artistName) }
+            appArtistRepository.upsertAll(artistStubs)
+
+            val trackStubs = playlist.tracks.mapNotNull { track ->
+                val artistId = track.artistIds.firstOrNull() ?: run {
+                    logger.warn { "Skipping track ${track.trackId} in playlist $playlistId: no artist data available" }
+                    return@mapNotNull null
+                }
+                AppTrack(
+                    trackId = track.trackId,
+                    trackTitle = track.trackName,
+                    artistId = artistId,
+                    additionalArtistIds = track.artistIds.drop(1),
+                )
+            }
+            appTrackRepository.upsertAll(trackStubs)
+
+            // Enqueue per-entity enrichment events (handlers skip if already enriched;
+            // EnrichTrackDetails auto-chains to EnrichAlbumDetails once the albumId is known).
+            artistStubs.forEach { artist ->
+                outboxPort.enqueue(DomainOutboxEvent.EnrichArtistDetails(artist.artistId, userId))
+            }
+            trackStubs.forEach { track ->
+                outboxPort.enqueue(DomainOutboxEvent.EnrichTrackDetails(track.trackId, userId))
+            }
         }
     }
 
