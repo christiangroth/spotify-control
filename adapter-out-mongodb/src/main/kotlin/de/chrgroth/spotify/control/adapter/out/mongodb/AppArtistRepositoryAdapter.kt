@@ -4,6 +4,7 @@ import com.mongodb.client.model.Filters
 import com.mongodb.client.model.UpdateOptions
 import com.mongodb.client.model.Updates
 import de.chrgroth.spotify.control.domain.model.AppArtist
+import de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus
 import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
@@ -31,12 +32,23 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
                         Updates.set("artistName", item.artistName),
                         Updates.setOnInsert("genres", item.genres),
                         Updates.setOnInsert("imageLink", item.imageLink),
+                        Updates.setOnInsert("playbackProcessingStatus", item.playbackProcessingStatus.name),
                     ),
                     upsertOptions,
                 )
             }
         }
     }
+
+    override fun findAll(): List<AppArtist> =
+        mongoQueryMetrics.timed("app_artist.findAll") {
+            appArtistDocumentRepository.listAll().map { it.toDomain() }
+        }
+
+    override fun findByPlaybackProcessingStatus(status: ArtistPlaybackProcessingStatus): List<AppArtist> =
+        mongoQueryMetrics.timed("app_artist.findByPlaybackProcessingStatus") {
+            appArtistDocumentRepository.list("playbackProcessingStatus = ?1", status.name).map { it.toDomain() }
+        }
 
     override fun findByArtistIds(artistIds: Set<String>): List<AppArtist> {
         if (artistIds.isEmpty()) return emptyList()
@@ -61,12 +73,24 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
         }
     }
 
+    override fun updatePlaybackProcessingStatus(artistId: String, status: ArtistPlaybackProcessingStatus) {
+        mongoQueryMetrics.timed("app_artist.updatePlaybackProcessingStatus") {
+            appArtistDocumentRepository.mongoCollection().updateOne(
+                Filters.eq("_id", artistId),
+                Updates.set("playbackProcessingStatus", status.name),
+            )
+        }
+    }
+
     private fun AppArtistDocument.toDomain() = AppArtist(
         artistId = id,
         artistName = artistName,
         genres = genres,
         imageLink = imageLink,
         lastEnrichmentDate = lastEnrichmentDate?.toKotlinInstant(),
+        playbackProcessingStatus = runCatching {
+            ArtistPlaybackProcessingStatus.valueOf(playbackProcessingStatus)
+        }.getOrDefault(ArtistPlaybackProcessingStatus.UNDECIDED),
     )
 
     companion object : KLogging()

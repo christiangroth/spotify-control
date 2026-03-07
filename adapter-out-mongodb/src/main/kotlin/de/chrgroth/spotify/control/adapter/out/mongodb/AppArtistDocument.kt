@@ -13,4 +13,5 @@ class AppArtistDocument {
     var genres: List<String> = emptyList()
     var imageLink: String? = null
     var lastEnrichmentDate: Instant? = null
+    var playbackProcessingStatus: String = "UNDECIDED"
 }

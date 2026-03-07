@@ -8,6 +8,7 @@ import kotlinx.datetime.LocalDate
 interface AppPlaybackRepositoryPort {
     fun saveAll(items: List<AppPlaybackItem>)
     fun deleteAllByUserId(userId: UserId)
+    fun deleteAllByTrackIds(trackIds: Set<String>)
     fun findMostRecentPlayedAt(userId: UserId): Instant?
     fun findExistingPlayedAts(userId: UserId, playedAts: Set<Instant>): Set<Instant>
     fun countAll(userId: UserId): Long

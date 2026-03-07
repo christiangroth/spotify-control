@@ -124,7 +124,7 @@ Implements all repository interfaces defined in `domain-api`. Manages the MongoD
 | `recently_partial_played`     | Partial play events (plays that did not complete a full track).                                       |
 | `app_playback`                | Processed playback events combining `spotify_recently_played` and `recently_partial_played`.          |
 | `app_track`                   | Deduplicated track metadata: title, main artist reference, additional artist references, album reference, lastEnrichmentDate. |
-| `app_artist`                  | Deduplicated artist metadata: name, genres, imageLink, lastEnrichmentDate.                                                    |
+| `app_artist`                  | Deduplicated artist metadata: name, genres, imageLink, lastEnrichmentDate, playbackProcessingStatus (UNDECIDED/ACTIVE/INACTIVE). |
 | `app_album`                   | Deduplicated album metadata: title, cover image, genres, main artist reference, lastEnrichmentDate.                           |
 | `starters`                    | One-time startup bean execution state (managed by `util-starters`).                                   |
 | `outbox`                      | Persistent outbox task queue (managed by `util-outbox`).                                              |
@@ -197,7 +197,7 @@ For each convertible session, a `RecentlyPartialPlayedItem` is created with the 
 
 Raw playback data from `spotify_recently_played` and `recently_partial_played` is processed into the normalised `app_*` collections by `PlaybackDataAdapter`. There are two modes:
 
-**Append (triggered automatically):** After new raw data arrives, `AppendPlaybackData` is enqueued on the `domain` partition. The adapter fetches all source items newer than the most recent `app_playback` entry for the user, deduplicates against existing `app_playback` timestamps, then:
+**Append (triggered automatically):** After new raw data arrives, `AppendPlaybackData` is enqueued on the `domain` partition. The adapter first loads all artists with `INACTIVE` playback processing status, then filters raw playback items to skip tracks whose primary artist is inactive. For remaining items it fetches all source items newer than the most recent `app_playback` entry for the user, deduplicates against existing `app_playback` timestamps, then:
 1. Upserts artist metadata into `app_artist` (artistId, artistName) — enriched genres and imageLink are preserved on re-encounter.
 2. Upserts track metadata into `app_track` (trackId, trackTitle, artistId, additionalArtistIds) — albumId is preserved if already enriched.
 3. Appends new entries to `app_playback` (userId, playedAt, trackId, secondsPlayed). The document `_id` is a composite of `${userId}:${playedAt.toEpochMilli()}:${trackId}` for natural deduplication.
@@ -215,6 +215,7 @@ AppendPlaybackData (domain partition)
     since = app_playback.findMostRecentPlayedAt(userId)
     recentlyPlayed  = spotify_recently_played.findSince(userId, since)
     partialPlayed   = recently_partial_played.findSince(userId, since)
+    → filter out items where primary artistId has playbackProcessingStatus=INACTIVE
     → deduplicate by playedAt against existing app_playback entries
     → upsertAll(app_artist)
     → upsertAll(app_track)
@@ -225,6 +226,20 @@ RebuildPlaybackData (domain partition)
     → deleteAllByUserId(app_playback)
     → AppendPlaybackData(userId) [since=null → processes all source data]
 ```
+
+## Artist Playback Processing
+
+The Settings page allows users to control which artists are included in playback processing via three statuses stored on `app_artist.playbackProcessingStatus`:
+
+| Status      | Description                                                                                               |
+|-------------|-----------------------------------------------------------------------------------------------------------|
+| `UNDECIDED` | Default for newly discovered artists. Treated identically to `ACTIVE` during processing.                 |
+| `ACTIVE`    | Artist tracks are included in playback processing.                                                       |
+| `INACTIVE`  | Artist tracks are excluded. All existing `app_playback` entries for the artist's tracks are deleted on transition to this status. |
+
+When an artist is set from `INACTIVE` back to `ACTIVE` or `UNDECIDED`, a `RebuildPlaybackData` event is enqueued for all users so that previously excluded playback records are recreated.
+
+The `EnrichArtistDetailsStarter` runs once at startup and enqueues `EnrichArtistDetails` for all artists that are missing enrichment data (no `lastEnrichmentDate`), ensuring the artist images and genres needed by the Settings UI are populated.
 
 ## Playlist Sync Flow
 

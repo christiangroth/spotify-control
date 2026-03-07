@@ -5,11 +5,13 @@ package de.chrgroth.spotify.control.domain
 import de.chrgroth.spotify.control.domain.model.AppArtist
 import de.chrgroth.spotify.control.domain.model.AppPlaybackItem
 import de.chrgroth.spotify.control.domain.model.AppTrack
+import de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus
 import de.chrgroth.spotify.control.domain.model.RecentlyPartialPlayedItem
 import de.chrgroth.spotify.control.domain.model.RecentlyPlayedItem
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.PlaybackDataPort
+import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppPlaybackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.RecentlyPartialPlayedRepositoryPort
@@ -23,6 +25,7 @@ class PlaybackDataAdapter(
     private val recentlyPlayedRepository: RecentlyPlayedRepositoryPort,
     private val recentlyPartialPlayedRepository: RecentlyPartialPlayedRepositoryPort,
     private val appPlaybackRepository: AppPlaybackRepositoryPort,
+    private val appArtistRepository: AppArtistRepositoryPort,
     private val appEnrichmentService: AppEnrichmentService,
     private val outboxPort: OutboxPort,
 ) : PlaybackDataPort {
@@ -44,7 +47,14 @@ class PlaybackDataAdapter(
         val recentlyPlayed = recentlyPlayedRepository.findSince(userId, since)
         val partialPlayed = recentlyPartialPlayedRepository.findSince(userId, since)
 
-        val allPlaybackItems = buildPlaybackItems(recentlyPlayed, partialPlayed)
+        val inactiveArtistIds = appArtistRepository.findByPlaybackProcessingStatus(ArtistPlaybackProcessingStatus.INACTIVE)
+            .map { it.artistId }
+            .toSet()
+
+        val filteredRecentlyPlayed = recentlyPlayed.filter { it.artistIds.firstOrNull() !in inactiveArtistIds }
+        val filteredPartialPlayed = partialPlayed.filter { it.artistIds.firstOrNull() !in inactiveArtistIds }
+
+        val allPlaybackItems = buildPlaybackItems(filteredRecentlyPlayed, filteredPartialPlayed)
         if (allPlaybackItems.isEmpty()) {
             logger.info { "No new playback items to append for user: ${userId.value}" }
             return
@@ -60,8 +70,8 @@ class PlaybackDataAdapter(
             return
         }
 
-        val artists = buildArtists(recentlyPlayed, partialPlayed)
-        val tracks = buildTracks(recentlyPlayed, partialPlayed)
+        val artists = buildArtists(filteredRecentlyPlayed, filteredPartialPlayed)
+        val tracks = buildTracks(filteredRecentlyPlayed, filteredPartialPlayed)
 
         logger.info { "Persisting ${newPlaybackItems.size} new app_playback items for user: ${userId.value}" }
         appPlaybackRepository.saveAll(newPlaybackItems)
