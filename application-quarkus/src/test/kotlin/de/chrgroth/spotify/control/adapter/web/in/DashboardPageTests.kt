@@ -24,6 +24,18 @@ class DashboardPageTests {
   }
 
   @Test
+  fun `dashboard page displays github link in dropdown`() {
+    given()
+      .`when`()
+      .get("/ui/dashboard")
+      .then()
+      .statusCode(200)
+      .body(containsString("""data-testid="github-link""""))
+      .body(containsString("https://github.com/christiangroth/spotify-control"))
+      .body(containsString("Code"))
+  }
+
+  @Test
   fun `dashboard page displays stats section`() {
     given()
       .`when`()

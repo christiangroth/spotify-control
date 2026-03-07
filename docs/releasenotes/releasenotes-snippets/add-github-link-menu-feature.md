@@ -1,0 +1,1 @@
+* add-github-link-menu: Added GitHub repository link (Code) to the technical dropdown menu in the navigation bar.
