@@ -96,6 +96,17 @@ class HealthPageTests {
   }
 
   @Test
+  fun `health page contains grafana metrics link in navbar`() {
+    given()
+      .`when`()
+      .get("/ui/health")
+      .then()
+      .statusCode(200)
+      .body(containsString("""data-testid="grafana-metrics-link""""))
+      .body(containsString("https://spotifycontrolprod.grafana.net/d/quarkus-spotify-control/quarkus-metrics"))
+  }
+
+  @Test
   fun `health page contains mongodb atlas link in navbar`() {
     given()
       .`when`()
