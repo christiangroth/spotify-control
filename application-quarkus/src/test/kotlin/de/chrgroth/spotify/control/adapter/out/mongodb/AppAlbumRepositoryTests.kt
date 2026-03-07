@@ -17,6 +17,7 @@ class AppAlbumRepositoryTests {
     private fun album(suffix: String) = AppAlbum(
         albumId = "album-$suffix-${UUID.randomUUID()}",
         albumTitle = "Album $suffix",
+        genres = listOf("Rock", "Pop"),
     )
 
     @Test
@@ -29,6 +30,7 @@ class AppAlbumRepositoryTests {
         assertThat(result).hasSize(1)
         assertThat(result[0].albumId).isEqualTo(item.albumId)
         assertThat(result[0].albumTitle).isEqualTo(item.albumTitle)
+        assertThat(result[0].genres).containsExactlyElementsOf(item.genres)
     }
 
     @Test

@@ -39,12 +39,14 @@ class AppAlbumRepositoryAdapter : AppAlbumRepositoryPort {
         albumId = id,
         albumTitle = albumTitle,
         imageLink = imageLink,
+        genres = genres,
     )
 
     private fun AppAlbum.toDocument() = AppAlbumDocument().apply {
         id = this@toDocument.albumId
         albumTitle = this@toDocument.albumTitle
         imageLink = this@toDocument.imageLink
+        genres = this@toDocument.genres
     }
 
     companion object : KLogging()

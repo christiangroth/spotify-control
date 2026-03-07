@@ -10,4 +10,5 @@ class AppAlbumDocument {
     lateinit var id: String  // Set to albumId value; maps to MongoDB _id
     var albumTitle: String? = null
     var imageLink: String? = null
+    var genres: List<String> = emptyList()
 }
