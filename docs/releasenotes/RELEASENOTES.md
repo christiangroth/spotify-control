@@ -1,3 +1,7 @@
+# 0.36.0 - 2026.03.08
+## New Features
+* split-settings-ui: Split settings UI into separate playlist settings (/ui/settings/playlist) and playback settings (/ui/settings/playback) pages.
+
 # 0.35.2 - 2026.03.07
 ## Bugfixes / Chore
 * extract-releasenotes-plugin: Extracted the release-notes plugin from buildSrc into a standalone Gradle plugin project to allow publishing as an external dependency.
