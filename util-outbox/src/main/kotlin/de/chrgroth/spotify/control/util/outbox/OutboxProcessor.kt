@@ -1,5 +1,6 @@
 package de.chrgroth.spotify.control.util.outbox
 
+import mu.KLogging
 import java.time.Duration
 import java.time.Instant
 
@@ -19,6 +20,7 @@ class OutboxProcessor(
         dispatch: (OutboxTask) -> OutboxTaskResult,
     ): Boolean {
         val task = repository.claim(partition) ?: return false
+        logger.info { "Executing outbox task: partition=${partition.key}, type=${task.eventType}" }
 
         return when (val result = dispatch(task)) {
             is OutboxTaskResult.Success -> {
@@ -50,4 +52,6 @@ class OutboxProcessor(
             }
         }
     }
+
+    companion object : KLogging()
 }
