@@ -1,3 +1,8 @@
+# 0.38.0 - 2026.03.08
+## New Features
+* move-throttling-to-http-handling: Spotify API request throttling is now applied at the HTTP level (2s per request for enrichment and sync calls) instead of at the outbox processing level.
+* move-throttling-to-http-handling: Currently playing polling now adapts dynamically: every 10s when playback is active, slowing down to every 90s when no playback is detected.
+
 # 0.37.0 - 2026.03.08
 ## New Features
 * optimize-rate-limit-logging: Add info-level logging when an outbox task is executed, including partition and task type.
