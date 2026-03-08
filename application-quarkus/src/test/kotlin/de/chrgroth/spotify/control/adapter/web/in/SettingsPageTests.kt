@@ -11,10 +11,10 @@ import org.junit.jupiter.api.Test
 class SettingsPageTests {
 
   @Test
-  fun `settings page is available and displays playlists heading`() {
+  fun `playlist settings page is available and displays playlists heading`() {
     given()
       .`when`()
-      .get("/ui/settings")
+      .get("/ui/settings/playlist")
       .then()
       .statusCode(200)
       .contentType(containsString("text/html"))
@@ -22,12 +22,43 @@ class SettingsPageTests {
   }
 
   @Test
-  fun `settings page displays sync now button`() {
+  fun `playlist settings page displays sync now button`() {
     given()
       .`when`()
-      .get("/ui/settings")
+      .get("/ui/settings/playlist")
       .then()
       .statusCode(200)
       .body(containsString("Sync Now"))
+  }
+
+  @Test
+  fun `playback settings page is available and displays playback settings heading`() {
+    given()
+      .`when`()
+      .get("/ui/settings/playback")
+      .then()
+      .statusCode(200)
+      .contentType(containsString("text/html"))
+      .body(containsString("Playback Settings"))
+  }
+
+  @Test
+  fun `playback settings page displays recreate playback data button`() {
+    given()
+      .`when`()
+      .get("/ui/settings/playback")
+      .then()
+      .statusCode(200)
+      .body(containsString("Recreate Playback Data"))
+  }
+
+  @Test
+  fun `playback settings page displays artist playback processing section`() {
+    given()
+      .`when`()
+      .get("/ui/settings/playback")
+      .then()
+      .statusCode(200)
+      .body(containsString("Artist Playback Processing"))
   }
 }

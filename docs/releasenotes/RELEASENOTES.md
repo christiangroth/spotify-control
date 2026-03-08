@@ -1,3 +1,20 @@
+# 0.38.0 - 2026.03.08
+## New Features
+* move-throttling-to-http-handling: Spotify API request throttling is now applied at the HTTP level (2s per request for enrichment and sync calls) instead of at the outbox processing level.
+* move-throttling-to-http-handling: Currently playing polling now adapts dynamically: every 10s when playback is active, slowing down to every 90s when no playback is detected.
+
+# 0.37.0 - 2026.03.08
+## New Features
+* optimize-rate-limit-logging: Add info-level logging when an outbox task is executed, including partition and task type.
+
+# 0.36.1 - 2026.03.08
+## Bugfixes / Chore
+* fix-rate-limiting-throttling: Increased playlist tracks page size to reduce Spotify API call volume; increased ToSpotify throttle interval; improved rate-limit warn logging with endpoint URL context.
+
+# 0.36.0 - 2026.03.08
+## New Features
+* split-settings-ui: Split settings UI into separate playlist settings (/ui/settings/playlist) and playback settings (/ui/settings/playback) pages.
+
 # 0.35.2 - 2026.03.07
 ## Bugfixes / Chore
 * extract-releasenotes-plugin: Extracted the release-notes plugin from buildSrc into a standalone Gradle plugin project to allow publishing as an external dependency.

@@ -38,8 +38,8 @@ releasenotes {
     ReleasenotesConfiguration(
       name = "repo-markdown",
       outputPath = "$releasenotesBasePath/RELEASENOTES.md",
-      snippetsPath = "$releasenotesBasePath/releasenotes-snippets",
-      templatesPath = "$releasenotesBasePath/releasenotes-templates",
+      snippetsPath = "$releasenotesBasePath/snippets",
+      templatesPath = "$releasenotesBasePath/templates",
       bugfixesHeader = "## Bugfixes / Chore",
       bugfixesFooter = "",
       featuresHeader = "## New Features",

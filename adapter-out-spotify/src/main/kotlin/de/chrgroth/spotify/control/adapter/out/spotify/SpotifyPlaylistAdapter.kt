@@ -10,6 +10,7 @@ import de.chrgroth.spotify.control.domain.error.PlaylistSyncError
 import de.chrgroth.spotify.control.domain.model.AccessToken
 import de.chrgroth.spotify.control.domain.model.SpotifyPlaylistItem
 import de.chrgroth.spotify.control.domain.model.UserId
+import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
 import de.chrgroth.spotify.control.domain.port.out.SpotifyPlaylistPort
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
@@ -24,6 +25,7 @@ import java.net.http.HttpResponse
 class SpotifyPlaylistAdapter(
     @param:ConfigProperty(name = "spotify.api.base-url", defaultValue = "https://api.spotify.com")
     private val apiBaseUrl: String,
+    private val throttler: SpotifyRequestThrottler,
 ) : SpotifyPlaylistPort {
 
     private val httpClient = HttpClient.newHttpClient()
@@ -34,6 +36,7 @@ class SpotifyPlaylistAdapter(
             val items = mutableListOf<SpotifyPlaylistItem>()
             var nextUrl: String? = "$apiBaseUrl/v1/me/playlists?limit=50"
             while (nextUrl != null) {
+                throttler.throttle(DomainOutboxPartition.ToSpotify.key)
                 val request = HttpRequest.newBuilder()
                     .uri(URI.create(nextUrl))
                     .header("Authorization", "Bearer ${accessToken.value}")
