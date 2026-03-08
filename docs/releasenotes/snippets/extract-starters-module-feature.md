@@ -1,0 +1,1 @@
+* extract-starters: Renamed `util-starters` package from `de.chrgroth.spotify.control.util.starters` to `de.chrgroth.starters` and added `maven-publish` configuration to prepare the module for extraction as a standalone external library.
