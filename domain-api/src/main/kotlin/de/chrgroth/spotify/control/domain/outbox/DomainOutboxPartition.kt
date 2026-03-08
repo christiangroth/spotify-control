@@ -6,7 +6,7 @@ import java.time.Duration
 sealed interface DomainOutboxPartition : OutboxPartition {
     data object ToSpotify : DomainOutboxPartition {
         override val key = "to-spotify"
-        override val throttleInterval: Duration = Duration.ofSeconds(1)
+        override val throttleInterval: Duration = Duration.ofSeconds(5)
     }
 
     data object ToSpotifyPlayback : DomainOutboxPartition {
