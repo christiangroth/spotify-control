@@ -106,7 +106,7 @@ class OutboxHandlerAdapter(
             is Either.Right -> OutboxTaskResult.Success
             is Either.Left -> when (val error = result.value) {
                 is SpotifyRateLimitError -> {
-                    logger.warn { "Rate limited on SyncPlaylistData for playlist ${event.playlistId} (user ${event.userId.value}), retry after ${error.retryAfter.seconds}s" }
+                    logger.warn { "Rate limited on SyncPlaylistData playlist ${event.playlistId} (user ${event.userId.value}), retry after ${error.retryAfter.seconds}s" }
                     OutboxTaskResult.RateLimited(error.retryAfter)
                 }
                 else -> {
@@ -141,7 +141,7 @@ class OutboxHandlerAdapter(
             is Either.Right -> OutboxTaskResult.Success
             is Either.Left -> when (val error = result.value) {
                 is SpotifyRateLimitError -> {
-                    logger.warn { "Rate limited on EnrichArtistDetails for artist ${event.artistId} (user ${event.userId.value}), retry after ${error.retryAfter.seconds}s" }
+                    logger.warn { "Rate limited on EnrichArtistDetails artist ${event.artistId} (user ${event.userId.value}), retry after ${error.retryAfter.seconds}s" }
                     OutboxTaskResult.RateLimited(error.retryAfter)
                 }
                 else -> {
