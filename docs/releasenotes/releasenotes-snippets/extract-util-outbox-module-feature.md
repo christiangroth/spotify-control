@@ -1,1 +1,0 @@
-* extract-util-outbox-module: Renamed util-outbox package from de.chrgroth.spotify.control.util.outbox to de.chrgroth.outbox to prepare for extraction as a standalone external library.
