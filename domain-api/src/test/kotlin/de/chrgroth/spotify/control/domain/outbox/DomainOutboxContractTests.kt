@@ -4,7 +4,6 @@ import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.OutboxHandlerPort
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import java.time.Duration
 
 class DomainOutboxContractTests {
 
@@ -70,20 +69,17 @@ class DomainOutboxContractTests {
     }
 
     @Test
-    fun `ToSpotify partition is throttled at five seconds per request`() {
-        assertThat(DomainOutboxPartition.ToSpotify.throttleInterval)
-            .isEqualTo(Duration.ofSeconds(5))
+    fun `ToSpotify partition has no throttle interval`() {
+        assertThat(DomainOutboxPartition.ToSpotify.pauseOnRateLimit).isTrue()
     }
 
     @Test
-    fun `ToSpotifyPlayback partition has no throttle interval`() {
-        assertThat(DomainOutboxPartition.ToSpotifyPlayback.throttleInterval)
-            .isNull()
+    fun `ToSpotifyPlayback partition does not pause on rate limit`() {
+        assertThat(DomainOutboxPartition.ToSpotifyPlayback.pauseOnRateLimit).isFalse()
     }
 
     @Test
-    fun `Domain partition has no throttle interval`() {
-        assertThat(DomainOutboxPartition.Domain.throttleInterval)
-            .isNull()
+    fun `Domain partition does not pause on rate limit`() {
+        assertThat(DomainOutboxPartition.Domain.pauseOnRateLimit).isFalse()
     }
 }

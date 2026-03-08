@@ -11,6 +11,7 @@ import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.out.CurrentlyPlayingRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
+import de.chrgroth.spotify.control.domain.port.out.PlaybackStatePort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyCurrentlyPlayingPort
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
@@ -32,6 +33,7 @@ class CurrentlyPlayingAdapterTests {
     private val currentlyPlayingRepository: CurrentlyPlayingRepositoryPort = mockk()
     private val outboxPort: OutboxPort = mockk()
     private val dashboardRefresh: DashboardRefreshPort = mockk(relaxed = true)
+    private val playbackState: PlaybackStatePort = mockk(relaxed = true)
 
     private val adapter = CurrentlyPlayingAdapter(
         userRepository,
@@ -40,6 +42,7 @@ class CurrentlyPlayingAdapterTests {
         currentlyPlayingRepository,
         outboxPort,
         dashboardRefresh,
+        playbackState,
     )
 
     private val userId = UserId("user-1")
@@ -55,7 +58,7 @@ class CurrentlyPlayingAdapterTests {
         lastLoginAt = now,
     )
 
-    private fun item() = CurrentlyPlayingItem(
+    private fun item(isPlaying: Boolean = true) = CurrentlyPlayingItem(
         spotifyUserId = userId,
         trackId = "track-1",
         trackName = "Track 1",
@@ -63,7 +66,7 @@ class CurrentlyPlayingAdapterTests {
         artistNames = listOf("Artist 1"),
         progressMs = 45000L,
         durationMs = 200000L,
-        isPlaying = true,
+        isPlaying = isPlaying,
         observedAt = now,
     )
 
@@ -118,6 +121,32 @@ class CurrentlyPlayingAdapterTests {
     }
 
     @Test
+    fun `update notifies playback state on active playback`() {
+        val item = item(isPlaying = true)
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { spotifyCurrentlyPlaying.getCurrentlyPlaying(userId, accessToken) } returns item.right()
+        every { currentlyPlayingRepository.existsByUserAndTrackAndObservedMinute(item) } returns false
+        every { currentlyPlayingRepository.save(item) } just runs
+
+        adapter.update(userId)
+
+        verify { playbackState.onPlaybackDetected() }
+    }
+
+    @Test
+    fun `update does not notify playback state when item is paused`() {
+        val item = item(isPlaying = false)
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { spotifyCurrentlyPlaying.getCurrentlyPlaying(userId, accessToken) } returns item.right()
+        every { currentlyPlayingRepository.existsByUserAndTrackAndObservedMinute(item) } returns false
+        every { currentlyPlayingRepository.save(item) } just runs
+
+        adapter.update(userId)
+
+        verify(exactly = 0) { playbackState.onPlaybackDetected() }
+    }
+
+    @Test
     fun `update does not persist duplicate item`() {
         val item = item()
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
@@ -150,6 +179,7 @@ class CurrentlyPlayingAdapterTests {
 
         verify(exactly = 0) { currentlyPlayingRepository.save(any()) }
         verify(exactly = 0) { dashboardRefresh.notifyUserPlaybackData(any()) }
+        verify(exactly = 0) { playbackState.onPlaybackDetected() }
     }
 
     @Test
