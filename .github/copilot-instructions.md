@@ -22,6 +22,6 @@
 
 ## Release Note Snippets
 
-**Snippet filename:** `docs/releasenotes/releasenotes-snippets/{branch-last-segment}-{type}.md` where `{type}` is one of `bugfix` or `feature`.
+**Snippet filename:** `docs/releasenotes/snippets/{branch-last-segment}-{type}.md` where `{type}` is one of `bugfix` or `feature`.
 
 **Snippet content:** Briefly describe what was changed or added on the branch. Each line should follow the pattern `* {branch-last-segment}: Description of the change.` Feel free to use multiple short lines, describing the change without technical detail. Only include **user-facing or dependency changes** in release notes. Do not add implementation details, refactoring notes, or internal structural changes (e.g. package renames, build task additions).
