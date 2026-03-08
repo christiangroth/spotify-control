@@ -28,14 +28,14 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.time.toJavaInstant
 
-@Path("/ui/settings")
+@Path("/ui/settings/playlist")
 @ApplicationScoped
 @Suppress("Unused")
-class SettingsResource {
+class PlaylistSettingsResource {
 
   @Inject
-  @Location("ui/settings.html")
-  private lateinit var settingsTemplate: Template
+  @Location("ui/settings/playlist.html")
+  private lateinit var playlistTemplate: Template
 
   @Inject
   private lateinit var securityIdentity: SecurityIdentity
@@ -52,7 +52,7 @@ class SettingsResource {
   @GET
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun settings(): TemplateInstance {
+  fun playlist(): TemplateInstance {
     val userId = UserId(securityIdentity.principal.name)
     val user = userRepository.findById(userId)
     val sortedPlaylists = playlistRepository.findByUserId(userId).sortedBy { it.name }
@@ -63,7 +63,7 @@ class SettingsResource {
         playlist = playlist,
       )
     }
-    return settingsTemplate
+    return playlistTemplate
       .data("displayName", user?.displayName ?: userId.value)
       .data("rows", rows)
   }
@@ -82,7 +82,7 @@ class SettingsResource {
 
   @PUT
   @Authenticated
-  @Path("/playlists/{playlistId}/sync-status")
+  @Path("/{playlistId}/sync-status")
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
   fun updateSyncStatus(
@@ -106,7 +106,7 @@ class SettingsResource {
 
   @POST
   @Authenticated
-  @Path("/playlists/sync")
+  @Path("/sync")
   @Produces(MediaType.APPLICATION_JSON)
   fun syncNow(): Response {
     val userId = UserId(securityIdentity.principal.name)
@@ -122,7 +122,7 @@ class SettingsResource {
 
   @POST
   @Authenticated
-  @Path("/playlists/{playlistId}/sync")
+  @Path("/{playlistId}/sync")
   @Produces(MediaType.APPLICATION_JSON)
   fun syncPlaylist(@PathParam("playlistId") playlistId: String): Response {
     val userId = UserId(securityIdentity.principal.name)

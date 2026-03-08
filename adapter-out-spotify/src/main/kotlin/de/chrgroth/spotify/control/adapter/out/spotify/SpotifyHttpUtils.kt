@@ -20,7 +20,7 @@ internal fun HttpResponse<String>.checkRateLimitOrError(
         val retryAfterSeconds = headers().firstValue("Retry-After")
             .map { it.toLongOrNull() ?: DEFAULT_RETRY_AFTER_SECONDS }
             .orElse(DEFAULT_RETRY_AFTER_SECONDS)
-        logger.warn { "Spotify rate limit exceeded, retry after ${retryAfterSeconds}s" }
+        logger.warn { "Spotify rate limit exceeded on ${request().uri().path}, retry after ${retryAfterSeconds}s" }
         return SpotifyRateLimitError(Duration.ofSeconds(retryAfterSeconds)).left()
     }
     if (statusCode() != HTTP_OK) {

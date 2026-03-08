@@ -1,5 +1,6 @@
 package de.chrgroth.outbox
 
+import mu.KLogging
 import java.time.Duration
 import java.time.Instant
 
@@ -19,10 +20,12 @@ class OutboxProcessor(
         dispatch: (OutboxTask) -> OutboxTaskResult,
     ): Boolean {
         val task = repository.claim(partition) ?: return false
+        logger.info { "[outbox-task] Executing: partition=${partition.key}, type=${task.eventType}" }
 
         return when (val result = dispatch(task)) {
             is OutboxTaskResult.Success -> {
                 repository.complete(task)
+                logger.info { "[outbox-task] Success: partition=${partition.key}, type=${task.eventType}" }
                 true
             }
             is OutboxTaskResult.RateLimited -> {
@@ -34,6 +37,7 @@ class OutboxProcessor(
                     val nextRetryAt = Instant.now().plus(result.retryAfter)
                     repository.reschedule(task, nextRetryAt)
                 }
+                logger.info { "[outbox-task] RateLimited: partition=${partition.key}, type=${task.eventType}, retryAfter=${result.retryAfter.seconds}s" }
                 onRateLimited(partition, result.retryAfter)
                 false
             }
@@ -46,8 +50,11 @@ class OutboxProcessor(
                     val nextRetryAt = Instant.now().plus(delay)
                     repository.fail(task, result.message, nextRetryAt)
                 }
+                logger.info { "[outbox-task] Failed: partition=${partition.key}, type=${task.eventType}, message=${result.message}" }
                 true
             }
         }
     }
+
+    companion object : KLogging()
 }

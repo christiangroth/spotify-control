@@ -24,6 +24,18 @@ class DashboardPageTests {
   }
 
   @Test
+  fun `dashboard page displays github link in dropdown`() {
+    given()
+      .`when`()
+      .get("/ui/dashboard")
+      .then()
+      .statusCode(200)
+      .body(containsString("""data-testid="github-link""""))
+      .body(containsString("https://github.com/christiangroth/spotify-control"))
+      .body(containsString("Code"))
+  }
+
+  @Test
   fun `dashboard page displays stats section`() {
     given()
       .`when`()
@@ -103,5 +115,42 @@ class DashboardPageTests {
       .statusCode(200)
       .contentType(containsString("text/html"))
       .body(containsString("Playlists synced"))
+  }
+
+  @Test
+  fun `dashboard page displays listening stats section`() {
+    given()
+      .`when`()
+      .get("/ui/dashboard")
+      .then()
+      .statusCode(200)
+      .body(containsString("Listening Stats"))
+      .body(containsString("""id="snippet-listening-stats""""))
+  }
+
+  @Test
+  fun `dashboard snippet endpoint for listening stats is available`() {
+    given()
+      .`when`()
+      .get("/ui/dashboard/snippets/listening-stats")
+      .then()
+      .statusCode(200)
+      .contentType(containsString("text/html"))
+      .body(containsString("Listening Stats"))
+      .body(containsString("""data-testid="listened-minutes""""))
+      .body(containsString("Top Tracks"))
+      .body(containsString("Top Artists"))
+      .body(containsString("Top Genres"))
+  }
+
+  @Test
+  fun `dashboard sse handler refreshes listening stats on playback data update`() {
+    given()
+      .`when`()
+      .get("/ui/dashboard")
+      .then()
+      .statusCode(200)
+      .body(containsString("snippet-listening-stats"))
+      .body(containsString("/ui/dashboard/snippets/listening-stats"))
   }
 }

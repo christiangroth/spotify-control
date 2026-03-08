@@ -7,7 +7,6 @@ import jakarta.enterprise.event.Observes
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import mu.KLogging
@@ -31,9 +30,6 @@ class OutboxPartitionWorker(
                     do {
                         processed = outbox.processNext(partition) { task ->
                             dispatcher.dispatch(task)
-                        }
-                        if (processed) {
-                            partition.throttleInterval?.let { delay(it.toMillis()) }
                         }
                     } while (processed && isActive)
                 }

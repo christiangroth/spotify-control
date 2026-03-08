@@ -1,6 +1,6 @@
 package de.chrgroth.spotify.control.domain.outbox
 
-import de.chrgroth.outbox.OutboxPartition
+import de.chrgroth.spotify.control.util.outbox.OutboxPartition
 import java.time.Duration
 
 sealed interface DomainOutboxPartition : OutboxPartition {
@@ -14,7 +14,12 @@ sealed interface DomainOutboxPartition : OutboxPartition {
         override val pauseOnRateLimit = false
     }
 
+    data object Domain : DomainOutboxPartition {
+        override val key = "domain"
+        override val pauseOnRateLimit = false
+    }
+
     companion object {
-        val all: List<DomainOutboxPartition> = listOf(ToSpotify, ToSpotifyPlayback)
+        val all: List<DomainOutboxPartition> = listOf(ToSpotify, ToSpotifyPlayback, Domain)
     }
 }

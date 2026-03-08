@@ -6,5 +6,6 @@ import kotlin.time.Instant
 
 interface RecentlyPartialPlayedRepositoryPort {
     fun findExistingPlayedAts(userId: UserId, playedAts: Set<Instant>): Set<Instant>
+    fun findSince(userId: UserId, since: Instant?): List<RecentlyPartialPlayedItem>
     fun saveAll(items: List<RecentlyPartialPlayedItem>)
 }

@@ -4,7 +4,6 @@ import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.OutboxHandlerPort
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import java.time.Duration
 
 class DomainOutboxContractTests {
 
@@ -14,6 +13,8 @@ class DomainOutboxContractTests {
         DomainOutboxEvent.UpdateUserProfile(UserId("user-1")),
         DomainOutboxEvent.SyncPlaylistInfo(UserId("user-1")),
         DomainOutboxEvent.SyncPlaylistData(UserId("user-1"), "playlist-1"),
+        DomainOutboxEvent.RebuildPlaybackData(UserId("user-1")),
+        DomainOutboxEvent.AppendPlaybackData(UserId("user-1")),
     )
 
     @Test
@@ -34,6 +35,8 @@ class DomainOutboxContractTests {
             DomainOutboxEvent.UpdateUserProfile(UserId(userId)),
             DomainOutboxEvent.SyncPlaylistInfo(UserId(userId)),
             DomainOutboxEvent.SyncPlaylistData(UserId(userId), "playlist-abc"),
+            DomainOutboxEvent.RebuildPlaybackData(UserId(userId)),
+            DomainOutboxEvent.AppendPlaybackData(UserId(userId)),
         ).forEach { event ->
             assertThat(event.deduplicationKey())
                 .describedAs("deduplicationKey for ${event::class.simpleName} should contain userId")
@@ -66,14 +69,17 @@ class DomainOutboxContractTests {
     }
 
     @Test
-    fun `ToSpotify partition is throttled at one request per second`() {
-        assertThat(DomainOutboxPartition.ToSpotify.throttleInterval)
-            .isEqualTo(Duration.ofSeconds(1))
+    fun `ToSpotify partition has no throttle interval`() {
+        assertThat(DomainOutboxPartition.ToSpotify.pauseOnRateLimit).isTrue()
     }
 
     @Test
-    fun `ToSpotifyPlayback partition has no throttle interval`() {
-        assertThat(DomainOutboxPartition.ToSpotifyPlayback.throttleInterval)
-            .isNull()
+    fun `ToSpotifyPlayback partition does not pause on rate limit`() {
+        assertThat(DomainOutboxPartition.ToSpotifyPlayback.pauseOnRateLimit).isFalse()
+    }
+
+    @Test
+    fun `Domain partition does not pause on rate limit`() {
+        assertThat(DomainOutboxPartition.Domain.pauseOnRateLimit).isFalse()
     }
 }

@@ -5,6 +5,8 @@ import arrow.core.left
 import arrow.core.right
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.PlaylistSyncError
+import de.chrgroth.spotify.control.domain.model.AppArtist
+import de.chrgroth.spotify.control.domain.model.AppTrack
 import de.chrgroth.spotify.control.domain.model.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.UserId
@@ -33,6 +35,7 @@ class PlaylistSyncAdapter(
     private val spotifyPlaylistTracks: SpotifyPlaylistTracksPort,
     private val outboxPort: OutboxPort,
     private val dashboardRefresh: DashboardRefreshPort,
+    private val appEnrichmentService: AppEnrichmentService,
 ) : PlaylistSyncPort {
 
     override fun enqueueUpdates() {
@@ -93,6 +96,28 @@ class PlaylistSyncAdapter(
         return spotifyPlaylistTracks.getPlaylistTracks(userId, accessToken, playlistId).map { playlist ->
             logger.info { "Synced ${playlist.tracks.size} track(s) for playlist $playlistId (user ${userId.value})" }
             playlistDataRepository.save(userId, playlist)
+
+            val artistStubs = playlist.tracks
+                .flatMap { track -> track.artistIds.zip(track.artistNames) }
+                .distinctBy { (artistId, _) -> artistId }
+                .map { (artistId, artistName) -> AppArtist(artistId = artistId, artistName = artistName) }
+
+            val trackStubs = playlist.tracks.mapNotNull { track ->
+                val artistId = track.artistIds.firstOrNull() ?: run {
+                    logger.warn { "Skipping track ${track.trackId} in playlist $playlistId: no artist data available" }
+                    return@mapNotNull null
+                }
+                AppTrack(
+                    trackId = track.trackId,
+                    trackTitle = track.trackName,
+                    artistId = artistId,
+                    additionalArtistIds = track.artistIds.drop(1),
+                )
+            }
+
+            // Upsert entity stubs and enqueue the full three-stage enrichment pipeline,
+            // including albums for tracks whose albumId is already known.
+            appEnrichmentService.upsertAndEnqueueEnrichment(artistStubs, trackStubs, userId)
         }
     }
 

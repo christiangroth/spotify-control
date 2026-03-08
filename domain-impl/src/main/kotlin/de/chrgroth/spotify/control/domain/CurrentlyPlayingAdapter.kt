@@ -9,6 +9,7 @@ import de.chrgroth.spotify.control.domain.port.`in`.CurrentlyPlayingPort
 import de.chrgroth.spotify.control.domain.port.out.CurrentlyPlayingRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
+import de.chrgroth.spotify.control.domain.port.out.PlaybackStatePort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyCurrentlyPlayingPort
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
@@ -25,6 +26,7 @@ class CurrentlyPlayingAdapter(
     private val currentlyPlayingRepository: CurrentlyPlayingRepositoryPort,
     private val outboxPort: OutboxPort,
     private val dashboardRefresh: DashboardRefreshPort,
+    private val playbackState: PlaybackStatePort,
 ) : CurrentlyPlayingPort {
 
     override fun enqueueUpdates() {
@@ -38,6 +40,9 @@ class CurrentlyPlayingAdapter(
     override fun update(userId: UserId): Either<DomainError, Unit> {
         val accessToken = spotifyAccessToken.getValidAccessToken(userId)
         return spotifyCurrentlyPlaying.getCurrentlyPlaying(userId, accessToken).flatMap { item ->
+            if (item != null && item.isPlaying) {
+                playbackState.onPlaybackDetected()
+            }
             if (item != null && !currentlyPlayingRepository.existsByUserAndTrackAndObservedMinute(item)) {
                 logger.info { "Persisting currently playing item for user: ${userId.value}, track: ${item.trackId}" }
                 currentlyPlayingRepository.save(item)

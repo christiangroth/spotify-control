@@ -1,5 +1,6 @@
 {#include layout.html}
     {#title}SpCtl – Playlists{/title}
+    {#scripts}<script src="/settings-utils.js"></script>{/scripts}
     {#content}
     <div class="container py-4">
         <div class="d-flex align-items-center mb-4 gap-3">
@@ -70,27 +71,7 @@
     </div>
     <script>
         document.getElementById('sync-now-btn').addEventListener('click', function() {
-            const btn = this;
-            btn.disabled = true;
-            fetch('/ui/settings/playlists/sync', { method: 'POST' })
-            .then(function(response) {
-                return response.json().then(function(data) {
-                    return { ok: response.ok, data: data };
-                });
-            })
-            .then(function(result) {
-                if (result.ok) {
-                    showBanner('Sync started successfully.', 'success');
-                } else {
-                    showBanner('Sync failed: ' + (result.data.error || 'Unknown error'), 'danger');
-                }
-            })
-            .catch(function(err) {
-                showBanner('Request failed: ' + err.message, 'danger');
-            })
-            .finally(function() {
-                btn.disabled = false;
-            });
+            postWithButton(this, '/ui/settings/playlist/sync', 'Sync started successfully.', 'Sync failed');
         });
 
         document.querySelectorAll('.sync-toggle').forEach(function(btn) {
@@ -100,7 +81,7 @@
                 const newStatus = currentStatus === 'ACTIVE' ? 'PASSIVE' : 'ACTIVE';
                 const button = this;
 
-                fetch('/ui/settings/playlists/' + encodeURIComponent(playlistId) + '/sync-status', {
+                fetch('/ui/settings/playlist/' + encodeURIComponent(playlistId) + '/sync-status', {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ syncStatus: newStatus })
@@ -131,42 +112,14 @@
         document.querySelectorAll('.sync-playlist-btn').forEach(function(btn) {
             btn.addEventListener('click', function() {
                 const playlistId = this.getAttribute('data-playlist-id');
-                const button = this;
-                button.disabled = true;
-                fetch('/ui/settings/playlists/' + encodeURIComponent(playlistId) + '/sync', {
-                    method: 'POST'
-                })
-                .then(function(response) {
-                    return response.json().then(function(data) {
-                        return { ok: response.ok, data: data };
-                    });
-                })
-                .then(function(result) {
-                    if (result.ok) {
-                        showBanner('Playlist sync enqueued successfully.', 'success');
-                    } else {
-                        showBanner('Failed to enqueue playlist sync: ' + (result.data.error || 'Unknown error'), 'danger');
-                    }
-                })
-                .catch(function(err) {
-                    showBanner('Request failed: ' + err.message, 'danger');
-                })
-                .finally(function() {
-                    button.disabled = false;
-                });
+                postWithButton(
+                    this,
+                    '/ui/settings/playlist/' + encodeURIComponent(playlistId) + '/sync',
+                    'Playlist sync enqueued successfully.',
+                    'Failed to enqueue playlist sync'
+                );
             });
         });
-
-        function showBanner(message, type) {
-            const banner = document.getElementById('status-banner');
-            banner.textContent = message;
-            banner.className = 'alert alert-' + type + ' mb-3';
-            banner.classList.remove('d-none');
-            clearTimeout(banner._fadeTimer);
-            banner._fadeTimer = setTimeout(function() {
-                banner.classList.add('d-none');
-            }, 5000);
-        }
     </script>
     {/content}
 {/include}

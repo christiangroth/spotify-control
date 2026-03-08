@@ -7,7 +7,7 @@ plugins {
   alias(libs.plugins.versionCatalogUpdate)
 
   alias(libs.plugins.release)
-  id("de.chrgroth.gradle.plugins.releasenotes")
+  id("de.chrgroth.gradle.release-notes") version "1.0.1"
 
   id("dev.iurysouza.modulegraph") version "0.13.0"
 }
@@ -38,8 +38,8 @@ releasenotes {
     ReleasenotesConfiguration(
       name = "repo-markdown",
       outputPath = "$releasenotesBasePath/RELEASENOTES.md",
-      snippetsPath = "$releasenotesBasePath/releasenotes-snippets",
-      templatesPath = "$releasenotesBasePath/releasenotes-templates",
+      snippetsPath = "$releasenotesBasePath/snippets",
+      templatesPath = "$releasenotesBasePath/templates",
       bugfixesHeader = "## Bugfixes / Chore",
       bugfixesFooter = "",
       featuresHeader = "## New Features",

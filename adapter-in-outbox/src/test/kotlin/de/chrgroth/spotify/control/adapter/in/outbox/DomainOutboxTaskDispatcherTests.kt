@@ -101,6 +101,69 @@ class DomainOutboxTaskDispatcherTests {
     }
 
     @Test
+    fun `RebuildPlaybackData dispatches to handle(RebuildPlaybackData)`() {
+        val event = DomainOutboxEvent.RebuildPlaybackData(userIdObj)
+        val task = buildTask(DomainOutboxEvent.RebuildPlaybackData.KEY, userId)
+        every { handlerPort.handle(event) } returns OutboxTaskResult.Success
+
+        val result = subject.dispatch(task)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.Success::class.java)
+        verify { handlerPort.handle(event) }
+    }
+
+    @Test
+    fun `AppendPlaybackData dispatches to handle(AppendPlaybackData)`() {
+        val event = DomainOutboxEvent.AppendPlaybackData(userIdObj)
+        val task = buildTask(DomainOutboxEvent.AppendPlaybackData.KEY, userId)
+        every { handlerPort.handle(event) } returns OutboxTaskResult.Success
+
+        val result = subject.dispatch(task)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.Success::class.java)
+        verify { handlerPort.handle(event) }
+    }
+
+    @Test
+    fun `EnrichArtistDetails dispatches to handle(EnrichArtistDetails)`() {
+        val artistId = "artist-456"
+        val event = DomainOutboxEvent.EnrichArtistDetails(artistId, userIdObj)
+        val task = buildTask(DomainOutboxEvent.EnrichArtistDetails.KEY, "$artistId:$userId")
+        every { handlerPort.handle(event) } returns OutboxTaskResult.Success
+
+        val result = subject.dispatch(task)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.Success::class.java)
+        verify { handlerPort.handle(event) }
+    }
+
+    @Test
+    fun `EnrichTrackDetails dispatches to handle(EnrichTrackDetails)`() {
+        val trackId = "track-789"
+        val event = DomainOutboxEvent.EnrichTrackDetails(trackId, userIdObj)
+        val task = buildTask(DomainOutboxEvent.EnrichTrackDetails.KEY, "$trackId:$userId")
+        every { handlerPort.handle(event) } returns OutboxTaskResult.Success
+
+        val result = subject.dispatch(task)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.Success::class.java)
+        verify { handlerPort.handle(event) }
+    }
+
+    @Test
+    fun `EnrichAlbumDetails dispatches to handle(EnrichAlbumDetails)`() {
+        val albumId = "album-101"
+        val event = DomainOutboxEvent.EnrichAlbumDetails(albumId, userIdObj)
+        val task = buildTask(DomainOutboxEvent.EnrichAlbumDetails.KEY, "$albumId:$userId")
+        every { handlerPort.handle(event) } returns OutboxTaskResult.Success
+
+        val result = subject.dispatch(task)
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.Success::class.java)
+        verify { handlerPort.handle(event) }
+    }
+
+    @Test
     fun `unknown event type returns Failed result`() {
         val task = buildTask("UnknownEvent", "payload")
 

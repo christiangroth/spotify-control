@@ -56,6 +56,7 @@ class OutboxImpl(
             enqueuedCounters.getOrPut(partition.key) {
                 meterRegistry.counter("outbox_tasks_enqueued_total", "partition", partition.key)
             }.increment()
+            partitionObservers.forEach { it.onTaskEnqueued(partition) }
         }
         return inserted
     }
