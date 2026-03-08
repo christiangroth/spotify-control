@@ -35,7 +35,7 @@ class SpotifyPlaylistTracksAdapter(
         return try {
             val tracks = mutableListOf<PlaylistTrack>()
             var snapshotId: String? = null
-            var nextUrl: String? = "$apiBaseUrl/v1/playlists/$playlistId/items?limit=100"
+            var nextUrl: String? = "$apiBaseUrl/v1/playlists/$playlistId/items?limit=50"
             while (nextUrl != null) {
                 val request = HttpRequest.newBuilder()
                     .uri(URI.create(nextUrl))
