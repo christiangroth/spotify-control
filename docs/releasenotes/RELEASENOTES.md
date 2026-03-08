@@ -1,3 +1,7 @@
+# 0.37.0 - 2026.03.08
+## New Features
+* optimize-rate-limit-logging: Add info-level logging when an outbox task is executed, including partition and task type.
+
 # 0.36.1 - 2026.03.08
 ## Bugfixes / Chore
 * fix-rate-limiting-throttling: Increased playlist tracks page size to reduce Spotify API call volume; increased ToSpotify throttle interval; improved rate-limit warn logging with endpoint URL context.
