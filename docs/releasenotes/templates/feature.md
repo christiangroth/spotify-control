@@ -1,1 +1,1 @@
-* Answer to the ultimate question of life, the universe, and everything.
+* {branch-last-segment}: Description of the change.

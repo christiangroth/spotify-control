@@ -29,7 +29,10 @@ class OutboxHandlerAdapter(
         when (val result = currentlyPlaying.update(event.userId)) {
             is Either.Right -> OutboxTaskResult.Success
             is Either.Left -> when (val error = result.value) {
-                is SpotifyRateLimitError -> OutboxTaskResult.RateLimited(error.retryAfter)
+                is SpotifyRateLimitError -> {
+                    logger.warn { "Rate limited on FetchCurrentlyPlaying for user ${event.userId.value}, retry after ${error.retryAfter.seconds}s" }
+                    OutboxTaskResult.RateLimited(error.retryAfter)
+                }
                 else -> {
                     logger.error { "Failed to fetch currently playing for user ${event.userId.value}: ${error.code}" }
                     OutboxTaskResult.Failed("Failed to fetch currently playing: ${error.code}")
@@ -45,7 +48,10 @@ class OutboxHandlerAdapter(
         when (val result = recentlyPlayed.update(event.userId)) {
             is Either.Right -> OutboxTaskResult.Success
             is Either.Left -> when (val error = result.value) {
-                is SpotifyRateLimitError -> OutboxTaskResult.RateLimited(error.retryAfter)
+                is SpotifyRateLimitError -> {
+                    logger.warn { "Rate limited on FetchRecentlyPlayed for user ${event.userId.value}, retry after ${error.retryAfter.seconds}s" }
+                    OutboxTaskResult.RateLimited(error.retryAfter)
+                }
                 else -> {
                     logger.error { "Failed to fetch recently played for user ${event.userId.value}: ${error.code}" }
                     OutboxTaskResult.Failed("Failed to fetch recently played: ${error.code}")
@@ -61,7 +67,10 @@ class OutboxHandlerAdapter(
         when (val result = userProfileUpdate.update(event.userId)) {
             is Either.Right -> OutboxTaskResult.Success
             is Either.Left -> when (val error = result.value) {
-                is SpotifyRateLimitError -> OutboxTaskResult.RateLimited(error.retryAfter)
+                is SpotifyRateLimitError -> {
+                    logger.warn { "Rate limited on UpdateUserProfile for user ${event.userId.value}, retry after ${error.retryAfter.seconds}s" }
+                    OutboxTaskResult.RateLimited(error.retryAfter)
+                }
                 else -> {
                     logger.error { "Failed to update user profile for ${event.userId.value}: ${error.code}" }
                     OutboxTaskResult.Failed("Failed to update user profile: ${error.code}")
@@ -77,7 +86,10 @@ class OutboxHandlerAdapter(
         when (val result = playlistSync.syncPlaylists(event.userId)) {
             is Either.Right -> OutboxTaskResult.Success
             is Either.Left -> when (val error = result.value) {
-                is SpotifyRateLimitError -> OutboxTaskResult.RateLimited(error.retryAfter)
+                is SpotifyRateLimitError -> {
+                    logger.warn { "Rate limited on SyncPlaylistInfo for user ${event.userId.value}, retry after ${error.retryAfter.seconds}s" }
+                    OutboxTaskResult.RateLimited(error.retryAfter)
+                }
                 else -> {
                     logger.error { "Failed to sync playlists for user ${event.userId.value}: ${error.code}" }
                     OutboxTaskResult.Failed("Failed to sync playlists: ${error.code}")
@@ -93,7 +105,10 @@ class OutboxHandlerAdapter(
         when (val result = playlistSync.syncPlaylistData(event.userId, event.playlistId)) {
             is Either.Right -> OutboxTaskResult.Success
             is Either.Left -> when (val error = result.value) {
-                is SpotifyRateLimitError -> OutboxTaskResult.RateLimited(error.retryAfter)
+                is SpotifyRateLimitError -> {
+                    logger.warn { "Rate limited on SyncPlaylistData playlist ${event.playlistId} (user ${event.userId.value}), retry after ${error.retryAfter.seconds}s" }
+                    OutboxTaskResult.RateLimited(error.retryAfter)
+                }
                 else -> {
                     logger.error { "Failed to sync playlist data for playlist ${event.playlistId} (user ${event.userId.value}): ${error.code}" }
                     OutboxTaskResult.Failed("Failed to sync playlist data: ${error.code}")
@@ -125,7 +140,10 @@ class OutboxHandlerAdapter(
         when (val result = playbackEnrichment.enrichArtistDetails(event.artistId, event.userId)) {
             is Either.Right -> OutboxTaskResult.Success
             is Either.Left -> when (val error = result.value) {
-                is SpotifyRateLimitError -> OutboxTaskResult.RateLimited(error.retryAfter)
+                is SpotifyRateLimitError -> {
+                    logger.warn { "Rate limited on EnrichArtistDetails artist ${event.artistId} (user ${event.userId.value}), retry after ${error.retryAfter.seconds}s" }
+                    OutboxTaskResult.RateLimited(error.retryAfter)
+                }
                 else -> {
                     logger.error { "Failed to enrich artist ${event.artistId} for user ${event.userId.value}: ${error.code}" }
                     OutboxTaskResult.Failed("Failed to enrich artist: ${error.code}")
@@ -141,7 +159,10 @@ class OutboxHandlerAdapter(
         when (val result = playbackEnrichment.enrichTrackDetails(event.trackId, event.userId)) {
             is Either.Right -> OutboxTaskResult.Success
             is Either.Left -> when (val error = result.value) {
-                is SpotifyRateLimitError -> OutboxTaskResult.RateLimited(error.retryAfter)
+                is SpotifyRateLimitError -> {
+                    logger.warn { "Rate limited on EnrichTrackDetails for track ${event.trackId} (user ${event.userId.value}), retry after ${error.retryAfter.seconds}s" }
+                    OutboxTaskResult.RateLimited(error.retryAfter)
+                }
                 else -> {
                     logger.error { "Failed to enrich track ${event.trackId} for user ${event.userId.value}: ${error.code}" }
                     OutboxTaskResult.Failed("Failed to enrich track: ${error.code}")
@@ -157,7 +178,10 @@ class OutboxHandlerAdapter(
         when (val result = playbackEnrichment.enrichAlbumDetails(event.albumId, event.userId)) {
             is Either.Right -> OutboxTaskResult.Success
             is Either.Left -> when (val error = result.value) {
-                is SpotifyRateLimitError -> OutboxTaskResult.RateLimited(error.retryAfter)
+                is SpotifyRateLimitError -> {
+                    logger.warn { "Rate limited on EnrichAlbumDetails for album ${event.albumId} (user ${event.userId.value}), retry after ${error.retryAfter.seconds}s" }
+                    OutboxTaskResult.RateLimited(error.retryAfter)
+                }
                 else -> {
                     logger.error { "Failed to enrich album ${event.albumId} for user ${event.userId.value}: ${error.code}" }
                     OutboxTaskResult.Failed("Failed to enrich album: ${error.code}")

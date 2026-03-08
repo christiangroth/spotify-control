@@ -70,9 +70,9 @@ class DomainOutboxContractTests {
     }
 
     @Test
-    fun `ToSpotify partition is throttled at one request per second`() {
+    fun `ToSpotify partition is throttled at five seconds per request`() {
         assertThat(DomainOutboxPartition.ToSpotify.throttleInterval)
-            .isEqualTo(Duration.ofSeconds(1))
+            .isEqualTo(Duration.ofSeconds(5))
     }
 
     @Test
