@@ -28,7 +28,7 @@ class SchedulerInfoAdapter(
                     val scheduled = method.getAnnotation(Scheduled::class.java) ?: return@mapNotNull null
                     CronjobStats(
                         simpleName = clazz.simpleName,
-                        cronSchedule = scheduled.cron,
+                        cronSchedule = scheduled.cron.ifEmpty { "every ${scheduled.every}" },
                         nextExecution = trigger.nextFireTime,
                         running = scheduler.isRunning && !scheduler.isPaused(trigger.id),
                     )

@@ -10,6 +10,7 @@ import de.chrgroth.spotify.control.domain.error.EnrichmentError
 import de.chrgroth.spotify.control.domain.model.AccessToken
 import de.chrgroth.spotify.control.domain.model.AppArtist
 import de.chrgroth.spotify.control.domain.model.UserId
+import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
 import de.chrgroth.spotify.control.domain.port.out.SpotifyArtistDetailsPort
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
@@ -25,6 +26,7 @@ class SpotifyArtistDetailsAdapter(
     @param:ConfigProperty(name = "spotify.api.base-url", defaultValue = "https://api.spotify.com")
     private val apiBaseUrl: String,
     private val httpMetrics: SpotifyHttpMetrics,
+    private val throttler: SpotifyRequestThrottler,
 ) : SpotifyArtistDetailsPort {
 
     private val httpClient = HttpClient.newHttpClient()
@@ -36,6 +38,7 @@ class SpotifyArtistDetailsAdapter(
         artistId: String,
     ): Either<DomainError, AppArtist?> {
         return try {
+            throttler.throttle(DomainOutboxPartition.ToSpotify.key)
             val request = HttpRequest.newBuilder()
                 .uri(URI.create("$apiBaseUrl/v1/artists/$artistId"))
                 .header("Authorization", "Bearer ${accessToken.value}")
