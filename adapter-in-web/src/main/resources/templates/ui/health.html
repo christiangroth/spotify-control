@@ -17,14 +17,14 @@
                                 <table class="table table-sm mb-0" style="color:#e0e0e0;background-color:transparent;" data-testid="outgoing-requests-table">
                                     <thead>
                                         <tr style="border-color:#333;">
-                                            <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Host</th>
+                                            <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Endpoint</th>
                                             <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">Requests</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {#for r in stats.outgoingRequestStats}
                                         <tr style="border-color:#333;">
-                                            <td style="border-color:#333;color:#e0e0e0;background-color:transparent;">{r.host}</td>
+                                            <td style="border-color:#333;color:#e0e0e0;background-color:transparent;">{r.endpoint}</td>
                                             <td style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">{r.requestCountLast24h}</td>
                                         </tr>
                                         {/for}

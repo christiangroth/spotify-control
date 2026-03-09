@@ -28,8 +28,8 @@ class SpotifyHttpMetrics(
 
     @PostConstruct
     fun initialize() {
-        Gauge.builder("spotify.request.hosts", requestTimestamps) { it.size.toDouble() }
-            .description("Number of tracked Spotify API hosts with recorded requests")
+        Gauge.builder("spotify.request.endpoints", requestTimestamps) { it.size.toDouble() }
+            .description("Number of tracked Spotify API endpoints with recorded requests")
             .register(meterRegistry)
     }
 
@@ -42,16 +42,15 @@ class SpotifyHttpMetrics(
     }
 
     private fun record(uri: URI, statusCode: Int, durationMs: Long) {
-        val url = "${uri.host}${uri.path}"
-        timers.getOrPut("${url}_${statusCode}") {
+        val endpoint = "${uri.host}${uri.path}"
+        timers.getOrPut("${endpoint}_${statusCode}") {
             Timer.builder("spotify.request")
-                .tag("url", url)
+                .tag("url", endpoint)
                 .tag("status", statusCode.toString())
                 .register(meterRegistry)
         }.record(durationMs, TimeUnit.MILLISECONDS)
 
-        val host = uri.host
-        val deque = requestTimestamps.getOrPut(host) { ConcurrentLinkedDeque() }
+        val deque = requestTimestamps.getOrPut(endpoint) { ConcurrentLinkedDeque() }
         deque.add(Instant.now())
         pruneOldEntries(deque)
         requestStatsObservers.forEach { it.onRequestRecorded() }
@@ -60,14 +59,14 @@ class SpotifyHttpMetrics(
     override fun getRequestStats(): List<OutgoingRequestStats> {
         val cutoff = Instant.now().minusSeconds(WINDOW_SECONDS)
         return requestTimestamps.entries
-            .map { (host, deque) ->
+            .map { (endpoint, deque) ->
                 pruneOldEntries(deque)
                 OutgoingRequestStats(
-                    host = host,
+                    endpoint = endpoint,
                     requestCountLast24h = deque.count { it.isAfter(cutoff) }.toLong(),
                 )
             }
-            .sortedBy { it.host }
+            .sortedBy { it.endpoint }
     }
 
     private fun pruneOldEntries(deque: ConcurrentLinkedDeque<Instant>) {
