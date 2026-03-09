@@ -1,3 +1,12 @@
+# 0.44.2 (2026.03.09)
+
+## Bugfixes / Chore
+* fix-resuming-partition-health-ui: Resuming a paused outbox partition via the Health UI now correctly wakes up the partition worker and triggers event processing.
+
+
+
+---
+
 # 0.44.1 (2026.03.09)
 
 ## Bugfixes / Chore
