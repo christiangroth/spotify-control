@@ -345,6 +345,7 @@
                 fetch('/ui/health/outbox-partitions/' + encodeURIComponent(partitionKey) + '/activate', { method: 'POST' })
                     .catch(function (err) { console.error('Failed to resume partition', err); });
             }
+            window.resumeOutboxPartition = resumeOutboxPartition;
 
             function toggleOutboxDetail(partitionKey) {
                 var row = document.querySelector('.outbox-detail-row[data-partition="' + CSS.escape(partitionKey) + '"]');
@@ -352,6 +353,7 @@
                     row.style.display = row.style.display === 'none' ? '' : 'none';
                 }
             }
+            window.toggleOutboxDetail = toggleOutboxDetail;
 
             function connect() {
                 source = new EventSource('/ui/health/events');
