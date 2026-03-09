@@ -1,3 +1,12 @@
+# 0.45.0 (2026.03.09)
+
+## New Features
+* delete-sample-api: Removed sample API endpoint (`GET /api/hello`) and all related code.
+
+
+
+---
+
 # 0.44.3 (2026.03.09)
 
 ## Bugfixes / Chore
