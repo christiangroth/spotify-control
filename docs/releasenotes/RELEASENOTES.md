@@ -1,3 +1,12 @@
+# 0.40.3 (2026.03.09)
+
+## Bugfixes / Chore
+* fix-metrics-dashboard-queries: Fixed Grafana metrics dashboard by updating all query job filters from `spotify_control` to `prometheus.scrape.spotify_control`.
+
+
+
+---
+
 # 0.40.2 (2026.03.09)
 
 ## Bugfixes / Chore
