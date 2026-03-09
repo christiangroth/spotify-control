@@ -8,7 +8,7 @@ import de.chrgroth.spotify.control.domain.model.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.RecentlyPlayedItem
 import de.chrgroth.spotify.control.domain.model.TopEntry
 import de.chrgroth.spotify.control.domain.model.UserId
-import de.chrgroth.spotify.control.domain.port.`in`.DashboardStatsPort
+import de.chrgroth.spotify.control.domain.port.`in`.DashboardPort
 import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppPlaybackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
@@ -25,7 +25,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty
 
 @ApplicationScoped
 @Suppress("Unused")
-class DashboardStatsAdapter(
+class DashboardAdapter(
     private val appPlaybackRepository: AppPlaybackRepositoryPort,
     private val appTrackRepository: AppTrackRepositoryPort,
     private val appArtistRepository: AppArtistRepositoryPort,
@@ -34,7 +34,7 @@ class DashboardStatsAdapter(
     private val recentlyPlayedLimit: Int,
     @param:ConfigProperty(name = "dashboard.listening-stats.top-entries-limit", defaultValue = "3")
     private val topEntriesLimit: Int,
-) : DashboardStatsPort {
+) : DashboardPort {
 
     override fun getStats(userId: UserId): DashboardStats {
         val since = Clock.System.now() - STATS_DAYS.days
@@ -169,4 +169,3 @@ class DashboardStatsAdapter(
 }
 
 private fun AppTrack.allArtistIds(): List<String> = listOfNotNull(artistId) + additionalArtistIds
-

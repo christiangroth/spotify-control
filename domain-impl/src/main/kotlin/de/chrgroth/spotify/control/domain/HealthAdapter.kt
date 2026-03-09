@@ -1,21 +1,23 @@
 package de.chrgroth.spotify.control.domain
 
 import de.chrgroth.spotify.control.domain.model.HealthStats
-import de.chrgroth.spotify.control.domain.port.`in`.HealthStatsPort
+import de.chrgroth.spotify.control.domain.port.`in`.HealthPort
 import de.chrgroth.spotify.control.domain.port.out.CronjobInfoPort
 import de.chrgroth.spotify.control.domain.port.out.MongoStatsPort
+import de.chrgroth.spotify.control.domain.port.out.OutboxActivationPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxInfoPort
 import de.chrgroth.spotify.control.domain.port.out.OutgoingRequestStatsPort
 import jakarta.enterprise.context.ApplicationScoped
 
 @ApplicationScoped
 @Suppress("Unused")
-class HealthStatsAdapter(
+class HealthAdapter(
     private val outboxInfo: OutboxInfoPort,
+    private val outboxActivation: OutboxActivationPort,
     private val outgoingRequestStats: OutgoingRequestStatsPort,
     private val mongoStats: MongoStatsPort,
     private val cronjobInfo: CronjobInfoPort,
-) : HealthStatsPort {
+) : HealthPort {
 
     override fun getStats(): HealthStats = HealthStats(
         outgoingRequestStats = outgoingRequestStats.getRequestStats(),
@@ -24,4 +26,7 @@ class HealthStatsAdapter(
         mongoQueryStats = mongoStats.getQueryStats(),
         cronjobStats = cronjobInfo.getCronjobStats(),
     )
+
+    override fun activatePartition(partitionKey: String): Boolean =
+        outboxActivation.activate(partitionKey)
 }
