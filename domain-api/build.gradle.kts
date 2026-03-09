@@ -3,5 +3,5 @@ plugins {
 }
 
 dependencies {
-  api(project(":util-outbox-api"))
+  api(libs.quarkusOutboxDomainApi)
 }

@@ -96,7 +96,7 @@ fun run() { ... }
 
 ## Architecture Placement
 
-`util-starters` follows the same self-contained utility module pattern as `util-outbox`:
+`util-starters` follows a similar self-contained utility module pattern as the external `de.chrgroth.quarkus.outbox` library:
 
 | Module               | Responsibility                                                                                        |
 |----------------------|-------------------------------------------------------------------------------------------------------|

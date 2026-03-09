@@ -2,7 +2,7 @@
 
 ## Overview
 
-The outbox is split into two modules: `util-outbox-api` (pure API contracts) and `util-outbox-impl` (Quarkus/MongoDB implementation). Together they provide a persistent, reliable task queue backed by MongoDB. They decouple producers (domain services that enqueue tasks) from consumers (partition workers that dispatch them), ensuring at-least-once delivery even across application restarts.
+The outbox is provided as an external library (`de.chrgroth.quarkus.outbox`, package `de.chrgroth.outbox`, [christiangroth/quarkus-outbox](https://github.com/christiangroth/quarkus-outbox)). It provides a persistent, reliable task queue backed by MongoDB, decoupling producers (domain services that enqueue tasks) from consumers (partition workers that dispatch them) and ensuring at-least-once delivery even across application restarts.
 
 ## Core Concepts
 
@@ -17,7 +17,7 @@ The outbox is split into two modules: `util-outbox-api` (pure API contracts) and
 
 ## Module Inventory
 
-### `util-outbox-api` (API contracts)
+### `domain-api` (API contracts)
 
 | Class / Interface            | Role                                                                                 |
 |------------------------------|--------------------------------------------------------------------------------------|
@@ -36,7 +36,7 @@ The outbox is split into two modules: `util-outbox-api` (pure API contracts) and
 | `OutboxPartitionInfo`        | Data snapshot of a partition's status and pause state.                               |
 | `OutboxPartitionObserver`    | Observer interface notified on partition pause/resume.                               |
 
-### `util-outbox-impl` (Quarkus/MongoDB implementation)
+### `domain-impl` + `adapter-out-persistence-mongodb` (Quarkus/MongoDB implementation)
 
 | Class / Interface            | Role                                                                                 |
 |------------------------------|--------------------------------------------------------------------------------------|
@@ -79,7 +79,7 @@ sealed interface DomainOutboxEvent : OutboxEvent {
 ## Enqueueing Tasks
 
 Enqueue via `OutboxPort` (in `domain-api`), implemented by `OutboxPortAdapter` in `adapter-out-outbox`,
-which delegates to the `Outbox` facade (implemented by `OutboxImpl`) in `util-outbox-impl`:
+which delegates to the `Outbox` facade (implemented by `OutboxImpl`) in `de.chrgroth.quarkus.outbox:domain-impl`:
 
 ```kotlin
 outboxPort.enqueue(DomainOutboxEvent.FetchRecentlyPlayed(userId))
@@ -183,5 +183,5 @@ The default value is 365 days.
 | Single `OutboxEvent` interface | Combines event type key + deduplication key | Reduces the number of types callers must implement; payload class owns the dedup logic naturally. |
 | Absent partition document = ACTIVE | Lazy creation on first pause | Existing deployments need no migration; only paused partitions need a document. |
 | Priority via enum name ordering | `HIGH` < `NORMAL` alphabetically (ascending sort) | Avoids a numeric mapping; enum names are self-documenting. |
-| `Outbox` interface / `OutboxImpl` in `util-outbox-impl` | Encapsulates `OutboxRepository` + `OutboxWakeupService` | Adapters depend on the `Outbox` interface from `util-outbox-api`; wakeup signalling is co-located with enqueue. |
+| `Outbox` interface / `OutboxImpl` in `de.chrgroth.quarkus.outbox:domain-impl` | Encapsulates `OutboxRepository` + `OutboxWakeupService` | Adapters depend on the `Outbox` interface from `de.chrgroth.quarkus.outbox:domain-api`; wakeup signalling is co-located with enqueue. |
 | Throttle interval in `OutboxPartition` | Per-partition `Duration?` property (default `null`) | Each partition can declare its own rate budget; the worker applies the delay without coupling throttling logic to the processor or repository. |
