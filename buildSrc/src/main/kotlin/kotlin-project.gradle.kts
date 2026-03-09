@@ -12,14 +12,6 @@ plugins {
   id("org.jetbrains.kotlinx.kover")
 }
 
-repositories {
-  mavenCentral()
-  maven {
-    this.name = "Jitpack.io"
-    url = uri("https://jitpack.io")
-  }
-}
-
 // Access the version catalog
 val libs = extensions.getByType(VersionCatalogsExtension::class.java).named("libs")
 
