@@ -1,3 +1,12 @@
+# 0.39.0 (2026.03.09)
+
+## New Features
+* extract-starters: Renamed `util-starters` package from `de.chrgroth.spotify.control.util.starters` to `de.chrgroth.starters` and added `maven-publish` configuration to prepare the module for extraction as a standalone external library.
+
+
+
+---
+
 # 0.38.1 (2026.03.09)
 
 ## Bugfixes / Chore
