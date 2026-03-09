@@ -25,6 +25,11 @@ dependencyResolutionManagement {
           ?: System.getenv("GHCR_PAT")
       }
     }
+    maven {
+      this.name = "Jitpack.io"
+      url = uri("https://jitpack.io")
+    }
+    mavenCentral()
   }
 }
 
