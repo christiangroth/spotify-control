@@ -18,7 +18,7 @@
                                     <thead>
                                         <tr style="border-color:#333;">
                                             <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Endpoint</th>
-                                            <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">Requests</th>
+                                            <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">#</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -45,8 +45,8 @@
                                     <thead>
                                         <tr style="border-color:#333;">
                                             <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Partition</th>
-                                            <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">Blocked Until</th>
-                                            <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">Documents</th>
+                                            <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">Blocked</th>
+                                            <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">#</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -63,10 +63,37 @@
                                                 </svg>
                                                 {/if}
                                                 {p.name}
+                                                {#if p.status != "ACTIVE"}
+                                                <button onclick="resumeOutboxPartition(this.dataset.partitionKey)" data-partition-key="{p.name}" class="btn btn-sm btn-outline-success" style="padding:1px 6px;font-size:0.75rem;margin-left:4px;" title="Resume partition" data-testid="resume-partition-btn">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                                                        <path d="M10.804 8 5 4.633v6.734L10.804 8zm.792-.696a.802.802 0 0 1 0 1.392l-6.363 3.692C4.713 12.69 4 12.345 4 11.692V4.308c0-.653.713-.998 1.233-.696l6.363 3.692z"/>
+                                                    </svg>
+                                                </button>
+                                                {/if}
                                             </td>
                                             <td class="outbox-blocked-until" style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">-</td>
-                                            <td style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">{p.documentCount}</td>
+                                            {#if p.documentCount > 0}
+                                            <td style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;cursor:pointer;text-decoration:underline dotted;" onclick="toggleOutboxDetail(this.dataset.partition)" onkeydown="if(event.key==='Enter'||event.key===' ')toggleOutboxDetail(this.dataset.partition)" tabindex="0" data-partition="{p.name}" data-testid="outbox-doc-count">{p.documentCount}</td>
+                                            {#else}
+                                            <td style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;" data-testid="outbox-doc-count">{p.documentCount}</td>
+                                            {/if}
                                         </tr>
+                                        {#if p.documentCount > 0}
+                                        <tr class="outbox-detail-row" data-partition="{p.name}" style="display:none;border-color:#333;">
+                                            <td colspan="3" style="padding:4px 8px 4px 24px;background-color:#161616;border-color:#333;">
+                                                <table class="table table-sm mb-0" style="color:#aaa;background-color:transparent;font-size:0.8rem;">
+                                                    <tbody>
+                                                        {#for etc in p.eventTypeCounts}
+                                                        <tr style="border-color:#2a2a2a;">
+                                                            <td style="border-color:#2a2a2a;color:#bbb;background-color:transparent;">{etc.eventType}</td>
+                                                            <td style="border-color:#2a2a2a;color:#bbb;text-align:right;background-color:transparent;">{etc.count}</td>
+                                                        </tr>
+                                                        {/for}
+                                                    </tbody>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                        {/if}
                                         {/for}
                                     </tbody>
                                 </table>
@@ -83,14 +110,13 @@
                     <div id="snippet-cronjobs" class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
                         {#fragment id="snippet_cronjobs"}
                         <div class="card-body">
-                            <p class="card-subtitle mb-3" style="color:#888;font-size:.8rem;">Scheduled Jobs</p>
                             <div class="table-responsive">
                                 <table class="table table-sm mb-0" style="color:#e0e0e0;background-color:transparent;" data-testid="cronjobs-table">
                                     <thead>
                                         <tr style="border-color:#333;">
                                             <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Job</th>
-                                            <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Schedule</th>
-                                            <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">Next Execution</th>
+                                            <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Cron</th>
+                                            <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">Next</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -133,7 +159,7 @@
                                     <thead>
                                         <tr style="border-color:#333;">
                                             <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Collection</th>
-                                            <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">Documents</th>
+                                            <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">#</th>
                                             <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">Size</th>
                                         </tr>
                                     </thead>
@@ -296,7 +322,7 @@
                     if (remaining <= 1000) {
                         cell.textContent = 'now';
                     } else if (remaining < TWENTY_FOUR_HOURS_MS) {
-                        cell.textContent = formatBlockedUntil(blockedUntil) + ' (' + formatCountdown(remaining) + ')';
+                        cell.textContent = formatCountdown(remaining);
                     } else {
                         cell.textContent = formatBlockedUntil(blockedUntil);
                     }
@@ -314,6 +340,18 @@
             setInterval(updateCronjobCountdowns, 500);
             updateCronjobCountdowns();
             startOutboxBlockedUntilInterval();
+
+            function resumeOutboxPartition(partitionKey) {
+                fetch('/ui/health/outbox-partitions/' + encodeURIComponent(partitionKey) + '/activate', { method: 'POST' })
+                    .catch(function (err) { console.error('Failed to resume partition', err); });
+            }
+
+            function toggleOutboxDetail(partitionKey) {
+                var row = document.querySelector('.outbox-detail-row[data-partition="' + CSS.escape(partitionKey) + '"]');
+                if (row) {
+                    row.style.display = row.style.display === 'none' ? '' : 'none';
+                }
+            }
 
             function connect() {
                 source = new EventSource('/ui/health/events');
