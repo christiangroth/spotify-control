@@ -1,3 +1,21 @@
+# 0.39.0 (2026.03.09)
+
+## New Features
+* extract-starters: Renamed `util-starters` package from `de.chrgroth.spotify.control.util.starters` to `de.chrgroth.starters` and added `maven-publish` configuration to prepare the module for extraction as a standalone external library.
+
+
+
+---
+
+# 0.38.1 (2026.03.09)
+
+## Bugfixes / Chore
+* fix-slow-queries-artists-tracks: Improved performance of artist and track lookups by replacing individual per-ID database queries with a single batch query.
+
+
+
+---
+
 # 0.38.0 - 2026.03.08
 ## New Features
 * move-throttling-to-http-handling: Spotify API request throttling is now applied at the HTTP level (2s per request for enrichment and sync calls) instead of at the outbox processing level.

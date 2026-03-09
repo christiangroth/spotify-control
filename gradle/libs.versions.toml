@@ -15,6 +15,7 @@ mockk = "1.14.9"
 openapiGenerator = "7.20.0"
 quarkus = "3.32.1"
 quarkusOutbox = "0.2.1"
+quarkusStarters = "0.3.1"
 release = "3.1.0"
 versionCatalogUpdate = "1.1.0"
 
@@ -36,6 +37,9 @@ quarkusBom = { module = "io.quarkus.platform:quarkus-bom", version.ref = "quarku
 quarkusOutboxAdapterOutPersistenceMongodb = { module = "de.chrgroth.quarkus.outbox:adapter-out-persistence-mongodb", version.ref = "quarkusOutbox" }
 quarkusOutboxDomainApi = { module = "de.chrgroth.quarkus.outbox:domain-api", version.ref = "quarkusOutbox" }
 quarkusOutboxDomainImpl = { module = "de.chrgroth.quarkus.outbox:domain-impl", version.ref = "quarkusOutbox" }
+quarkusStartersDomainApi = { module = "de.chrgroth.quarkus.starters:domain-api", version.ref = "quarkusStarters" }
+quarkusStartersDomainImpl = { module = "de.chrgroth.quarkus.starters:domain-impl", version.ref = "quarkusStarters" }
+quarkusStartersAdapterOutPersistenceMongodb = { module = "de.chrgroth.quarkus.starters:adapter-out-persistence-mongodb", version.ref = "quarkusStarters" }
 
 [plugins]
 allopen = { id = "org.jetbrains.kotlin.plugin.allopen", version.ref = "kotlin" }

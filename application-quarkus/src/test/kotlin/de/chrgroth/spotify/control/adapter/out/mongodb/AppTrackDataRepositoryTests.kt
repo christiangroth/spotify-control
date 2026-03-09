@@ -58,4 +58,17 @@ class AppTrackDataRepositoryTests {
         val result = appTrackRepository.findByTrackIds(emptySet())
         assertThat(result).isEmpty()
     }
+
+    @Test
+    fun `findByTrackIds returns all matching items in a single batch`() {
+        val item1 = trackData("batch1")
+        val item2 = trackData("batch2")
+        val item3 = trackData("batch3")
+        appTrackRepository.upsertAll(listOf(item1, item2, item3))
+
+        val result = appTrackRepository.findByTrackIds(setOf(item1.trackId, item2.trackId, item3.trackId))
+
+        assertThat(result).hasSize(3)
+        assertThat(result.map { it.trackId }).containsExactlyInAnyOrder(item1.trackId, item2.trackId, item3.trackId)
+    }
 }
