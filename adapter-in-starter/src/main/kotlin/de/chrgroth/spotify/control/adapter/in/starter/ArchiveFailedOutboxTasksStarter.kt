@@ -1,7 +1,7 @@
 package de.chrgroth.spotify.control.adapter.`in`.starter
 
 import de.chrgroth.spotify.control.util.outbox.Outbox
-import de.chrgroth.spotify.control.util.starters.Starter
+import de.chrgroth.quarkus.starters.Starter
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
 

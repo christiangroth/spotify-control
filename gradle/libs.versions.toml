@@ -14,6 +14,7 @@ marked = "17.0.3"
 mockk = "1.14.9"
 openapiGenerator = "7.20.0"
 quarkus = "3.32.1"
+quarkusStarters = "0.3.1"
 release = "3.1.0"
 versionCatalogUpdate = "1.1.0"
 
@@ -32,6 +33,9 @@ marked = { module = "org.webjars.npm:marked", version.ref = "marked" }
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 quarkusAgroal = { module = "io.quarkus:quarkus-agroal" }
 quarkusBom = { module = "io.quarkus.platform:quarkus-bom", version.ref = "quarkus" }
+quarkusStartersDomainApi = { module = "de.chrgroth.quarkus.starters:domain-api", version.ref = "quarkusStarters" }
+quarkusStartersDomainImpl = { module = "de.chrgroth.quarkus.starters:domain-impl", version.ref = "quarkusStarters" }
+quarkusStartersAdapterOutPersistenceMongodb = { module = "de.chrgroth.quarkus.starters:adapter-out-persistence-mongodb", version.ref = "quarkusStarters" }
 
 [plugins]
 allopen = { id = "org.jetbrains.kotlin.plugin.allopen", version.ref = "kotlin" }

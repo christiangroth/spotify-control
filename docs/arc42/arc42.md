@@ -102,7 +102,8 @@ The system is composed of the following Gradle modules:
 | `domain-api`            | Ports (interfaces) – defines the contracts between domain and adapters                |
 | `domain-impl`           | Domain services, domain objects, CDI events                                           |
 | `util-outbox`           | Outbox implementation (designed to be extractable as a separate external module)      |
-| `util-starters`         | One-time startup bean infrastructure (designed to be extractable as a separate external module) |
+
+> **External dependency – `de.chrgroth.quarkus.starters`:** One-time startup bean library (GitHub Packages: `christiangroth/quarkus-starters`). Three artifacts are consumed: `domain-api` (public contract – `Starter`, `StarterSkipPredicate`, `StarterCompletionFlag`), `domain-impl` (execution orchestration and startup observer), `adapter-out-persistence-mongodb` (MongoDB persistence for starter state). All classes are in the `de.chrgroth.quarkus.starters` package. See [starters.md](starters.md) for architecture details and usage guidance.
 
 ### `adapter-in-web`
 
@@ -126,7 +127,7 @@ Implements all repository interfaces defined in `domain-api`. Manages the MongoD
 | `app_track`                   | Deduplicated track metadata: title, main artist reference, additional artist references, album reference, lastEnrichmentDate. |
 | `app_artist`                  | Deduplicated artist metadata: name, genres, imageLink, lastEnrichmentDate, playbackProcessingStatus (UNDECIDED/ACTIVE/INACTIVE). |
 | `app_album`                   | Deduplicated album metadata: title, cover image, genres, main artist reference, lastEnrichmentDate.                           |
-| `starters`                    | One-time startup bean execution state (managed by `util-starters`).                                   |
+| `starters`                    | One-time startup bean execution state (managed by `de.chrgroth.quarkus.starters:adapter-out-persistence-mongodb`). |
 | `outbox`                      | Persistent outbox task queue (managed by `util-outbox`).                                              |
 | `outbox_archive`              | Archived completed/failed outbox tasks (managed by `util-outbox`).                                    |
 
@@ -148,11 +149,7 @@ A self-contained outbox implementation providing: persistent task storage (Mongo
 
 ### `adapter-in-starter`
 
-Contains concrete `Starter` implementations acting as inbound adapters: they receive a startup trigger from `util-starters` and call into the domain via port interfaces. Currently contains `HelloWorldStarter` as a demo implementation.
-
-### `util-starters`
-
-A self-contained one-time startup bean infrastructure providing: `Starter` interface, persistent state tracking (MongoDB `starters` collection), execution history, profile-aware startup observer, Quarkus scheduler integration via a named `SkipPredicate`, and Micrometer metrics. Starters execute exactly once in `NORMAL` (prod) mode and are skipped in `dev`/`test`. See [starters.md](starters.md) for architecture details and usage guidance.
+Contains concrete `Starter` implementations acting as inbound adapters: they receive a startup trigger from the `de.chrgroth.quarkus.starters` library and call into the domain via port interfaces. Currently contains `HelloWorldStarter` as a demo implementation.
 
 ## Level 2
 
