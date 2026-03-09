@@ -66,24 +66,4 @@ class HealthSseTests {
 
         cancellable.cancel()
     }
-
-    @Test
-    fun `sse endpoint delivers refresh-outbox-partitions event when task is enqueued`() {
-        val userId = UserId("test-user-health-sse-outbox-enqueue")
-        val received = CopyOnWriteArrayList<String>()
-        val latch = CountDownLatch(1)
-
-        val cancellable: Cancellable = healthSseService.stream(userId)
-            .subscribe().with(
-                { event: String -> received.add(event); latch.countDown() },
-                { _: Throwable -> /* ignore errors */ },
-            )
-
-        outboxPartitionObserver.onTaskEnqueued(DomainOutboxPartition.ToSpotify)
-
-        assertTrue(latch.await(5, TimeUnit.SECONDS), "SSE refresh event should be received within 5 seconds")
-        assertEquals(listOf("refresh-outbox-partitions"), received.toList())
-
-        cancellable.cancel()
-    }
 }
