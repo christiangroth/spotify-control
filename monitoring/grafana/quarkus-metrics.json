@@ -321,7 +321,24 @@
           },
           "unit": "bytes"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.*max.*/"
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": false,
+                  "viz": false
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 8,
@@ -432,7 +449,24 @@
           },
           "unit": "bytes"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.*max.*/"
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": false,
+                  "viz": false
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 8,
@@ -661,7 +695,7 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 8,
+        "w": 12,
         "x": 12,
         "y": 15
       },
@@ -714,106 +748,6 @@
         }
       ],
       "title": "JVM Threads",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 5,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 4,
-        "x": 20,
-        "y": 15
-      },
-      "id": 23,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "expr": "jvm_classes_loaded_classes{job=\"prometheus.scrape.spotify_control\"}",
-          "legendFormat": "Loaded",
-          "refId": "A",
-          "instant": false,
-          "range": true
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "expr": "rate(jvm_classes_unloaded_classes_total{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval])",
-          "legendFormat": "Unloaded/s",
-          "refId": "B",
-          "instant": false,
-          "range": true
-        }
-      ],
-      "title": "JVM Classes",
       "type": "timeseries"
     },
     {
@@ -1010,7 +944,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(rate(http_server_requests_seconds_count{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval])) by (method, uri, status)",
+          "expr": "sum(rate(http_server_requests_seconds_count{job=\"prometheus.scrape.spotify_control\",outcome!=\"REDIRECTION\"}[$__rate_interval])) by (method, uri, status)",
           "legendFormat": "{{method}} {{uri}} {{status}}",
           "refId": "A",
           "instant": false,
@@ -1312,7 +1246,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(rate(spotify_request_seconds_count{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval])) by (url, status)",
+          "expr": "sum(\n  label_replace(\n    rate(spotify_request_seconds_count{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval]),\n    \"url\", \"$1/{id}$2\", \"url\", \"(.*)/[A-Za-z0-9]{16,}(/.*)?\")\n) by (url, status)",
           "legendFormat": "{{url}} [{{status}}]",
           "refId": "A",
           "instant": false,
@@ -1401,7 +1335,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.50, sum(rate(spotify_request_seconds_bucket{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval])) by (le, url))",
+          "expr": "histogram_quantile(0.50,\n  sum(\n    label_replace(\n      rate(spotify_request_seconds_bucket{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval]),\n      \"url\", \"$1/{id}$2\", \"url\", \"(.*)/[A-Za-z0-9]{16,}(/.*)?\")\n  ) by (le, url))",
           "legendFormat": "p50 {{url}}",
           "refId": "A",
           "instant": false,
@@ -1412,7 +1346,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.95, sum(rate(spotify_request_seconds_bucket{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval])) by (le, url))",
+          "expr": "histogram_quantile(0.95,\n  sum(\n    label_replace(\n      rate(spotify_request_seconds_bucket{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval]),\n      \"url\", \"$1/{id}$2\", \"url\", \"(.*)/[A-Za-z0-9]{16,}(/.*)?\")\n  ) by (le, url))",
           "legendFormat": "p95 {{url}}",
           "refId": "B",
           "instant": false,
@@ -1423,7 +1357,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.99, sum(rate(spotify_request_seconds_bucket{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval])) by (le, url))",
+          "expr": "histogram_quantile(0.99,\n  sum(\n    label_replace(\n      rate(spotify_request_seconds_bucket{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval]),\n      \"url\", \"$1/{id}$2\", \"url\", \"(.*)/[A-Za-z0-9]{16,}(/.*)?\")\n  ) by (le, url))",
           "legendFormat": "p99 {{url}}",
           "refId": "C",
           "instant": false,
@@ -1434,73 +1368,12 @@
       "type": "timeseries"
     },
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 0,
-        "y": 58
-      },
-      "id": 53,
-      "options": {
-        "colorMode": "none",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "expr": "spotify_request_hosts{job=\"prometheus.scrape.spotify_control\"}",
-          "legendFormat": "hosts",
-          "refId": "A",
-          "instant": false,
-          "range": true
-        }
-      ],
-      "title": "Spotify API Tracked Hosts",
-      "type": "stat"
-    },
-    {
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 62
+        "y": 58
       },
       "id": 60,
       "panels": [],
@@ -1565,7 +1438,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 63
+        "y": 59
       },
       "id": 61,
       "options": {
@@ -1676,7 +1549,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 63
+        "y": 59
       },
       "id": 62,
       "options": {
@@ -1713,7 +1586,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 71
+        "y": 67
       },
       "id": 70,
       "panels": [],
@@ -1778,7 +1651,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 72
+        "y": 68
       },
       "id": 71,
       "options": {
@@ -1804,20 +1677,9 @@
           "refId": "A",
           "instant": false,
           "range": true
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "expr": "rate(outbox_tasks_processed_total{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval])",
-          "legendFormat": "processed [{{partition}}]",
-          "refId": "B",
-          "instant": false,
-          "range": true
         }
       ],
-      "title": "Task Enqueued & Processed Rates",
+      "title": "Task Enqueued Rate",
       "type": "timeseries"
     },
     {
@@ -1878,7 +1740,96 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 72
+        "y": 68
+      },
+      "id": 74,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "rate(outbox_tasks_processed_total{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval])",
+          "legendFormat": "processed [{{partition}}]",
+          "refId": "A",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "title": "Task Processed Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 5,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 76
       },
       "id": 72,
       "options": {
@@ -1899,7 +1850,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "rate(outbox_tasks_failed_total{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval])",
+          "expr": "rate(outbox_tasks_failed_total{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval]) or on() vector(0)",
           "legendFormat": "failed [{{partition}}]",
           "refId": "A",
           "instant": false,
@@ -1910,7 +1861,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "rate(outbox_tasks_rate_limited_total{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval])",
+          "expr": "rate(outbox_tasks_rate_limited_total{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval]) or on() vector(0)",
           "legendFormat": "rate-limited [{{partition}}]",
           "refId": "B",
           "instant": false,
@@ -1967,8 +1918,8 @@
       "gridPos": {
         "h": 4,
         "w": 12,
-        "x": 0,
-        "y": 80
+        "x": 12,
+        "y": 76
       },
       "id": 73,
       "options": {
@@ -1991,7 +1942,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "outbox_partition_status{job=\"prometheus.scrape.spotify_control\"}",
+          "expr": "last_over_time(outbox_partition_status{job=\"prometheus.scrape.spotify_control\"}[1d])",
           "legendFormat": "{{partition}}",
           "refId": "A",
           "instant": false,
@@ -2235,117 +2186,6 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 5,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 94
-      },
-      "id": 91,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "expr": "histogram_quantile(0.50, sum(rate(starter_execution_duration_seconds_bucket{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval])) by (le, id))",
-          "legendFormat": "p50 {{id}}",
-          "refId": "A",
-          "instant": false,
-          "range": true
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "expr": "histogram_quantile(0.95, sum(rate(starter_execution_duration_seconds_bucket{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval])) by (le, id))",
-          "legendFormat": "p95 {{id}}",
-          "refId": "B",
-          "instant": false,
-          "range": true
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "expr": "histogram_quantile(0.99, sum(rate(starter_execution_duration_seconds_bucket{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval])) by (le, id))",
-          "legendFormat": "p99 {{id}}",
-          "refId": "C",
-          "instant": false,
-          "range": true
-        }
-      ],
-      "title": "Starter Execution Duration Percentiles",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
             "mode": "thresholds"
           },
           "mappings": [
@@ -2385,7 +2225,7 @@
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 12,
+        "x": 0,
         "y": 94
       },
       "id": 92,
