@@ -3,7 +3,6 @@
 // ── Metrics ──────────────────────────────────────────────────────────────────
 prometheus.scrape "spotify_control" {
   targets = [{ "__address__" = "quarkus:8080", "__metrics_path__" = "/q/metrics" }]
-  job_name       = "spotify_control"
   scrape_interval = "30s"
   forward_to = [prometheus.remote_write.grafana_cloud.receiver]
 }

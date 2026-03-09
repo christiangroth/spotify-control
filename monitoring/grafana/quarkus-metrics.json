@@ -85,7 +85,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "application_info{job=\"spotify_control\"}",
+          "expr": "application_info{job=\"prometheus.scrape.spotify_control\"}",
           "legendFormat": "{{version}}",
           "refId": "A",
           "instant": false,
@@ -146,7 +146,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "process_uptime_seconds{job=\"spotify_control\"}",
+          "expr": "process_uptime_seconds{job=\"prometheus.scrape.spotify_control\"}",
           "legendFormat": "uptime",
           "refId": "A",
           "instant": false,
@@ -235,7 +235,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "system_cpu_usage{job=\"spotify_control\"}",
+          "expr": "system_cpu_usage{job=\"prometheus.scrape.spotify_control\"}",
           "legendFormat": "System CPU",
           "refId": "A",
           "instant": false,
@@ -246,7 +246,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "process_cpu_usage{job=\"spotify_control\"}",
+          "expr": "process_cpu_usage{job=\"prometheus.scrape.spotify_control\"}",
           "legendFormat": "Process CPU",
           "refId": "B",
           "instant": false,
@@ -348,7 +348,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "jvm_memory_used_bytes{job=\"spotify_control\",area=\"heap\"}",
+          "expr": "jvm_memory_used_bytes{job=\"prometheus.scrape.spotify_control\",area=\"heap\"}",
           "legendFormat": "{{id}} used",
           "refId": "A",
           "instant": false,
@@ -359,7 +359,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "jvm_memory_committed_bytes{job=\"spotify_control\",area=\"heap\"}",
+          "expr": "jvm_memory_committed_bytes{job=\"prometheus.scrape.spotify_control\",area=\"heap\"}",
           "legendFormat": "{{id}} committed",
           "refId": "B",
           "instant": false,
@@ -370,7 +370,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "jvm_memory_max_bytes{job=\"spotify_control\",area=\"heap\"}",
+          "expr": "jvm_memory_max_bytes{job=\"prometheus.scrape.spotify_control\",area=\"heap\"}",
           "legendFormat": "{{id}} max",
           "refId": "C",
           "instant": false,
@@ -459,7 +459,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "jvm_memory_used_bytes{job=\"spotify_control\",area=\"nonheap\"}",
+          "expr": "jvm_memory_used_bytes{job=\"prometheus.scrape.spotify_control\",area=\"nonheap\"}",
           "legendFormat": "{{id}} used",
           "refId": "A",
           "instant": false,
@@ -470,7 +470,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "jvm_memory_committed_bytes{job=\"spotify_control\",area=\"nonheap\"}",
+          "expr": "jvm_memory_committed_bytes{job=\"prometheus.scrape.spotify_control\",area=\"nonheap\"}",
           "legendFormat": "{{id}} committed",
           "refId": "B",
           "instant": false,
@@ -482,7 +482,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "jvm_memory_max_bytes{job=\"spotify_control\",area=\"nonheap\"}",
+          "expr": "jvm_memory_max_bytes{job=\"prometheus.scrape.spotify_control\",area=\"nonheap\"}",
           "instant": false,
           "legendFormat": "{{id}} max",
           "range": true,
@@ -584,7 +584,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "rate(jvm_gc_pause_seconds_sum{job=\"spotify_control\"}[$__rate_interval]) / rate(jvm_gc_pause_seconds_count{job=\"spotify_control\"}[$__rate_interval])",
+          "expr": "rate(jvm_gc_pause_seconds_sum{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval]) / rate(jvm_gc_pause_seconds_count{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval])",
           "legendFormat": "{{action}} / {{cause}} (avg)",
           "refId": "A",
           "instant": false,
@@ -595,7 +595,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "jvm_gc_pause_seconds_max{job=\"spotify_control\"}",
+          "expr": "jvm_gc_pause_seconds_max{job=\"prometheus.scrape.spotify_control\"}",
           "legendFormat": "{{action}} / {{cause}} (max)",
           "refId": "B",
           "instant": false,
@@ -684,7 +684,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "jvm_threads_live_threads{job=\"spotify_control\"}",
+          "expr": "jvm_threads_live_threads{job=\"prometheus.scrape.spotify_control\"}",
           "legendFormat": "Live",
           "refId": "A",
           "instant": false,
@@ -695,7 +695,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "jvm_threads_daemon_threads{job=\"spotify_control\"}",
+          "expr": "jvm_threads_daemon_threads{job=\"prometheus.scrape.spotify_control\"}",
           "legendFormat": "Daemon",
           "refId": "B",
           "instant": false,
@@ -706,7 +706,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "jvm_threads_peak_threads{job=\"spotify_control\"}",
+          "expr": "jvm_threads_peak_threads{job=\"prometheus.scrape.spotify_control\"}",
           "legendFormat": "Peak",
           "refId": "C",
           "instant": false,
@@ -795,7 +795,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "jvm_classes_loaded_classes{job=\"spotify_control\"}",
+          "expr": "jvm_classes_loaded_classes{job=\"prometheus.scrape.spotify_control\"}",
           "legendFormat": "Loaded",
           "refId": "A",
           "instant": false,
@@ -806,7 +806,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "rate(jvm_classes_unloaded_classes_total{job=\"spotify_control\"}[$__rate_interval])",
+          "expr": "rate(jvm_classes_unloaded_classes_total{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval])",
           "legendFormat": "Unloaded/s",
           "refId": "B",
           "instant": false,
@@ -908,7 +908,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "rate(log4j2_events_total{job=\"spotify_control\"}[$__rate_interval])",
+          "expr": "rate(log4j2_events_total{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval])",
           "legendFormat": "{{level}}",
           "refId": "A",
           "instant": false,
@@ -1010,7 +1010,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(rate(http_server_requests_seconds_count{job=\"spotify_control\"}[$__rate_interval])) by (method, uri, status)",
+          "expr": "sum(rate(http_server_requests_seconds_count{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval])) by (method, uri, status)",
           "legendFormat": "{{method}} {{uri}} {{status}}",
           "refId": "A",
           "instant": false,
@@ -1099,7 +1099,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(rate(http_server_requests_seconds_count{job=\"spotify_control\",outcome!=\"SUCCESS\"}[$__rate_interval])) by (method, uri, status)",
+          "expr": "sum(rate(http_server_requests_seconds_count{job=\"prometheus.scrape.spotify_control\",outcome!=\"SUCCESS\"}[$__rate_interval])) by (method, uri, status)",
           "legendFormat": "{{method}} {{uri}} {{status}}",
           "refId": "A",
           "instant": false,
@@ -1188,7 +1188,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.50, sum(rate(http_server_requests_seconds_bucket{job=\"spotify_control\"}[$__rate_interval])) by (le, uri))",
+          "expr": "histogram_quantile(0.50, sum(rate(http_server_requests_seconds_bucket{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval])) by (le, uri))",
           "legendFormat": "p50 {{uri}}",
           "refId": "A",
           "instant": false,
@@ -1199,7 +1199,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{job=\"spotify_control\"}[$__rate_interval])) by (le, uri))",
+          "expr": "histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval])) by (le, uri))",
           "legendFormat": "p95 {{uri}}",
           "refId": "B",
           "instant": false,
@@ -1210,7 +1210,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket{job=\"spotify_control\"}[$__rate_interval])) by (le, uri))",
+          "expr": "histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval])) by (le, uri))",
           "legendFormat": "p99 {{uri}}",
           "refId": "C",
           "instant": false,
@@ -1312,7 +1312,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(rate(spotify_request_seconds_count{job=\"spotify_control\"}[$__rate_interval])) by (url, status)",
+          "expr": "sum(rate(spotify_request_seconds_count{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval])) by (url, status)",
           "legendFormat": "{{url}} [{{status}}]",
           "refId": "A",
           "instant": false,
@@ -1401,7 +1401,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.50, sum(rate(spotify_request_seconds_bucket{job=\"spotify_control\"}[$__rate_interval])) by (le, url))",
+          "expr": "histogram_quantile(0.50, sum(rate(spotify_request_seconds_bucket{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval])) by (le, url))",
           "legendFormat": "p50 {{url}}",
           "refId": "A",
           "instant": false,
@@ -1412,7 +1412,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.95, sum(rate(spotify_request_seconds_bucket{job=\"spotify_control\"}[$__rate_interval])) by (le, url))",
+          "expr": "histogram_quantile(0.95, sum(rate(spotify_request_seconds_bucket{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval])) by (le, url))",
           "legendFormat": "p95 {{url}}",
           "refId": "B",
           "instant": false,
@@ -1423,7 +1423,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.99, sum(rate(spotify_request_seconds_bucket{job=\"spotify_control\"}[$__rate_interval])) by (le, url))",
+          "expr": "histogram_quantile(0.99, sum(rate(spotify_request_seconds_bucket{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval])) by (le, url))",
           "legendFormat": "p99 {{url}}",
           "refId": "C",
           "instant": false,
@@ -1484,7 +1484,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "spotify_request_hosts{job=\"spotify_control\"}",
+          "expr": "spotify_request_hosts{job=\"prometheus.scrape.spotify_control\"}",
           "legendFormat": "hosts",
           "refId": "A",
           "instant": false,
@@ -1586,7 +1586,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.50, sum(rate(mongodb_query_seconds_bucket{job=\"spotify_control\"}[$__rate_interval])) by (le, operation))",
+          "expr": "histogram_quantile(0.50, sum(rate(mongodb_query_seconds_bucket{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval])) by (le, operation))",
           "legendFormat": "p50 {{operation}}",
           "refId": "A",
           "instant": false,
@@ -1597,7 +1597,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.95, sum(rate(mongodb_query_seconds_bucket{job=\"spotify_control\"}[$__rate_interval])) by (le, operation))",
+          "expr": "histogram_quantile(0.95, sum(rate(mongodb_query_seconds_bucket{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval])) by (le, operation))",
           "legendFormat": "p95 {{operation}}",
           "refId": "B",
           "instant": false,
@@ -1608,7 +1608,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.99, sum(rate(mongodb_query_seconds_bucket{job=\"spotify_control\"}[$__rate_interval])) by (le, operation))",
+          "expr": "histogram_quantile(0.99, sum(rate(mongodb_query_seconds_bucket{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval])) by (le, operation))",
           "legendFormat": "p99 {{operation}}",
           "refId": "C",
           "instant": false,
@@ -1697,7 +1697,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "rate(mongodb_slow_queries_total{job=\"spotify_control\"}[$__rate_interval])",
+          "expr": "rate(mongodb_slow_queries_total{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval])",
           "legendFormat": "{{operation}}",
           "refId": "A",
           "instant": false,
@@ -1799,7 +1799,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "rate(outbox_tasks_enqueued_total{job=\"spotify_control\"}[$__rate_interval])",
+          "expr": "rate(outbox_tasks_enqueued_total{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval])",
           "legendFormat": "enqueued [{{partition}}]",
           "refId": "A",
           "instant": false,
@@ -1810,7 +1810,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "rate(outbox_tasks_processed_total{job=\"spotify_control\"}[$__rate_interval])",
+          "expr": "rate(outbox_tasks_processed_total{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval])",
           "legendFormat": "processed [{{partition}}]",
           "refId": "B",
           "instant": false,
@@ -1899,7 +1899,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "rate(outbox_tasks_failed_total{job=\"spotify_control\"}[$__rate_interval])",
+          "expr": "rate(outbox_tasks_failed_total{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval])",
           "legendFormat": "failed [{{partition}}]",
           "refId": "A",
           "instant": false,
@@ -1910,7 +1910,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "rate(outbox_tasks_rate_limited_total{job=\"spotify_control\"}[$__rate_interval])",
+          "expr": "rate(outbox_tasks_rate_limited_total{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval])",
           "legendFormat": "rate-limited [{{partition}}]",
           "refId": "B",
           "instant": false,
@@ -1991,7 +1991,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "outbox_partition_status{job=\"spotify_control\"}",
+          "expr": "outbox_partition_status{job=\"prometheus.scrape.spotify_control\"}",
           "legendFormat": "{{partition}}",
           "refId": "A",
           "instant": false,
@@ -2093,7 +2093,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.50, sum(rate(quarkus_scheduler_scheduled_methods_seconds_bucket{job=\"spotify_control\"}[$__rate_interval])) by (le, invoker))",
+          "expr": "histogram_quantile(0.50, sum(rate(quarkus_scheduler_scheduled_methods_seconds_bucket{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval])) by (le, invoker))",
           "legendFormat": "p50 {{invoker}}",
           "refId": "A",
           "instant": false,
@@ -2104,7 +2104,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.95, sum(rate(quarkus_scheduler_scheduled_methods_seconds_bucket{job=\"spotify_control\"}[$__rate_interval])) by (le, invoker))",
+          "expr": "histogram_quantile(0.95, sum(rate(quarkus_scheduler_scheduled_methods_seconds_bucket{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval])) by (le, invoker))",
           "legendFormat": "p95 {{invoker}}",
           "refId": "B",
           "instant": false,
@@ -2115,7 +2115,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.99, sum(rate(quarkus_scheduler_scheduled_methods_seconds_bucket{job=\"spotify_control\"}[$__rate_interval])) by (le, invoker))",
+          "expr": "histogram_quantile(0.99, sum(rate(quarkus_scheduler_scheduled_methods_seconds_bucket{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval])) by (le, invoker))",
           "legendFormat": "p99 {{invoker}}",
           "refId": "C",
           "instant": false,
@@ -2204,7 +2204,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "rate(quarkus_scheduler_scheduled_methods_seconds_count{job=\"spotify_control\"}[$__rate_interval])",
+          "expr": "rate(quarkus_scheduler_scheduled_methods_seconds_count{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval])",
           "legendFormat": "{{invoker}}",
           "refId": "A",
           "instant": false,
@@ -2306,7 +2306,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.50, sum(rate(starter_execution_duration_seconds_bucket{job=\"spotify_control\"}[$__rate_interval])) by (le, id))",
+          "expr": "histogram_quantile(0.50, sum(rate(starter_execution_duration_seconds_bucket{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval])) by (le, id))",
           "legendFormat": "p50 {{id}}",
           "refId": "A",
           "instant": false,
@@ -2317,7 +2317,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.95, sum(rate(starter_execution_duration_seconds_bucket{job=\"spotify_control\"}[$__rate_interval])) by (le, id))",
+          "expr": "histogram_quantile(0.95, sum(rate(starter_execution_duration_seconds_bucket{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval])) by (le, id))",
           "legendFormat": "p95 {{id}}",
           "refId": "B",
           "instant": false,
@@ -2328,7 +2328,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.99, sum(rate(starter_execution_duration_seconds_bucket{job=\"spotify_control\"}[$__rate_interval])) by (le, id))",
+          "expr": "histogram_quantile(0.99, sum(rate(starter_execution_duration_seconds_bucket{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval])) by (le, id))",
           "legendFormat": "p99 {{id}}",
           "refId": "C",
           "instant": false,
@@ -2409,7 +2409,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "starter_overall_status{job=\"spotify_control\"}",
+          "expr": "starter_overall_status{job=\"prometheus.scrape.spotify_control\"}",
           "legendFormat": "{{id}}",
           "refId": "A",
           "instant": false,
