@@ -18,7 +18,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty
 @Suppress("Unused")
 class SpotifyMockResource {
 
-    @ConfigProperty(name = "app.mock.spotify.user-id", defaultValue = "test-user-a")
+    @ConfigProperty(name = "app.mock.spotify.user-id")
     private lateinit var mockUserId: String
 
     @POST

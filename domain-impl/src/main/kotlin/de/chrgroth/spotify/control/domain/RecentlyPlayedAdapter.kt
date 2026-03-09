@@ -32,7 +32,7 @@ class RecentlyPlayedAdapter(
     private val recentlyPartialPlayedRepository: RecentlyPartialPlayedRepositoryPort,
     private val outboxPort: OutboxPort,
     private val dashboardRefresh: DashboardRefreshPort,
-    @ConfigProperty(name = "app.playback.minimum-progress-seconds", defaultValue = "25")
+    @ConfigProperty(name = "app.playback.minimum-progress-seconds")
     minimumProgressSeconds: Long,
 ) : RecentlyPlayedPort {
 

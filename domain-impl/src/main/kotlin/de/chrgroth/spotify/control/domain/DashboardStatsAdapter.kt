@@ -30,9 +30,9 @@ class DashboardStatsAdapter(
     private val appTrackRepository: AppTrackRepositoryPort,
     private val appArtistRepository: AppArtistRepositoryPort,
     private val playlistRepository: PlaylistRepositoryPort,
-    @param:ConfigProperty(name = "dashboard.recently-played.limit", defaultValue = "13")
+    @param:ConfigProperty(name = "dashboard.recently-played.limit")
     private val recentlyPlayedLimit: Int,
-    @param:ConfigProperty(name = "dashboard.listening-stats.top-entries-limit", defaultValue = "3")
+    @param:ConfigProperty(name = "dashboard.listening-stats.top-entries-limit")
     private val topEntriesLimit: Int,
 ) : DashboardStatsPort {
 

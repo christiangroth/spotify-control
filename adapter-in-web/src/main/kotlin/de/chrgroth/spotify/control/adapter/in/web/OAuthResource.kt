@@ -35,7 +35,7 @@ class OAuthResource {
     @ConfigProperty(name = "app.oauth.redirect-uri")
     private lateinit var redirectUri: String
 
-    @ConfigProperty(name = "spotify.accounts.base-url", defaultValue = "https://accounts.spotify.com")
+    @ConfigProperty(name = "spotify.accounts.base-url")
     private lateinit var accountsBaseUrl: String
 
     private val stateStore = ConcurrentHashMap<String, Long>()
