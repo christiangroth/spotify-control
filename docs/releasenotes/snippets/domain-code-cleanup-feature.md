@@ -1,1 +1,2 @@
-* domain-code-cleanup: Added PlaylistId, ArtistId, AlbumId, and TrackId value types to the domain model.
+* domain-code-cleanup: Introduced PlaylistId, ArtistId, AlbumId, and TrackId value classes.
+* domain-code-cleanup: Combined related port interfaces (PlaybackPort, PlaylistPort, HealthPort, DashboardPort, UserProfilePort, LoginServicePort).
