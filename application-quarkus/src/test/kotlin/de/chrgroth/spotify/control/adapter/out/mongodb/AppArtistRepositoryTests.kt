@@ -69,4 +69,32 @@ class AppArtistRepositoryTests {
         assertThat(result).hasSize(3)
         assertThat(result.map { it.artistId }).containsExactlyInAnyOrder(item1.artistId, item2.artistId, item3.artistId)
     }
+
+    @Test
+    fun `updateEnrichmentData updates artistName genres and imageLink`() {
+        val item = artist("enrich").copy(artistName = "Old Name")
+        appArtistRepository.upsertAll(listOf(item))
+
+        appArtistRepository.updateEnrichmentData(item.artistId, "New Name", listOf("pop"), "https://example.com/image.jpg")
+
+        val result = appArtistRepository.findByArtistIds(setOf(item.artistId))
+        assertThat(result).hasSize(1)
+        assertThat(result[0].artistName).isEqualTo("New Name")
+        assertThat(result[0].genres).containsExactly("pop")
+        assertThat(result[0].imageLink).isEqualTo("https://example.com/image.jpg")
+        assertThat(result[0].lastEnrichmentDate).isNotNull()
+    }
+
+    @Test
+    fun `findWithImageLinkAndBlankName returns only artists with imageLink and blank artistName`() {
+        val withImageAndBlankName = artist("blank-name").copy(artistName = "", imageLink = "https://img.example.com/1.jpg")
+        val withImageAndName = artist("has-name").copy(imageLink = "https://img.example.com/2.jpg")
+        val withoutImage = artist("no-image").copy(artistName = "")
+        appArtistRepository.upsertAll(listOf(withImageAndBlankName, withImageAndName, withoutImage))
+
+        val result = appArtistRepository.findWithImageLinkAndBlankName()
+
+        assertThat(result.map { it.artistId }).contains(withImageAndBlankName.artistId)
+        assertThat(result.map { it.artistId }).doesNotContain(withImageAndName.artistId, withoutImage.artistId)
+    }
 }
