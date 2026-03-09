@@ -42,9 +42,10 @@ class AppTrackRepositoryAdapter : AppTrackRepositoryPort {
     override fun findByTrackIds(trackIds: Set<String>): List<AppTrack> {
         if (trackIds.isEmpty()) return emptyList()
         return mongoQueryMetrics.timed("app_track.findByTrackIds") {
-            trackIds.mapNotNull { trackId ->
-                appTrackDocumentRepository.findById(trackId)?.toDomain()
-            }
+            appTrackDocumentRepository.mongoCollection()
+                .find(Filters.`in`("_id", trackIds))
+                .toList()
+                .map { it.toDomain() }
         }
     }
 

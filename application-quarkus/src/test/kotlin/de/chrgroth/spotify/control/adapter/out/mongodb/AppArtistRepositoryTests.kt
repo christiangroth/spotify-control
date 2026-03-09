@@ -56,4 +56,17 @@ class AppArtistRepositoryTests {
         val result = appArtistRepository.findByArtistIds(emptySet())
         assertThat(result).isEmpty()
     }
+
+    @Test
+    fun `findByArtistIds returns all matching items in a single batch`() {
+        val item1 = artist("batch1")
+        val item2 = artist("batch2")
+        val item3 = artist("batch3")
+        appArtistRepository.upsertAll(listOf(item1, item2, item3))
+
+        val result = appArtistRepository.findByArtistIds(setOf(item1.artistId, item2.artistId, item3.artistId))
+
+        assertThat(result).hasSize(3)
+        assertThat(result.map { it.artistId }).containsExactlyInAnyOrder(item1.artistId, item2.artistId, item3.artistId)
+    }
 }
