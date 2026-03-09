@@ -1,3 +1,12 @@
+# 0.40.1 (2026.03.09)
+
+## Bugfixes / Chore
+* optimize-request-throttling: Increased Spotify API request throttle interval from 2s to 5s to reduce rate limiting.
+* optimize-request-throttling: Increased inactive playback polling interval from 90s to 5 minutes to reduce unnecessary requests.
+
+
+---
+
 # 0.40.0 (2026.03.09)
 
 ## New Features

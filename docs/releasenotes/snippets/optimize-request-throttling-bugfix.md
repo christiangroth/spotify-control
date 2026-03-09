@@ -1,2 +1,0 @@
-* optimize-request-throttling: Increased Spotify API request throttle interval from 2s to 5s to reduce rate limiting.
-* optimize-request-throttling: Increased inactive playback polling interval from 90s to 5 minutes to reduce unnecessary requests.
