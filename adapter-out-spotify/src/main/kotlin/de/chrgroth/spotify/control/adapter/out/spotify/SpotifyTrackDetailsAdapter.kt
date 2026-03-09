@@ -22,7 +22,7 @@ import java.net.http.HttpResponse
 @ApplicationScoped
 @Suppress("Unused", "TooGenericExceptionCaught")
 class SpotifyTrackDetailsAdapter(
-    @param:ConfigProperty(name = "spotify.api.base-url", defaultValue = "https://api.spotify.com")
+    @param:ConfigProperty(name = "spotify.api.base-url")
     private val apiBaseUrl: String,
     private val httpMetrics: SpotifyHttpMetrics,
     private val throttler: SpotifyRequestThrottler,
