@@ -1,9 +1,7 @@
 # 0.44.2 (2026.03.09)
 
 ## Bugfixes / Chore
-* fix-resuming-partition-health-ui: Resuming a paused outbox partition via the Health UI now correctly wakes up the partition worker and triggers event processing.
-
-
+* fix-resuming-partition-health-ui: Resuming a paused outbox partition via the Health UI now correctly triggers event processing.
 
 ---
 
@@ -12,8 +10,6 @@
 ## Bugfixes / Chore
 * fix-health-ui: Fix resume partition button on the health page.
 * fix-health-ui: Fix show events per type on the health page.
-
-
 
 ---
 
@@ -25,8 +21,6 @@
 * add-resume-button-health-ui: Blocked countdown now shows only the countdown (no timestamp) for near-future blocks.
 * add-resume-button-health-ui: Renamed various health page column headers for brevity.
 
-
-
 ---
 
 # 0.43.0 (2026.03.09)
@@ -34,31 +28,25 @@
 ## New Features
 * group-http-requests-by-endpoint: Outgoing HTTP requests on the health page are now grouped by endpoint instead of host.
 
-
-
 ---
 
 # 0.42.0 (2026.03.09)
 
 ## New Features
-* enhance-metrics-dashboard: Removed JVM Classes, Spotify API Tracked Hosts, and Starter Execution Duration panels from the metrics dashboard.
+* enhance-metrics-dashboard: Removed unused panels from the metrics dashboard.
 * enhance-metrics-dashboard: Incoming HTTP requests panel no longer shows redirect responses.
-* enhance-metrics-dashboard: Heap and non-heap memory "max" series are now hidden by default in the metrics dashboard.
+* enhance-metrics-dashboard: Heap and non-heap memory "max" series are now hidden by default.
 * enhance-metrics-dashboard: Spotify API request URLs are now grouped by URL pattern, so requests to the same endpoint with different IDs are aggregated together.
 * enhance-metrics-dashboard: Failed and rate-limited task rate panels now display 0 instead of showing no data when no failures have occurred.
 * enhance-metrics-dashboard: Partition status panel now always shows the last known state, even when no data was recorded in the selected time range.
 * enhance-metrics-dashboard: Task enqueue and task processed rates are now shown in separate panels.
-
-
 
 ---
 
 # 0.41.1 (2026.03.09)
 
 ## Bugfixes / Chore
-* display-artist-name-in-settings: Artist names are now correctly displayed in playback settings, including after the enrichment process fetches updated data from Spotify.
-
-
+* display-artist-name-in-settings: Artist names are now correctly displayed in playback settings, including after enrichment data is fetched from Spotify.
 
 ---
 
@@ -70,81 +58,67 @@
 * enhance-artist-playback-processing: Added a filter input to the Artist Playback Processing section to search across all three lists by name (regex, case insensitive).
 * enhance-artist-playback-processing: Each status column now shows the current item count, e.g. Undecided (138), updated live as the filter is applied.
 
-
-
 ---
 
 # 0.40.3 (2026.03.09)
 
 ## Bugfixes / Chore
-* fix-metrics-dashboard-queries: Fixed Grafana metrics dashboard by updating all query job filters from `spotify_control` to `prometheus.scrape.spotify_control`.
-
-
+* fix-metrics-dashboard-queries: Fixed Grafana metrics dashboard queries.
 
 ---
 
 # 0.40.2 (2026.03.09)
 
 ## Bugfixes / Chore
-* fix-metrics-dashboard: Fixed Grafana metrics dashboard by correcting the job label in the Alloy scrape configuration so metrics are accessible with the expected `job="spotify_control"` filter.
-
-
+* fix-metrics-dashboard: Fixed Grafana metrics dashboard scrape configuration.
 
 ---
 
 # 0.40.1 (2026.03.09)
 
 ## Bugfixes / Chore
-* optimize-request-throttling: Increased Spotify API request throttle interval from 2s to 5s to reduce rate limiting.
-* optimize-request-throttling: Increased inactive playback polling interval from 90s to 5 minutes to reduce unnecessary requests.
-
+* optimize-request-throttling: Increased Spotify API request throttle interval to reduce rate limiting.
+* optimize-request-throttling: Increased inactive playback polling interval to reduce unnecessary requests.
 
 ---
 
 # 0.40.0 (2026.03.09)
 
 ## New Features
-* extract-util-outbox-module: Renamed util-outbox package from de.chrgroth.spotify.control.util.outbox to de.chrgroth.outbox to prepare for extraction as a standalone external library.
-* extract-util-outbox-module: Replaced internal util-outbox-api and util-outbox-impl modules with the external de.chrgroth.quarkus.outbox library (domain-api, domain-impl, adapter-out-persistence-mongodb).
-
-
+* extract-util-outbox-module: Extracted outbox functionality as a standalone external library.
 
 ---
 
 # 0.39.0 (2026.03.09)
 
 ## New Features
-* extract-starters: Renamed `util-starters` package from `de.chrgroth.spotify.control.util.starters` to `de.chrgroth.starters` and added `maven-publish` configuration to prepare the module for extraction as a standalone external library.
-
-
+* extract-starters: Extracted starters functionality as a standalone external library.
 
 ---
 
 # 0.38.1 (2026.03.09)
 
 ## Bugfixes / Chore
-* fix-slow-queries-artists-tracks: Improved performance of artist and track lookups by replacing individual per-ID database queries with a single batch query.
-
-
+* fix-slow-queries-artists-tracks: Improved performance of artist and track lookups.
 
 ---
 
 # 0.38.0 (2026.03.08)
 ## New Features
-* move-throttling-to-http-handling: Spotify API request throttling is now applied at the HTTP level (2s per request for enrichment and sync calls) instead of at the outbox processing level.
+* move-throttling-to-http-handling: Spotify API requests are now throttled per request to reduce rate limiting.
 * move-throttling-to-http-handling: Currently playing polling now adapts dynamically: every 10s when playback is active, slowing down to every 90s when no playback is detected.
 
 ---
 
 # 0.37.0 (2026.03.08)
 ## New Features
-* optimize-rate-limit-logging: Add info-level logging when an outbox task is executed, including partition and task type.
+* optimize-rate-limit-logging: Improved logging when outbox tasks are executed.
 
 ---
 
 # 0.36.1 (2026.03.08)
 ## Bugfixes / Chore
-* fix-rate-limiting-throttling: Increased playlist tracks page size to reduce Spotify API call volume; increased ToSpotify throttle interval; improved rate-limit warn logging with endpoint URL context.
+* fix-rate-limiting-throttling: Reduced Spotify API call volume and improved rate limiting handling.
 
 ---
 
@@ -156,19 +130,22 @@
 
 # 0.35.2 (2026.03.07)
 ## Bugfixes / Chore
-* extract-releasenotes-plugin: Extracted the release-notes plugin from buildSrc into a standalone Gradle plugin project to allow publishing as an external dependency.
+* extract-releasenotes-plugin: Extracted the release-notes plugin as a standalone external dependency.
 
 ---
 
 # 0.35.1 (2026.03.07)
 ## Bugfixes / Chore
-* add-missing-mongodb-indexes: Added missing MongoDB indexes to improve query performance.* fix-outbox-sse-issue: Fixed outbox SSE not updating the health UI when tasks are enqueued.
+* add-missing-mongodb-indexes: Added missing MongoDB indexes to improve query performance.
+* fix-outbox-sse-issue: Fixed outbox SSE not updating the health UI when tasks are enqueued.
 
 ---
 
 # 0.35.0 (2026.03.07)
 ## New Features
-* ignore-artists-for-app-playback: Artists can now be ignored for playback processing. Setting an artist to inactive removes their playback data; reactivating triggers a rebuild. Settings UI shows artists in three columns: undecided, active, and inactive.
+* ignore-artists-for-app-playback: Artists can now be ignored for playback processing.
+* ignore-artists-for-app-playback: Setting an artist to inactive removes their playback data; reactivating triggers a rebuild.
+* ignore-artists-for-app-playback: Settings UI shows artists in three columns: undecided, active, and inactive.
 
 ---
 
@@ -180,10 +157,10 @@
 
 # 0.33.0 (2026.03.07)
 ## New Features
-* process-spotify-playback-data: Process Spotify playback data into new app_playback collection combining spotify_recently_played and recently_partial_played
-* process-spotify-playback-data: Introduce app_track, app_artist, and app_album collections to deduplicate track metadata
-* process-spotify-playback-data: Add Recreate Playback Data button on settings page to rebuild processed playback data from scratch
-* process-spotify-playback-data: Dashboard stats (totals, histogram, recently played tracks) now sourced from app_ collections
+* process-spotify-playback-data: Spotify playback data is now processed into dedicated collections for tracks, artists, and albums.
+* process-spotify-playback-data: Track, artist, and album metadata are now stored in separate collections to avoid duplication.
+* process-spotify-playback-data: Added a Recreate Playback Data button on the settings page to rebuild processed playback data from scratch.
+* process-spotify-playback-data: Dashboard stats (totals, histogram, recently played tracks) now sourced from processed collections.
 
 ---
 
@@ -204,26 +181,19 @@
 
 # 0.30.2 (2026.03.07)
 ## Bugfixes / Chore
-* fix-build-issue: Fix Detekt MaxLineLength violation in OAuthResource by splitting the scopes string across multiple lines.* fix-currently-playing-permission: Added missing `user-read-currently-playing` OAuth scope so the currently playing endpoint can be accessed.
+* fix-currently-playing-permission: Added missing OAuth scope so the currently playing endpoint can be accessed.
 
 ---
 
 # 0.30.1 (2026.03.07)
 ## Bugfixes / Chore
-* fix-partition-blocking-issue: Fixed an issue where tasks in the to-spotify-playback partition were not executed after being rate-limited, because no delayed wakeup signal was scheduled for partitions with pauseOnRateLimit=false.
-
----
-
-# 0.30.0 (2026.03.06)
-## New Features
-* rename-mongodb-collections: Renamed MongoDB collections to a clean naming scheme (app_user, spotify_playlist, spotify_playlist_metadata, spotify_recently_played, spotify_currently_playing). Added a one-time migration starter to rename existing collections on upgrade.
+* fix-partition-blocking-issue: Fixed an issue where tasks in a partition were not executed after being rate-limited.
 
 ---
 
 # 0.29.0 (2026.03.06)
 ## New Features
-* implement-throttling-feature: Outbox partitions now support a configurable throttle interval to proactively limit outgoing request rates.
-* implement-throttling-feature: The `to-spotify` partition is throttled at one request per second to avoid Spotify rate limits.
+* implement-throttling-feature: Outgoing Spotify API requests are now rate-limited to avoid hitting Spotify rate limits.
 
 ---
 
@@ -271,7 +241,7 @@
 
 # 0.24.1 (2026.03.06)
 ## Bugfixes / Chore
-* ensure-outbox-partition-existence: Outbox partition documents are now always created at startup, not only when a partition is paused.
+* ensure-outbox-partition-existence: Outbox partitions are now always initialized at startup.
 
 ---
 
@@ -295,7 +265,7 @@
 
 # 0.22.0 (2026.03.06)
 ## New Features
-* move-failed-outbox-tasks-to-archive: Failed outbox tasks that have exhausted all retry attempts are now moved to the archive instead of remaining in the outbox collection.
+* move-failed-outbox-tasks-to-archive: Failed outbox tasks that have exhausted all retry attempts are now moved to an archive instead of remaining in the main queue.
 
 ---
 
@@ -313,31 +283,31 @@
 
 # 0.19.4 (2026.03.06)
 ## Bugfixes / Chore
-* fix-fetch-playlist-data: Fixed playlist data fetch by using the /items endpoint instead of the deprecated /tracks endpoint.
+* fix-fetch-playlist-data: Fixed playlist data fetch by using the correct Spotify API endpoint.
 
 ---
 
 # 0.19.3 (2026.03.06)
 ## Bugfixes / Chore
-* fix-version-bump-issue-again: Fix version bump: update in-memory project.version after writing new version to gradle.properties so that the release plugin's unSnapshotVersion task picks up the correct bumped version.
+* fix-version-bump-issue-again: Fixed automatic version bump during release.
 
 ---
 
 # 0.19.2 (2026.03.06)
 ## New Features
-* update-releasenotes-plugin-version-bump: Version bump is now performed automatically before the release build based on snippet types (feature → minor, update notice → major); snippet creation tasks no longer modify gradle.properties.
+* update-releasenotes-plugin-version-bump: Version bump is now performed automatically before the release build based on snippet types.
 
 ---
 
 # 0.19.1 (2026.03.06)
 ## Bugfixes / Chore
-* fix-cronjobs-ui-animation: Fixed cronjob table pulse animation restarting every 500ms and cronjob row not being resorted after execution.
+* fix-cronjobs-ui-animation: Fixed cronjob table pulse animation and row resorting after execution.
 
 ---
 
 # 0.19.0 (2026.03.06)
 ## New Features
-* move-recently-played-partition: Move recently-played fetching to its own outbox partition `to-spotify-recently-played` that never pauses on rate limits, and filter Spotify API calls using the last known playback timestamp to reduce redundant data transfer.
+* move-recently-played-partition: Recently-played fetching now only requests data newer than the last known playback timestamp, reducing redundant data transfer.
 
 ---
 
@@ -363,19 +333,19 @@
 
 # 0.16.8 (2026.03.06)
 ## Bugfixes / Chore
-* fix-spotify-playlist-tracks-adapter: Added missing `playlist-read-collaborative` OAuth scope to fix 403 errors when fetching tracks of collaborative playlists.
+* fix-spotify-playlist-tracks-adapter: Fixed 403 errors when fetching tracks of collaborative playlists.
 
 ---
 
 # 0.16.7 (2026.03.06)
 ## New Features
-* add-cronjob-overview-health-ui: Added cronjob overview to health UI showing all configured cronjobs with simple class name, cron schedule and a live countdown to the next execution.
+* add-cronjob-overview-health-ui: Added cronjob overview to health UI showing all configured cronjobs with their schedule and a live countdown to the next execution.
 
 ---
 
 # 0.16.6 (2026.03.06)
 ## Bugfixes / Chore
-* fix-markdown-doc-links: Fix relative links between documentation markdown files to work both offline in the git repo and when browsed via the web UI.
+* fix-markdown-doc-links: Fixed relative links between documentation markdown files.
 
 ---
 
@@ -387,33 +357,26 @@
 
 # 0.16.4 (2026.03.04)
 ## Bugfixes / Chore
-* fix-login-page-redirect: Fixed login page redirect — users with a valid session are now properly redirected to the dashboard when reloading or revisiting the login page. Session cookie is now persistent across browser restarts.
+* fix-login-page-redirect: Fixed login page redirect — users with a valid session are now properly redirected to the dashboard when reloading or revisiting the login page.
+* fix-login-page-redirect: Session cookie is now persistent across browser restarts.
 
 ---
 
 # 0.16.0 (2026.03.04)
 ## New Features
 * add-mongodb-stats-health-ui: Added MongoDB collection stats (name, document count, size) and query stats (name, executions in 24h, slow query count) to the health UI, with communication and MongoDB sub-sections.
-## Bugfixes / Chore
-* fix-build-issue: Fix detekt TooGenericExceptionCaught in MongoStatsAdapter by catching MongoException.
 
 ---
 
 # 0.15.2 (2026.03.04)
 ## Bugfixes / Chore
-* fix-cleanup-non-tracks: Added a bugfix starter to remove non-track items (e.g. podcast episodes) from recently played history.
+* fix-cleanup-non-tracks: Podcast episodes and other non-track items are now removed from recently played history.
 
 ---
 
 # 0.15.1 (2026.03.04)
 ## Bugfixes / Chore
-* remove-non-owned-playlists: Added bugfix starter to remove playlist metadata documents for playlists not owned by the user.
-
----
-
-# 0.15.0 (2026.03.04)
-## New Features
-* implement-starters-concept: Added starters concept for one-time startup beans.
+* remove-non-owned-playlists: Playlist metadata for playlists not owned by the user is now removed.
 
 ---
 
@@ -451,7 +414,7 @@
 
 # 0.12.7 (2026.03.04)
 ## Bugfixes / Chore
-* split-sse-events: Dashboard updates now use fine-grained SSE events per section (playback data, playlist metadata, outgoing HTTP calls, outbox partitions) with partial page updates and a fade effect instead of full page reloads.
+* split-sse-events: Dashboard updates now use fine-grained SSE events per section with partial page updates and a fade effect instead of full page reloads.
 
 ---
 
@@ -464,8 +427,6 @@
 # 0.12.5 (2026.03.04)
 ## New Features
 * trigger-sse-update-event: Playlist sync now triggers a Dashboard SSE refresh event when the number of playlists changes.
-## Bugfixes / Chore
-* create-one-time-startup-beans-concept: Added concept document for one-time startup beans (starters).
 
 ---
 
@@ -477,15 +438,14 @@
 
 # 0.12.3 (2026.03.04)
 ## Bugfixes / Chore
-* fix-sync-status-reset: Fixed scheduled playlist sync overwriting user-configured sync status (ACTIVE/PASSIVE) due to stale data read before the Spotify API call. Also fixed lastSnapshotIdSyncTime being reset on every sync regardless of snapshotId changes.
+* fix-sync-status-reset: Fixed scheduled playlist sync incorrectly overwriting user-configured sync status.
+* fix-sync-status-reset: Fixed last sync time being reset on every sync regardless of actual changes.
 
 ---
 
 # 0.12.1 (2026.03.04)
 ## New Features
 * show-last-30-days-dates: Date labels under playback events histogram columns are now only shown on large screens.
-## Bugfixes / Chore
-* optimize-build-performance: Speed up build by removing verbose --info flag from CI, converting @QuarkusTest scheduler job tests to unit tests, and moving DomainOutboxContractTests to domain-api module.
 
 ---
 
@@ -521,14 +481,14 @@
 
 # 0.11.3 (2026.03.04)
 ## New Features
-* add-prometheus-metrics: Add Prometheus metrics for outgoing Spotify HTTP requests (url, duration, response code).
+* add-prometheus-metrics: Add Prometheus metrics for outgoing Spotify API requests.
 * add-prometheus-metrics: Add Spotify request stats panel to dashboard showing outgoing request counts per host (last 24h).
 
 ---
 
 # 0.11.2 (2026.03.04)
 ## Bugfixes / Chore
-* fix-2071856-1165050559-9eb8f697-c4f3-4e2d-8967-17dee0927f82: Fixed HTTP 415 error on dashboard SSE connect by injecting SecurityIdentity via CDI instead of as method parameter.
+* fix-dashboard-sse-connect: Fixed dashboard SSE connection error.
 
 ---
 
@@ -537,10 +497,6 @@
 * update-header-logo-and-docs: Add logo to header bar.
 * update-header-logo-and-docs: Replace Docs text in menu bar with icon.
 * update-header-logo-and-docs: Make Docs link always visible when authenticated.
-* update-header-logo-and-docs: Rename arc42-EN.md to arc42.md.
-* update-header-logo-and-docs: Add outbox.md and coding-guidelines serving.
-* update-header-logo-and-docs: Remove ADR index page and related code.
-* update-header-logo-and-docs: Change ADR URL to /ui/adr/$file.md.
 * update-header-logo-and-docs: Dashboard page now uses SSE for live updates.
 
 ---
@@ -548,8 +504,6 @@
 # 0.10.2 (2026.03.04)
 ## New Features
 * upgrade-java-25-kotlin-2-3-10: Upgraded to Java 25 (LTS) and Kotlin 2.3.10.
-## Bugfixes / Chore
-* fix-current-build-issues: Fix Kotlin compiler warning about annotation default target for @ConfigProperty constructor parameters.
 
 ---
 
@@ -561,17 +515,16 @@
 
 # 0.10.0 (2026.03.04)
 ## New Features
-* add-mongodb-slow-query-metrics: Add MongoDB query metrics, slow query detection (configurable threshold, default 250ms), and indexes for recently_played and outbox collections.
+* add-mongodb-slow-query-metrics: Add MongoDB query metrics and slow query detection.
 
 ---
 
 # 0.9.4 (2026.03.03)
 ## Bugfixes / Chore
 * streamline-navigation-links: Streamlined navigation links across all pages.
-* streamline-navigation-links: Fixed partition stats table text color (unreadable black-on-dark).
+* streamline-navigation-links: Fixed partition stats table text color.
 * streamline-navigation-links: Fixed docs page headline styling to match dashboard heading.
 * streamline-navigation-links: Added Spotify favicon.
-* streamline-navigation-links: Fixed marked.js webjar path (was 404).
 * streamline-navigation-links: Switched dashboard stats refresh to 60-second polling.
 
 ---
@@ -584,14 +537,13 @@
 
 # 0.9.2 (2026.03.03)
 ## Bugfixes / Chore
-* change-to-repository-pattern: Changed MongoDB entities from active record pattern to Quarkus Panache repository pattern.
-* fix-docs-rendering-issue: Fix docs markdown rendering JS error by ensuring marked.js is loaded before content scripts execute.
+* fix-docs-rendering-issue: Fixed docs markdown rendering issue.
 
 ---
 
 # 0.9.1 (2026.03.03)
 ## Bugfixes / Chore
-* update-partition-table-appearance: Fixed partition information table to use dark mode styling on dashboard. 
+* update-partition-table-appearance: Fixed partition information table to use dark mode styling on dashboard.
 
 ---
 
@@ -609,7 +561,7 @@
 
 # 0.7.7 (2026.03.03)
 ## New Features
-* update-mongodb-atlas-auth-config: Switch MongoDB Atlas connection from connection-string to separate host, credentials and tuning configuration.
+* update-mongodb-atlas-auth-config: Updated MongoDB Atlas connection configuration.
 
 ---
 
@@ -628,7 +580,7 @@
 
 # 0.6.0 (2026.03.01)
 ## New Features
-* update-throttling-concept: Implement outbox throttling as core feature with OutboxTaskResult sealed interface for rate-limit handling in Spotify adapters.
+* update-throttling-concept: Implemented outbox throttling to handle Spotify API rate limits.
 
 ---
 
@@ -640,14 +592,7 @@
 
 # 0.4.2 (2026.02.28)
 ## New Features
-* implement-util-outbox-module: Add util-outbox module with outbox pattern support (MongoDB-backed task queue with retry, deduplication, and partition management).
-
----
-
-# 0.4.1 (2026.02.28)
-## Bugfixes / Chore
-* add-spotify-throttling-concept: Add Spotify request throttling concept document (docs/plans/spotify-throttling.md).
-* create-test-concept-docs: Added test-boundaries.md concept document describing the "Test Your Boundaries" approach for the hexagonal architecture.
+* implement-util-outbox-module: Added outbox module with task queue, retry, deduplication, and partition management.
 
 ---
 
@@ -671,20 +616,19 @@
 
 # 0.2.0 (2026.02.27)
 ## New Features
-* implement-error-handling-arrow: Implemented error handling using Arrow.
+* implement-error-handling-arrow: Improved error handling.
 
 ---
 
 # 0.1.11 (2026.02.27)
 ## New Features
-* implement-logging-system: Added logging across all relevant classes (info, warn, error) using KLogging.
+* implement-logging-system: Added logging across all relevant classes.
 
 ---
 
 # 0.1.10 (2026.02.26)
 ## New Features
-* enhance-error-handling-concept: Added error handling concept document and ADR covering DomainError enum pattern and Arrow library evaluation.
-* implement-token-refresh: Implement Spotify OAuth 2.0 token refresh so access tokens are automatically renewed before expiry for all Spotify API calls.
+* implement-token-refresh: Spotify access tokens are now automatically renewed before expiry.
 
 ---
 
@@ -696,7 +640,7 @@
 
 # 0.1.8 (2026.02.26)
 ## Bugfixes / Chore
-* fix-build-version-ui: Fixed build version not being shown in UI in dev mode by passing version via template data map instead of @TemplateGlobal.
+* fix-build-version-ui: Fixed build version not being shown in UI in dev mode.
 
 ---
 
@@ -726,20 +670,18 @@
 
 # 0.1.2 (2026.02.25)
 ## New Features
-* update-deployment-process: Deployment via SCP instead of git clone on VPS; optimized GitHub Actions release workflow.
+* update-deployment-process: Improved deployment process and release workflow.
 
 ---
 
 # 0.1.0 (2026.02.25)
 ## New Features
-* add-ssr-structures: Added server side rendering infrastructure using Qute templates and Bootstrap WebJar
-* add-ssr-structures: Added login page with Spotify branding and a login button
-* add-ssr-structures: Added slim black navigation bar showing application name and version
-* add-ssr-structures: Added dashboard page as main entry point after login
-* add-ssr-structures: Application version is rendered in the top menu bar
-* enhance-gradle-build-version: Serve application version dynamically in base template via app.build.version property injected from Gradle build.
-* serve-markdown-feature: Added documentation pages for architecture docs, ADRs, and release notes accessible from the nav bar
-* serve-markdown-feature: Added marked WebJar dependency for Markdown rendering
+* add-ssr-structures: Added server side rendering infrastructure.
+* add-ssr-structures: Added login page with Spotify branding and a login button.
+* add-ssr-structures: Added slim black navigation bar showing application name and version.
+* add-ssr-structures: Added dashboard page as main entry point after login.
+* add-ssr-structures: Application version is rendered in the top menu bar.
+* serve-markdown-feature: Added documentation pages for architecture docs, ADRs, and release notes accessible from the nav bar.
 
 ---
 
