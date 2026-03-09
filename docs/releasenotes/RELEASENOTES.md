@@ -1,3 +1,12 @@
+# 0.43.0 (2026.03.09)
+
+## New Features
+* group-http-requests-by-endpoint: Outgoing HTTP requests on the health page are now grouped by endpoint instead of host.
+
+
+
+---
+
 # 0.42.0 (2026.03.09)
 
 ## New Features
