@@ -8,10 +8,8 @@ import de.chrgroth.spotify.control.domain.model.CurrentlyPlayingItem
 import de.chrgroth.spotify.control.domain.model.User
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
-import de.chrgroth.spotify.control.domain.port.out.AppAlbumRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppPlaybackRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.CurrentlyPlayingRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
@@ -19,11 +17,8 @@ import de.chrgroth.spotify.control.domain.port.out.PlaybackStatePort
 import de.chrgroth.spotify.control.domain.port.out.RecentlyPartialPlayedRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.RecentlyPlayedRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
-import de.chrgroth.spotify.control.domain.port.out.SpotifyAlbumDetailsPort
-import de.chrgroth.spotify.control.domain.port.out.SpotifyArtistDetailsPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyCurrentlyPlayingPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyRecentlyPlayedPort
-import de.chrgroth.spotify.control.domain.port.out.SpotifyTrackDetailsPort
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
 import io.mockk.every
 import io.mockk.just
@@ -41,16 +36,11 @@ class CurrentlyPlayingAdapterTests {
     private val spotifyAccessToken: SpotifyAccessTokenPort = mockk()
     private val spotifyCurrentlyPlaying: SpotifyCurrentlyPlayingPort = mockk()
     private val spotifyRecentlyPlayed: SpotifyRecentlyPlayedPort = mockk(relaxed = true)
-    private val spotifyArtistDetails: SpotifyArtistDetailsPort = mockk(relaxed = true)
-    private val spotifyTrackDetails: SpotifyTrackDetailsPort = mockk(relaxed = true)
-    private val spotifyAlbumDetails: SpotifyAlbumDetailsPort = mockk(relaxed = true)
     private val currentlyPlayingRepository: CurrentlyPlayingRepositoryPort = mockk()
     private val recentlyPlayedRepository: RecentlyPlayedRepositoryPort = mockk(relaxed = true)
     private val recentlyPartialPlayedRepository: RecentlyPartialPlayedRepositoryPort = mockk(relaxed = true)
     private val appPlaybackRepository: AppPlaybackRepositoryPort = mockk(relaxed = true)
     private val appArtistRepository: AppArtistRepositoryPort = mockk(relaxed = true)
-    private val appTrackRepository: AppTrackRepositoryPort = mockk(relaxed = true)
-    private val appAlbumRepository: AppAlbumRepositoryPort = mockk(relaxed = true)
     private val outboxPort: OutboxPort = mockk()
     private val dashboardRefresh: DashboardRefreshPort = mockk(relaxed = true)
     private val playbackState: PlaybackStatePort = mockk(relaxed = true)
@@ -61,16 +51,11 @@ class CurrentlyPlayingAdapterTests {
         spotifyAccessToken,
         spotifyCurrentlyPlaying,
         spotifyRecentlyPlayed,
-        spotifyArtistDetails,
-        spotifyTrackDetails,
-        spotifyAlbumDetails,
         currentlyPlayingRepository,
         recentlyPlayedRepository,
         recentlyPartialPlayedRepository,
         appPlaybackRepository,
         appArtistRepository,
-        appTrackRepository,
-        appAlbumRepository,
         outboxPort,
         dashboardRefresh,
         playbackState,

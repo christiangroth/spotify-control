@@ -3,6 +3,7 @@ package de.chrgroth.spotify.control.adapter.`in`.web.ui
 import de.chrgroth.spotify.control.domain.error.ArtistSettingsError
 import de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus
 import de.chrgroth.spotify.control.domain.model.UserId
+import de.chrgroth.spotify.control.domain.port.`in`.CatalogPort
 import de.chrgroth.spotify.control.domain.port.`in`.PlaybackPort
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
 import io.quarkus.qute.Location
@@ -40,13 +41,16 @@ class PlaybackSettingsResource {
   @Inject
   private lateinit var playback: PlaybackPort
 
+  @Inject
+  private lateinit var catalog: CatalogPort
+
   @GET
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
   fun playback(): TemplateInstance {
     val userId = UserId(securityIdentity.principal.name)
     val user = userRepository.findById(userId)
-    val allArtists = playback.findAllArtists().sortedBy { it.artistName }
+    val allArtists = catalog.findAllArtists().sortedBy { it.artistName }
     return playbackTemplate
       .data("displayName", user?.displayName ?: userId.value)
       .data("undecidedArtists", allArtists.filter { it.playbackProcessingStatus == ArtistPlaybackProcessingStatus.UNDECIDED })
@@ -78,7 +82,7 @@ class PlaybackSettingsResource {
       ?: return Response.status(Response.Status.BAD_REQUEST)
         .entity(mapOf("error" to "Invalid artist status: ${request.status}"))
         .build()
-    return playback.updateArtistPlaybackProcessingStatus(artistId, status, userId).fold(
+    return catalog.updateArtistPlaybackProcessingStatus(artistId, status, userId).fold(
       ifLeft = { error ->
         when (error) {
           ArtistSettingsError.ARTIST_NOT_FOUND -> Response.status(Response.Status.NOT_FOUND)

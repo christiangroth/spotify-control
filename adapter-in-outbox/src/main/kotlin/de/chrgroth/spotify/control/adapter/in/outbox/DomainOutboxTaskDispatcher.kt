@@ -2,6 +2,7 @@ package de.chrgroth.spotify.control.adapter.`in`.outbox
 
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
+import de.chrgroth.spotify.control.domain.port.`in`.CatalogPort
 import de.chrgroth.spotify.control.domain.port.`in`.PlaybackPort
 import de.chrgroth.spotify.control.domain.port.`in`.PlaylistPort
 import de.chrgroth.spotify.control.domain.port.`in`.UserProfilePort
@@ -15,6 +16,7 @@ import jakarta.enterprise.context.ApplicationScoped
 @Suppress("Unused")
 class DomainOutboxTaskDispatcher(
     private val playback: PlaybackPort,
+    private val catalog: CatalogPort,
     private val playlist: PlaylistPort,
     private val userProfile: UserProfilePort,
 ) : OutboxTaskDispatcher {
@@ -35,9 +37,9 @@ class DomainOutboxTaskDispatcher(
             is DomainOutboxEvent.SyncPlaylistData -> playlist.handle(event)
             is DomainOutboxEvent.RebuildPlaybackData -> playback.handle(event)
             is DomainOutboxEvent.AppendPlaybackData -> playback.handle(event)
-            is DomainOutboxEvent.EnrichArtistDetails -> playback.handle(event)
-            is DomainOutboxEvent.EnrichTrackDetails -> playback.handle(event)
-            is DomainOutboxEvent.EnrichAlbumDetails -> playback.handle(event)
+            is DomainOutboxEvent.EnrichArtistDetails -> catalog.handle(event)
+            is DomainOutboxEvent.EnrichTrackDetails -> catalog.handle(event)
+            is DomainOutboxEvent.EnrichAlbumDetails -> catalog.handle(event)
         }
     }
 }
