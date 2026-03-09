@@ -251,7 +251,7 @@ class PlaybackAdapter(
             userId = item.spotifyUserId,
             playedAt = item.playedAt,
             trackId = item.trackId,
-            secondsPlayed = 0L,
+            secondsPlayed = 0L, // Spotify recently played API does not include play duration
         )
     } + partialPlayed.map { item ->
         AppPlaybackItem(
