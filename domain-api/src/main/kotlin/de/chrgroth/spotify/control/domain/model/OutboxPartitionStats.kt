@@ -7,4 +7,5 @@ data class OutboxPartitionStats(
     val status: String,
     val documentCount: Long,
     val blockedUntil: Instant?,
+    val eventTypeCounts: List<OutboxEventTypeCount> = emptyList(),
 )

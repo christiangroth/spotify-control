@@ -72,8 +72,28 @@
                                                 {/if}
                                             </td>
                                             <td class="outbox-blocked-until" style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">-</td>
-                                            <td style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">{p.documentCount}</td>
+                                            {#if p.documentCount > 0}
+                                            <td style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;cursor:pointer;text-decoration:underline dotted;" onclick="toggleOutboxDetail(this.dataset.partition)" onkeydown="if(event.key==='Enter'||event.key===' ')toggleOutboxDetail(this.dataset.partition)" tabindex="0" data-partition="{p.name}" data-testid="outbox-doc-count">{p.documentCount}</td>
+                                            {#else}
+                                            <td style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;" data-testid="outbox-doc-count">{p.documentCount}</td>
+                                            {/if}
                                         </tr>
+                                        {#if p.documentCount > 0}
+                                        <tr class="outbox-detail-row" data-partition="{p.name}" style="display:none;border-color:#333;">
+                                            <td colspan="3" style="padding:4px 8px 4px 24px;background-color:#161616;border-color:#333;">
+                                                <table class="table table-sm mb-0" style="color:#aaa;background-color:transparent;font-size:0.8rem;">
+                                                    <tbody>
+                                                        {#for etc in p.eventTypeCounts}
+                                                        <tr style="border-color:#2a2a2a;">
+                                                            <td style="border-color:#2a2a2a;color:#bbb;background-color:transparent;">{etc.eventType}</td>
+                                                            <td style="border-color:#2a2a2a;color:#bbb;text-align:right;background-color:transparent;">{etc.count}</td>
+                                                        </tr>
+                                                        {/for}
+                                                    </tbody>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                        {/if}
                                         {/for}
                                     </tbody>
                                 </table>
@@ -324,6 +344,13 @@
             function resumeOutboxPartition(partitionKey) {
                 fetch('/ui/health/outbox-partitions/' + encodeURIComponent(partitionKey) + '/activate', { method: 'POST' })
                     .catch(function (err) { console.error('Failed to resume partition', err); });
+            }
+
+            function toggleOutboxDetail(partitionKey) {
+                var row = document.querySelector('.outbox-detail-row[data-partition="' + CSS.escape(partitionKey) + '"]');
+                if (row) {
+                    row.style.display = row.style.display === 'none' ? '' : 'none';
+                }
             }
 
             function connect() {
