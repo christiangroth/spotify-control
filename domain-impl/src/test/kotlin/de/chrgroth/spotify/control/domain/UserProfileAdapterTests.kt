@@ -26,14 +26,14 @@ import java.time.Duration
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.hours
 
-class UserProfileUpdateAdapterTests {
+class UserProfileAdapterTests {
 
     private val userRepository: UserRepositoryPort = mockk()
     private val spotifyAccessToken: SpotifyAccessTokenPort = mockk()
     private val spotifyAuth: SpotifyAuthPort = mockk()
     private val outboxPort: OutboxPort = mockk()
 
-    private val adapter = UserProfileUpdateAdapter(userRepository, spotifyAccessToken, spotifyAuth, outboxPort)
+    private val adapter = UserProfileAdapter(userRepository, spotifyAccessToken, spotifyAuth, outboxPort)
 
     private val userId = UserId("user-1")
     private val accessToken = AccessToken("access-token")

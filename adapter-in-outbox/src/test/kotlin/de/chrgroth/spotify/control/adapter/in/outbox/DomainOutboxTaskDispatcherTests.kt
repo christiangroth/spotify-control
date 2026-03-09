@@ -2,7 +2,9 @@ package de.chrgroth.spotify.control.adapter.`in`.outbox
 
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
-import de.chrgroth.spotify.control.domain.port.`in`.OutboxHandlerPort
+import de.chrgroth.spotify.control.domain.port.`in`.PlaybackPort
+import de.chrgroth.spotify.control.domain.port.`in`.PlaylistPort
+import de.chrgroth.spotify.control.domain.port.`in`.UserProfilePort
 import de.chrgroth.outbox.OutboxTask
 import de.chrgroth.outbox.OutboxTaskPriority
 import de.chrgroth.outbox.OutboxTaskResult
@@ -17,9 +19,11 @@ import java.time.Instant
 
 class DomainOutboxTaskDispatcherTests {
 
-    private val handlerPort: OutboxHandlerPort = mockk()
+    private val playback: PlaybackPort = mockk()
+    private val playlist: PlaylistPort = mockk()
+    private val userProfile: UserProfilePort = mockk()
 
-    private val subject = DomainOutboxTaskDispatcher(handlerPort)
+    private val subject = DomainOutboxTaskDispatcher(playback, playlist, userProfile)
 
     private val userId = "user-123"
     private val userIdObj = UserId(userId)
@@ -43,48 +47,48 @@ class DomainOutboxTaskDispatcherTests {
     fun `FetchCurrentlyPlaying dispatches to handle(FetchCurrentlyPlaying)`() {
         val event = DomainOutboxEvent.FetchCurrentlyPlaying(userIdObj)
         val task = buildTask(DomainOutboxEvent.FetchCurrentlyPlaying.KEY, userId)
-        every { handlerPort.handle(event) } returns OutboxTaskResult.Success
+        every { playback.handle(event) } returns OutboxTaskResult.Success
 
         val result = subject.dispatch(task)
 
         assertThat(result).isInstanceOf(OutboxTaskResult.Success::class.java)
-        verify { handlerPort.handle(event) }
+        verify { playback.handle(event) }
     }
 
     @Test
     fun `FetchRecentlyPlayed dispatches to handle(FetchRecentlyPlayed)`() {
         val event = DomainOutboxEvent.FetchRecentlyPlayed(userIdObj)
         val task = buildTask(DomainOutboxEvent.FetchRecentlyPlayed.KEY, userId)
-        every { handlerPort.handle(event) } returns OutboxTaskResult.Success
+        every { playback.handle(event) } returns OutboxTaskResult.Success
 
         val result = subject.dispatch(task)
 
         assertThat(result).isInstanceOf(OutboxTaskResult.Success::class.java)
-        verify { handlerPort.handle(event) }
+        verify { playback.handle(event) }
     }
 
     @Test
     fun `UpdateUserProfile dispatches to handle(UpdateUserProfile)`() {
         val event = DomainOutboxEvent.UpdateUserProfile(userIdObj)
         val task = buildTask(DomainOutboxEvent.UpdateUserProfile.KEY, userId)
-        every { handlerPort.handle(event) } returns OutboxTaskResult.Success
+        every { userProfile.handle(event) } returns OutboxTaskResult.Success
 
         val result = subject.dispatch(task)
 
         assertThat(result).isInstanceOf(OutboxTaskResult.Success::class.java)
-        verify { handlerPort.handle(event) }
+        verify { userProfile.handle(event) }
     }
 
     @Test
     fun `SyncPlaylistInfo dispatches to handle(SyncPlaylistInfo)`() {
         val event = DomainOutboxEvent.SyncPlaylistInfo(userIdObj)
         val task = buildTask(DomainOutboxEvent.SyncPlaylistInfo.KEY, userId)
-        every { handlerPort.handle(event) } returns OutboxTaskResult.Success
+        every { playlist.handle(event) } returns OutboxTaskResult.Success
 
         val result = subject.dispatch(task)
 
         assertThat(result).isInstanceOf(OutboxTaskResult.Success::class.java)
-        verify { handlerPort.handle(event) }
+        verify { playlist.handle(event) }
     }
 
     @Test
@@ -92,36 +96,36 @@ class DomainOutboxTaskDispatcherTests {
         val playlistId = "playlist-123"
         val event = DomainOutboxEvent.SyncPlaylistData(userIdObj, playlistId)
         val task = buildTask(DomainOutboxEvent.SyncPlaylistData.KEY, "$userId:$playlistId")
-        every { handlerPort.handle(event) } returns OutboxTaskResult.Success
+        every { playlist.handle(event) } returns OutboxTaskResult.Success
 
         val result = subject.dispatch(task)
 
         assertThat(result).isInstanceOf(OutboxTaskResult.Success::class.java)
-        verify { handlerPort.handle(event) }
+        verify { playlist.handle(event) }
     }
 
     @Test
     fun `RebuildPlaybackData dispatches to handle(RebuildPlaybackData)`() {
         val event = DomainOutboxEvent.RebuildPlaybackData(userIdObj)
         val task = buildTask(DomainOutboxEvent.RebuildPlaybackData.KEY, userId)
-        every { handlerPort.handle(event) } returns OutboxTaskResult.Success
+        every { playback.handle(event) } returns OutboxTaskResult.Success
 
         val result = subject.dispatch(task)
 
         assertThat(result).isInstanceOf(OutboxTaskResult.Success::class.java)
-        verify { handlerPort.handle(event) }
+        verify { playback.handle(event) }
     }
 
     @Test
     fun `AppendPlaybackData dispatches to handle(AppendPlaybackData)`() {
         val event = DomainOutboxEvent.AppendPlaybackData(userIdObj)
         val task = buildTask(DomainOutboxEvent.AppendPlaybackData.KEY, userId)
-        every { handlerPort.handle(event) } returns OutboxTaskResult.Success
+        every { playback.handle(event) } returns OutboxTaskResult.Success
 
         val result = subject.dispatch(task)
 
         assertThat(result).isInstanceOf(OutboxTaskResult.Success::class.java)
-        verify { handlerPort.handle(event) }
+        verify { playback.handle(event) }
     }
 
     @Test
@@ -129,12 +133,12 @@ class DomainOutboxTaskDispatcherTests {
         val artistId = "artist-456"
         val event = DomainOutboxEvent.EnrichArtistDetails(artistId, userIdObj)
         val task = buildTask(DomainOutboxEvent.EnrichArtistDetails.KEY, "$artistId:$userId")
-        every { handlerPort.handle(event) } returns OutboxTaskResult.Success
+        every { playback.handle(event) } returns OutboxTaskResult.Success
 
         val result = subject.dispatch(task)
 
         assertThat(result).isInstanceOf(OutboxTaskResult.Success::class.java)
-        verify { handlerPort.handle(event) }
+        verify { playback.handle(event) }
     }
 
     @Test
@@ -142,12 +146,12 @@ class DomainOutboxTaskDispatcherTests {
         val trackId = "track-789"
         val event = DomainOutboxEvent.EnrichTrackDetails(trackId, userIdObj)
         val task = buildTask(DomainOutboxEvent.EnrichTrackDetails.KEY, "$trackId:$userId")
-        every { handlerPort.handle(event) } returns OutboxTaskResult.Success
+        every { playback.handle(event) } returns OutboxTaskResult.Success
 
         val result = subject.dispatch(task)
 
         assertThat(result).isInstanceOf(OutboxTaskResult.Success::class.java)
-        verify { handlerPort.handle(event) }
+        verify { playback.handle(event) }
     }
 
     @Test
@@ -155,12 +159,12 @@ class DomainOutboxTaskDispatcherTests {
         val albumId = "album-101"
         val event = DomainOutboxEvent.EnrichAlbumDetails(albumId, userIdObj)
         val task = buildTask(DomainOutboxEvent.EnrichAlbumDetails.KEY, "$albumId:$userId")
-        every { handlerPort.handle(event) } returns OutboxTaskResult.Success
+        every { playback.handle(event) } returns OutboxTaskResult.Success
 
         val result = subject.dispatch(task)
 
         assertThat(result).isInstanceOf(OutboxTaskResult.Success::class.java)
-        verify { handlerPort.handle(event) }
+        verify { playback.handle(event) }
     }
 
     @Test
@@ -176,7 +180,7 @@ class DomainOutboxTaskDispatcherTests {
     fun `handler failure propagates as Failed result`() {
         val event = DomainOutboxEvent.FetchRecentlyPlayed(userIdObj)
         val task = buildTask(DomainOutboxEvent.FetchRecentlyPlayed.KEY, userId)
-        every { handlerPort.handle(event) } returns OutboxTaskResult.Failed("fetch failed")
+        every { playback.handle(event) } returns OutboxTaskResult.Failed("fetch failed")
 
         val result = subject.dispatch(task)
 
@@ -189,7 +193,7 @@ class DomainOutboxTaskDispatcherTests {
         val event = DomainOutboxEvent.FetchRecentlyPlayed(userIdObj)
         val task = buildTask(DomainOutboxEvent.FetchRecentlyPlayed.KEY, userId)
         val retryAfter = Duration.ofSeconds(30)
-        every { handlerPort.handle(event) } returns OutboxTaskResult.RateLimited(retryAfter)
+        every { playback.handle(event) } returns OutboxTaskResult.RateLimited(retryAfter)
 
         val result = subject.dispatch(task)
 

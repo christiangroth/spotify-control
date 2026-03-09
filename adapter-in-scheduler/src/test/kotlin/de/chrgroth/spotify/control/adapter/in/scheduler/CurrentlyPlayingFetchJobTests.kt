@@ -1,6 +1,6 @@
 package de.chrgroth.spotify.control.adapter.`in`.scheduler
 
-import de.chrgroth.spotify.control.domain.port.`in`.CurrentlyPlayingPort
+import de.chrgroth.spotify.control.domain.port.`in`.PlaybackPort
 import io.mockk.mockk
 import io.mockk.verify
 import org.assertj.core.api.Assertions.assertThat
@@ -9,16 +9,16 @@ import java.time.Instant
 
 class CurrentlyPlayingFetchJobTests {
 
-    private val currentlyPlaying: CurrentlyPlayingPort = mockk(relaxed = true)
+    private val playback: PlaybackPort = mockk(relaxed = true)
     private val scheduleState: CurrentlyPlayingScheduleState = CurrentlyPlayingScheduleState()
 
-    private val job = CurrentlyPlayingFetchJob(currentlyPlaying, scheduleState)
+    private val job = CurrentlyPlayingFetchJob(playback, scheduleState)
 
     @Test
     fun `run calls enqueueUpdates when no playback active and interval elapsed`() {
         job.run()
 
-        verify { currentlyPlaying.enqueueUpdates() }
+        verify { playback.enqueueFetchCurrentlyPlaying() }
     }
 
     @Test
@@ -28,7 +28,7 @@ class CurrentlyPlayingFetchJobTests {
 
         job.run()
 
-        verify(exactly = 1) { currentlyPlaying.enqueueUpdates() }
+        verify(exactly = 1) { playback.enqueueFetchCurrentlyPlaying() }
     }
 
     @Test
@@ -38,7 +38,7 @@ class CurrentlyPlayingFetchJobTests {
 
         job.run()
 
-        verify(exactly = invocationsBefore) { currentlyPlaying.enqueueUpdates() }
+        verify(exactly = invocationsBefore) { playback.enqueueFetchCurrentlyPlaying() }
     }
 
     @Test

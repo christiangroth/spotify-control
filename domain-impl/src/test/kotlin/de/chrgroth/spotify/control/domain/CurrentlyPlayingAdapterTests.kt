@@ -8,12 +8,22 @@ import de.chrgroth.spotify.control.domain.model.CurrentlyPlayingItem
 import de.chrgroth.spotify.control.domain.model.User
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
+import de.chrgroth.spotify.control.domain.port.out.AppAlbumRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.AppPlaybackRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.CurrentlyPlayingRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.PlaybackStatePort
+import de.chrgroth.spotify.control.domain.port.out.RecentlyPartialPlayedRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.RecentlyPlayedRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
+import de.chrgroth.spotify.control.domain.port.out.SpotifyAlbumDetailsPort
+import de.chrgroth.spotify.control.domain.port.out.SpotifyArtistDetailsPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyCurrentlyPlayingPort
+import de.chrgroth.spotify.control.domain.port.out.SpotifyRecentlyPlayedPort
+import de.chrgroth.spotify.control.domain.port.out.SpotifyTrackDetailsPort
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
 import io.mockk.every
 import io.mockk.just
@@ -30,19 +40,42 @@ class CurrentlyPlayingAdapterTests {
     private val userRepository: UserRepositoryPort = mockk()
     private val spotifyAccessToken: SpotifyAccessTokenPort = mockk()
     private val spotifyCurrentlyPlaying: SpotifyCurrentlyPlayingPort = mockk()
+    private val spotifyRecentlyPlayed: SpotifyRecentlyPlayedPort = mockk(relaxed = true)
+    private val spotifyArtistDetails: SpotifyArtistDetailsPort = mockk(relaxed = true)
+    private val spotifyTrackDetails: SpotifyTrackDetailsPort = mockk(relaxed = true)
+    private val spotifyAlbumDetails: SpotifyAlbumDetailsPort = mockk(relaxed = true)
     private val currentlyPlayingRepository: CurrentlyPlayingRepositoryPort = mockk()
+    private val recentlyPlayedRepository: RecentlyPlayedRepositoryPort = mockk(relaxed = true)
+    private val recentlyPartialPlayedRepository: RecentlyPartialPlayedRepositoryPort = mockk(relaxed = true)
+    private val appPlaybackRepository: AppPlaybackRepositoryPort = mockk(relaxed = true)
+    private val appArtistRepository: AppArtistRepositoryPort = mockk(relaxed = true)
+    private val appTrackRepository: AppTrackRepositoryPort = mockk(relaxed = true)
+    private val appAlbumRepository: AppAlbumRepositoryPort = mockk(relaxed = true)
     private val outboxPort: OutboxPort = mockk()
     private val dashboardRefresh: DashboardRefreshPort = mockk(relaxed = true)
     private val playbackState: PlaybackStatePort = mockk(relaxed = true)
+    private val appEnrichmentService: AppEnrichmentService = mockk(relaxed = true)
 
-    private val adapter = CurrentlyPlayingAdapter(
+    private val adapter = PlaybackAdapter(
         userRepository,
         spotifyAccessToken,
         spotifyCurrentlyPlaying,
+        spotifyRecentlyPlayed,
+        spotifyArtistDetails,
+        spotifyTrackDetails,
+        spotifyAlbumDetails,
         currentlyPlayingRepository,
+        recentlyPlayedRepository,
+        recentlyPartialPlayedRepository,
+        appPlaybackRepository,
+        appArtistRepository,
+        appTrackRepository,
+        appAlbumRepository,
         outboxPort,
         dashboardRefresh,
         playbackState,
+        appEnrichmentService,
+        minimumProgressSeconds = 0L,
     )
 
     private val userId = UserId("user-1")
@@ -76,7 +109,7 @@ class CurrentlyPlayingAdapterTests {
     fun `enqueueUpdates does nothing when no users exist`() {
         every { userRepository.findAll() } returns emptyList()
 
-        adapter.enqueueUpdates()
+        adapter.enqueueFetchCurrentlyPlaying()
 
         verify(exactly = 0) { outboxPort.enqueue(any()) }
     }
@@ -86,7 +119,7 @@ class CurrentlyPlayingAdapterTests {
         every { userRepository.findAll() } returns listOf(buildUser("user-1"), buildUser("user-2"))
         every { outboxPort.enqueue(any()) } just runs
 
-        adapter.enqueueUpdates()
+        adapter.enqueueFetchCurrentlyPlaying()
 
         verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.FetchCurrentlyPlaying(UserId("user-1"))) }
         verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.FetchCurrentlyPlaying(UserId("user-2"))) }
@@ -102,7 +135,7 @@ class CurrentlyPlayingAdapterTests {
         every { currentlyPlayingRepository.existsByUserAndTrackAndObservedMinute(item) } returns false
         every { currentlyPlayingRepository.save(item) } just runs
 
-        adapter.update(userId)
+        adapter.fetchCurrentlyPlaying(userId)
 
         verify { currentlyPlayingRepository.save(item) }
     }
@@ -115,7 +148,7 @@ class CurrentlyPlayingAdapterTests {
         every { currentlyPlayingRepository.existsByUserAndTrackAndObservedMinute(item) } returns false
         every { currentlyPlayingRepository.save(item) } just runs
 
-        adapter.update(userId)
+        adapter.fetchCurrentlyPlaying(userId)
 
         verify { dashboardRefresh.notifyUserPlaybackData(userId) }
     }
@@ -128,7 +161,7 @@ class CurrentlyPlayingAdapterTests {
         every { currentlyPlayingRepository.existsByUserAndTrackAndObservedMinute(item) } returns false
         every { currentlyPlayingRepository.save(item) } just runs
 
-        adapter.update(userId)
+        adapter.fetchCurrentlyPlaying(userId)
 
         verify { playbackState.onPlaybackDetected() }
     }
@@ -141,7 +174,7 @@ class CurrentlyPlayingAdapterTests {
         every { currentlyPlayingRepository.existsByUserAndTrackAndObservedMinute(item) } returns false
         every { currentlyPlayingRepository.save(item) } just runs
 
-        adapter.update(userId)
+        adapter.fetchCurrentlyPlaying(userId)
 
         verify(exactly = 0) { playbackState.onPlaybackDetected() }
     }
@@ -153,7 +186,7 @@ class CurrentlyPlayingAdapterTests {
         every { spotifyCurrentlyPlaying.getCurrentlyPlaying(userId, accessToken) } returns item.right()
         every { currentlyPlayingRepository.existsByUserAndTrackAndObservedMinute(item) } returns true
 
-        adapter.update(userId)
+        adapter.fetchCurrentlyPlaying(userId)
 
         verify(exactly = 0) { currentlyPlayingRepository.save(any()) }
     }
@@ -165,7 +198,7 @@ class CurrentlyPlayingAdapterTests {
         every { spotifyCurrentlyPlaying.getCurrentlyPlaying(userId, accessToken) } returns item.right()
         every { currentlyPlayingRepository.existsByUserAndTrackAndObservedMinute(item) } returns true
 
-        adapter.update(userId)
+        adapter.fetchCurrentlyPlaying(userId)
 
         verify(exactly = 0) { dashboardRefresh.notifyUserPlaybackData(any()) }
     }
@@ -175,7 +208,7 @@ class CurrentlyPlayingAdapterTests {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { spotifyCurrentlyPlaying.getCurrentlyPlaying(userId, accessToken) } returns null.right()
 
-        adapter.update(userId)
+        adapter.fetchCurrentlyPlaying(userId)
 
         verify(exactly = 0) { currentlyPlayingRepository.save(any()) }
         verify(exactly = 0) { dashboardRefresh.notifyUserPlaybackData(any()) }
@@ -187,7 +220,7 @@ class CurrentlyPlayingAdapterTests {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { spotifyCurrentlyPlaying.getCurrentlyPlaying(userId, accessToken) } returns PlaybackError.CURRENTLY_PLAYING_FETCH_FAILED.left()
 
-        val result = adapter.update(userId)
+        val result = adapter.fetchCurrentlyPlaying(userId)
 
         assertThat(result.isLeft()).isTrue()
         verify(exactly = 0) { currentlyPlayingRepository.save(any()) }

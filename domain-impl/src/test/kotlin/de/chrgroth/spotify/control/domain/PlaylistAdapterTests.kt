@@ -35,7 +35,7 @@ import java.time.Duration
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.hours
 
-class PlaylistSyncAdapterTests {
+class PlaylistAdapterTests {
 
     private val userRepository: UserRepositoryPort = mockk()
     private val playlistRepository: PlaylistRepositoryPort = mockk()
@@ -47,7 +47,7 @@ class PlaylistSyncAdapterTests {
     private val dashboardRefresh: DashboardRefreshPort = mockk()
     private val appEnrichmentService: AppEnrichmentService = mockk()
 
-    private val adapter = PlaylistSyncAdapter(
+    private val adapter = PlaylistAdapter(
         userRepository, playlistRepository, playlistDataRepository,
         spotifyAccessToken, spotifyPlaylist, spotifyPlaylistTracks,
         outboxPort, dashboardRefresh, appEnrichmentService,
