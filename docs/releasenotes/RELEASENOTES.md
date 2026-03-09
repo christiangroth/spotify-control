@@ -1,3 +1,12 @@
+# 0.41.1 (2026.03.09)
+
+## Bugfixes / Chore
+* display-artist-name-in-settings: Artist names are now correctly displayed in playback settings, including after the enrichment process fetches updated data from Spotify.
+
+
+
+---
+
 # 0.41.0 (2026.03.09)
 
 ## New Features
