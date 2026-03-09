@@ -1,3 +1,12 @@
+# 0.44.3 (2026.03.09)
+
+## Bugfixes / Chore
+* split-application-properties: Configuration properties are now declared in each owning module's application.properties instead of being centralised in application-quarkus.
+
+
+
+---
+
 # 0.44.2 (2026.03.09)
 
 ## Bugfixes / Chore
