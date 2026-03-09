@@ -84,4 +84,17 @@ class AppArtistRepositoryTests {
         assertThat(result[0].imageLink).isEqualTo("https://example.com/image.jpg")
         assertThat(result[0].lastEnrichmentDate).isNotNull()
     }
+
+    @Test
+    fun `findWithImageLinkAndBlankName returns only artists with imageLink and blank artistName`() {
+        val withImageAndBlankName = artist("blank-name").copy(artistName = "", imageLink = "https://img.example.com/1.jpg")
+        val withImageAndName = artist("has-name").copy(imageLink = "https://img.example.com/2.jpg")
+        val withoutImage = artist("no-image").copy(artistName = "")
+        appArtistRepository.upsertAll(listOf(withImageAndBlankName, withImageAndName, withoutImage))
+
+        val result = appArtistRepository.findWithImageLinkAndBlankName()
+
+        assertThat(result.map { it.artistId }).contains(withImageAndBlankName.artistId)
+        assertThat(result.map { it.artistId }).doesNotContain(withImageAndName.artistId, withoutImage.artistId)
+    }
 }

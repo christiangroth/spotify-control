@@ -34,7 +34,7 @@ class PlaybackEnrichmentAdapter(
 
     override fun enrichArtistDetails(artistId: String, userId: UserId): Either<DomainError, Unit> {
         val existing = appArtistRepository.findByArtistIds(setOf(artistId)).firstOrNull()
-        if (existing?.lastEnrichmentDate != null) {
+        if (existing?.lastEnrichmentDate != null && existing.artistName.isNotBlank()) {
             logger.debug { "Artist $artistId already enriched, skipping" }
             return Unit.right()
         }

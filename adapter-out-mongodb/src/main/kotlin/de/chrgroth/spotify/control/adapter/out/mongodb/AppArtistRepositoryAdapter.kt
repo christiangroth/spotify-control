@@ -60,6 +60,22 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
         }
     }
 
+    override fun findWithImageLinkAndBlankName(): List<AppArtist> =
+        mongoQueryMetrics.timed("app_artist.findWithImageLinkAndBlankName") {
+            appArtistDocumentRepository.mongoCollection()
+                .find(
+                    Filters.and(
+                        Filters.ne("imageLink", null),
+                        Filters.or(
+                            Filters.eq("artistName", ""),
+                            Filters.exists("artistName", false),
+                        ),
+                    ),
+                )
+                .toList()
+                .map { it.toDomain() }
+        }
+
     override fun updateEnrichmentData(artistId: String, artistName: String, genres: List<String>, imageLink: String?) {
         val now = java.time.Instant.now()
         mongoQueryMetrics.timed("app_artist.updateEnrichmentData") {

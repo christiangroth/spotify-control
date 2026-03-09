@@ -72,4 +72,29 @@ class PlaybackEnrichmentAdapterTests {
         verify(exactly = 0) { spotifyArtistDetails.getArtist(any(), any(), any()) }
         verify(exactly = 0) { appArtistRepository.updateEnrichmentData(any(), any(), any(), any()) }
     }
+
+    @Test
+    fun `enrichArtistDetails re-enriches when artist has enrichmentDate but blank name`() {
+        val artistId = "artist-blank-name"
+        val artistWithBlankName = AppArtist(
+            artistId = artistId,
+            artistName = "",
+            imageLink = "https://example.com/image.jpg",
+            lastEnrichmentDate = kotlin.time.Clock.System.now(),
+        )
+        val spotifyArtist = AppArtist(
+            artistId = artistId,
+            artistName = "Recovered Name",
+            genres = listOf("rock"),
+            imageLink = "https://example.com/image.jpg",
+        )
+        every { appArtistRepository.findByArtistIds(setOf(artistId)) } returns listOf(artistWithBlankName)
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { spotifyArtistDetails.getArtist(userId, accessToken, artistId) } returns spotifyArtist.right()
+        every { appArtistRepository.updateEnrichmentData(artistId, "Recovered Name", listOf("rock"), "https://example.com/image.jpg") } just runs
+
+        adapter.enrichArtistDetails(artistId, userId)
+
+        verify { appArtistRepository.updateEnrichmentData(artistId, "Recovered Name", listOf("rock"), "https://example.com/image.jpg") }
+    }
 }
