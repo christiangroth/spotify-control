@@ -1,3 +1,13 @@
+# 0.44.1 (2026.03.09)
+
+## Bugfixes / Chore
+* fix-health-ui: Fix resume partition button on the health page.
+* fix-health-ui: Fix show events per type on the health page.
+
+
+
+---
+
 # 0.44.0 (2026.03.09)
 
 ## New Features
