@@ -25,8 +25,7 @@ import de.chrgroth.spotify.control.domain.port.out.PlaybackStatePort
 import de.chrgroth.spotify.control.domain.port.out.RecentlyPartialPlayedRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.RecentlyPlayedRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
-import de.chrgroth.spotify.control.domain.port.out.SpotifyCurrentlyPlayingPort
-import de.chrgroth.spotify.control.domain.port.out.SpotifyRecentlyPlayedPort
+import de.chrgroth.spotify.control.domain.port.out.SpotifyPlaybackPort
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
@@ -37,8 +36,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty
 class PlaybackAdapter(
     private val userRepository: UserRepositoryPort,
     private val spotifyAccessToken: SpotifyAccessTokenPort,
-    private val spotifyCurrentlyPlaying: SpotifyCurrentlyPlayingPort,
-    private val spotifyRecentlyPlayed: SpotifyRecentlyPlayedPort,
+    private val spotifyPlayback: SpotifyPlaybackPort,
     private val currentlyPlayingRepository: CurrentlyPlayingRepositoryPort,
     private val recentlyPlayedRepository: RecentlyPlayedRepositoryPort,
     private val recentlyPartialPlayedRepository: RecentlyPartialPlayedRepositoryPort,
@@ -66,7 +64,7 @@ class PlaybackAdapter(
 
     override fun fetchCurrentlyPlaying(userId: UserId): Either<DomainError, Unit> {
         val accessToken = spotifyAccessToken.getValidAccessToken(userId)
-        return spotifyCurrentlyPlaying.getCurrentlyPlaying(userId, accessToken).flatMap { item ->
+        return spotifyPlayback.getCurrentlyPlaying(userId, accessToken).flatMap { item ->
             if (item != null && item.isPlaying) {
                 playbackState.onPlaybackDetected()
             }
@@ -92,7 +90,7 @@ class PlaybackAdapter(
     override fun fetchRecentlyPlayed(userId: UserId): Either<DomainError, Unit> {
         val accessToken = spotifyAccessToken.getValidAccessToken(userId)
         val after = recentlyPlayedRepository.findMostRecentPlayedAt(userId)
-        return spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken, after).flatMap { tracks ->
+        return spotifyPlayback.getRecentlyPlayed(userId, accessToken, after).flatMap { tracks ->
             val playedAts = tracks.map { it.playedAt }.toSet()
             val existingPlayedAts = recentlyPlayedRepository.findExistingPlayedAts(userId, playedAts)
             val newItems = tracks.filter { it.playedAt !in existingPlayedAts }

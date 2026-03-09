@@ -17,8 +17,7 @@ import de.chrgroth.spotify.control.domain.port.out.PlaybackStatePort
 import de.chrgroth.spotify.control.domain.port.out.RecentlyPartialPlayedRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.RecentlyPlayedRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
-import de.chrgroth.spotify.control.domain.port.out.SpotifyCurrentlyPlayingPort
-import de.chrgroth.spotify.control.domain.port.out.SpotifyRecentlyPlayedPort
+import de.chrgroth.spotify.control.domain.port.out.SpotifyPlaybackPort
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
 import io.mockk.every
 import io.mockk.just
@@ -34,8 +33,7 @@ class CurrentlyPlayingAdapterTests {
 
     private val userRepository: UserRepositoryPort = mockk()
     private val spotifyAccessToken: SpotifyAccessTokenPort = mockk()
-    private val spotifyCurrentlyPlaying: SpotifyCurrentlyPlayingPort = mockk()
-    private val spotifyRecentlyPlayed: SpotifyRecentlyPlayedPort = mockk(relaxed = true)
+    private val spotifyPlayback: SpotifyPlaybackPort = mockk(relaxed = true)
     private val currentlyPlayingRepository: CurrentlyPlayingRepositoryPort = mockk()
     private val recentlyPlayedRepository: RecentlyPlayedRepositoryPort = mockk(relaxed = true)
     private val recentlyPartialPlayedRepository: RecentlyPartialPlayedRepositoryPort = mockk(relaxed = true)
@@ -49,8 +47,7 @@ class CurrentlyPlayingAdapterTests {
     private val adapter = PlaybackAdapter(
         userRepository,
         spotifyAccessToken,
-        spotifyCurrentlyPlaying,
-        spotifyRecentlyPlayed,
+        spotifyPlayback,
         currentlyPlayingRepository,
         recentlyPlayedRepository,
         recentlyPartialPlayedRepository,
@@ -116,7 +113,7 @@ class CurrentlyPlayingAdapterTests {
     fun `update persists new currently playing item`() {
         val item = item()
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
-        every { spotifyCurrentlyPlaying.getCurrentlyPlaying(userId, accessToken) } returns item.right()
+        every { spotifyPlayback.getCurrentlyPlaying(userId, accessToken) } returns item.right()
         every { currentlyPlayingRepository.existsByUserAndTrackAndObservedMinute(item) } returns false
         every { currentlyPlayingRepository.save(item) } just runs
 
@@ -129,7 +126,7 @@ class CurrentlyPlayingAdapterTests {
     fun `update notifies playback data when new item is persisted`() {
         val item = item()
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
-        every { spotifyCurrentlyPlaying.getCurrentlyPlaying(userId, accessToken) } returns item.right()
+        every { spotifyPlayback.getCurrentlyPlaying(userId, accessToken) } returns item.right()
         every { currentlyPlayingRepository.existsByUserAndTrackAndObservedMinute(item) } returns false
         every { currentlyPlayingRepository.save(item) } just runs
 
@@ -142,7 +139,7 @@ class CurrentlyPlayingAdapterTests {
     fun `update notifies playback state on active playback`() {
         val item = item(isPlaying = true)
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
-        every { spotifyCurrentlyPlaying.getCurrentlyPlaying(userId, accessToken) } returns item.right()
+        every { spotifyPlayback.getCurrentlyPlaying(userId, accessToken) } returns item.right()
         every { currentlyPlayingRepository.existsByUserAndTrackAndObservedMinute(item) } returns false
         every { currentlyPlayingRepository.save(item) } just runs
 
@@ -155,7 +152,7 @@ class CurrentlyPlayingAdapterTests {
     fun `update does not notify playback state when item is paused`() {
         val item = item(isPlaying = false)
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
-        every { spotifyCurrentlyPlaying.getCurrentlyPlaying(userId, accessToken) } returns item.right()
+        every { spotifyPlayback.getCurrentlyPlaying(userId, accessToken) } returns item.right()
         every { currentlyPlayingRepository.existsByUserAndTrackAndObservedMinute(item) } returns false
         every { currentlyPlayingRepository.save(item) } just runs
 
@@ -168,7 +165,7 @@ class CurrentlyPlayingAdapterTests {
     fun `update does not persist duplicate item`() {
         val item = item()
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
-        every { spotifyCurrentlyPlaying.getCurrentlyPlaying(userId, accessToken) } returns item.right()
+        every { spotifyPlayback.getCurrentlyPlaying(userId, accessToken) } returns item.right()
         every { currentlyPlayingRepository.existsByUserAndTrackAndObservedMinute(item) } returns true
 
         adapter.fetchCurrentlyPlaying(userId)
@@ -180,7 +177,7 @@ class CurrentlyPlayingAdapterTests {
     fun `update does not notify playback data when item is duplicate`() {
         val item = item()
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
-        every { spotifyCurrentlyPlaying.getCurrentlyPlaying(userId, accessToken) } returns item.right()
+        every { spotifyPlayback.getCurrentlyPlaying(userId, accessToken) } returns item.right()
         every { currentlyPlayingRepository.existsByUserAndTrackAndObservedMinute(item) } returns true
 
         adapter.fetchCurrentlyPlaying(userId)
@@ -191,7 +188,7 @@ class CurrentlyPlayingAdapterTests {
     @Test
     fun `update does nothing when nothing is playing`() {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
-        every { spotifyCurrentlyPlaying.getCurrentlyPlaying(userId, accessToken) } returns null.right()
+        every { spotifyPlayback.getCurrentlyPlaying(userId, accessToken) } returns null.right()
 
         adapter.fetchCurrentlyPlaying(userId)
 
@@ -203,7 +200,7 @@ class CurrentlyPlayingAdapterTests {
     @Test
     fun `update returns Left on domain error`() {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
-        every { spotifyCurrentlyPlaying.getCurrentlyPlaying(userId, accessToken) } returns PlaybackError.CURRENTLY_PLAYING_FETCH_FAILED.left()
+        every { spotifyPlayback.getCurrentlyPlaying(userId, accessToken) } returns PlaybackError.CURRENTLY_PLAYING_FETCH_FAILED.left()
 
         val result = adapter.fetchCurrentlyPlaying(userId)
 

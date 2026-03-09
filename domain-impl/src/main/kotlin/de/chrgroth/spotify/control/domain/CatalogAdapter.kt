@@ -20,9 +20,7 @@ import de.chrgroth.spotify.control.domain.port.out.AppPlaybackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
-import de.chrgroth.spotify.control.domain.port.out.SpotifyAlbumDetailsPort
-import de.chrgroth.spotify.control.domain.port.out.SpotifyArtistDetailsPort
-import de.chrgroth.spotify.control.domain.port.out.SpotifyTrackDetailsPort
+import de.chrgroth.spotify.control.domain.port.out.SpotifyCatalogPort
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
@@ -31,9 +29,7 @@ import mu.KLogging
 @Suppress("Unused", "TooGenericExceptionCaught")
 class CatalogAdapter(
     private val spotifyAccessToken: SpotifyAccessTokenPort,
-    private val spotifyArtistDetails: SpotifyArtistDetailsPort,
-    private val spotifyTrackDetails: SpotifyTrackDetailsPort,
-    private val spotifyAlbumDetails: SpotifyAlbumDetailsPort,
+    private val spotifyCatalog: SpotifyCatalogPort,
     private val appArtistRepository: AppArtistRepositoryPort,
     private val appTrackRepository: AppTrackRepositoryPort,
     private val appAlbumRepository: AppAlbumRepositoryPort,
@@ -93,7 +89,7 @@ class CatalogAdapter(
         }
         logger.info { "Fetching genre details for artist $artistId (user ${userId.value})" }
         val accessToken = spotifyAccessToken.getValidAccessToken(userId)
-        return spotifyArtistDetails.getArtist(userId, accessToken, artistId)
+        return spotifyCatalog.getArtist(userId, accessToken, artistId)
             .flatMap { detail ->
                 if (detail != null) {
                     appArtistRepository.updateEnrichmentData(detail.artistId, detail.artistName, detail.genres, detail.imageLink)
@@ -113,7 +109,7 @@ class CatalogAdapter(
         }
         logger.info { "Fetching album id for track $trackId (user ${userId.value})" }
         val accessToken = spotifyAccessToken.getValidAccessToken(userId)
-        return spotifyTrackDetails.getTrack(userId, accessToken, trackId)
+        return spotifyCatalog.getTrack(userId, accessToken, trackId)
             .flatMap { albumId ->
                 if (albumId != null) {
                     appAlbumRepository.upsertAll(listOf(AppAlbum(albumId = albumId)))
@@ -135,7 +131,7 @@ class CatalogAdapter(
         }
         logger.info { "Fetching album details for album $albumId (user ${userId.value})" }
         val accessToken = spotifyAccessToken.getValidAccessToken(userId)
-        return spotifyAlbumDetails.getAlbum(userId, accessToken, albumId)
+        return spotifyCatalog.getAlbum(userId, accessToken, albumId)
             .flatMap { detail ->
                 if (detail != null) {
                     appAlbumRepository.updateEnrichmentData(detail.albumId, detail.albumTitle, detail.imageLink, detail.genres, detail.artistId)

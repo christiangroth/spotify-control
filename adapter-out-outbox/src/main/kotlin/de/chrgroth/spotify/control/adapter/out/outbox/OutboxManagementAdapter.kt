@@ -1,24 +1,26 @@
 package de.chrgroth.spotify.control.adapter.out.outbox
 
 import com.mongodb.client.MongoClient
+import de.chrgroth.outbox.Outbox
 import de.chrgroth.outbox.OutboxPartitionStatus
 import de.chrgroth.outbox.OutboxRepository
 import de.chrgroth.spotify.control.domain.model.OutboxEventTypeCount
 import de.chrgroth.spotify.control.domain.model.OutboxPartitionStats
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
-import de.chrgroth.spotify.control.domain.port.out.OutboxInfoPort
+import de.chrgroth.spotify.control.domain.port.out.OutboxManagementPort
 import jakarta.enterprise.context.ApplicationScoped
 import org.bson.Document
 import org.eclipse.microprofile.config.inject.ConfigProperty
 
 @ApplicationScoped
 @Suppress("Unused")
-class OutboxInfoAdapter(
+class OutboxManagementAdapter(
     private val repository: OutboxRepository,
+    private val outbox: Outbox,
     private val mongoClient: MongoClient,
     @param:ConfigProperty(name = "quarkus.mongodb.database")
     private val databaseName: String,
-) : OutboxInfoPort {
+) : OutboxManagementPort {
 
     override fun getPartitionStats(): List<OutboxPartitionStats> =
         DomainOutboxPartition.all.map { partition ->
@@ -31,6 +33,13 @@ class OutboxInfoAdapter(
                 eventTypeCounts = queryEventTypeCounts(partition.key),
             )
         }
+
+    override fun activate(partitionKey: String): Boolean {
+        val partition = DomainOutboxPartition.all.firstOrNull { it.key == partitionKey } ?: return false
+        outbox.activatePartition(partition)
+        outbox.signal(partition)
+        return true
+    }
 
     private fun queryEventTypeCounts(partitionKey: String): List<OutboxEventTypeCount> =
         mongoClient.getDatabase(databaseName)

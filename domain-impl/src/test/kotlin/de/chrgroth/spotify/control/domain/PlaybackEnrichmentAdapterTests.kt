@@ -10,9 +10,7 @@ import de.chrgroth.spotify.control.domain.port.out.AppPlaybackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
-import de.chrgroth.spotify.control.domain.port.out.SpotifyAlbumDetailsPort
-import de.chrgroth.spotify.control.domain.port.out.SpotifyArtistDetailsPort
-import de.chrgroth.spotify.control.domain.port.out.SpotifyTrackDetailsPort
+import de.chrgroth.spotify.control.domain.port.out.SpotifyCatalogPort
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
 import io.mockk.every
 import io.mockk.just
@@ -24,9 +22,7 @@ import org.junit.jupiter.api.Test
 class PlaybackEnrichmentAdapterTests {
 
     private val spotifyAccessToken: SpotifyAccessTokenPort = mockk()
-    private val spotifyArtistDetails: SpotifyArtistDetailsPort = mockk()
-    private val spotifyTrackDetails: SpotifyTrackDetailsPort = mockk()
-    private val spotifyAlbumDetails: SpotifyAlbumDetailsPort = mockk()
+    private val spotifyCatalog: SpotifyCatalogPort = mockk()
     private val appArtistRepository: AppArtistRepositoryPort = mockk()
     private val appTrackRepository: AppTrackRepositoryPort = mockk()
     private val appAlbumRepository: AppAlbumRepositoryPort = mockk()
@@ -36,9 +32,7 @@ class PlaybackEnrichmentAdapterTests {
 
     private val adapter = CatalogAdapter(
         spotifyAccessToken,
-        spotifyArtistDetails,
-        spotifyTrackDetails,
-        spotifyAlbumDetails,
+        spotifyCatalog,
         appArtistRepository,
         appTrackRepository,
         appAlbumRepository,
@@ -61,7 +55,7 @@ class PlaybackEnrichmentAdapterTests {
         )
         every { appArtistRepository.findByArtistIds(setOf(artistId)) } returns listOf(AppArtist(artistId = artistId, artistName = ""))
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
-        every { spotifyArtistDetails.getArtist(userId, accessToken, artistId) } returns spotifyArtist.right()
+        every { spotifyCatalog.getArtist(userId, accessToken, artistId) } returns spotifyArtist.right()
         every { appArtistRepository.updateEnrichmentData(artistId, "Real Artist Name", listOf("pop"), "https://example.com/image.jpg") } just runs
 
         adapter.enrichArtistDetails(artistId, userId)
@@ -81,7 +75,7 @@ class PlaybackEnrichmentAdapterTests {
 
         adapter.enrichArtistDetails(artistId, userId)
 
-        verify(exactly = 0) { spotifyArtistDetails.getArtist(any(), any(), any()) }
+        verify(exactly = 0) { spotifyCatalog.getArtist(any(), any(), any()) }
         verify(exactly = 0) { appArtistRepository.updateEnrichmentData(any(), any(), any(), any()) }
     }
 
@@ -102,7 +96,7 @@ class PlaybackEnrichmentAdapterTests {
         )
         every { appArtistRepository.findByArtistIds(setOf(artistId)) } returns listOf(artistWithBlankName)
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
-        every { spotifyArtistDetails.getArtist(userId, accessToken, artistId) } returns spotifyArtist.right()
+        every { spotifyCatalog.getArtist(userId, accessToken, artistId) } returns spotifyArtist.right()
         every { appArtistRepository.updateEnrichmentData(artistId, "Recovered Name", listOf("rock"), "https://example.com/image.jpg") } just runs
 
         adapter.enrichArtistDetails(artistId, userId)
