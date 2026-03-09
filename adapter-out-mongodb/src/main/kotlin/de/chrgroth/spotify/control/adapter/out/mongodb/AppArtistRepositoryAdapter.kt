@@ -53,9 +53,10 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
     override fun findByArtistIds(artistIds: Set<String>): List<AppArtist> {
         if (artistIds.isEmpty()) return emptyList()
         return mongoQueryMetrics.timed("app_artist.findByArtistIds") {
-            artistIds.mapNotNull { artistId ->
-                appArtistDocumentRepository.findById(artistId)?.toDomain()
-            }
+            appArtistDocumentRepository.mongoCollection()
+                .find(Filters.`in`("_id", artistIds))
+                .toList()
+                .map { it.toDomain() }
         }
     }
 
