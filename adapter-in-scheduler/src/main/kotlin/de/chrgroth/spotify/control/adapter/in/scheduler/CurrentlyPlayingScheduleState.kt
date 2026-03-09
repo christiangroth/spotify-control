@@ -23,6 +23,6 @@ class CurrentlyPlayingScheduleState : PlaybackStatePort {
         Duration.between(lastPlaybackDetectedAtRef.get(), Instant.now()) < SLOW_INTERVAL
 
     companion object {
-        val SLOW_INTERVAL: Duration = Duration.ofSeconds(90)
+        val SLOW_INTERVAL: Duration = Duration.ofMinutes(5)
     }
 }
