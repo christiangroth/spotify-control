@@ -14,6 +14,21 @@ pluginManagement {
   }
 }
 
+dependencyResolutionManagement {
+  repositories {
+    maven {
+      url = uri("https://maven.pkg.github.com/christiangroth/quarkus-starters")
+      credentials {
+        username = providers.gradleProperty("gpr.user").orNull
+          ?: System.getenv("GITHUB_ACTOR")
+        password = providers.gradleProperty("gpr.token").orNull
+          ?: System.getenv("GHCR_PAT")
+      }
+    }
+    mavenCentral()
+  }
+}
+
 rootProject.name = "spotify-control"
 
 include("adapter-in-outbox")
@@ -27,5 +42,3 @@ include("application-quarkus")
 include("domain-api")
 include("domain-impl")
 include("util-outbox")
-include("util-starters-api")
-include("util-starters-impl")

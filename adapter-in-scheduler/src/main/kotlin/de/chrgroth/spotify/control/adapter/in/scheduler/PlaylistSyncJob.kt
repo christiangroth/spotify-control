@@ -1,7 +1,7 @@
 package de.chrgroth.spotify.control.adapter.`in`.scheduler
 
 import de.chrgroth.spotify.control.domain.port.`in`.PlaylistSyncPort
-import de.chrgroth.starters.StarterSkipPredicate
+import de.chrgroth.quarkus.starters.StarterSkipPredicate
 import io.quarkus.scheduler.Scheduled
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging

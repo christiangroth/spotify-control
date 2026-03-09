@@ -14,7 +14,8 @@ dependencies {
   implementation(project(":adapter-out-spotify"))
   implementation(project(":domain-impl"))
   implementation(project(":util-outbox"))
-  implementation(project(":util-starters-impl"))
+  implementation(libs.quarkusStartersDomainImpl)
+  implementation(libs.quarkusStartersAdapterOutPersistenceMongodb)
 
   implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
 

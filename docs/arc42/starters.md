@@ -2,18 +2,27 @@
 
 ## Overview
 
-The `util-starters` module provides a mechanism for **one-time startup beans** that execute arbitrary logic exactly once during the application lifecycle. Typical use cases are data migrations, schema changes, or one-time bugfixes. Once a starter has succeeded, it is permanently skipped on subsequent restarts. A failed starter is retried on the next application start.
+The `de.chrgroth.quarkus.starters` library provides a mechanism for **one-time startup beans** that execute arbitrary logic exactly once during the application lifecycle. Typical use cases are data migrations, schema changes, or one-time bugfixes. Once a starter has succeeded, it is permanently skipped on subsequent restarts. A failed starter is retried on the next application start.
 
 Starters are **never executed** in `dev` or `test` profiles. In those environments the completion flag is set immediately so the Quarkus scheduler is not blocked.
 
-## Module Coordinates
+## External Library Coordinates
 
-The starter library is split into two modules, both in the `de.chrgroth.starters` package under group `de.chrgroth.starters`:
+The starter library is an external dependency hosted on GitHub Packages (`christiangroth/quarkus-starters`). All classes live in the `de.chrgroth.quarkus.starters` package.
 
-| Module               | Artifact               | Contents                                                                                           |
-|----------------------|------------------------|----------------------------------------------------------------------------------------------------|
-| `util-starters-api`  | `util-starters-api`    | `Starter`, `StarterStatus`, `StarterCompletionFlag`, `StarterSkipPredicate`                        |
-| `util-starters-impl` | `util-starters-impl`   | `StarterDocument`, `StarterDocumentRepository`, `StarterExecutionDocument`, `StarterService`, `StarterStartup` |
+| Artifact                           | Group                          | Version | Contents                                                                                           |
+|------------------------------------|--------------------------------|---------|----------------------------------------------------------------------------------------------------|
+| `domain-api`                       | `de.chrgroth.quarkus.starters` | 0.3.0   | `Starter`, `StarterStatus`, `StarterCompletionFlag`, `StarterSkipPredicate`                        |
+| `domain-impl`                      | `de.chrgroth.quarkus.starters` | 0.3.0   | `StarterService`, `StarterStartup`                                                                 |
+| `adapter-out-persistence-mongodb`  | `de.chrgroth.quarkus.starters` | 0.3.0   | `StarterDocument`, `StarterDocumentRepository`, `StarterExecutionDocument`                         |
+
+### Dependency usage in this project
+
+| Module               | Artifact(s) consumed                                                                                |
+|----------------------|-----------------------------------------------------------------------------------------------------|
+| `adapter-in-starter` | `domain-api` (implements `Starter`)                                                                 |
+| `adapter-in-scheduler` | `domain-api` (references `StarterSkipPredicate`)                                                  |
+| `application-quarkus` | `domain-impl`, `adapter-out-persistence-mongodb` (wires up full infrastructure at runtime)        |
 
 ## Module Inventory
 
@@ -81,7 +90,7 @@ All starters SUCCEEDED?
 All `@Scheduled` jobs in `adapter-in-scheduler` are annotated with `skipExecutionIf = StarterSkipPredicate::class`. The Quarkus scheduler calls `StarterSkipPredicate.test()` before each trigger; it returns `true` (skip) while `StarterCompletionFlag.isCompleted()` is `false`.
 
 ```kotlin
-import de.chrgroth.starters.StarterSkipPredicate
+import de.chrgroth.quarkus.starters.StarterSkipPredicate
 
 @Scheduled(cron = "0 0/10 * * * ?", skipExecutionIf = StarterSkipPredicate::class)
 fun run() { ... }
@@ -107,19 +116,20 @@ fun run() { ... }
 
 ## Architecture Placement
 
-The starter library follows the same api/impl split pattern as `domain-api`/`domain-impl`:
+The starter library is an external dependency following the same api/impl split as `domain-api`/`domain-impl` within this project:
 
-| Module               | Responsibility                                                                                        |
-|----------------------|-------------------------------------------------------------------------------------------------------|
-| `util-starters-api`  | Public contract: `Starter` interface, `StarterStatus`, `StarterCompletionFlag`, `StarterSkipPredicate`. Consumed by `adapter-in-starter` and `adapter-in-scheduler`. |
-| `util-starters-impl` | Infrastructure: MongoDB persistence, execution orchestration, startup observer, metrics. Consumed only by `application-quarkus`. |
-| `adapter-in-starter` | Concrete starter implementations acting as inbound adapters: receive a startup trigger from `util-starters-impl` and call into the domain via port interfaces. |
+| Artifact                          | Responsibility                                                                                        |
+|-----------------------------------|-------------------------------------------------------------------------------------------------------|
+| `domain-api`                      | Public contract: `Starter` interface, `StarterStatus`, `StarterCompletionFlag`, `StarterSkipPredicate`. Consumed by `adapter-in-starter` and `adapter-in-scheduler`. |
+| `domain-impl`                     | Execution orchestration (`StarterService`) and startup observer (`StarterStartup`). Consumed only by `application-quarkus`. |
+| `adapter-out-persistence-mongodb` | MongoDB persistence for starter state. Consumed only by `application-quarkus`. |
+| `adapter-in-starter`              | Concrete starter implementations: receive a startup trigger from the library and call into the domain via port interfaces. |
 
 ## Defining a Starter
 
 ```kotlin
 // adapter-in-starter
-import de.chrgroth.starters.Starter
+import de.chrgroth.quarkus.starters.Starter
 
 @ApplicationScoped
 class AddMissingGenreFieldMigration(

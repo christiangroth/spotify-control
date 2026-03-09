@@ -5,7 +5,7 @@ plugins {
 
 dependencies {
   implementation(project(":domain-api"))
-  implementation(project(":util-starters-api"))
+  implementation(libs.quarkusStartersDomainApi)
 
   implementation(enforcedPlatform(libs.quarkusBom))
   implementation("io.quarkus:quarkus-arc")
