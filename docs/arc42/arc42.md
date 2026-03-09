@@ -103,7 +103,7 @@ The system is composed of the following Gradle modules:
 | `domain-impl`           | Domain services, domain objects, CDI events                                           |
 | `util-outbox`           | Outbox implementation (designed to be extractable as a separate external module)      |
 
-> **External dependency – `de.chrgroth.quarkus.starters` (v0.3.0):** One-time startup bean library (GitHub Packages: `christiangroth/quarkus-starters`). Three artifacts are consumed: `domain-api` (public contract – `Starter`, `StarterSkipPredicate`, `StarterCompletionFlag`), `domain-impl` (execution orchestration and startup observer), `adapter-out-persistence-mongodb` (MongoDB persistence for starter state). All classes are in the `de.chrgroth.quarkus.starters` package. See [starters.md](starters.md) for architecture details and usage guidance.
+> **External dependency – `de.chrgroth.quarkus.starters`:** One-time startup bean library (GitHub Packages: `christiangroth/quarkus-starters`). Three artifacts are consumed: `domain-api` (public contract – `Starter`, `StarterSkipPredicate`, `StarterCompletionFlag`), `domain-impl` (execution orchestration and startup observer), `adapter-out-persistence-mongodb` (MongoDB persistence for starter state). All classes are in the `de.chrgroth.quarkus.starters` package. See [starters.md](starters.md) for architecture details and usage guidance.
 
 ### `adapter-in-web`
 
