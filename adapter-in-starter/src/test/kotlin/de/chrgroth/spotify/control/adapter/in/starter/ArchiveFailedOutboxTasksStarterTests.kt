@@ -1,6 +1,6 @@
 package de.chrgroth.spotify.control.adapter.`in`.starter
 
-import de.chrgroth.spotify.control.util.outbox.Outbox
+import de.chrgroth.outbox.Outbox
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

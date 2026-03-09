@@ -3,10 +3,10 @@ package de.chrgroth.spotify.control.adapter.`in`.outbox
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
 import de.chrgroth.spotify.control.domain.port.`in`.OutboxHandlerPort
-import de.chrgroth.spotify.control.util.outbox.OutboxPartition
-import de.chrgroth.spotify.control.util.outbox.OutboxTask
-import de.chrgroth.spotify.control.util.outbox.OutboxTaskDispatcher
-import de.chrgroth.spotify.control.util.outbox.OutboxTaskResult
+import de.chrgroth.outbox.OutboxPartition
+import de.chrgroth.outbox.OutboxTask
+import de.chrgroth.outbox.OutboxTaskDispatcher
+import de.chrgroth.outbox.OutboxTaskResult
 import jakarta.enterprise.context.ApplicationScoped
 
 @ApplicationScoped

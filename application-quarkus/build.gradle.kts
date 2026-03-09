@@ -13,7 +13,9 @@ dependencies {
   implementation(project(":adapter-out-outbox"))
   implementation(project(":adapter-out-spotify"))
   implementation(project(":domain-impl"))
-  implementation(project(":util-outbox"))
+
+  implementation(libs.quarkusOutboxAdapterOutPersistenceMongodb)
+  implementation(libs.quarkusOutboxDomainImpl)
   implementation(libs.quarkusStartersDomainImpl)
   implementation(libs.quarkusStartersAdapterOutPersistenceMongodb)
 

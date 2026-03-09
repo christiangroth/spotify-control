@@ -1,6 +1,6 @@
 package de.chrgroth.spotify.control.domain.outbox
 
-import de.chrgroth.spotify.control.util.outbox.OutboxPartition
+import de.chrgroth.outbox.OutboxPartition
 
 sealed interface DomainOutboxPartition : OutboxPartition {
     data object ToSpotify : DomainOutboxPartition {

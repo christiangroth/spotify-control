@@ -17,6 +17,15 @@ pluginManagement {
 dependencyResolutionManagement {
   repositories {
     maven {
+      url = uri("https://maven.pkg.github.com/christiangroth/quarkus-outbox")
+      credentials {
+        username = providers.gradleProperty("gpr.user").orNull
+          ?: System.getenv("GITHUB_ACTOR")
+        password = providers.gradleProperty("gpr.token").orNull
+          ?: System.getenv("GHCR_PAT")
+      }
+    }
+    maven {
       url = uri("https://maven.pkg.github.com/christiangroth/quarkus-starters")
       credentials {
         username = providers.gradleProperty("gpr.user").orNull
@@ -45,4 +54,3 @@ include("adapter-out-spotify")
 include("application-quarkus")
 include("domain-api")
 include("domain-impl")
-include("util-outbox")

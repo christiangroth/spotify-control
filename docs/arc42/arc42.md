@@ -74,7 +74,7 @@ spotify-control interacts with the following external systems:
 | Web UI                | Quarkus Qute SSR, htmx, Bootstrap 5, Server-Sent Events |
 | Scheduled jobs        | Quarkus scheduler                                       |
 | Internal event bus    | CDI Events (in-process)                                 |
-| Async task queue      | Persistent Outbox (`util-outbox`)                       |
+| Async task queue      | Persistent Outbox (`de.chrgroth.quarkus.outbox:domain-api` + `domain-impl` + `adapter-out-persistence-mongodb`)          |
 
 # Solution Strategy
 
@@ -101,7 +101,6 @@ The system is composed of the following Gradle modules:
 | `application-quarkus`   | Quarkus application bundling and configuration                                        |
 | `domain-api`            | Ports (interfaces) – defines the contracts between domain and adapters                |
 | `domain-impl`           | Domain services, domain objects, CDI events                                           |
-| `util-outbox`           | Outbox implementation (designed to be extractable as a separate external module)      |
 
 > **External dependency – `de.chrgroth.quarkus.starters`:** One-time startup bean library (GitHub Packages: `christiangroth/quarkus-starters`). Three artifacts are consumed: `domain-api` (public contract – `Starter`, `StarterSkipPredicate`, `StarterCompletionFlag`), `domain-impl` (execution orchestration and startup observer), `adapter-out-persistence-mongodb` (MongoDB persistence for starter state). All classes are in the `de.chrgroth.quarkus.starters` package. See [starters.md](starters.md) for architecture details and usage guidance.
 
@@ -128,8 +127,8 @@ Implements all repository interfaces defined in `domain-api`. Manages the MongoD
 | `app_artist`                  | Deduplicated artist metadata: name, genres, imageLink, lastEnrichmentDate, playbackProcessingStatus (UNDECIDED/ACTIVE/INACTIVE). |
 | `app_album`                   | Deduplicated album metadata: title, cover image, genres, main artist reference, lastEnrichmentDate.                           |
 | `starters`                    | One-time startup bean execution state (managed by `de.chrgroth.quarkus.starters:adapter-out-persistence-mongodb`). |
-| `outbox`                      | Persistent outbox task queue (managed by `util-outbox`).                                              |
-| `outbox_archive`              | Archived completed/failed outbox tasks (managed by `util-outbox`).                                    |
+| `outbox`                      | Persistent outbox task queue (managed by `de.chrgroth.quarkus.outbox:adapter-out-persistence-mongodb`).                                         |
+| `outbox_archive`              | Archived completed/failed outbox tasks (managed by `de.chrgroth.quarkus.outbox:adapter-out-persistence-mongodb`).                               |
 
 ### `adapter-out-spotify`
 
@@ -143,9 +142,15 @@ Sends notifications via a Slack Incoming Webhook, including album upgrade notifi
 
 Contains the core business logic: playback enrichment, aggregation computation, genre derivation and override handling, playlist invariant enforcement, album upgrade matching, and duplicate detection.
 
-### `util-outbox`
+### `de.chrgroth.quarkus.outbox`
 
-A self-contained outbox implementation providing: persistent task storage (MongoDB), atomic claim via `findOneAndUpdate`, at-least-once delivery with configurable retry backoff, partition-level pause/resume, task deduplication, priority-based ordering, and a conflated `Channel<Unit>` per partition for event-driven wakeup. Designed to be potentially extracted as a standalone library. See [outbox.md](outbox.md) for architecture details and usage guidance.
+The outbox is provided as an external library (`de.chrgroth.quarkus.outbox`, package `de.chrgroth.outbox`) via [christiangroth/quarkus-outbox](https://github.com/christiangroth/quarkus-outbox).
+
+`domain-api` defines the outbox contracts (package `de.chrgroth.outbox`): `OutboxPartition`, `OutboxEvent`, `OutboxRepository`, `OutboxTask`, `OutboxTaskDispatcher`, `OutboxTaskResult`, `RetryPolicy`, and the associated enums and data types. Domain-facing modules depend only on this API module.
+
+`domain-impl` provides the core Quarkus implementation (package `de.chrgroth.outbox`): `OutboxImpl`, `OutboxProcessor`, `OutboxWakeupService`, `OutboxStartupRecovery`, and `OutboxPartitionWorker`.
+
+`adapter-out-persistence-mongodb` provides the MongoDB persistence layer (package `de.chrgroth.outbox`): persistent task storage, atomic claim via `findOneAndUpdate`, at-least-once delivery with configurable retry backoff, partition-level pause/resume, task deduplication, priority-based ordering, and a conflated `Channel<Unit>` per partition for event-driven wakeup. See [outbox.md](outbox.md) for architecture details and usage guidance.
 
 ### `adapter-in-starter`
 

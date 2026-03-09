@@ -10,7 +10,7 @@ import de.chrgroth.spotify.control.domain.port.`in`.PlaybackEnrichmentPort
 import de.chrgroth.spotify.control.domain.port.`in`.PlaylistSyncPort
 import de.chrgroth.spotify.control.domain.port.`in`.RecentlyPlayedPort
 import de.chrgroth.spotify.control.domain.port.`in`.UserProfileUpdatePort
-import de.chrgroth.spotify.control.util.outbox.OutboxTaskResult
+import de.chrgroth.outbox.OutboxTaskResult
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
 

@@ -3,10 +3,10 @@ package de.chrgroth.spotify.control.adapter.`in`.outbox
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.OutboxHandlerPort
-import de.chrgroth.spotify.control.util.outbox.OutboxTask
-import de.chrgroth.spotify.control.util.outbox.OutboxTaskPriority
-import de.chrgroth.spotify.control.util.outbox.OutboxTaskResult
-import de.chrgroth.spotify.control.util.outbox.OutboxTaskStatus
+import de.chrgroth.outbox.OutboxTask
+import de.chrgroth.outbox.OutboxTaskPriority
+import de.chrgroth.outbox.OutboxTaskResult
+import de.chrgroth.outbox.OutboxTaskStatus
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

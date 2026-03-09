@@ -1,4 +1,4 @@
-package de.chrgroth.spotify.control.util.outbox
+package de.chrgroth.outbox
 
 import io.quarkus.test.junit.QuarkusTest
 import jakarta.inject.Inject
