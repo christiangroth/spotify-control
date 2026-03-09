@@ -7,32 +7,7 @@ servers:
   - url: http://127.0.0.1:8080
     description: Local Development
 
-tags:
-  - name: sample
-    description: Sample project starter
-
-paths:
-  /api/hello:
-    get:
-      tags:
-        - sample
-      summary: Sample endpoint to return greeting
-      operationId: getHello
-      responses:
-        '200':
-          description: Successful response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HelloResponse'
+paths: {}
 
 components:
-  schemas:
-    HelloResponse:
-      type: object
-      required:
-        - message
-      properties:
-        message:
-          type: string
-          description: Hello message
+  schemas: {}
