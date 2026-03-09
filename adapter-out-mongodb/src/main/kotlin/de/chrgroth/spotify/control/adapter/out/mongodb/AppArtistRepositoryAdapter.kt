@@ -60,12 +60,13 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
         }
     }
 
-    override fun updateEnrichmentData(artistId: String, genres: List<String>, imageLink: String?) {
+    override fun updateEnrichmentData(artistId: String, artistName: String, genres: List<String>, imageLink: String?) {
         val now = java.time.Instant.now()
         mongoQueryMetrics.timed("app_artist.updateEnrichmentData") {
             appArtistDocumentRepository.mongoCollection().updateOne(
                 Filters.eq("_id", artistId),
                 Updates.combine(
+                    Updates.set("artistName", artistName),
                     Updates.set("genres", genres),
                     Updates.set("imageLink", imageLink),
                     Updates.set("lastEnrichmentDate", now),

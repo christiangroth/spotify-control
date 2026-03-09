@@ -43,7 +43,7 @@ class PlaybackEnrichmentAdapter(
         return spotifyArtistDetails.getArtist(userId, accessToken, artistId)
             .flatMap { detail ->
                 if (detail != null) {
-                    appArtistRepository.updateEnrichmentData(detail.artistId, detail.genres, detail.imageLink)
+                    appArtistRepository.updateEnrichmentData(detail.artistId, detail.artistName, detail.genres, detail.imageLink)
                     logger.info { "Updated enrichment data for artist $artistId: ${detail.genres}" }
                 } else {
                     logger.warn { "No data returned from Spotify for artist $artistId" }
