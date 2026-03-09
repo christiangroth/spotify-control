@@ -4,6 +4,7 @@ import io.quarkus.test.junit.QuarkusTest
 import io.quarkus.test.security.TestSecurity
 import io.restassured.RestAssured.given
 import org.hamcrest.CoreMatchers.containsString
+import org.hamcrest.CoreMatchers.not
 import org.junit.jupiter.api.Test
 
 @QuarkusTest
@@ -39,14 +40,14 @@ class HealthPageTests {
   }
 
   @Test
-  fun `health page outbox table contains blocked until column`() {
+  fun `health page outbox table contains blocked column`() {
     given()
       .`when`()
       .get("/ui/health")
       .then()
       .statusCode(200)
       .body(containsString("""data-testid="outbox-table""""))
-      .body(containsString("Blocked Until"))
+      .body(containsString("Blocked"))
   }
 
   @Test
@@ -166,14 +167,14 @@ class HealthPageTests {
   }
 
   @Test
-  fun `health page outbox blocked-until shows countdown in braces when less than 24h away`() {
+  fun `health page outbox blocked-until shows only countdown when less than 24h away`() {
     given()
       .`when`()
       .get("/ui/health")
       .then()
       .statusCode(200)
       .body(containsString("formatCountdown(remaining)"))
-      .body(containsString("formatBlockedUntil(blockedUntil) + ' (' + formatCountdown(remaining) + ')'"))
+      .body(not(containsString("formatBlockedUntil(blockedUntil) + ' ('")))
   }
 
   @Test
@@ -232,10 +233,9 @@ class HealthPageTests {
       .then()
       .statusCode(200)
       .body(containsString("Cronjobs"))
-      .body(containsString("Scheduled Jobs"))
       .body(containsString("""data-testid="cronjobs-table""""))
-      .body(containsString("Schedule"))
-      .body(containsString("Next Execution"))
+      .body(containsString("Cron"))
+      .body(containsString("Next"))
   }
 
   @Test
@@ -275,7 +275,6 @@ class HealthPageTests {
       .then()
       .statusCode(200)
       .contentType(containsString("text/html"))
-      .body(containsString("Scheduled Jobs"))
       .body(containsString("""data-testid="cronjobs-table""""))
   }
 
@@ -355,5 +354,35 @@ class HealthPageTests {
       .statusCode(200)
       .body(containsString("""data-testid="mongodb-queries-table""""))
       .body(containsString("Executions"))
+  }
+
+  @Test
+  fun `health page outbox table contains resume button javascript function`() {
+    given()
+      .`when`()
+      .get("/ui/health")
+      .then()
+      .statusCode(200)
+      .body(containsString("resumeOutboxPartition"))
+      .body(containsString("/ui/health/outbox-partitions/"))
+      .body(containsString("activate"))
+  }
+
+  @Test
+  fun `health activate outbox partition endpoint returns 404 for unknown partition`() {
+    given()
+      .`when`()
+      .post("/ui/health/outbox-partitions/unknown-partition/activate")
+      .then()
+      .statusCode(404)
+  }
+
+  @Test
+  fun `health activate outbox partition endpoint returns 204 for known partition`() {
+    given()
+      .`when`()
+      .post("/ui/health/outbox-partitions/to-spotify/activate")
+      .then()
+      .statusCode(204)
   }
 }

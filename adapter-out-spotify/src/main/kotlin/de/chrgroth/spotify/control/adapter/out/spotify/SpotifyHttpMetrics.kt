@@ -62,7 +62,7 @@ class SpotifyHttpMetrics(
             .map { (endpoint, deque) ->
                 pruneOldEntries(deque)
                 OutgoingRequestStats(
-                    endpoint = endpoint,
+                    endpoint = endpoint.let { if (it.contains('/')) it.substring(it.indexOf('/')) else it },
                     requestCountLast24h = deque.count { it.isAfter(cutoff) }.toLong(),
                 )
             }
