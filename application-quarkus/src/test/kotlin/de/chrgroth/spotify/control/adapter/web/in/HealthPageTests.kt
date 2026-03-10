@@ -15,7 +15,7 @@ class HealthPageTests {
   fun `health page is available and displays system health heading`() {
     given()
       .`when`()
-      .get("/ui/health")
+      .get("/health")
       .then()
       .statusCode(200)
       .contentType(containsString("text/html"))
@@ -26,7 +26,7 @@ class HealthPageTests {
   fun `health page displays health section with communication, cronjobs and mongodb sub-headings`() {
     given()
       .`when`()
-      .get("/ui/health")
+      .get("/health")
       .then()
       .statusCode(200)
       .body(containsString("""id="health-section""""))
@@ -43,7 +43,7 @@ class HealthPageTests {
   fun `health page outbox table contains blocked column`() {
     given()
       .`when`()
-      .get("/ui/health")
+      .get("/health")
       .then()
       .statusCode(200)
       .body(containsString("""data-testid="outbox-table""""))
@@ -54,11 +54,11 @@ class HealthPageTests {
   fun `health page contains sse connection setup with reconnect interval`() {
     given()
       .`when`()
-      .get("/ui/health")
+      .get("/health")
       .then()
       .statusCode(200)
       .body(containsString("EventSource"))
-      .body(containsString("/ui/health/events"))
+      .body(containsString("/health/events"))
       .body(containsString("setInterval"))
       .body(containsString("60000"))
   }
@@ -67,7 +67,7 @@ class HealthPageTests {
   fun `health page uses specific sse events with fade updates instead of full reload`() {
     given()
       .`when`()
-      .get("/ui/health")
+      .get("/health")
       .then()
       .statusCode(200)
       .body(containsString("refresh-outgoing-http-calls"))
@@ -79,7 +79,7 @@ class HealthPageTests {
   fun `health page contains health link in navbar`() {
     given()
       .`when`()
-      .get("/ui/health")
+      .get("/health")
       .then()
       .statusCode(200)
       .body(containsString("""data-testid="health-link""""))
@@ -89,7 +89,7 @@ class HealthPageTests {
   fun `health page contains grafana logs link in navbar`() {
     given()
       .`when`()
-      .get("/ui/health")
+      .get("/health")
       .then()
       .statusCode(200)
       .body(containsString("""data-testid="grafana-logs-link""""))
@@ -100,7 +100,7 @@ class HealthPageTests {
   fun `health page contains grafana metrics link in navbar`() {
     given()
       .`when`()
-      .get("/ui/health")
+      .get("/health")
       .then()
       .statusCode(200)
       .body(containsString("""data-testid="grafana-metrics-link""""))
@@ -111,7 +111,7 @@ class HealthPageTests {
   fun `health page contains mongodb atlas link in navbar`() {
     given()
       .`when`()
-      .get("/ui/health")
+      .get("/health")
       .then()
       .statusCode(200)
       .body(containsString("""data-testid="mongodb-atlas-link""""))
@@ -122,7 +122,7 @@ class HealthPageTests {
   fun `health snippet endpoint for outgoing http calls is available`() {
     given()
       .`when`()
-      .get("/ui/health/snippets/outgoing-http-calls")
+      .get("/health/snippets/outgoing-http-calls")
       .then()
       .statusCode(200)
       .contentType(containsString("text/html"))
@@ -133,7 +133,7 @@ class HealthPageTests {
   fun `health snippet endpoint for outbox partitions is available`() {
     given()
       .`when`()
-      .get("/ui/health/snippets/outbox-partitions")
+      .get("/health/snippets/outbox-partitions")
       .then()
       .statusCode(200)
       .contentType(containsString("text/html"))
@@ -144,7 +144,7 @@ class HealthPageTests {
   fun `health page contains outbox blocked-until countdown javascript`() {
     given()
       .`when`()
-      .get("/ui/health")
+      .get("/health")
       .then()
       .statusCode(200)
       .body(containsString("formatBlockedUntil"))
@@ -159,7 +159,7 @@ class HealthPageTests {
   fun `health page outbox blocked-until uses dd-MM-yyyy HH-mm format for dates beyond 24h`() {
     given()
       .`when`()
-      .get("/ui/health")
+      .get("/health")
       .then()
       .statusCode(200)
       .body(containsString("TWENTY_FOUR_HOURS_MS"))
@@ -170,7 +170,7 @@ class HealthPageTests {
   fun `health page outbox blocked-until shows only countdown when less than 24h away`() {
     given()
       .`when`()
-      .get("/ui/health")
+      .get("/health")
       .then()
       .statusCode(200)
       .body(containsString("formatCountdown(remaining)"))
@@ -181,7 +181,7 @@ class HealthPageTests {
   fun `health page outbox blocked-until interval is started and managed with 500ms`() {
     given()
       .`when`()
-      .get("/ui/health")
+      .get("/health")
       .then()
       .statusCode(200)
       .body(containsString("setInterval(updateOutboxBlockedUntilCountdowns, 500)"))
@@ -192,7 +192,7 @@ class HealthPageTests {
   fun `health page outbox interval is cleared before sse snippet replacement`() {
     given()
       .`when`()
-      .get("/ui/health")
+      .get("/health")
       .then()
       .statusCode(200)
       .body(containsString("refresh-outbox-partitions"))
@@ -204,7 +204,7 @@ class HealthPageTests {
   fun `health snippet endpoint for mongodb collections is available`() {
     given()
       .`when`()
-      .get("/ui/health/snippets/mongodb-collections")
+      .get("/health/snippets/mongodb-collections")
       .then()
       .statusCode(200)
       .contentType(containsString("text/html"))
@@ -217,7 +217,7 @@ class HealthPageTests {
   fun `health snippet endpoint for mongodb queries is available`() {
     given()
       .`when`()
-      .get("/ui/health/snippets/mongodb-queries")
+      .get("/health/snippets/mongodb-queries")
       .then()
       .statusCode(200)
       .contentType(containsString("text/html"))
@@ -229,7 +229,7 @@ class HealthPageTests {
   fun `health page displays cronjobs section with table`() {
     given()
       .`when`()
-      .get("/ui/health")
+      .get("/health")
       .then()
       .statusCode(200)
       .body(containsString("Cronjobs"))
@@ -242,7 +242,7 @@ class HealthPageTests {
   fun `health page lists all scheduled jobs in cronjob table`() {
     given()
       .`when`()
-      .get("/ui/health")
+      .get("/health")
       .then()
       .statusCode(200)
       .body(containsString("PlaylistSyncJob"))
@@ -255,7 +255,7 @@ class HealthPageTests {
   fun `health page contains cronjob countdown javascript`() {
     given()
       .`when`()
-      .get("/ui/health")
+      .get("/health")
       .then()
       .statusCode(200)
       .body(containsString("formatCountdown"))
@@ -271,7 +271,7 @@ class HealthPageTests {
   fun `health snippet endpoint for cronjobs is available`() {
     given()
       .`when`()
-      .get("/ui/health/snippets/cronjobs")
+      .get("/health/snippets/cronjobs")
       .then()
       .statusCode(200)
       .contentType(containsString("text/html"))
@@ -282,7 +282,7 @@ class HealthPageTests {
   fun `health page cronjob sort only reorders dom when order changes`() {
     given()
       .`when`()
-      .get("/ui/health")
+      .get("/health")
       .then()
       .statusCode(200)
       .body(containsString("hasChanged"))
@@ -293,17 +293,17 @@ class HealthPageTests {
   fun `health page cronjob pulse animation refreshes table from server after completion`() {
     given()
       .`when`()
-      .get("/ui/health")
+      .get("/health")
       .then()
       .statusCode(200)
-      .body(containsString("fadeUpdate('snippet-cronjobs', '/ui/health/snippets/cronjobs'"))
+      .body(containsString("fadeUpdate('snippet-cronjobs', '/health/snippets/cronjobs'"))
   }
 
   @Test
   fun `health page cronjob sort excludes pulsing rows from reordering`() {
     given()
       .`when`()
-      .get("/ui/health")
+      .get("/health")
       .then()
       .statusCode(200)
       .body(containsString("pulsingRows"))
@@ -315,7 +315,7 @@ class HealthPageTests {
   fun `health page outbox table uses icon before partition name instead of status column`() {
     given()
       .`when`()
-      .get("/ui/health")
+      .get("/health")
       .then()
       .statusCode(200)
       .body(containsString("""data-testid="outbox-table""""))
@@ -327,7 +327,7 @@ class HealthPageTests {
   fun `health page cronjob table uses icon before job name instead of status column`() {
     given()
       .`when`()
-      .get("/ui/health")
+      .get("/health")
       .then()
       .statusCode(200)
       .body(containsString("""data-testid="cronjobs-table""""))
@@ -339,7 +339,7 @@ class HealthPageTests {
   fun `health page mongodb collections size column shows kb after value`() {
     given()
       .`when`()
-      .get("/ui/health/snippets/mongodb-collections")
+      .get("/health/snippets/mongodb-collections")
       .then()
       .statusCode(200)
       .body(containsString(" kb</td>"))
@@ -349,7 +349,7 @@ class HealthPageTests {
   fun `health page mongodb queries table shows combined slow and total executions column`() {
     given()
       .`when`()
-      .get("/ui/health/snippets/mongodb-queries")
+      .get("/health/snippets/mongodb-queries")
       .then()
       .statusCode(200)
       .body(containsString("""data-testid="mongodb-queries-table""""))
@@ -360,11 +360,11 @@ class HealthPageTests {
   fun `health page outbox table contains resume button javascript function`() {
     given()
       .`when`()
-      .get("/ui/health")
+      .get("/health")
       .then()
       .statusCode(200)
       .body(containsString("resumeOutboxPartition"))
-      .body(containsString("/ui/health/outbox-partitions/"))
+      .body(containsString("/health/outbox-partitions/"))
       .body(containsString("activate"))
   }
 
@@ -372,7 +372,7 @@ class HealthPageTests {
   fun `health activate outbox partition endpoint returns 404 for unknown partition`() {
     given()
       .`when`()
-      .post("/ui/health/outbox-partitions/unknown-partition/activate")
+      .post("/health/outbox-partitions/unknown-partition/activate")
       .then()
       .statusCode(404)
   }
@@ -381,7 +381,7 @@ class HealthPageTests {
   fun `health activate outbox partition endpoint returns 204 for known partition`() {
     given()
       .`when`()
-      .post("/ui/health/outbox-partitions/to-spotify/activate")
+      .post("/health/outbox-partitions/to-spotify/activate")
       .then()
       .statusCode(204)
   }
@@ -390,7 +390,7 @@ class HealthPageTests {
   fun `health page outbox document count is clickable when greater than zero`() {
     given()
       .`when`()
-      .get("/ui/health")
+      .get("/health")
       .then()
       .statusCode(200)
       .body(containsString("toggleOutboxDetail"))
@@ -401,7 +401,7 @@ class HealthPageTests {
   fun `health page outbox detail row javascript function is present`() {
     given()
       .`when`()
-      .get("/ui/health")
+      .get("/health")
       .then()
       .statusCode(200)
       .body(containsString("outbox-detail-row"))

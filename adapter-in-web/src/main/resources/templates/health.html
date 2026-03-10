@@ -1,0 +1,371 @@
+{#include layout.html}
+    {#title}SpCtl – Health{/title}
+    {#content}
+    <div class="container-fluid py-4 px-3 px-md-4">
+
+        <h1 class="mb-4 fs-4 fw-semibold">System Health</h1>
+
+        <div id="health-section">
+            <h2 class="mb-3 fs-6 fw-semibold text-uppercase" style="color:#888;letter-spacing:.05em;">Communication</h2>
+            <div class="row g-3 mb-4">
+                <div class="col-12 col-sm-6 col-lg-6">
+                    <div id="snippet-outgoing-http-calls" class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                        {#fragment id="snippet_outgoing_http_calls"}
+                        <div class="card-body">
+                            <p class="card-subtitle mb-3" style="color:#888;font-size:.8rem;">Outgoing HTTP Requests (Last 24h)</p>
+                            <div class="table-responsive">
+                                <table class="table table-sm mb-0" style="color:#e0e0e0;background-color:transparent;" data-testid="outgoing-requests-table">
+                                    <thead>
+                                        <tr style="border-color:#333;">
+                                            <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Endpoint</th>
+                                            <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">#</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {#for r in stats.outgoingRequestStats}
+                                        <tr style="border-color:#333;">
+                                            <td style="border-color:#333;color:#e0e0e0;background-color:transparent;">{r.endpoint}</td>
+                                            <td style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">{r.requestCountLast24h}</td>
+                                        </tr>
+                                        {/for}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        {/fragment}
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-6">
+                    <div id="snippet-outbox-partitions" class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                        {#fragment id="snippet_outbox_partitions"}
+                        <div class="card-body">
+                            <p class="card-subtitle mb-3" style="color:#888;font-size:.8rem;">Outbox Partitions</p>
+                            <div class="table-responsive">
+                                <table class="table table-sm mb-0" style="color:#e0e0e0;background-color:transparent;" data-testid="outbox-table">
+                                    <thead>
+                                        <tr style="border-color:#333;">
+                                            <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Partition</th>
+                                            <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">Blocked</th>
+                                            <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">#</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {#for p in stats.outboxPartitions}
+                                        <tr style="border-color:#333;" {#if p.blockedUntil}data-blocked-until="{p.blockedUntil.toEpochMilli()}"{/if}>
+                                            <td style="border-color:#333;color:#e0e0e0;background-color:transparent;">
+                                                {#if p.status == "ACTIVE"}
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#1db954" viewBox="0 0 16 16" style="vertical-align:middle;margin-right:4px;">
+                                                    <use href="#icon-check-circle"/>
+                                                </svg>
+                                                {#else}
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#dc3545" viewBox="0 0 16 16" style="vertical-align:middle;margin-right:4px;">
+                                                    <use href="#icon-x-circle"/>
+                                                </svg>
+                                                {/if}
+                                                {p.name}
+                                                {#if p.status != "ACTIVE"}
+                                                <button onclick="resumeOutboxPartition(this.dataset.partitionKey)" data-partition-key="{p.name}" class="btn btn-sm btn-outline-success" style="padding:1px 6px;font-size:0.75rem;margin-left:4px;" title="Resume partition" data-testid="resume-partition-btn">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                                                        <path d="M10.804 8 5 4.633v6.734L10.804 8zm.792-.696a.802.802 0 0 1 0 1.392l-6.363 3.692C4.713 12.69 4 12.345 4 11.692V4.308c0-.653.713-.998 1.233-.696l6.363 3.692z"/>
+                                                    </svg>
+                                                </button>
+                                                {/if}
+                                            </td>
+                                            <td class="outbox-blocked-until" style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">-</td>
+                                            {#if p.documentCount > 0}
+                                            <td style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;cursor:pointer;text-decoration:underline dotted;" onclick="toggleOutboxDetail(this.dataset.partition)" onkeydown="if(event.key==='Enter'||event.key===' ')toggleOutboxDetail(this.dataset.partition)" tabindex="0" data-partition="{p.name}" data-testid="outbox-doc-count">{p.documentCount}</td>
+                                            {#else}
+                                            <td style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;" data-testid="outbox-doc-count">{p.documentCount}</td>
+                                            {/if}
+                                        </tr>
+                                        {#if p.documentCount > 0}
+                                        <tr class="outbox-detail-row" data-partition="{p.name}" style="display:none;border-color:#333;">
+                                            <td colspan="3" style="padding:4px 8px 4px 24px;background-color:#161616;border-color:#333;">
+                                                <table class="table table-sm mb-0" style="color:#aaa;background-color:transparent;font-size:0.8rem;">
+                                                    <tbody>
+                                                        {#for etc in p.eventTypeCounts}
+                                                        <tr style="border-color:#2a2a2a;">
+                                                            <td style="border-color:#2a2a2a;color:#bbb;background-color:transparent;">{etc.eventType}</td>
+                                                            <td style="border-color:#2a2a2a;color:#bbb;text-align:right;background-color:transparent;">{etc.count}</td>
+                                                        </tr>
+                                                        {/for}
+                                                    </tbody>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                        {/if}
+                                        {/for}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        {/fragment}
+                    </div>
+                </div>
+            </div>
+
+            <h2 class="mb-3 fs-6 fw-semibold text-uppercase" style="color:#888;letter-spacing:.05em;">Cronjobs</h2>
+            <div class="row g-3 mb-4">
+                <div class="col-12">
+                    <div id="snippet-cronjobs" class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                        {#fragment id="snippet_cronjobs"}
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-sm mb-0" style="color:#e0e0e0;background-color:transparent;" data-testid="cronjobs-table">
+                                    <thead>
+                                        <tr style="border-color:#333;">
+                                            <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Job</th>
+                                            <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Cron</th>
+                                            <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">Next</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {#for job in stats.cronjobStats}
+                                        <tr style="border-color:#333;" {#if job.nextExecution}data-next-execution="{job.nextExecution.toEpochMilli()}"{/if}>
+                                            <td style="border-color:#333;color:#e0e0e0;background-color:transparent;">
+                                                {#if job.running}
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#1db954" viewBox="0 0 16 16" style="vertical-align:middle;margin-right:4px;">
+                                                    <use href="#icon-check-circle"/>
+                                                </svg>
+                                                {#else}
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#dc3545" viewBox="0 0 16 16" style="vertical-align:middle;margin-right:4px;">
+                                                    <use href="#icon-x-circle"/>
+                                                </svg>
+                                                {/if}
+                                                {job.simpleName}
+                                            </td>
+                                            <td style="border-color:#333;color:#e0e0e0;background-color:transparent;">{job.cronSchedule}</td>
+                                            <td class="cronjob-countdown" style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">{#if job.nextExecution}-{#else}N/A{/if}</td>
+                                        </tr>
+                                        {/for}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        {/fragment}
+                    </div>
+                </div>
+            </div>
+
+            <h2 class="mb-3 fs-6 fw-semibold text-uppercase" style="color:#888;letter-spacing:.05em;">MongoDB</h2>
+            <div class="row g-3 mb-4">
+                <div class="col-12 col-sm-6 col-lg-6">
+                    <div id="snippet-mongodb-collections" class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                        {#fragment id="snippet_mongodb_collections"}
+                        <div class="card-body">
+                            <p class="card-subtitle mb-3" style="color:#888;font-size:.8rem;">Collections</p>
+                            <div class="table-responsive">
+                                <table class="table table-sm mb-0" style="color:#e0e0e0;background-color:transparent;" data-testid="mongodb-collections-table">
+                                    <thead>
+                                        <tr style="border-color:#333;">
+                                            <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Collection</th>
+                                            <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">#</th>
+                                            <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">Size</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {#for c in stats.mongoCollectionStats}
+                                        <tr style="border-color:#333;">
+                                            <td style="border-color:#333;color:#e0e0e0;background-color:transparent;">{c.name}</td>
+                                            <td style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">{c.documentCount}</td>
+                                            <td style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">{c.sizeKb} kb</td>
+                                        </tr>
+                                        {/for}
+                                    </tbody>
+                                    <tfoot>
+                                        <tr style="border-color:#333;border-top:2px solid #555;">
+                                            <td style="border-color:#333;color:#888;background-color:transparent;">Total</td>
+                                            <td style="border-color:#333;color:#888;text-align:right;background-color:transparent;">{stats.mongoCollectionDocumentTotal}</td>
+                                            <td style="border-color:#333;color:#888;text-align:right;background-color:transparent;">{stats.mongoCollectionSizeTotalKb} kb</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                        {/fragment}
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-6">
+                    <div id="snippet-mongodb-queries" class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                        {#fragment id="snippet_mongodb_queries"}
+                        <div class="card-body">
+                            <p class="card-subtitle mb-3" style="color:#888;font-size:.8rem;">Queries (Last 24h)</p>
+                            <div class="table-responsive">
+                                <table class="table table-sm mb-0" style="color:#e0e0e0;background-color:transparent;" data-testid="mongodb-queries-table">
+                                    <thead>
+                                        <tr style="border-color:#333;">
+                                            <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Query</th>
+                                            <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">Executions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {#for q in stats.mongoQueryStats}
+                                        <tr style="border-color:#333;">
+                                            <td style="border-color:#333;color:#e0e0e0;background-color:transparent;">{q.name}</td>
+                                            <td style="border-color:#333;background-color:transparent;text-align:right;">
+                                                {#if q.slowQueryCount > 0}
+                                                <span style="color:#f90;">{q.slowQueryCount}</span>
+                                                {#else}
+                                                <span style="color:#e0e0e0;">{q.slowQueryCount}</span>
+                                                {/if}
+                                                <span style="color:#e0e0e0;"> / {q.executionCountLast24h}</span>
+                                            </td>
+                                        </tr>
+                                        {/for}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        {/fragment}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        @keyframes cronjob-pulse-green {
+            0%   { background-color: transparent; }
+            30%  { background-color: rgba(30, 215, 96, 0.35); }
+            70%  { background-color: rgba(30, 215, 96, 0.35); }
+            100% { background-color: transparent; }
+        }
+        .cronjob-pulse {
+            animation: cronjob-pulse-green 5s ease-in-out forwards;
+        }
+    </style>
+    <script>
+        (function () {
+            var outboxBlockedUntilInterval;
+            var TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
+
+            function formatCountdown(ms) {
+                if (ms <= 0) return 'now';
+                var totalSeconds = Math.floor(ms / 1000);
+                var hours = Math.floor(totalSeconds / 3600);
+                var minutes = Math.floor((totalSeconds % 3600) / 60);
+                var seconds = totalSeconds % 60;
+                return String(hours).padStart(2, '0') + ':'
+                    + String(minutes).padStart(2, '0') + ':'
+                    + String(seconds).padStart(2, '0');
+            }
+
+            function sortCronjobTable() {
+                var tbody = document.querySelector('[data-testid="cronjobs-table"] tbody');
+                if (!tbody) return;
+                var rows = Array.from(tbody.querySelectorAll('tr'));
+                var now = Date.now();
+                var pulsingRows = [], sortableRows = [];
+                rows.forEach(function (row) {
+                    if (row.dataset.pulsing === 'true') {
+                        pulsingRows.push(row);
+                    } else {
+                        sortableRows.push(row);
+                    }
+                });
+                sortableRows.sort(function (a, b) {
+                    var aVal = a.dataset.nextExecution ? parseInt(a.dataset.nextExecution, 10) - now : Infinity;
+                    var bVal = b.dataset.nextExecution ? parseInt(b.dataset.nextExecution, 10) - now : Infinity;
+                    return aVal - bVal;
+                });
+                var newOrder = pulsingRows.concat(sortableRows);
+                var hasChanged = newOrder.some(function (row, i) { return row !== rows[i]; });
+                if (hasChanged) {
+                    newOrder.forEach(function (row) { tbody.appendChild(row); });
+                }
+            }
+
+            function updateCronjobCountdowns() {
+                document.querySelectorAll('[data-next-execution]').forEach(function (row) {
+                    var nextExec = parseInt(row.dataset.nextExecution, 10);
+                    var remaining = nextExec - Date.now();
+                    var cell = row.querySelector('.cronjob-countdown');
+                    if (remaining <= 0) {
+                        if (cell) cell.textContent = 'now';
+                    } else {
+                        if (cell) cell.textContent = formatCountdown(remaining);
+                    }
+                    if (remaining < 1000 && !row.dataset.pulsing) {
+                        row.dataset.pulsing = 'true';
+                        row.classList.add('cronjob-pulse');
+                        setTimeout(function () {
+                            fadeUpdate('snippet-cronjobs', '/health/snippets/cronjobs', function () {
+                                updateCronjobCountdowns();
+                            });
+                        }, 5000);
+                    }
+                });
+                sortCronjobTable();
+            }
+
+            function formatBlockedUntil(epochMs) {
+                var d = new Date(epochMs);
+                var hours = String(d.getHours()).padStart(2, '0');
+                var minutes = String(d.getMinutes()).padStart(2, '0');
+                var remaining = epochMs - Date.now();
+                if (remaining < TWENTY_FOUR_HOURS_MS) {
+                    return hours + ':' + minutes;
+                }
+                var day = String(d.getDate()).padStart(2, '0');
+                var month = String(d.getMonth() + 1).padStart(2, '0');
+                var year = d.getFullYear();
+                return day + '.' + month + '.' + year + ' ' + hours + ':' + minutes;
+            }
+
+            function updateOutboxBlockedUntilCountdowns() {
+                document.querySelectorAll('[data-blocked-until]').forEach(function (row) {
+                    var blockedUntil = parseInt(row.dataset.blockedUntil, 10);
+                    var remaining = blockedUntil - Date.now();
+                    var cell = row.querySelector('.outbox-blocked-until');
+                    if (!cell) return;
+                    if (remaining <= 1000) {
+                        cell.textContent = 'now';
+                    } else if (remaining < TWENTY_FOUR_HOURS_MS) {
+                        cell.textContent = formatCountdown(remaining);
+                    } else {
+                        cell.textContent = formatBlockedUntil(blockedUntil);
+                    }
+                });
+            }
+
+            function startOutboxBlockedUntilInterval() {
+                if (outboxBlockedUntilInterval) {
+                    clearInterval(outboxBlockedUntilInterval);
+                }
+                updateOutboxBlockedUntilCountdowns();
+                outboxBlockedUntilInterval = setInterval(updateOutboxBlockedUntilCountdowns, 500);
+            }
+
+            setInterval(updateCronjobCountdowns, 500);
+            updateCronjobCountdowns();
+            startOutboxBlockedUntilInterval();
+
+            function resumeOutboxPartition(partitionKey) {
+                fetch('/health/outbox-partitions/' + encodeURIComponent(partitionKey) + '/activate', { method: 'POST' })
+                    .catch(function (err) { console.error('Failed to resume partition', err); });
+            }
+            window.resumeOutboxPartition = resumeOutboxPartition;
+
+            function toggleOutboxDetail(partitionKey) {
+                var row = document.querySelector('.outbox-detail-row[data-partition="' + CSS.escape(partitionKey) + '"]');
+                if (row) {
+                    row.style.display = row.style.display === 'none' ? '' : 'none';
+                }
+            }
+            window.toggleOutboxDetail = toggleOutboxDetail;
+
+            connectSse('/health/events', function (event) {
+                if (event.data === 'refresh-outgoing-http-calls') {
+                    fadeUpdate('snippet-outgoing-http-calls', '/health/snippets/outgoing-http-calls');
+                } else if (event.data === 'refresh-outbox-partitions') {
+                    if (outboxBlockedUntilInterval) {
+                        clearInterval(outboxBlockedUntilInterval);
+                        outboxBlockedUntilInterval = null;
+                    }
+                    fadeUpdate('snippet-outbox-partitions', '/health/snippets/outbox-partitions', startOutboxBlockedUntilInterval);
+                }
+            });
+        })();
+    </script>
+    {/content}
+{/include}

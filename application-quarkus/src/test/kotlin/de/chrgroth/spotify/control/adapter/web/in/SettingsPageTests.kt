@@ -14,7 +14,7 @@ class SettingsPageTests {
   fun `playlist settings page is available and displays playlists heading`() {
     given()
       .`when`()
-      .get("/ui/settings/playlist")
+      .get("/settings/playlist")
       .then()
       .statusCode(200)
       .contentType(containsString("text/html"))
@@ -25,7 +25,7 @@ class SettingsPageTests {
   fun `playlist settings page displays sync now button`() {
     given()
       .`when`()
-      .get("/ui/settings/playlist")
+      .get("/settings/playlist")
       .then()
       .statusCode(200)
       .body(containsString("Sync Now"))
@@ -35,7 +35,7 @@ class SettingsPageTests {
   fun `playback settings page is available and displays playback settings heading`() {
     given()
       .`when`()
-      .get("/ui/settings/playback")
+      .get("/settings/playback")
       .then()
       .statusCode(200)
       .contentType(containsString("text/html"))
@@ -46,7 +46,7 @@ class SettingsPageTests {
   fun `playback settings page displays recreate playback data button`() {
     given()
       .`when`()
-      .get("/ui/settings/playback")
+      .get("/settings/playback")
       .then()
       .statusCode(200)
       .body(containsString("Recreate Playback Data"))
@@ -56,7 +56,7 @@ class SettingsPageTests {
   fun `playback settings page displays artist playback processing section`() {
     given()
       .`when`()
-      .get("/ui/settings/playback")
+      .get("/settings/playback")
       .then()
       .statusCode(200)
       .body(containsString("Artist Playback Processing"))

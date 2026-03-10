@@ -14,7 +14,7 @@ class DashboardPageTests {
   fun `dashboard page is available and displays logout link and personalized welcome message`() {
     given()
       .`when`()
-      .get("/ui/dashboard")
+      .get("/dashboard")
       .then()
       .statusCode(200)
       .contentType(containsString("text/html"))
@@ -27,7 +27,7 @@ class DashboardPageTests {
   fun `dashboard page displays github link in dropdown`() {
     given()
       .`when`()
-      .get("/ui/dashboard")
+      .get("/dashboard")
       .then()
       .statusCode(200)
       .body(containsString("""data-testid="github-link""""))
@@ -39,7 +39,7 @@ class DashboardPageTests {
   fun `dashboard page displays stats section`() {
     given()
       .`when`()
-      .get("/ui/dashboard")
+      .get("/dashboard")
       .then()
       .statusCode(200)
       .body(containsString("""id="stats-section""""))
@@ -52,11 +52,11 @@ class DashboardPageTests {
   fun `dashboard page contains sse connection setup with reconnect interval`() {
     given()
       .`when`()
-      .get("/ui/dashboard")
+      .get("/dashboard")
       .then()
       .statusCode(200)
       .body(containsString("EventSource"))
-      .body(containsString("/ui/dashboard/events"))
+      .body(containsString("/dashboard/events"))
       .body(containsString("setInterval"))
       .body(containsString("60000"))
   }
@@ -65,7 +65,7 @@ class DashboardPageTests {
   fun `dashboard page uses specific sse events with fade updates instead of full reload`() {
     given()
       .`when`()
-      .get("/ui/dashboard")
+      .get("/dashboard")
       .then()
       .statusCode(200)
       .body(containsString("refresh-playback-data"))
@@ -77,7 +77,7 @@ class DashboardPageTests {
   fun `dashboard page displays recently played section`() {
     given()
       .`when`()
-      .get("/ui/dashboard")
+      .get("/dashboard")
       .then()
       .statusCode(200)
       .body(containsString("Recently Played"))
@@ -88,7 +88,7 @@ class DashboardPageTests {
   fun `dashboard snippet endpoint for recently played is available`() {
     given()
       .`when`()
-      .get("/ui/dashboard/snippets/recently-played")
+      .get("/dashboard/snippets/recently-played")
       .then()
       .statusCode(200)
       .contentType(containsString("text/html"))
@@ -99,7 +99,7 @@ class DashboardPageTests {
   fun `dashboard snippet endpoint for playback data is available`() {
     given()
       .`when`()
-      .get("/ui/dashboard/snippets/playback-data")
+      .get("/dashboard/snippets/playback-data")
       .then()
       .statusCode(200)
       .contentType(containsString("text/html"))
@@ -110,7 +110,7 @@ class DashboardPageTests {
   fun `dashboard snippet endpoint for playlist metadata is available`() {
     given()
       .`when`()
-      .get("/ui/dashboard/snippets/playlist-metadata")
+      .get("/dashboard/snippets/playlist-metadata")
       .then()
       .statusCode(200)
       .contentType(containsString("text/html"))
@@ -121,7 +121,7 @@ class DashboardPageTests {
   fun `dashboard page displays listening stats section`() {
     given()
       .`when`()
-      .get("/ui/dashboard")
+      .get("/dashboard")
       .then()
       .statusCode(200)
       .body(containsString("Listening Stats"))
@@ -132,7 +132,7 @@ class DashboardPageTests {
   fun `dashboard snippet endpoint for listening stats is available`() {
     given()
       .`when`()
-      .get("/ui/dashboard/snippets/listening-stats")
+      .get("/dashboard/snippets/listening-stats")
       .then()
       .statusCode(200)
       .contentType(containsString("text/html"))
@@ -147,10 +147,10 @@ class DashboardPageTests {
   fun `dashboard sse handler refreshes listening stats on playback data update`() {
     given()
       .`when`()
-      .get("/ui/dashboard")
+      .get("/dashboard")
       .then()
       .statusCode(200)
       .body(containsString("snippet-listening-stats"))
-      .body(containsString("/ui/dashboard/snippets/listening-stats"))
+      .body(containsString("/dashboard/snippets/listening-stats"))
   }
 }

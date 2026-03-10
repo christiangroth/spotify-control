@@ -13,13 +13,13 @@ import org.bson.Document
 class MongoIndexInitializer {
 
     @Inject
-    lateinit var recentlyPlayedDocumentRepository: RecentlyPlayedDocumentRepository
+    lateinit var recentlyPlayedDocumentRepository: SpotifyRecentlyPlayedDocumentRepository
 
     @Inject
-    lateinit var currentlyPlayingDocumentRepository: CurrentlyPlayingDocumentRepository
+    lateinit var currentlyPlayingDocumentRepository: SpotifyCurrentlyPlayingDocumentRepository
 
     @Inject
-    lateinit var recentlyPartialPlayedDocumentRepository: RecentlyPartialPlayedDocumentRepository
+    lateinit var recentlyPartialPlayedDocumentRepository: SpotifyRecentlyPartialPlayedDocumentRepository
 
     @Inject
     lateinit var appPlaybackDocumentRepository: AppPlaybackDocumentRepository

@@ -14,3 +14,21 @@ function fadeUpdate(elementId, url, callback) {
             el.style.opacity = '1';
         });
 }
+
+function connectSse(url, onMessage) {
+    var source;
+    function connect() {
+        source = new EventSource(url);
+        source.onopen = function () { };
+        source.onmessage = onMessage;
+        source.onerror = function () {
+            source.close();
+        };
+    }
+    connect();
+    setInterval(function () {
+        if (!source || source.readyState === EventSource.CLOSED) {
+            connect();
+        }
+    }, 60000);
+}

@@ -4,13 +4,15 @@ plugins {
 }
 
 dependencies {
-  implementation(project(":adapter-out-scheduler"))
   implementation(project(":domain-api"))
-  implementation(libs.quarkusStartersDomainApi)
 
   implementation(enforcedPlatform(libs.quarkusBom))
   implementation("io.quarkus:quarkus-arc")
   implementation("io.quarkus:quarkus-scheduler")
+}
+
+allOpen {
+  annotation("jakarta.enterprise.context.ApplicationScoped")
 }
 
 allOpen {
