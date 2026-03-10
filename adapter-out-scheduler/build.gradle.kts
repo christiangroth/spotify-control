@@ -14,7 +14,3 @@ dependencies {
 allOpen {
   annotation("jakarta.enterprise.context.ApplicationScoped")
 }
-
-allOpen {
-  annotation("jakarta.enterprise.context.ApplicationScoped")
-}
