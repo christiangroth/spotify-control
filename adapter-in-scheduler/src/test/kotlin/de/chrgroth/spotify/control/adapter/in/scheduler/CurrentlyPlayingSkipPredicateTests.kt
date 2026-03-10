@@ -63,8 +63,7 @@ class CurrentlyPlayingSkipPredicateTests {
     @Test
     fun `schedule state reports playback inactive after slow interval passes`() {
         val pastTime = Instant.now().minus(CurrentlyPlayingScheduleState.SLOW_INTERVAL).minusSeconds(1)
-        val state = CurrentlyPlayingScheduleState()
-        state.lastPlaybackDetectedAt = pastTime
+        val state = CurrentlyPlayingScheduleState(pastTime)
 
         assertThat(state.isPlaybackActive()).isFalse()
     }

@@ -7,13 +7,12 @@ import java.time.Instant
 import java.util.concurrent.atomic.AtomicReference
 
 @ApplicationScoped
-class CurrentlyPlayingScheduleState : PlaybackStatePort {
+class CurrentlyPlayingScheduleState @JvmOverloads constructor(initialTime: Instant = Instant.EPOCH) : PlaybackStatePort {
 
-    private val lastPlaybackDetectedAtRef = AtomicReference<Instant>(Instant.EPOCH)
+    private val lastPlaybackDetectedAtRef = AtomicReference<Instant>(initialTime)
 
-    var lastPlaybackDetectedAt: Instant
+    val lastPlaybackDetectedAt: Instant
         get() = lastPlaybackDetectedAtRef.get()
-        internal set(value) { lastPlaybackDetectedAtRef.set(value) }
 
     override fun onPlaybackDetected() {
         lastPlaybackDetectedAtRef.set(Instant.now())
