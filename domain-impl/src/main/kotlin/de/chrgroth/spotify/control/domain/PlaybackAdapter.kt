@@ -80,102 +80,106 @@ class PlaybackAdapter(
     // --- Recently Played ---
 
     override fun enqueueFetchRecentlyPlayed() {
-        val users = userRepository.findAll()
-        logger.info { "Scheduling recently played fetch for ${users.size} user(s)" }
-        users.forEach { user ->
-            outboxPort.enqueue(DomainOutboxEvent.FetchRecentlyPlayed(user.spotifyUserId))
-        }
+      val users = userRepository.findAll()
+      logger.info { "Scheduling recently played fetch for ${users.size} user(s)" }
+      users.forEach { user ->
+        outboxPort.enqueue(DomainOutboxEvent.FetchRecentlyPlayed(user.spotifyUserId))
+      }
     }
 
     override fun fetchRecentlyPlayed(userId: UserId): Either<DomainError, Unit> {
-        val accessToken = spotifyAccessToken.getValidAccessToken(userId)
-        val after = recentlyPlayedRepository.findMostRecentPlayedAt(userId)
-        return spotifyPlayback.getRecentlyPlayed(userId, accessToken, after).flatMap { tracks ->
-            val playedAts = tracks.map { it.playedAt }.toSet()
-            val existingPlayedAts = recentlyPlayedRepository.findExistingPlayedAts(userId, playedAts)
-            val newItems = tracks.filter { it.playedAt !in existingPlayedAts }
-            if (newItems.isNotEmpty()) {
-                logger.info { "Persisting ${newItems.size} new recently played items for user: ${userId.value}" }
-                recentlyPlayedRepository.saveAll(newItems)
-            }
-            val computedCount = convertPartialPlays(userId, tracks.map { it.trackId }.toSet())
-            if (newItems.isNotEmpty() || computedCount > 0) {
-                dashboardRefresh.notifyUserPlaybackData(userId)
-                outboxPort.enqueue(DomainOutboxEvent.AppendPlaybackData(userId))
-            }
-            Unit.right()
+      val accessToken = spotifyAccessToken.getValidAccessToken(userId)
+      val after = recentlyPlayedRepository.findMostRecentPlayedAt(userId)
+      return spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken, after).flatMap { tracks ->
+        val playedAts = tracks.map { it.playedAt }.toSet()
+        val existingPlayedAts = recentlyPlayedRepository.findExistingPlayedAts(userId, playedAts)
+        val newItems = tracks.filter { it.playedAt !in existingPlayedAts }
+        if (newItems.isNotEmpty()) {
+          logger.info { "Persisting ${newItems.size} new recently played items for user: ${userId.value}" }
+          recentlyPlayedRepository.saveAll(newItems)
         }
+        val computedCount = convertPartialPlays(userId, tracks.map { it.trackId }.toSet())
+        if (newItems.isNotEmpty() || computedCount > 0) {
+          dashboardRefresh.notifyUserPlaybackData(userId)
+          outboxPort.enqueue(DomainOutboxEvent.AppendPlaybackData(userId))
+        }
+        Unit.right()
+      }
     }
 
-    private fun convertPartialPlays(userId: UserId, completedTrackIds: Set<String>): Int {
-        val allItems = currentlyPlayingRepository.findByUserId(userId)
-        val sortedItems = allItems.sortedBy { it.observedAt }
+  private fun convertPartialPlays(userId: UserId, completedTrackIds: Set<String>): Int {
+    val allItems = currentlyPlayingRepository.findByUserId(userId)
+    val sortedItems = allItems.sortedBy { it.observedAt }
 
-        val sessions = buildSessions(sortedItems)
+    // Group items into contiguous play sessions per track.
+    // A new session for a track begins whenever a different track is observed between observations of the same track.
+    val sessions = buildSessions(sortedItems)
 
-        val latestNonCompletedSession = sessions
-            .filter { it.trackId !in completedTrackIds }
-            .maxByOrNull { session -> session.items.maxOf { it.observedAt } }
+    // The most recently observed non-completed session is protected — it may still be active
+    val latestNonCompletedSession = sessions
+      .filter { it.trackId !in completedTrackIds }
+      .maxByOrNull { session -> session.items.maxOf { it.observedAt } }
 
-        val convertibleSessions = sessions.filter { session ->
-            session.trackId !in completedTrackIds
-                && session !== latestNonCompletedSession
-                && session.items.maxOf { it.progressMs } > minimumProgressMs
-        }
+    val convertibleSessions = sessions.filter { session ->
+      session.trackId !in completedTrackIds
+          && session !== latestNonCompletedSession
+          && session.items.maxOf { it.progressMs } > minimumProgressMs
+    }
 
-        val newComputedCount = if (convertibleSessions.isNotEmpty()) {
-            val partialItems = convertibleSessions.map { session ->
-                val firstObservedAt = session.items.minOf { it.observedAt }
-                val lastObservedAtForSession = session.items.maxOf { it.observedAt }
-                val nextItem = sortedItems.firstOrNull { it.observedAt > lastObservedAtForSession && it.trackId != session.trackId }
-                val playedMs = if (nextItem != null) {
-                    (nextItem.observedAt - firstObservedAt).inWholeMilliseconds
-                } else {
-                    session.items.maxOf { it.progressMs }
-                }
-                val representative = session.items.maxBy { it.progressMs }
-                RecentlyPartialPlayedItem(
-                    spotifyUserId = userId,
-                    trackId = session.trackId,
-                    trackName = representative.trackName,
-                    artistIds = representative.artistIds,
-                    artistNames = representative.artistNames,
-                    playedAt = firstObservedAt,
-                    playedSeconds = playedMs / MS_PER_SECOND,
-                )
-            }
-            val existingPlayedAts = recentlyPartialPlayedRepository.findExistingPlayedAts(userId, partialItems.map { it.playedAt }.toSet())
-            val newPartial = partialItems.filter { it.playedAt !in existingPlayedAts }
-            if (newPartial.isNotEmpty()) {
-                logger.info { "Persisting ${newPartial.size} recently partial played items for user: ${userId.value}" }
-                recentlyPartialPlayedRepository.saveAll(newPartial)
-            }
-            newPartial.size
+    val newComputedCount = if (convertibleSessions.isNotEmpty()) {
+      val partialItems = convertibleSessions.map { session ->
+        val firstObservedAt = session.items.minOf { it.observedAt }
+        val lastObservedAtForSession = session.items.maxOf { it.observedAt }
+        val nextItem = sortedItems.firstOrNull { it.observedAt > lastObservedAtForSession && it.trackId != session.trackId }
+        val playedMs = if (nextItem != null) {
+          (nextItem.observedAt - firstObservedAt).inWholeMilliseconds
         } else {
-            0
+          session.items.maxOf { it.progressMs }
         }
-
-        val protectedTrackIds = latestNonCompletedSession?.let { setOf(it.trackId) } ?: emptySet()
-        val convertedTrackIds = convertibleSessions.map { it.trackId }.filter { it !in protectedTrackIds }.toSet()
-        currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, completedTrackIds + convertedTrackIds)
-        return newComputedCount
+        val representative = session.items.maxBy { it.progressMs }
+        RecentlyPartialPlayedItem(
+          spotifyUserId = userId,
+          trackId = session.trackId,
+          trackName = representative.trackName,
+          artistIds = representative.artistIds,
+          artistNames = representative.artistNames,
+          playedAt = firstObservedAt,
+          playedSeconds = playedMs / RecentlyPlayedAdapter.Companion.MS_PER_SECOND,
+        )
+      }
+      val existingPlayedAts = recentlyPartialPlayedRepository.findExistingPlayedAts(userId, partialItems.map { it.playedAt }.toSet())
+      val newPartial = partialItems.filter { it.playedAt !in existingPlayedAts }
+      if (newPartial.isNotEmpty()) {
+        logger.info { "Persisting ${newPartial.size} recently partial played items for user: ${userId.value}" }
+        recentlyPartialPlayedRepository.saveAll(newPartial)
+      }
+      newPartial.size
+    } else {
+      0
     }
 
-    private fun buildSessions(sortedItems: List<CurrentlyPlayingItem>): List<PlaySession> {
-        val result = mutableListOf<PlaySession>()
-        var lastTrackId: String? = null
-        for (item in sortedItems) {
-            if (lastTrackId == item.trackId) {
-                result.last().items.add(item)
-            } else {
-                result.add(PlaySession(item.trackId, mutableListOf(item)))
-            }
-            lastTrackId = item.trackId
-        }
-        return result
-    }
+    // Only delete track entries that are not held by a protected session
+    val protectedTrackIds = latestNonCompletedSession?.let { setOf(it.trackId) } ?: emptySet()
+    val convertedTrackIds = convertibleSessions.map { it.trackId }.filter { it !in protectedTrackIds }.toSet()
+    currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, completedTrackIds + convertedTrackIds)
+    return newComputedCount
+  }
 
-    private data class PlaySession(val trackId: String, val items: MutableList<CurrentlyPlayingItem>)
+  private fun buildSessions(sortedItems: List<CurrentlyPlayingItem>): List<PlaySession> {
+    val result = mutableListOf<PlaySession>()
+    var lastTrackId: String? = null
+    for (item in sortedItems) {
+      if (lastTrackId == item.trackId) {
+        result.last().items.add(item)
+      } else {
+        result.add(PlaySession(item.trackId, mutableListOf(item)))
+      }
+      lastTrackId = item.trackId
+    }
+    return result
+  }
+
+  private data class PlaySession(val trackId: String, val items: MutableList<CurrentlyPlayingItem>)
 
     // --- Playback Data ---
 

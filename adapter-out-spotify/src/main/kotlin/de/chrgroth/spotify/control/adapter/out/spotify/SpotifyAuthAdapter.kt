@@ -27,9 +27,9 @@ import java.util.Base64
 @ApplicationScoped
 @Suppress("Unused", "TooGenericExceptionCaught")
 class SpotifyAuthAdapter(
-    @param:ConfigProperty(name = "spotify.accounts.base-url", defaultValue = "https://accounts.spotify.com")
+    @param:ConfigProperty(name = "spotify.accounts.base-url")
     private val accountsBaseUrl: String,
-    @param:ConfigProperty(name = "spotify.api.base-url", defaultValue = "https://api.spotify.com")
+    @param:ConfigProperty(name = "spotify.api.base-url")
     private val apiBaseUrl: String,
     @param:ConfigProperty(name = "spotify.client-id")
     private val clientId: String,
