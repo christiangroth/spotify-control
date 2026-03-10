@@ -2,26 +2,6 @@
 
 Stand: 2026.03.03
 
-## Phase 2: Playlist-Spiegel
-
-*Ziel: Lokale Kopie der relevanten Playlists.*
-
-- Initialer Playlist-Sync (Tracks, Artists, Alben) – gedrosselt via Outbox
-
-**Nach Phase 2 hast du einen lokalen Spiegel deiner Playlists.**
-
-## Phase 3: Enrichment-Pipeline
-
-*Ziel: Rohdaten aufwerten, Genre-Grundlage schaffen.*
-
-- Enrichment-Service: Raw → Enriched Events
-- Skip-Erkennung
-- Genre-Logik: Artist-Genres auf Tracks ableiten, `genre.source` setzen
-- `EnrichmentTrigger` Enum und CDI Event-Bus
-- DevFixtures für Playback-Events (kontrollierte Testdaten)
-
-**Nach Phase 3 sind alle gesammelten Raw Events aufgewertet.**
-
 ## Phase 4: Reports & Charts
 
 *Ziel: Erste Insights aus den gesammelten Daten.*
@@ -57,17 +37,6 @@ Stand: 2026.03.03
 - Slack: Incoming Webhook für Benachrichtigungen
 
 **Nach Phase 6 hält die App deine Playlists automatisch sauber.**
-
-## Phase 7: Spotify Web Playback SDK
-
-*Ziel: Präziseres Tracking wenn am Rechner.*
-
-- SDK-Integration im Frontend
-- `player_state_changed` → POST an Backend
-- `source: "sdk"` in Raw Events
-- Poll-Job als reiner Fallback
-
-**Nach Phase 7 sind Skip-Erkennung und Timestamps deutlich genauer.**
 
 ## Phase 8: Slack Bot (optional)
 
