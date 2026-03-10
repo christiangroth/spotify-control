@@ -5,14 +5,10 @@
 - Update coding guidelines
 - Dependency updates and other maintenance tasks
 
-# Playback data gathering
-
-- playback duplicate/skip handling
-
 # Spotify API
 
-- cronjob to sync artists, releases and tracks
 - dashboard stats on synced Spotify data
+- rate limit / throttling issue
 
 # Playlist connect
 
