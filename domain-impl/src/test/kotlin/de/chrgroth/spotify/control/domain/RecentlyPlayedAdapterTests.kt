@@ -10,13 +10,16 @@ import de.chrgroth.spotify.control.domain.model.RecentlyPlayedItem
 import de.chrgroth.spotify.control.domain.model.User
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
-import de.chrgroth.spotify.control.domain.port.out.RecentlyPartialPlayedRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.AppPlaybackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.CurrentlyPlayingRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.DashboardRefreshPort
-import de.chrgroth.spotify.control.domain.port.out.RecentlyPlayedRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
+import de.chrgroth.spotify.control.domain.port.out.PlaybackStatePort
+import de.chrgroth.spotify.control.domain.port.out.RecentlyPartialPlayedRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.RecentlyPlayedRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
-import de.chrgroth.spotify.control.domain.port.out.SpotifyRecentlyPlayedPort
+import de.chrgroth.spotify.control.domain.port.out.SpotifyPlaybackPort
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
 import io.mockk.every
 import io.mockk.just
@@ -36,22 +39,30 @@ class RecentlyPlayedAdapterTests {
 
     private val userRepository: UserRepositoryPort = mockk()
     private val spotifyAccessToken: SpotifyAccessTokenPort = mockk()
-    private val spotifyRecentlyPlayed: SpotifyRecentlyPlayedPort = mockk()
-    private val recentlyPlayedRepository: RecentlyPlayedRepositoryPort = mockk()
+    private val spotifyPlayback: SpotifyPlaybackPort = mockk(relaxed = true)
     private val currentlyPlayingRepository: CurrentlyPlayingRepositoryPort = mockk(relaxed = true)
+    private val recentlyPlayedRepository: RecentlyPlayedRepositoryPort = mockk()
     private val recentlyPartialPlayedRepository: RecentlyPartialPlayedRepositoryPort = mockk(relaxed = true)
+    private val appPlaybackRepository: AppPlaybackRepositoryPort = mockk(relaxed = true)
+    private val appArtistRepository: AppArtistRepositoryPort = mockk(relaxed = true)
     private val outboxPort: OutboxPort = mockk(relaxed = true)
     private val dashboardRefresh: DashboardRefreshPort = mockk(relaxed = true)
+    private val playbackState: PlaybackStatePort = mockk(relaxed = true)
+    private val appEnrichmentService: AppEnrichmentService = mockk(relaxed = true)
 
-    private val adapter = RecentlyPlayedAdapter(
+    private val adapter = PlaybackAdapter(
         userRepository,
         spotifyAccessToken,
-        spotifyRecentlyPlayed,
-        recentlyPlayedRepository,
+        spotifyPlayback,
         currentlyPlayingRepository,
+        recentlyPlayedRepository,
         recentlyPartialPlayedRepository,
+        appPlaybackRepository,
+        appArtistRepository,
         outboxPort,
         dashboardRefresh,
+        playbackState,
+        appEnrichmentService,
         minimumProgressSeconds = 25L,
     )
 
@@ -103,7 +114,7 @@ class RecentlyPlayedAdapterTests {
     fun `enqueueUpdates does nothing when no users exist`() {
         every { userRepository.findAll() } returns emptyList()
 
-        adapter.enqueueUpdates()
+        adapter.enqueueFetchRecentlyPlayed()
 
         verify(exactly = 0) { outboxPort.enqueue(any()) }
     }
@@ -113,7 +124,7 @@ class RecentlyPlayedAdapterTests {
         every { userRepository.findAll() } returns listOf(buildUser("user-1"), buildUser("user-2"))
         every { outboxPort.enqueue(any()) } just runs
 
-        adapter.enqueueUpdates()
+        adapter.enqueueFetchRecentlyPlayed()
 
         verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.FetchRecentlyPlayed(UserId("user-1"))) }
         verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.FetchRecentlyPlayed(UserId("user-2"))) }
@@ -126,12 +137,12 @@ class RecentlyPlayedAdapterTests {
         val items = listOf(item(1), item(2))
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
-        every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken, null) } returns items.right()
+        every { spotifyPlayback.getRecentlyPlayed(userId, accessToken, null) } returns items.right()
         every { recentlyPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
         every { recentlyPlayedRepository.saveAll(any()) } just runs
         setupNoConsolidation()
 
-        adapter.update(userId)
+        adapter.fetchRecentlyPlayed(userId)
 
         val savedSlot = slot<List<RecentlyPlayedItem>>()
         verify { recentlyPlayedRepository.saveAll(capture(savedSlot)) }
@@ -144,12 +155,12 @@ class RecentlyPlayedAdapterTests {
         val items = listOf(item(1))
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
-        every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken, null) } returns items.right()
+        every { spotifyPlayback.getRecentlyPlayed(userId, accessToken, null) } returns items.right()
         every { recentlyPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
         every { recentlyPlayedRepository.saveAll(any()) } just runs
         setupNoConsolidation()
 
-        adapter.update(userId)
+        adapter.fetchRecentlyPlayed(userId)
 
         verify { dashboardRefresh.notifyUserPlaybackData(userId) }
     }
@@ -159,11 +170,11 @@ class RecentlyPlayedAdapterTests {
         val items = listOf(item(1))
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
-        every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken, null) } returns items.right()
+        every { spotifyPlayback.getRecentlyPlayed(userId, accessToken, null) } returns items.right()
         every { recentlyPlayedRepository.findExistingPlayedAts(userId, any()) } returns setOf(items[0].playedAt)
         setupNoConsolidation()
 
-        adapter.update(userId)
+        adapter.fetchRecentlyPlayed(userId)
 
         verify(exactly = 0) { dashboardRefresh.notifyUserPlaybackData(any()) }
     }
@@ -174,14 +185,14 @@ class RecentlyPlayedAdapterTests {
         val items = listOf(item(1))
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns after
-        every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken, after) } returns items.right()
+        every { spotifyPlayback.getRecentlyPlayed(userId, accessToken, after) } returns items.right()
         every { recentlyPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
         every { recentlyPlayedRepository.saveAll(any()) } just runs
         setupNoConsolidation()
 
-        adapter.update(userId)
+        adapter.fetchRecentlyPlayed(userId)
 
-        verify { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken, after) }
+        verify { spotifyPlayback.getRecentlyPlayed(userId, accessToken, after) }
     }
 
     @Test
@@ -189,12 +200,12 @@ class RecentlyPlayedAdapterTests {
         val items = listOf(item(1), item(2))
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
-        every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken, null) } returns items.right()
+        every { spotifyPlayback.getRecentlyPlayed(userId, accessToken, null) } returns items.right()
         every { recentlyPlayedRepository.findExistingPlayedAts(userId, any()) } returns setOf(items[0].playedAt)
         every { recentlyPlayedRepository.saveAll(any()) } just runs
         setupNoConsolidation()
 
-        adapter.update(userId)
+        adapter.fetchRecentlyPlayed(userId)
 
         val savedSlot = slot<List<RecentlyPlayedItem>>()
         verify { recentlyPlayedRepository.saveAll(capture(savedSlot)) }
@@ -207,11 +218,11 @@ class RecentlyPlayedAdapterTests {
         val items = listOf(item(1))
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
-        every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken, null) } returns items.right()
+        every { spotifyPlayback.getRecentlyPlayed(userId, accessToken, null) } returns items.right()
         every { recentlyPlayedRepository.findExistingPlayedAts(userId, any()) } returns setOf(items[0].playedAt)
         setupNoConsolidation()
 
-        adapter.update(userId)
+        adapter.fetchRecentlyPlayed(userId)
 
         verify(exactly = 0) { recentlyPlayedRepository.saveAll(any()) }
     }
@@ -220,11 +231,11 @@ class RecentlyPlayedAdapterTests {
     fun `update does not call saveAll when no tracks returned`() {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
-        every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken, null) } returns emptyList<RecentlyPlayedItem>().right()
+        every { spotifyPlayback.getRecentlyPlayed(userId, accessToken, null) } returns emptyList<RecentlyPlayedItem>().right()
         every { recentlyPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
         setupNoConsolidation()
 
-        adapter.update(userId)
+        adapter.fetchRecentlyPlayed(userId)
 
         verify(exactly = 0) { recentlyPlayedRepository.saveAll(any()) }
     }
@@ -233,9 +244,9 @@ class RecentlyPlayedAdapterTests {
     fun `update returns Left on domain error`() {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
-        every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken, null) } returns PlaybackError.RECENTLY_PLAYED_FETCH_FAILED.left()
+        every { spotifyPlayback.getRecentlyPlayed(userId, accessToken, null) } returns PlaybackError.RECENTLY_PLAYED_FETCH_FAILED.left()
 
-        val result = adapter.update(userId)
+        val result = adapter.fetchRecentlyPlayed(userId)
 
         assertThat(result.isLeft()).isTrue()
         verify(exactly = 0) { recentlyPlayedRepository.saveAll(any()) }
@@ -248,12 +259,12 @@ class RecentlyPlayedAdapterTests {
         val items = listOf(item(1))
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
-        every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken, null) } returns items.right()
+        every { spotifyPlayback.getRecentlyPlayed(userId, accessToken, null) } returns items.right()
         every { recentlyPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
         every { recentlyPlayedRepository.saveAll(any()) } just runs
         setupNoConsolidation()
 
-        adapter.update(userId)
+        adapter.fetchRecentlyPlayed(userId)
 
         verify { currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, setOf("track-1")) }
     }
@@ -262,7 +273,7 @@ class RecentlyPlayedAdapterTests {
     fun `update converts partial plays exceeding 25s to recently partial played`() {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
-        every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken, null) } returns emptyList<RecentlyPlayedItem>().right()
+        every { spotifyPlayback.getRecentlyPlayed(userId, accessToken, null) } returns emptyList<RecentlyPlayedItem>().right()
         every { recentlyPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
         every { recentlyPartialPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
         every { recentlyPartialPlayedRepository.saveAll(any()) } just runs
@@ -272,7 +283,7 @@ class RecentlyPlayedAdapterTests {
         val latestTrack = currentlyPlayingItem("track-latest", progressMs = 10_000L, observedAt = now)
         every { currentlyPlayingRepository.findByUserId(userId) } returns listOf(olderFirst, olderSecond, latestTrack)
 
-        adapter.update(userId)
+        adapter.fetchRecentlyPlayed(userId)
 
         val savedSlot = slot<List<RecentlyPartialPlayedItem>>()
         verify { recentlyPartialPlayedRepository.saveAll(capture(savedSlot)) }
@@ -284,7 +295,7 @@ class RecentlyPlayedAdapterTests {
     fun `update computes playedSeconds using next track first observation timestamp`() {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
-        every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken, null) } returns emptyList<RecentlyPlayedItem>().right()
+        every { spotifyPlayback.getRecentlyPlayed(userId, accessToken, null) } returns emptyList<RecentlyPlayedItem>().right()
         every { recentlyPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
         every { recentlyPartialPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
         every { recentlyPartialPlayedRepository.saveAll(any()) } just runs
@@ -295,7 +306,7 @@ class RecentlyPlayedAdapterTests {
         val latestTrack = currentlyPlayingItem("track-latest", progressMs = 10_000L, observedAt = nextTrackObserved)
         every { currentlyPlayingRepository.findByUserId(userId) } returns listOf(olderItem, latestTrack)
 
-        adapter.update(userId)
+        adapter.fetchRecentlyPlayed(userId)
 
         val savedSlot = slot<List<RecentlyPartialPlayedItem>>()
         verify { recentlyPartialPlayedRepository.saveAll(capture(savedSlot)) }
@@ -307,7 +318,7 @@ class RecentlyPlayedAdapterTests {
     fun `update computes playedSeconds using full session span to next different track observation`() {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
-        every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken, null) } returns emptyList<RecentlyPlayedItem>().right()
+        every { spotifyPlayback.getRecentlyPlayed(userId, accessToken, null) } returns emptyList<RecentlyPlayedItem>().right()
         every { recentlyPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
         every { recentlyPartialPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
         every { recentlyPartialPlayedRepository.saveAll(any()) } just runs
@@ -320,7 +331,7 @@ class RecentlyPlayedAdapterTests {
         val latestTrack = currentlyPlayingItem("track-latest", progressMs = 10_000L, observedAt = now)
         every { currentlyPlayingRepository.findByUserId(userId) } returns listOf(olderFirst, olderSecond, olderThird, latestTrack)
 
-        adapter.update(userId)
+        adapter.fetchRecentlyPlayed(userId)
 
         val savedSlot = slot<List<RecentlyPartialPlayedItem>>()
         verify { recentlyPartialPlayedRepository.saveAll(capture(savedSlot)) }
@@ -334,14 +345,14 @@ class RecentlyPlayedAdapterTests {
         val completedItems = listOf(item(1))
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
-        every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken, null) } returns completedItems.right()
+        every { spotifyPlayback.getRecentlyPlayed(userId, accessToken, null) } returns completedItems.right()
         every { recentlyPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
         every { recentlyPlayedRepository.saveAll(any()) } just runs
 
         val olderItem = currentlyPlayingItem("track-old", progressMs = 45_000L, observedAt = now - 5.minutes)
         every { currentlyPlayingRepository.findByUserId(userId) } returns listOf(olderItem)
 
-        adapter.update(userId)
+        adapter.fetchRecentlyPlayed(userId)
 
         verify(exactly = 0) { recentlyPartialPlayedRepository.saveAll(any()) }
     }
@@ -351,7 +362,7 @@ class RecentlyPlayedAdapterTests {
         val completedItems = listOf(item(1))
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
-        every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken, null) } returns completedItems.right()
+        every { spotifyPlayback.getRecentlyPlayed(userId, accessToken, null) } returns completedItems.right()
         every { recentlyPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
         every { recentlyPlayedRepository.saveAll(any()) } just runs
         every { recentlyPartialPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
@@ -364,7 +375,7 @@ class RecentlyPlayedAdapterTests {
         val olderTrackFirst = currentlyPlayingItem("track-old", progressMs = 30_000L, observedAt = firstObserved)
         every { currentlyPlayingRepository.findByUserId(userId) } returns listOf(olderTrackFirst, olderTrackSecond, completedEntry, latestTrack)
 
-        adapter.update(userId)
+        adapter.fetchRecentlyPlayed(userId)
 
         val savedSlot = slot<List<RecentlyPartialPlayedItem>>()
         verify { recentlyPartialPlayedRepository.saveAll(capture(savedSlot)) }
@@ -376,7 +387,7 @@ class RecentlyPlayedAdapterTests {
     fun `update creates two partial played items when same track played twice`() {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
-        every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken, null) } returns emptyList<RecentlyPlayedItem>().right()
+        every { spotifyPlayback.getRecentlyPlayed(userId, accessToken, null) } returns emptyList<RecentlyPlayedItem>().right()
         every { recentlyPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
         every { recentlyPartialPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
         every { recentlyPartialPlayedRepository.saveAll(any()) } just runs
@@ -395,7 +406,7 @@ class RecentlyPlayedAdapterTests {
             session1First, session1Second, differentTrack, session2First, session2Second, latestTrack,
         )
 
-        adapter.update(userId)
+        adapter.fetchRecentlyPlayed(userId)
 
         val savedSlot = slot<List<RecentlyPartialPlayedItem>>()
         verify { recentlyPartialPlayedRepository.saveAll(capture(savedSlot)) }
@@ -412,13 +423,13 @@ class RecentlyPlayedAdapterTests {
     fun `update does not convert the most recently observed non-completed session`() {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
-        every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken, null) } returns emptyList<RecentlyPlayedItem>().right()
+        every { spotifyPlayback.getRecentlyPlayed(userId, accessToken, null) } returns emptyList<RecentlyPlayedItem>().right()
         every { recentlyPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
 
         val latestTrack = currentlyPlayingItem("track-latest", progressMs = 60_000L, observedAt = now)
         every { currentlyPlayingRepository.findByUserId(userId) } returns listOf(latestTrack)
 
-        adapter.update(userId)
+        adapter.fetchRecentlyPlayed(userId)
 
         verify(exactly = 0) { recentlyPartialPlayedRepository.saveAll(any()) }
     }
@@ -427,14 +438,14 @@ class RecentlyPlayedAdapterTests {
     fun `update does not convert partial plays shorter than minimum progress`() {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
-        every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken, null) } returns emptyList<RecentlyPlayedItem>().right()
+        every { spotifyPlayback.getRecentlyPlayed(userId, accessToken, null) } returns emptyList<RecentlyPlayedItem>().right()
         every { recentlyPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
 
         val olderTrack = currentlyPlayingItem("track-old", progressMs = 10_000L, observedAt = now - 5.minutes)
         val latestTrack = currentlyPlayingItem("track-latest", progressMs = 5_000L, observedAt = now)
         every { currentlyPlayingRepository.findByUserId(userId) } returns listOf(olderTrack, latestTrack)
 
-        adapter.update(userId)
+        adapter.fetchRecentlyPlayed(userId)
 
         verify(exactly = 0) { recentlyPartialPlayedRepository.saveAll(any()) }
     }
@@ -443,7 +454,7 @@ class RecentlyPlayedAdapterTests {
     fun `update notifies dashboard when partial plays are converted`() {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
-        every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken, null) } returns emptyList<RecentlyPlayedItem>().right()
+        every { spotifyPlayback.getRecentlyPlayed(userId, accessToken, null) } returns emptyList<RecentlyPlayedItem>().right()
         every { recentlyPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
         every { recentlyPartialPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
         every { recentlyPartialPlayedRepository.saveAll(any()) } just runs
@@ -452,7 +463,7 @@ class RecentlyPlayedAdapterTests {
         val latestTrack = currentlyPlayingItem("track-latest", progressMs = 10_000L, observedAt = now)
         every { currentlyPlayingRepository.findByUserId(userId) } returns listOf(olderTrack, latestTrack)
 
-        adapter.update(userId)
+        adapter.fetchRecentlyPlayed(userId)
 
         verify { dashboardRefresh.notifyUserPlaybackData(userId) }
     }
@@ -461,7 +472,7 @@ class RecentlyPlayedAdapterTests {
     fun `update deletes converted currently playing entries at end`() {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
-        every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken, null) } returns emptyList<RecentlyPlayedItem>().right()
+        every { spotifyPlayback.getRecentlyPlayed(userId, accessToken, null) } returns emptyList<RecentlyPlayedItem>().right()
         every { recentlyPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
         every { recentlyPartialPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
         every { recentlyPartialPlayedRepository.saveAll(any()) } just runs
@@ -470,7 +481,7 @@ class RecentlyPlayedAdapterTests {
         val latestTrack = currentlyPlayingItem("track-latest", progressMs = 10_000L, observedAt = now)
         every { currentlyPlayingRepository.findByUserId(userId) } returns listOf(olderTrack, latestTrack)
 
-        adapter.update(userId)
+        adapter.fetchRecentlyPlayed(userId)
 
         verify { currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, setOf("track-old")) }
     }
@@ -480,7 +491,7 @@ class RecentlyPlayedAdapterTests {
         val completedItems = listOf(item(1))
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
-        every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken, null) } returns completedItems.right()
+        every { spotifyPlayback.getRecentlyPlayed(userId, accessToken, null) } returns completedItems.right()
         every { recentlyPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
         every { recentlyPlayedRepository.saveAll(any()) } just runs
         every { recentlyPartialPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
@@ -490,7 +501,7 @@ class RecentlyPlayedAdapterTests {
         val latestTrack = currentlyPlayingItem("track-latest", progressMs = 10_000L, observedAt = now)
         every { currentlyPlayingRepository.findByUserId(userId) } returns listOf(olderTrack, latestTrack)
 
-        adapter.update(userId)
+        adapter.fetchRecentlyPlayed(userId)
 
         verify { currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, setOf("track-1", "track-old")) }
     }
@@ -499,7 +510,7 @@ class RecentlyPlayedAdapterTests {
     fun `update does not delete protected track entries when it has a second session`() {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
-        every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken, null) } returns emptyList<RecentlyPlayedItem>().right()
+        every { spotifyPlayback.getRecentlyPlayed(userId, accessToken, null) } returns emptyList<RecentlyPlayedItem>().right()
         every { recentlyPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
         every { recentlyPartialPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
         every { recentlyPartialPlayedRepository.saveAll(any()) } just runs
@@ -510,7 +521,7 @@ class RecentlyPlayedAdapterTests {
         val session2 = currentlyPlayingItem("track-a", progressMs = 5_000L, observedAt = now)
         every { currentlyPlayingRepository.findByUserId(userId) } returns listOf(session1, different, session2)
 
-        adapter.update(userId)
+        adapter.fetchRecentlyPlayed(userId)
 
         // track-a must NOT be deleted (session 2 is protected)
         // track-b also has no completed tracks to delete and is not converted (it's a session of track-b with progress < 25s... wait, 10s)
@@ -521,7 +532,7 @@ class RecentlyPlayedAdapterTests {
     fun `update saves partial played item with first observedAt as playedAt`() {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
-        every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken, null) } returns emptyList<RecentlyPlayedItem>().right()
+        every { spotifyPlayback.getRecentlyPlayed(userId, accessToken, null) } returns emptyList<RecentlyPlayedItem>().right()
         every { recentlyPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
         every { recentlyPartialPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
         every { recentlyPartialPlayedRepository.saveAll(any()) } just runs
@@ -531,7 +542,7 @@ class RecentlyPlayedAdapterTests {
         val latestTrack = currentlyPlayingItem("track-latest", progressMs = 10_000L, observedAt = now)
         every { currentlyPlayingRepository.findByUserId(userId) } returns listOf(olderTrack, latestTrack)
 
-        adapter.update(userId)
+        adapter.fetchRecentlyPlayed(userId)
 
         val savedSlot = slot<List<RecentlyPartialPlayedItem>>()
         verify { recentlyPartialPlayedRepository.saveAll(capture(savedSlot)) }
@@ -542,7 +553,7 @@ class RecentlyPlayedAdapterTests {
     fun `update does not save partial played item to recently played repository`() {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
-        every { spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken, null) } returns emptyList<RecentlyPlayedItem>().right()
+        every { spotifyPlayback.getRecentlyPlayed(userId, accessToken, null) } returns emptyList<RecentlyPlayedItem>().right()
         every { recentlyPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
         every { recentlyPartialPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
         every { recentlyPartialPlayedRepository.saveAll(any()) } just runs
@@ -551,7 +562,7 @@ class RecentlyPlayedAdapterTests {
         val latestTrack = currentlyPlayingItem("track-latest", progressMs = 10_000L, observedAt = now)
         every { currentlyPlayingRepository.findByUserId(userId) } returns listOf(olderTrack, latestTrack)
 
-        adapter.update(userId)
+        adapter.fetchRecentlyPlayed(userId)
 
         verify(exactly = 0) { recentlyPlayedRepository.saveAll(any()) }
     }

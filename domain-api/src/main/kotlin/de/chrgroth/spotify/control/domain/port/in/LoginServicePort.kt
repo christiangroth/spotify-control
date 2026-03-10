@@ -5,5 +5,6 @@ import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.model.UserId
 
 interface LoginServicePort {
+    fun isAllowed(userId: UserId): Boolean
     fun handleCallback(code: String): Either<DomainError, UserId>
 }

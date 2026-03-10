@@ -3,7 +3,7 @@ package de.chrgroth.spotify.control.adapter.out.mongodb
 import de.chrgroth.spotify.control.domain.model.Playlist
 import de.chrgroth.spotify.control.domain.model.PlaylistTrack
 import de.chrgroth.spotify.control.domain.model.UserId
-import de.chrgroth.spotify.control.domain.port.out.PlaylistDataRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
 import io.quarkus.test.junit.QuarkusTest
 import jakarta.inject.Inject
 import org.assertj.core.api.Assertions.assertThat
@@ -14,7 +14,7 @@ import java.util.UUID
 class PlaylistDataRepositoryTests {
 
     @Inject
-    lateinit var playlistDataRepository: PlaylistDataRepositoryPort
+    lateinit var playlistRepository: PlaylistRepositoryPort
 
     private fun buildPlaylist(playlistId: String, snapshotId: String = "snap-1") = Playlist(
         spotifyPlaylistId = playlistId,
@@ -33,7 +33,7 @@ class PlaylistDataRepositoryTests {
     fun `findByUserIdAndPlaylistId returns null when no playlist exists`() {
         val userId = UserId("no-playlist-${UUID.randomUUID()}")
 
-        assertThat(playlistDataRepository.findByUserIdAndPlaylistId(userId, "unknown-playlist")).isNull()
+        assertThat(playlistRepository.findByUserIdAndPlaylistId(userId, "unknown-playlist")).isNull()
     }
 
     @Test
@@ -41,9 +41,9 @@ class PlaylistDataRepositoryTests {
         val userId = UserId("test-${UUID.randomUUID()}")
         val playlist = buildPlaylist("playlist-1")
 
-        playlistDataRepository.save(userId, playlist)
+        playlistRepository.save(userId, playlist)
 
-        val found = playlistDataRepository.findByUserIdAndPlaylistId(userId, "playlist-1")
+        val found = playlistRepository.findByUserIdAndPlaylistId(userId, "playlist-1")
         assertThat(found).isNotNull
         assertThat(found!!.spotifyPlaylistId).isEqualTo("playlist-1")
         assertThat(found.snapshotId).isEqualTo("snap-1")
@@ -57,11 +57,11 @@ class PlaylistDataRepositoryTests {
     @Test
     fun `save overwrites previous playlist data`() {
         val userId = UserId("test-${UUID.randomUUID()}")
-        playlistDataRepository.save(userId, buildPlaylist("playlist-1", "snap-1"))
+        playlistRepository.save(userId, buildPlaylist("playlist-1", "snap-1"))
 
-        playlistDataRepository.save(userId, buildPlaylist("playlist-1", "snap-2"))
+        playlistRepository.save(userId, buildPlaylist("playlist-1", "snap-2"))
 
-        val found = playlistDataRepository.findByUserIdAndPlaylistId(userId, "playlist-1")
+        val found = playlistRepository.findByUserIdAndPlaylistId(userId, "playlist-1")
         assertThat(found).isNotNull
         assertThat(found!!.snapshotId).isEqualTo("snap-2")
     }
@@ -70,12 +70,12 @@ class PlaylistDataRepositoryTests {
     fun `save does not affect playlists of other users`() {
         val userId1 = UserId("test-${UUID.randomUUID()}")
         val userId2 = UserId("test-${UUID.randomUUID()}")
-        playlistDataRepository.save(userId1, buildPlaylist("playlist-1"))
-        playlistDataRepository.save(userId2, buildPlaylist("playlist-2"))
+        playlistRepository.save(userId1, buildPlaylist("playlist-1"))
+        playlistRepository.save(userId2, buildPlaylist("playlist-2"))
 
-        assertThat(playlistDataRepository.findByUserIdAndPlaylistId(userId1, "playlist-1")).isNotNull
-        assertThat(playlistDataRepository.findByUserIdAndPlaylistId(userId2, "playlist-2")).isNotNull
-        assertThat(playlistDataRepository.findByUserIdAndPlaylistId(userId1, "playlist-2")).isNull()
-        assertThat(playlistDataRepository.findByUserIdAndPlaylistId(userId2, "playlist-1")).isNull()
+        assertThat(playlistRepository.findByUserIdAndPlaylistId(userId1, "playlist-1")).isNotNull
+        assertThat(playlistRepository.findByUserIdAndPlaylistId(userId2, "playlist-2")).isNotNull
+        assertThat(playlistRepository.findByUserIdAndPlaylistId(userId1, "playlist-2")).isNull()
+        assertThat(playlistRepository.findByUserIdAndPlaylistId(userId2, "playlist-1")).isNull()
     }
 }

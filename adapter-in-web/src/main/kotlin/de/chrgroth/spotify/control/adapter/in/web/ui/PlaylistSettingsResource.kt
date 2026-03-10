@@ -4,7 +4,7 @@ import de.chrgroth.spotify.control.domain.error.PlaylistSyncError
 import de.chrgroth.spotify.control.domain.model.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.UserId
-import de.chrgroth.spotify.control.domain.port.`in`.PlaylistSyncPort
+import de.chrgroth.spotify.control.domain.port.`in`.PlaylistPort
 import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
 import io.quarkus.qute.Location
@@ -47,7 +47,7 @@ class PlaylistSettingsResource {
   private lateinit var playlistRepository: PlaylistRepositoryPort
 
   @Inject
-  private lateinit var playlistSync: PlaylistSyncPort
+  private lateinit var playlist: PlaylistPort
 
   @GET
   @Authenticated
@@ -94,7 +94,7 @@ class PlaylistSettingsResource {
       ?: return Response.status(Response.Status.BAD_REQUEST)
         .entity(mapOf("error" to "Invalid sync status: ${request.syncStatus}"))
         .build()
-    return when (playlistSync.updateSyncStatus(userId, playlistId, syncStatus).isRight()) {
+    return when (playlist.updateSyncStatus(userId, playlistId, syncStatus).isRight()) {
       true -> Response.ok(mapOf("syncStatus" to syncStatus.name)).build()
       false -> Response.status(Response.Status.NOT_FOUND)
         .entity(mapOf("error" to "Playlist not found"))
@@ -110,7 +110,7 @@ class PlaylistSettingsResource {
   @Produces(MediaType.APPLICATION_JSON)
   fun syncNow(): Response {
     val userId = UserId(securityIdentity.principal.name)
-    return playlistSync.syncPlaylists(userId).fold(
+    return playlist.syncPlaylists(userId).fold(
       ifLeft = { error ->
         Response.status(Response.Status.INTERNAL_SERVER_ERROR)
           .entity(mapOf("error" to "Sync failed: ${error.code}"))
@@ -126,7 +126,7 @@ class PlaylistSettingsResource {
   @Produces(MediaType.APPLICATION_JSON)
   fun syncPlaylist(@PathParam("playlistId") playlistId: String): Response {
     val userId = UserId(securityIdentity.principal.name)
-    return playlistSync.enqueueSyncPlaylistData(userId, playlistId).fold(
+    return playlist.enqueueSyncPlaylistData(userId, playlistId).fold(
       ifLeft = { error ->
         when (error) {
           PlaylistSyncError.PLAYLIST_SYNC_INACTIVE -> Response.status(Response.Status.BAD_REQUEST)

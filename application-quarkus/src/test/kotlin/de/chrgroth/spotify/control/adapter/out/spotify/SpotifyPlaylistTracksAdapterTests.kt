@@ -4,7 +4,7 @@ import arrow.core.Either
 import de.chrgroth.spotify.control.domain.model.AccessToken
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.out.OutgoingRequestStatsPort
-import de.chrgroth.spotify.control.domain.port.out.SpotifyPlaylistTracksPort
+import de.chrgroth.spotify.control.domain.port.out.SpotifyPlaylistPort
 import io.micrometer.core.instrument.MeterRegistry
 import io.quarkus.test.junit.QuarkusTest
 import jakarta.inject.Inject
@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test
 class SpotifyPlaylistTracksAdapterTests {
 
     @Inject
-    lateinit var spotifyPlaylistTracks: SpotifyPlaylistTracksPort
+    lateinit var spotifyPlaylist: SpotifyPlaylistPort
 
     @Inject
     lateinit var outgoingRequestStats: OutgoingRequestStatsPort
@@ -25,7 +25,7 @@ class SpotifyPlaylistTracksAdapterTests {
 
     @Test
     fun `getPlaylistTracks returns tracks from mock`() {
-        val result = spotifyPlaylistTracks.getPlaylistTracks(UserId("test-user-a"), AccessToken("mock-access-token"), "mock-playlist-1")
+        val result = spotifyPlaylist.getPlaylistTracks(UserId("test-user-a"), AccessToken("mock-access-token"), "mock-playlist-1")
 
         assertThat(result).isInstanceOf(Either.Right::class.java)
         val playlist = (result as Either.Right).value
@@ -40,7 +40,7 @@ class SpotifyPlaylistTracksAdapterTests {
 
     @Test
     fun `getPlaylistTracks filters out non-track items`() {
-        val result = spotifyPlaylistTracks.getPlaylistTracks(UserId("test-user-a"), AccessToken("mock-access-token"), "mock-playlist-1")
+        val result = spotifyPlaylist.getPlaylistTracks(UserId("test-user-a"), AccessToken("mock-access-token"), "mock-playlist-1")
 
         assertThat(result).isInstanceOf(Either.Right::class.java)
         val playlist = (result as Either.Right).value
@@ -49,7 +49,7 @@ class SpotifyPlaylistTracksAdapterTests {
 
     @Test
     fun `getPlaylistTracks filters out null track items`() {
-        val result = spotifyPlaylistTracks.getPlaylistTracks(UserId("test-user-a"), AccessToken("mock-access-token"), "mock-playlist-1")
+        val result = spotifyPlaylist.getPlaylistTracks(UserId("test-user-a"), AccessToken("mock-access-token"), "mock-playlist-1")
 
         assertThat(result).isInstanceOf(Either.Right::class.java)
         val playlist = (result as Either.Right).value
@@ -58,7 +58,7 @@ class SpotifyPlaylistTracksAdapterTests {
 
     @Test
     fun `getPlaylistTracks records spotify request metrics`() {
-        spotifyPlaylistTracks.getPlaylistTracks(UserId("test-user-a"), AccessToken("mock-access-token"), "mock-playlist-1")
+        spotifyPlaylist.getPlaylistTracks(UserId("test-user-a"), AccessToken("mock-access-token"), "mock-playlist-1")
 
         val timer = meterRegistry.find("spotify.request").timer()
         assertThat(timer).isNotNull
@@ -67,7 +67,7 @@ class SpotifyPlaylistTracksAdapterTests {
 
     @Test
     fun `getPlaylistTracks increments in-memory request counter`() {
-        spotifyPlaylistTracks.getPlaylistTracks(UserId("test-user-a"), AccessToken("mock-access-token"), "mock-playlist-1")
+        spotifyPlaylist.getPlaylistTracks(UserId("test-user-a"), AccessToken("mock-access-token"), "mock-playlist-1")
 
         val stats = outgoingRequestStats.getRequestStats()
         assertThat(stats).isNotEmpty

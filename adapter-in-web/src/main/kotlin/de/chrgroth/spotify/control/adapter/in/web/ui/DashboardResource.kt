@@ -1,7 +1,7 @@
 package de.chrgroth.spotify.control.adapter.`in`.web.ui
 
 import de.chrgroth.spotify.control.domain.model.UserId
-import de.chrgroth.spotify.control.domain.port.`in`.DashboardStatsPort
+import de.chrgroth.spotify.control.domain.port.`in`.DashboardPort
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
 import io.quarkus.qute.Location
 import io.quarkus.qute.Template
@@ -31,7 +31,7 @@ class DashboardResource {
   private lateinit var userRepository: UserRepositoryPort
 
   @Inject
-  private lateinit var dashboardStats: DashboardStatsPort
+  private lateinit var dashboard: DashboardPort
 
   @GET
   @Authenticated
@@ -39,7 +39,7 @@ class DashboardResource {
   fun dashboard(): TemplateInstance {
     val userId = UserId(securityIdentity.principal.name)
     val user = userRepository.findById(userId)
-    val stats = dashboardStats.getStats(userId)
+    val stats = dashboard.getStats(userId)
     return dashboardTemplate
       .data("displayName", user?.displayName ?: userId.value)
       .data("stats", stats)
@@ -51,7 +51,7 @@ class DashboardResource {
   @Produces(MediaType.TEXT_HTML)
   fun snippetPlaybackData(): TemplateInstance {
     val userId = UserId(securityIdentity.principal.name)
-    val stats = dashboardStats.getStats(userId)
+    val stats = dashboard.getStats(userId)
     return dashboardTemplate.getFragment("snippet_playback_data").data("stats", stats)
   }
 
@@ -61,7 +61,7 @@ class DashboardResource {
   @Produces(MediaType.TEXT_HTML)
   fun snippetPlaybackHistogram(): TemplateInstance {
     val userId = UserId(securityIdentity.principal.name)
-    val stats = dashboardStats.getStats(userId)
+    val stats = dashboard.getStats(userId)
     return dashboardTemplate.getFragment("snippet_playback_histogram").data("stats", stats)
   }
 
@@ -71,7 +71,7 @@ class DashboardResource {
   @Produces(MediaType.TEXT_HTML)
   fun snippetPlaylistMetadata(): TemplateInstance {
     val userId = UserId(securityIdentity.principal.name)
-    val stats = dashboardStats.getStats(userId)
+    val stats = dashboard.getStats(userId)
     return dashboardTemplate.getFragment("snippet_playlist_metadata").data("stats", stats)
   }
 
@@ -81,7 +81,7 @@ class DashboardResource {
   @Produces(MediaType.TEXT_HTML)
   fun snippetRecentlyPlayed(): TemplateInstance {
     val userId = UserId(securityIdentity.principal.name)
-    val stats = dashboardStats.getStats(userId)
+    val stats = dashboard.getStats(userId)
     return dashboardTemplate.getFragment("snippet_recently_played").data("stats", stats)
   }
 
@@ -91,7 +91,7 @@ class DashboardResource {
   @Produces(MediaType.TEXT_HTML)
   fun snippetListeningStats(): TemplateInstance {
     val userId = UserId(securityIdentity.principal.name)
-    val stats = dashboardStats.getStats(userId)
+    val stats = dashboard.getStats(userId)
     return dashboardTemplate.getFragment("snippet_listening_stats").data("stats", stats)
   }
 }

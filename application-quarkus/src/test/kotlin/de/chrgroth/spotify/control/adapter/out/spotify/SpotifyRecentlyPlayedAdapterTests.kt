@@ -3,7 +3,7 @@ package de.chrgroth.spotify.control.adapter.out.spotify
 import arrow.core.Either
 import de.chrgroth.spotify.control.domain.model.AccessToken
 import de.chrgroth.spotify.control.domain.model.UserId
-import de.chrgroth.spotify.control.domain.port.out.SpotifyRecentlyPlayedPort
+import de.chrgroth.spotify.control.domain.port.out.SpotifyPlaybackPort
 import de.chrgroth.spotify.control.domain.port.out.OutgoingRequestStatsPort
 import io.micrometer.core.instrument.MeterRegistry
 import io.quarkus.test.junit.QuarkusTest
@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test
 class SpotifyRecentlyPlayedAdapterTests {
 
     @Inject
-    lateinit var spotifyRecentlyPlayed: SpotifyRecentlyPlayedPort
+    lateinit var spotifyPlayback: SpotifyPlaybackPort
 
     @Inject
     lateinit var outgoingRequestStats: OutgoingRequestStatsPort
@@ -26,7 +26,7 @@ class SpotifyRecentlyPlayedAdapterTests {
 
     @Test
     fun `getRecentlyPlayed returns items from mock`() {
-        val result = spotifyRecentlyPlayed.getRecentlyPlayed(UserId("test-user-a"), AccessToken("mock-access-token"))
+        val result = spotifyPlayback.getRecentlyPlayed(UserId("test-user-a"), AccessToken("mock-access-token"))
 
         assertThat(result).isInstanceOf(Either.Right::class.java)
         val items = (result as Either.Right).value
@@ -41,7 +41,7 @@ class SpotifyRecentlyPlayedAdapterTests {
     @Test
     fun `getRecentlyPlayed with after parameter returns items from mock`() {
         val after = Instant.parse("2024-01-01T00:00:00Z")
-        val result = spotifyRecentlyPlayed.getRecentlyPlayed(UserId("test-user-a"), AccessToken("mock-access-token"), after)
+        val result = spotifyPlayback.getRecentlyPlayed(UserId("test-user-a"), AccessToken("mock-access-token"), after)
 
         assertThat(result).isInstanceOf(Either.Right::class.java)
         val items = (result as Either.Right).value
@@ -51,7 +51,7 @@ class SpotifyRecentlyPlayedAdapterTests {
 
     @Test
     fun `getRecentlyPlayed filters out podcast episodes`() {
-        val result = spotifyRecentlyPlayed.getRecentlyPlayed(UserId("test-user-a"), AccessToken("mock-access-token"))
+        val result = spotifyPlayback.getRecentlyPlayed(UserId("test-user-a"), AccessToken("mock-access-token"))
 
         assertThat(result).isInstanceOf(Either.Right::class.java)
         val items = (result as Either.Right).value
@@ -60,7 +60,7 @@ class SpotifyRecentlyPlayedAdapterTests {
 
     @Test
     fun `getRecentlyPlayed filters out local tracks`() {
-        val result = spotifyRecentlyPlayed.getRecentlyPlayed(UserId("test-user-a"), AccessToken("mock-access-token"))
+        val result = spotifyPlayback.getRecentlyPlayed(UserId("test-user-a"), AccessToken("mock-access-token"))
 
         assertThat(result).isInstanceOf(Either.Right::class.java)
         val items = (result as Either.Right).value
@@ -69,7 +69,7 @@ class SpotifyRecentlyPlayedAdapterTests {
 
     @Test
     fun `getRecentlyPlayed records spotify request metrics`() {
-        spotifyRecentlyPlayed.getRecentlyPlayed(UserId("test-user-a"), AccessToken("mock-access-token"))
+        spotifyPlayback.getRecentlyPlayed(UserId("test-user-a"), AccessToken("mock-access-token"))
 
         val timer = meterRegistry.find("spotify.request").timer()
         assertThat(timer).isNotNull
@@ -78,7 +78,7 @@ class SpotifyRecentlyPlayedAdapterTests {
 
     @Test
     fun `getRecentlyPlayed increments in-memory request counter`() {
-        spotifyRecentlyPlayed.getRecentlyPlayed(UserId("test-user-a"), AccessToken("mock-access-token"))
+        spotifyPlayback.getRecentlyPlayed(UserId("test-user-a"), AccessToken("mock-access-token"))
 
         val stats = outgoingRequestStats.getRequestStats()
         assertThat(stats).isNotEmpty

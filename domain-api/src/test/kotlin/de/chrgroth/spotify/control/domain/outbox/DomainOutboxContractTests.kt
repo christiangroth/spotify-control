@@ -1,7 +1,10 @@
 package de.chrgroth.spotify.control.domain.outbox
 
 import de.chrgroth.spotify.control.domain.model.UserId
-import de.chrgroth.spotify.control.domain.port.`in`.OutboxHandlerPort
+import de.chrgroth.spotify.control.domain.port.`in`.CatalogPort
+import de.chrgroth.spotify.control.domain.port.`in`.PlaybackPort
+import de.chrgroth.spotify.control.domain.port.`in`.PlaylistPort
+import de.chrgroth.spotify.control.domain.port.`in`.UserProfilePort
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -15,6 +18,9 @@ class DomainOutboxContractTests {
         DomainOutboxEvent.SyncPlaylistData(UserId("user-1"), "playlist-1"),
         DomainOutboxEvent.RebuildPlaybackData(UserId("user-1")),
         DomainOutboxEvent.AppendPlaybackData(UserId("user-1")),
+        DomainOutboxEvent.EnrichArtistDetails("artist-1", UserId("user-1")),
+        DomainOutboxEvent.EnrichTrackDetails("track-1", UserId("user-1")),
+        DomainOutboxEvent.EnrichAlbumDetails("album-1", UserId("user-1")),
     )
 
     @Test
@@ -55,15 +61,16 @@ class DomainOutboxContractTests {
     }
 
     @Test
-    fun `OutboxHandlerPort has a handler method for every DomainOutboxEvent type`() {
-        val methods = OutboxHandlerPort::class.java.methods
+    fun `every DomainOutboxEvent type has a handler method in one of the domain ports`() {
+        val allPortMethods = listOf(PlaybackPort::class, CatalogPort::class, PlaylistPort::class, UserProfilePort::class)
+            .flatMap { it.java.methods.toList() }
         allEvents.forEach { event ->
             val eventClass = event::class.java
-            val hasMatchingHandle = methods.any { method ->
+            val hasMatchingHandle = allPortMethods.any { method ->
                 method.name == "handle" && method.parameterCount == 1 && method.parameterTypes[0].isAssignableFrom(eventClass)
             }
             assertThat(hasMatchingHandle)
-                .describedAs("OutboxHandlerPort should have method 'handle(${eventClass.simpleName})'")
+                .describedAs("One of the domain ports should have method 'handle(${eventClass.simpleName})'")
                 .isTrue()
         }
     }

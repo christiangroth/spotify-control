@@ -1,6 +1,6 @@
 package de.chrgroth.spotify.control.adapter.`in`.scheduler
 
-import de.chrgroth.spotify.control.domain.port.`in`.CurrentlyPlayingPort
+import de.chrgroth.spotify.control.domain.port.`in`.PlaybackPort
 import de.chrgroth.quarkus.starters.StarterSkipPredicate
 import io.quarkus.scheduler.Scheduled
 import jakarta.enterprise.context.ApplicationScoped
@@ -11,7 +11,7 @@ import java.util.concurrent.atomic.AtomicReference
 @ApplicationScoped
 @Suppress("Unused")
 class CurrentlyPlayingFetchJob(
-    private val currentlyPlaying: CurrentlyPlayingPort,
+    private val playback: PlaybackPort,
     private val scheduleState: CurrentlyPlayingScheduleState,
 ) {
 
@@ -24,7 +24,7 @@ class CurrentlyPlayingFetchJob(
         val lastExecutedAt = lastExecutedAtRef.get()
         if (now.isBefore(lastExecutedAt.plus(effectiveInterval))) return
         if (!lastExecutedAtRef.compareAndSet(lastExecutedAt, now)) return
-        currentlyPlaying.enqueueUpdates()
+        playback.enqueueFetchCurrentlyPlaying()
     }
 
     companion object {
