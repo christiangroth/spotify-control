@@ -43,7 +43,7 @@ class SpotifyPlaybackAdapter(
       val response = httpMetrics.timed(request.uri()) {
         httpClient.send(request, HttpResponse.BodyHandlers.ofString())
       }
-      if (response.statusCode() == SpotifyCurrentlyPlayingAdapter.Companion.HTTP_NO_CONTENT) {
+      if (response.statusCode() == HTTP_NO_CONTENT) {
         return null.right()
       }
       val errorResult = response.checkRateLimitOrError(logger, PlaybackError.CURRENTLY_PLAYING_FETCH_FAILED)

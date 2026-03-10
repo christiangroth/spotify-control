@@ -90,7 +90,7 @@ class PlaybackAdapter(
     override fun fetchRecentlyPlayed(userId: UserId): Either<DomainError, Unit> {
       val accessToken = spotifyAccessToken.getValidAccessToken(userId)
       val after = recentlyPlayedRepository.findMostRecentPlayedAt(userId)
-      return spotifyRecentlyPlayed.getRecentlyPlayed(userId, accessToken, after).flatMap { tracks ->
+      return spotifyPlayback.getRecentlyPlayed(userId, accessToken, after).flatMap { tracks ->
         val playedAts = tracks.map { it.playedAt }.toSet()
         val existingPlayedAts = recentlyPlayedRepository.findExistingPlayedAts(userId, playedAts)
         val newItems = tracks.filter { it.playedAt !in existingPlayedAts }
@@ -144,7 +144,7 @@ class PlaybackAdapter(
           artistIds = representative.artistIds,
           artistNames = representative.artistNames,
           playedAt = firstObservedAt,
-          playedSeconds = playedMs / RecentlyPlayedAdapter.Companion.MS_PER_SECOND,
+          playedSeconds = playedMs / MS_PER_SECOND,
         )
       }
       val existingPlayedAts = recentlyPartialPlayedRepository.findExistingPlayedAts(userId, partialItems.map { it.playedAt }.toSet())
