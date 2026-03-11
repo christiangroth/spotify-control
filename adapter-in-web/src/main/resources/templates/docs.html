@@ -2,7 +2,7 @@
     {#title}SpCtl – {title}{/title}
     {#content}
     <div class="container py-4">
-        <h1 class="mb-4 fs-4 fw-semibold">{title}</h1>
+        {#if showHeading}<h1 class="mb-4 fs-4 fw-semibold">{title}</h1>{/if}
         <div id="docs-rendered" class="docs-content"></div>
         <textarea id="docs-raw" class="d-none">{markdownContent}</textarea>
     </div>

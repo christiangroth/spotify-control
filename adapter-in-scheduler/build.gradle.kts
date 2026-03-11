@@ -4,7 +4,6 @@ plugins {
 }
 
 dependencies {
-  implementation(project(":adapter-out-scheduler"))
   implementation(project(":domain-api"))
   implementation(libs.quarkusStartersDomainApi)
 

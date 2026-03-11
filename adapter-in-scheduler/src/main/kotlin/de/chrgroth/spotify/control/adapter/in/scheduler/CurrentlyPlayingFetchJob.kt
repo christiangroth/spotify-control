@@ -10,7 +10,7 @@ class CurrentlyPlayingFetchJob(
     private val playback: PlaybackPort,
 ) {
 
-    @Scheduled(every = "10s", skipExecutionIf = CurrentlyPlayingSkipPredicate::class)
+    @Scheduled(every = "20s", skipExecutionIf = CurrentlyPlayingSkipPredicate::class)
     fun run() {
         playback.enqueueFetchCurrentlyPlaying()
     }

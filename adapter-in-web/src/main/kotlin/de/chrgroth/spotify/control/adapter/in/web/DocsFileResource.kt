@@ -39,9 +39,11 @@ class DocsFileResource {
     }
     val content = DocsUtils.readMarkdown("docs/$subdir/$decodedFilename")
       ?: throw NotFoundException("Doc not found: $subdir/$filename")
+    val hasOwnHeading = DocsUtils.hasHeading(content)
     return docsTemplate.instance()
       .data("title", DocsUtils.extractTitle(content, decodedFilename))
-      .data("markdownContent", DocsUtils.stripFirstHeading(content))
+      .data("showHeading", !hasOwnHeading)
+      .data("markdownContent", content)
   }
 
   private fun isInvalidFilename(filename: String): Boolean =

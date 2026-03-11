@@ -15,13 +15,6 @@ internal object DocsUtils {
       ?.trim()
       ?: fallback
 
-  fun stripFirstHeading(content: String): String {
-    val lines = content.lines()
-    val idx = lines.indexOfFirst { it.startsWith("# ") }
-    return if (idx >= 0) {
-      lines.drop(idx + 1).dropWhile { it.isBlank() }.joinToString("\n")
-    } else {
-      content
-    }
-  }
+  fun hasHeading(content: String): Boolean =
+    content.lineSequence().any { it.startsWith("# ") }
 }
