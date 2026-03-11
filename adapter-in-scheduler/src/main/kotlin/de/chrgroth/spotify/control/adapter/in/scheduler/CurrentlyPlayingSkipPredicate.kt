@@ -18,6 +18,7 @@ class CurrentlyPlayingSkipPredicate(
     private val lastExecutedAtRef = AtomicReference<Instant>(Instant.EPOCH)
     private val lastPlaybackDetectedAtRef = AtomicReference<Instant>(Instant.EPOCH)
 
+    @Suppress("UnusedParameter")
     fun onPlaybackDetected(@Observes event: PlaybackDetectedEvent) {
         lastPlaybackDetectedAtRef.set(Instant.now())
     }
