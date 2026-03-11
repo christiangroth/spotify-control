@@ -11,8 +11,8 @@ import java.time.Instant
 import java.util.concurrent.atomic.AtomicReference
 
 @ApplicationScoped
-class CurrentlyPlayingSkipPredicate(
-    private val starterSkipPredicate: StarterSkipPredicate,
+class CurrentlyPlayingSkipPredicate @JvmOverloads constructor(
+    private val starterSkipPredicate: StarterSkipPredicate = StarterSkipPredicate(),
 ) : Scheduled.SkipPredicate {
 
     private val lastExecutedAtRef = AtomicReference<Instant>(Instant.EPOCH)
