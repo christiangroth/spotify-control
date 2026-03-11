@@ -14,7 +14,4 @@ internal object DocsUtils {
       ?.removePrefix("# ")
       ?.trim()
       ?: fallback
-
-  fun hasHeading(content: String): Boolean =
-    content.lineSequence().any { it.startsWith("# ") }
 }

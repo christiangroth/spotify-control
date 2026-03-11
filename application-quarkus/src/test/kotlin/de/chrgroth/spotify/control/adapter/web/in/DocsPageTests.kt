@@ -37,7 +37,6 @@ class DocsPageTests {
     assertMarkdownRenderingPipeline(body, "Introduction and Goals")
     assertThat(body).contains("spotify-control")
     assertThat(body).contains("# spotify-control")
-    assertThat(body).doesNotContain("""<h1 class="mb-4 fs-4 fw-semibold">""")
   }
 
   @Test
