@@ -61,8 +61,7 @@ spotify-control interacts with the following external systems:
 |---------------------|----------------|------------------------------------------------------------------------------|
 | Spotify API         | bidirectional  | Read recently played tracks, playlists, artists; write playlist edits        |
 | MongoDB Atlas       | bidirectional  | Persistent storage for all domain data (tracks, playlists, events, etc.)     |
-| Slack               | outbound       | Incoming Webhook for notifications and album upgrade approve/reject links     |
-| User (browser)      | bidirectional  | Web UI for dashboard, admin, charts, and action endpoints (approve/reject)   |
+| User (browser)      | bidirectional  | Web UI for dashboard, admin, charts, and action endpoints                    |
 
 ## Technical Context
 
@@ -70,7 +69,6 @@ spotify-control interacts with the following external systems:
 |-----------------------|---------------------------------------------------------|
 | Spotify API           | REST via `adapter-out-spotify`; OAuth 2.0 token refresh |
 | MongoDB Atlas         | MongoDB driver via `adapter-out-mongodb`                |
-| Slack                 | Incoming Webhook via `adapter-out-slack`                |
 | Web UI                | Quarkus Qute SSR, htmx, Bootstrap 5, Server-Sent Events |
 | Scheduled jobs        | Quarkus scheduler                                       |
 | Internal event bus    | CDI Events (in-process)                                 |
@@ -92,12 +90,14 @@ The system is composed of the following Gradle modules:
 
 | Module                  | Role                                                                                  |
 |-------------------------|---------------------------------------------------------------------------------------|
-| `adapter-in-web`        | REST endpoints, OAuth callback, SSE endpoints, action endpoints (approve/reject)      |
-| `adapter-in-starter`    | Concrete one-time startup bean implementations                                        |
+| `adapter-in-web`        | REST endpoints, OAuth callback, SSE endpoints, action endpoints                       |
+| `adapter-in-scheduler`  | Scheduled jobs for polling Spotify and syncing data                                   |
+| `adapter-in-starter`    | One-time startup bean implementations for data migrations and bugfixes                |
+| `adapter-in-outbox`     | Outbox event dispatcher – routes outbox events to the correct domain port handler     |
 | `adapter-out-mongodb`   | Repository implementations for MongoDB                                                |
 | `adapter-out-spotify`   | Spotify API client, token refresh, token bucket rate limiting, backoff                |
-| `adapter-out-slack`     | Slack API client, Block Kit message builder                                           |
 | `adapter-out-outbox`    | Outbox adapter for writing new tasks into the outbox                                  |
+| `adapter-out-scheduler` | Scheduler info provider for the health page                                           |
 | `application-quarkus`   | Quarkus application bundling and configuration                                        |
 | `domain-api`            | Ports (interfaces) – defines the contracts between domain and adapters                |
 | `domain-impl`           | Domain services, domain objects, CDI events                                           |
@@ -106,11 +106,11 @@ The system is composed of the following Gradle modules:
 
 ### `adapter-in-web`
 
-Handles all inbound HTTP interactions: the web UI (Qute templates), OAuth callback, SSE streams for live updates, and action endpoints for album upgrade approve/reject flows.
+Handles all inbound HTTP interactions: the web UI (Qute templates), OAuth callback, SSE streams for live updates, and settings action endpoints.
 
 ### `adapter-out-mongodb`
 
-Implements all repository interfaces defined in `domain-api`. Manages the MongoDB collections for users (including encrypted token storage), tracks, artists, playlists, playback events, aggregations, pending upgrades, and the outbox.
+Implements all repository interfaces defined in `domain-api`. Manages the MongoDB collections for users (including encrypted token storage), tracks, artists, albums, playlists, and playback events.
 
 #### MongoDB Collections
 
@@ -134,13 +134,9 @@ Implements all repository interfaces defined in `domain-api`. Manages the MongoD
 
 Encapsulates all communication with the Spotify Web API. Handles token refresh, rate limiting via a token bucket (~50 requests/30s), and backoff for hidden 24h bulk limits.
 
-### `adapter-out-slack`
-
-Sends notifications via a Slack Incoming Webhook, including album upgrade notifications with approve/reject action links.
-
 ### `domain-impl`
 
-Contains the core business logic: playback enrichment, aggregation computation, genre derivation and override handling, playlist invariant enforcement, album upgrade matching, and duplicate detection.
+Contains the core business logic: playback data processing, playlist synchronization, artist catalog management, user profile handling, and dashboard statistics computation.
 
 ### `de.chrgroth.quarkus.outbox`
 
@@ -154,7 +150,7 @@ The outbox is provided as an external library (`de.chrgroth.quarkus.outbox`, pac
 
 ### `adapter-in-starter`
 
-Contains concrete `Starter` implementations acting as inbound adapters: they receive a startup trigger from the `de.chrgroth.quarkus.starters` library and call into the domain via port interfaces. Currently contains `HelloWorldStarter` as a demo implementation.
+Contains concrete `Starter` implementations acting as inbound adapters: they receive a startup trigger from the `de.chrgroth.quarkus.starters` library and call into the domain via port interfaces. Each starter executes exactly once in production mode. Used for one-time data migrations, schema changes, and bugfixes.
 
 ## Level 2
 
@@ -164,14 +160,7 @@ Contains concrete `Starter` implementations acting as inbound adapters: they rec
 
 ## Album Upgrade Flow
 
-```
-Match found (track name + artist, single/EP → album)
-    → Entry created in pending_upgrades (UUID, expires_at)
-    → Slack notification with approve/reject links
-    → Links require authenticated session → redirect to login, then dashboard
-    → Dashboard shows all pending_upgrades
-    → Action executed → redirect to dashboard with success banner (disappears after 10s)
-```
+*Planned – not yet implemented.*
 
 ## Playback Polling Flow
 
@@ -241,8 +230,6 @@ The Settings page allows users to control which artists are included in playback
 
 When an artist is set from `INACTIVE` back to `ACTIVE` or `UNDECIDED`, a `RebuildPlaybackData` event is enqueued for all users so that previously excluded playback records are recreated.
 
-The `EnrichArtistDetailsStarter` runs once at startup and enqueues `EnrichArtistDetails` for all artists that are missing enrichment data (no `lastEnrichmentDate`), ensuring the artist images and genres needed by the Settings UI are populated.
-
 ## Playlist Sync Flow
 
 ```
@@ -264,7 +251,6 @@ The application is deployed on an existing VPS running Docker Swarm. Traefik han
 | Application     | Quarkus (native Docker) | Deployed as a Docker Swarm service         |
 | Reverse Proxy   | Traefik                 | TLS via Let's Encrypt, already provisioned |
 | Database        | MongoDB Atlas           | Two projects: prod + dev                   |
-| Notifications   | Slack Incoming Webhook  | External service                           |
 
 ## Infrastructure Level 2
 
@@ -356,11 +342,15 @@ Successfully processed events are moved to `outbox_archive` (audit log). Interna
 
 ## Server-Sent Events (SSE) and Live Updates
 
-CDI events act as a bridge between backend services and SSE streams. The SSE endpoint delivers the initial state on connect, then pushes updates via a hot stream backed by a `BroadcastProcessor`.
+Backend services notify SSE streams via CDI events. The SSE endpoint delivers the initial state on connect, then pushes named update events to connected clients via per-user reactive streams.
 
 ## Genre Management
 
-Spotify provides genres only at the artist level. Genres are derived from the artist to individual tracks (`genre.source = "artist"`). The user can override genres per album/release (`genre.source = "override"`). Overrides trigger re-enrichment and re-aggregation as needed. The `enrichment_version` field tracks which version of enrichment logic was applied.
+*Planned – not yet implemented.*
+
+## MongoDB Charts Contract
+
+*Planned – not yet implemented. When implemented, `aggregations_*` collections will be the public API contract for MongoDB Charts. Field names must be stable; contract tests will validate schema on every build.*
 
 ## Scheduler Jobs
 
@@ -376,10 +366,6 @@ All scheduler jobs skip execution via `skipExecutionIf = StarterSkipPredicate::c
 ## Starters
 
 One-time startup beans for data migrations, schema changes, and one-time bugfixes. Each starter executes exactly once in `NORMAL` (prod) mode; failed starters are retried on the next application start. The Quarkus scheduler is blocked until all starters succeed. See [starters.md](starters.md) for architecture details and usage guidance.
-
-## MongoDB Charts Contract
-
-Charts work exclusively on `aggregations_*` collections. Field names are stable (public API) – breaking changes require contract test updates. `@QuarkusTest` contract tests validate the schema on every build. Additive changes (new fields) are non-breaking.
 
 ## Frontend Approach
 
@@ -408,7 +394,6 @@ SPOTIFY_CLIENT_ID
 SPOTIFY_CLIENT_SECRET
 MONGODB_CONNECTION_STRING
 APP_TOKEN_ENCRYPTION_KEY
-SLACK_WEBHOOK_URL
 ```
 
 # Architecture Decisions
@@ -442,16 +427,10 @@ See [outbox.md](outbox.md) for outbox-specific design decisions.
 
 | Term                    | Definition                                                                                                            |
 |-------------------------|-----------------------------------------------------------------------------------------------------------------------|
-| Starter                 | A one-time startup bean (`util-starters`) that executes arbitrary logic exactly once in production; used for data migrations, schema changes, and one-time bugfixes |
+| Starter                 | A one-time startup bean (`de.chrgroth.quarkus.starters`) that executes arbitrary logic exactly once in production; used for data migrations, schema changes, and one-time bugfixes |
 | Outbox                  | A persistent task queue used to reliably dispatch Spotify API calls and domain events asynchronously                  |
 | Snapshot ID             | A Spotify-provided identifier that changes whenever a playlist is modified; used to detect changes efficiently        |
-| All-Invariant           | The rule that the `All` playlist must always be the union of all yearly playlists                                     |
-| Album Upgrade           | The process of replacing a track from a single/EP with the equivalent track from the full album release               |
-| Pending Upgrade         | A proposed album upgrade waiting for user confirmation (approve or reject)                                            |
-| Enrichment              | The process of deriving additional metadata (genres, skip detection) from raw playback events                         |
-| Enrichment Version      | A version counter on enriched events that tracks which enrichment logic version was applied                           |
-| Genre Override          | A user-defined genre assignment for an album/release that takes precedence over artist-derived genres                 |
-| Aggregation             | Pre-computed monthly listening statistics stored in `aggregations_monthly` for use by MongoDB Charts                  |
+| Enrichment              | The process of fetching and storing additional metadata (genres, album details, images) from Spotify for artists, tracks, and albums |
 | SSE                     | Server-Sent Events – a mechanism for the server to push real-time updates to the browser                              |
 | Token Bucket            | A rate limiting mechanism used to throttle Spotify API requests (~50 requests per 30 seconds)                        |
 | CDI Event               | Contexts and Dependency Injection event – used for in-process communication between Quarkus beans                    |

@@ -32,7 +32,7 @@ Follow the hexagonal structure. See [role-architect.md](role-architect.md).
 
 All Spotify operations and internal domain events are routed through the persistent outbox in MongoDB. Direct Spotify API calls outside `adapter-out-spotify` are forbidden.
 
-Outbox partitions: `spotify` and `domain`. See [arc42.md](../arc42/arc42.md) for full event type listing.
+Outbox partitions: `to-spotify`, `to-spotify-playback`, and `domain`. See [arc42.md](../arc42/arc42.md) for full event type listing.
 
 CDI events (`jakarta.enterprise.event.Event`) serve as the internal bus between domain services and the `LiveUpdateService` (SSE).
 
@@ -56,7 +56,12 @@ fun getData() = col.find(eq("s", "p")).toList()
 
 ## Testing Expectations
 
-- Contract tests for all aggregated MongoDB collections (`aggregations_*`)
-- Unit tests for domain logic without Quarkus context
-- `@QuarkusTest` for adapter integration tests
-- Test data via Kotlin builder functions, no lengthy setup blocks
+Tests follow the *Test Your Boundaries* principle mapped to the hexagonal architecture:
+
+- **Domain logic** (`domain-impl`): JUnit 5 + MockK, no Quarkus context. Test via inbound port interfaces with mocked outbound ports.
+- **Outbound adapters** (MongoDB repositories, Spotify client): `@QuarkusTest` in `application-quarkus` against real dev services (embedded MongoDB, Spotify mock).
+- **Inbound adapters** (HTTP endpoints, scheduler jobs): `@QuarkusTest` + REST Assured in `application-quarkus`, with CDI mocks via `@InjectMock` where needed.
+- **App wiring** (health/metrics): `@QuarkusTest` in `application-quarkus`.
+- **Adapter-local unit tests**: Plain JUnit 5 + MockK for pure logic in adapter modules (e.g. `adapter-in-starter`, `adapter-out-scheduler`) that does not require Quarkus context.
+
+Contract tests for all outbox event types are mandatory and must fail on payload structure breaks. Test data via Kotlin builder functions, no lengthy setup blocks.

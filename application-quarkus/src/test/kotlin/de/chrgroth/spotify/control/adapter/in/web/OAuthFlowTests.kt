@@ -1,4 +1,4 @@
-package de.chrgroth.spotify.control.adapter.web.`in`
+package de.chrgroth.spotify.control.adapter.`in`.web
 
 import de.chrgroth.spotify.control.domain.port.out.TokenEncryptionPort
 import io.quarkus.test.junit.QuarkusTest

@@ -1,4 +1,4 @@
-package de.chrgroth.spotify.control.adapter.web.`in`
+package de.chrgroth.spotify.control.adapter.`in`.web
 
 import io.quarkus.test.junit.QuarkusTest
 import io.restassured.RestAssured.given
