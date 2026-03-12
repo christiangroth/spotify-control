@@ -11,8 +11,10 @@ class AppArtistDocument {
     @BsonId
     lateinit var id: String  // Set to artistId value; maps to MongoDB _id
     lateinit var artistName: String
-    var genres: List<String> = emptyList()
+    var genre: String? = null
+    var additionalGenres: List<String>? = null
     var imageLink: String? = null
+    var type: String? = null
     var lastEnrichmentDate: Instant? = null
     var playbackProcessingStatus: ArtistPlaybackProcessingStatus = ArtistPlaybackProcessingStatus.UNDECIDED
 }

@@ -52,11 +52,14 @@ class SpotifyCatalogAdapter(
       if (errorResult != null) return errorResult
       val json: JsonNode = objectMapper.readTree(response.body())
       if (json.isNull || !json.has("id")) return null.right()
+      val allGenres = json.get("genres")?.map { it.asText() } ?: emptyList()
       AppArtist(
         artistId = json.get("id").asText(),
         artistName = json.get("name").asText(),
-        genres = json.get("genres")?.map { it.asText() } ?: emptyList(),
+        genre = allGenres.firstOrNull(),
+        additionalGenres = allGenres.drop(1).ifEmpty { null },
         imageLink = json.get("images")?.firstOrNull()?.get("url")?.asText(),
+        type = json.get("type")?.asText(),
       ).right()
     } catch (e: Exception) {
       logger.error(e) { "Unexpected error fetching artist details for artist $artistId (user ${userId.value})" }

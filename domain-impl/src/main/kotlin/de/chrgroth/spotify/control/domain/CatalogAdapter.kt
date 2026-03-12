@@ -92,8 +92,8 @@ class CatalogAdapter(
         return spotifyCatalog.getArtist(userId, accessToken, artistId)
             .flatMap { detail ->
                 if (detail != null) {
-                    appArtistRepository.updateEnrichmentData(detail.artistId, detail.artistName, detail.genres, detail.imageLink)
-                    logger.info { "Updated enrichment data for artist $artistId: ${detail.genres}" }
+                    appArtistRepository.updateEnrichmentData(detail.artistId, detail.artistName, detail.genre, detail.additionalGenres, detail.imageLink, detail.type)
+                    logger.info { "Updated enrichment data for artist $artistId: genre=${detail.genre}, additionalGenres=${detail.additionalGenres}" }
                 } else {
                     logger.warn { "No data returned from Spotify for artist $artistId" }
                 }

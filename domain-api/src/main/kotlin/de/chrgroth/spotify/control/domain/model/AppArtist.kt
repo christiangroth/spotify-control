@@ -10,8 +10,10 @@ import kotlin.time.Instant
 data class AppArtist(
     val artistId: String,
     val artistName: String,
-    val genres: List<String> = emptyList(),
+    val genre: String? = null,
+    val additionalGenres: List<String>? = null,
     val imageLink: String? = null,
+    val type: String? = null,
     val lastEnrichmentDate: Instant? = null,
     val playbackProcessingStatus: ArtistPlaybackProcessingStatus = ArtistPlaybackProcessingStatus.UNDECIDED,
 )
