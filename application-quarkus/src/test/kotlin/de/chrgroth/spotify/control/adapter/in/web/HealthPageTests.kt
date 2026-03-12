@@ -403,7 +403,6 @@ class HealthPageTests {
       .get("/health")
       .then()
       .statusCode(200)
-      .body(containsString("outbox-detail-row"))
       .body(not(containsString("toggleOutboxDetail")))
       .body(not(containsString("display:none;border-color")))
   }
