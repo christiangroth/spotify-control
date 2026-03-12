@@ -1,3 +1,11 @@
+# 0.46.2 (2026.03.12)
+
+## Bugfixes / Chore
+* fix-rate-limiting-issue: Increased Spotify catalog API throttle interval from 5s to 10s to reduce rate limiting during bulk catalog enrichment.
+
+
+---
+
 # 0.46.1 (2026.03.12)
 
 ## Bugfixes / Chore
