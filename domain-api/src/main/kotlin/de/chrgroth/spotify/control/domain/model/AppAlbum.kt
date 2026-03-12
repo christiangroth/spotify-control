@@ -10,7 +10,6 @@ import kotlin.time.Instant
  */
 data class AppAlbum(
     val albumId: String,
-    val albumType: String? = null,
     val totalTracks: Int? = null,
     val albumTitle: String? = null,
     val imageLink: String? = null,
@@ -21,5 +20,6 @@ data class AppAlbum(
     val artistName: String? = null,
     val additionalArtistIds: List<String>? = null,
     val additionalArtistNames: List<String>? = null,
+    val genreOverrides: List<String>? = null,
     val lastEnrichmentDate: Instant? = null,
 )

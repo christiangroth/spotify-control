@@ -142,13 +142,12 @@ class SpotifyCatalogAdapter(
 
     val album = AppAlbum(
       albumId = albumId,
-      albumType = albumNode.get("album_type")?.asText(),
       totalTracks = albumNode.get("total_tracks")?.asInt(),
       albumTitle = albumName,
       imageLink = albumNode.get("images")?.firstOrNull()?.get("url")?.asText(),
       releaseDate = albumNode.get("release_date")?.asText(),
       releaseDatePrecision = albumNode.get("release_date_precision")?.asText(),
-      type = albumNode.get("type")?.asText(),
+      type = albumNode.get("album_type")?.asText(),
       artistId = albumPrimaryArtistId,
       artistName = albumPrimaryArtistName,
       additionalArtistIds = albumAdditionalArtistIds,

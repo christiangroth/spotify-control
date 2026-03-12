@@ -9,7 +9,6 @@ class AppAlbumDocument {
 
     @BsonId
     lateinit var id: String  // Set to albumId value; maps to MongoDB _id
-    var albumType: String? = null
     var totalTracks: Int? = null
     var albumTitle: String? = null
     var imageLink: String? = null
@@ -20,5 +19,6 @@ class AppAlbumDocument {
     var artistName: String? = null
     var additionalArtistIds: List<String>? = null
     var additionalArtistNames: List<String>? = null
+    var genreOverrides: List<String>? = null
     var lastEnrichmentDate: Instant? = null
 }

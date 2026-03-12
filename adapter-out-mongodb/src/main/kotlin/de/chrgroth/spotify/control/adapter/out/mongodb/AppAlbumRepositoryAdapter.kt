@@ -29,7 +29,6 @@ class AppAlbumRepositoryAdapter : AppAlbumRepositoryPort {
                 collection.updateOne(
                     Filters.eq("_id", item.albumId),
                     Updates.combine(
-                        Updates.set("albumType", item.albumType),
                         Updates.set("totalTracks", item.totalTracks),
                         Updates.set("albumTitle", item.albumTitle),
                         Updates.set("imageLink", item.imageLink),
@@ -59,7 +58,6 @@ class AppAlbumRepositoryAdapter : AppAlbumRepositoryPort {
 
     private fun AppAlbumDocument.toDomain() = AppAlbum(
         albumId = id,
-        albumType = albumType,
         totalTracks = totalTracks,
         albumTitle = albumTitle,
         imageLink = imageLink,
@@ -70,6 +68,7 @@ class AppAlbumRepositoryAdapter : AppAlbumRepositoryPort {
         artistName = artistName,
         additionalArtistIds = additionalArtistIds,
         additionalArtistNames = additionalArtistNames,
+        genreOverrides = genreOverrides,
         lastEnrichmentDate = lastEnrichmentDate?.toKotlinInstant(),
     )
 

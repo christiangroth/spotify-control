@@ -16,7 +16,6 @@ class AppAlbumRepositoryTests {
 
     private fun album(suffix: String) = AppAlbum(
         albumId = "album-$suffix-${UUID.randomUUID()}",
-        albumType = "album",
         totalTracks = 10,
         albumTitle = "Album $suffix",
         imageLink = "https://img.example.com/cover-$suffix.jpg",
@@ -39,7 +38,7 @@ class AppAlbumRepositoryTests {
         assertThat(result[0].albumTitle).isEqualTo(item.albumTitle)
         assertThat(result[0].artistId).isEqualTo(item.artistId)
         assertThat(result[0].artistName).isEqualTo(item.artistName)
-        assertThat(result[0].albumType).isEqualTo(item.albumType)
+        assertThat(result[0].type).isEqualTo(item.type)
         assertThat(result[0].totalTracks).isEqualTo(item.totalTracks)
         assertThat(result[0].releaseDate).isEqualTo(item.releaseDate)
         assertThat(result[0].lastEnrichmentDate).isNotNull()
