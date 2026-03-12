@@ -23,15 +23,24 @@ class AppAlbumRepositoryAdapter : AppAlbumRepositoryPort {
         if (items.isEmpty()) return
         val collection = appAlbumDocumentRepository.mongoCollection()
         val upsertOptions = UpdateOptions().upsert(true)
+        val now = java.time.Instant.now()
         mongoQueryMetrics.timed("app_album.upsertAll") {
             items.forEach { item ->
                 collection.updateOne(
                     Filters.eq("_id", item.albumId),
                     Updates.combine(
-                        Updates.setOnInsert("albumTitle", item.albumTitle),
-                        Updates.setOnInsert("imageLink", item.imageLink),
-                        Updates.setOnInsert("genres", item.genres),
-                        Updates.setOnInsert("artistId", item.artistId),
+                        Updates.set("albumType", item.albumType),
+                        Updates.set("totalTracks", item.totalTracks),
+                        Updates.set("albumTitle", item.albumTitle),
+                        Updates.set("imageLink", item.imageLink),
+                        Updates.set("releaseDate", item.releaseDate),
+                        Updates.set("releaseDatePrecision", item.releaseDatePrecision),
+                        Updates.set("type", item.type),
+                        Updates.set("artistId", item.artistId),
+                        Updates.set("artistName", item.artistName),
+                        Updates.set("additionalArtistIds", item.additionalArtistIds),
+                        Updates.set("additionalArtistNames", item.additionalArtistNames),
+                        Updates.set("lastEnrichmentDate", now),
                     ),
                     upsertOptions,
                 )
@@ -48,28 +57,19 @@ class AppAlbumRepositoryAdapter : AppAlbumRepositoryPort {
         }
     }
 
-    override fun updateEnrichmentData(albumId: String, albumTitle: String?, imageLink: String?, genres: List<String>, artistId: String?) {
-        val now = java.time.Instant.now()
-        mongoQueryMetrics.timed("app_album.updateEnrichmentData") {
-            appAlbumDocumentRepository.mongoCollection().updateOne(
-                Filters.eq("_id", albumId),
-                Updates.combine(
-                    Updates.set("albumTitle", albumTitle),
-                    Updates.set("imageLink", imageLink),
-                    Updates.set("genres", genres),
-                    Updates.set("artistId", artistId),
-                    Updates.set("lastEnrichmentDate", now),
-                ),
-            )
-        }
-    }
-
     private fun AppAlbumDocument.toDomain() = AppAlbum(
         albumId = id,
+        albumType = albumType,
+        totalTracks = totalTracks,
         albumTitle = albumTitle,
         imageLink = imageLink,
-        genres = genres,
+        releaseDate = releaseDate,
+        releaseDatePrecision = releaseDatePrecision,
+        type = type,
         artistId = artistId,
+        artistName = artistName,
+        additionalArtistIds = additionalArtistIds,
+        additionalArtistNames = additionalArtistNames,
         lastEnrichmentDate = lastEnrichmentDate?.toKotlinInstant(),
     )
 

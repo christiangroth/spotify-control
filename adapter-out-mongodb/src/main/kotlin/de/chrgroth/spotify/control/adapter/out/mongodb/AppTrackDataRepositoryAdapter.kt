@@ -54,13 +54,21 @@ class AppTrackRepositoryAdapter : AppTrackRepositoryPort {
             appTrackDocumentRepository.list("artistId = ?1", artistId).map { it.toDomain() }
         }
 
-    override fun updateAlbumId(trackId: String, albumId: String) {
+    override fun updateTrackEnrichmentData(track: AppTrack) {
         val now = java.time.Instant.now()
-        mongoQueryMetrics.timed("app_track.updateAlbumId") {
+        mongoQueryMetrics.timed("app_track.updateTrackEnrichmentData") {
             appTrackDocumentRepository.mongoCollection().updateOne(
-                Filters.eq("_id", trackId),
+                Filters.eq("_id", track.trackId),
                 Updates.combine(
-                    Updates.set("albumId", albumId),
+                    Updates.set("albumId", track.albumId),
+                    Updates.set("albumName", track.albumName),
+                    Updates.set("artistName", track.artistName),
+                    Updates.set("additionalArtistIds", track.additionalArtistIds),
+                    Updates.set("additionalArtistNames", track.additionalArtistNames),
+                    Updates.set("discNumber", track.discNumber),
+                    Updates.set("durationMs", track.durationMs),
+                    Updates.set("trackNumber", track.trackNumber),
+                    Updates.set("type", track.type),
                     Updates.set("lastEnrichmentDate", now),
                 ),
             )
@@ -71,8 +79,15 @@ class AppTrackRepositoryAdapter : AppTrackRepositoryPort {
         trackId = id,
         trackTitle = trackTitle,
         albumId = albumId,
+        albumName = albumName,
         artistId = artistId,
+        artistName = artistName,
         additionalArtistIds = additionalArtistIds,
+        additionalArtistNames = additionalArtistNames,
+        discNumber = discNumber,
+        durationMs = durationMs,
+        trackNumber = trackNumber,
+        type = type,
         lastEnrichmentDate = lastEnrichmentDate?.toKotlinInstant(),
     )
 

@@ -11,15 +11,13 @@ import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
 
 /**
- * Shared service that upserts app_artist and app_track stubs then enqueues the full
- * three-stage enrichment pipeline on the throttled `to-spotify` outbox partition:
+ * Shared service that upserts app_artist and app_track stubs then enqueues the enrichment
+ * pipeline on the throttled `to-spotify` outbox partition:
  *
  * 1. [DomainOutboxEvent.EnrichArtistDetails] — one per artist
- * 2. [DomainOutboxEvent.EnrichTrackDetails]  — one per track; auto-chains to EnrichAlbumDetails
- *    when the albumId is fetched from Spotify
- * 3. [DomainOutboxEvent.EnrichAlbumDetails]  — one per albumId that is already known in
- *    app_track; needed because EnrichTrackDetails is skipped for pre-enriched tracks, so
- *    album enrichment would otherwise be missed for those tracks.
+ * 2. [DomainOutboxEvent.EnrichTrackDetails]  — one per track; fetches full track details,
+ *    updates app_track with all fields, upserts app_album, and enqueues EnrichArtistDetails
+ *    for all track artists.
  *
  * All enrichment handlers implement "skip if already enriched" so duplicate events are harmless.
  */
@@ -41,18 +39,6 @@ class AppEnrichmentService(
         appTrackRepository.upsertAll(tracks)
         tracks.forEach { track ->
             outboxPort.enqueue(DomainOutboxEvent.EnrichTrackDetails(track.trackId, userId))
-        }
-
-        // EnrichTrackDetails is skipped when albumId is already populated.  For those tracks the
-        // album enrichment must be triggered directly so previously-synced albums are not missed.
-        if (tracks.isNotEmpty()) {
-            val trackIds = tracks.map { it.trackId }.toSet()
-            appTrackRepository.findByTrackIds(trackIds)
-                .mapNotNull { it.albumId }
-                .forEach { albumId ->
-                    logger.debug { "Enqueueing EnrichAlbumDetails for already-known album $albumId (user ${userId.value})" }
-                    outboxPort.enqueue(DomainOutboxEvent.EnrichAlbumDetails(albumId, userId))
-                }
         }
     }
 

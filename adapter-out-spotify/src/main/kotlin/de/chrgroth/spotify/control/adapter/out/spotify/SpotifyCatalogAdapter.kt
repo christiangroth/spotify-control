@@ -10,6 +10,8 @@ import de.chrgroth.spotify.control.domain.error.EnrichmentError
 import de.chrgroth.spotify.control.domain.model.AccessToken
 import de.chrgroth.spotify.control.domain.model.AppAlbum
 import de.chrgroth.spotify.control.domain.model.AppArtist
+import de.chrgroth.spotify.control.domain.model.AppTrack
+import de.chrgroth.spotify.control.domain.model.TrackSyncResult
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
 import de.chrgroth.spotify.control.domain.port.out.SpotifyCatalogPort
@@ -68,7 +70,7 @@ class SpotifyCatalogAdapter(
     userId: UserId,
     accessToken: AccessToken,
     trackId: String,
-  ): Either<DomainError, String?> {
+  ): Either<DomainError, TrackSyncResult?> {
     return try {
       throttler.throttle(DomainOutboxPartition.ToSpotify.key)
       val request = HttpRequest.newBuilder()
@@ -81,51 +83,79 @@ class SpotifyCatalogAdapter(
       }
       val errorResult = response.checkRateLimitOrError(logger, EnrichmentError.TRACK_DETAILS_FETCH_FAILED)
       if (errorResult != null) return errorResult
-      parseAlbumId(objectMapper.readTree(response.body())).right()
+      parseTrackSyncResult(objectMapper.readTree(response.body())).right()
     } catch (e: Exception) {
       logger.error(e) { "Unexpected error fetching track details for track $trackId (user ${userId.value})" }
       EnrichmentError.TRACK_DETAILS_FETCH_FAILED.left()
     }
   }
 
-  private fun parseAlbumId(json: JsonNode): String? {
+  private fun parseTrackSyncResult(json: JsonNode): TrackSyncResult? {
     if (json.isNull || !json.has("id")) return null
-    return json.get("album")?.get("id")?.asText()
-  }
 
-  override fun getAlbum(
-    userId: UserId,
-    accessToken: AccessToken,
-    albumId: String,
-  ): Either<DomainError, AppAlbum?> {
-    return try {
-      throttler.throttle(DomainOutboxPartition.ToSpotify.key)
-      val request = HttpRequest.newBuilder()
-        .uri(URI.create("$apiBaseUrl/v1/albums/$albumId"))
-        .header("Authorization", "Bearer ${accessToken.value}")
-        .GET()
-        .build()
-      val response = httpMetrics.timed("/v1/albums/{id}") {
-        httpClient.send(request, HttpResponse.BodyHandlers.ofString())
-      }
-      val errorResult = response.checkRateLimitOrError(logger, EnrichmentError.ALBUM_DETAILS_FETCH_FAILED)
-      if (errorResult != null) return errorResult
-      parseAlbumDetails(objectMapper.readTree(response.body())).right()
-    } catch (e: Exception) {
-      logger.error(e) { "Unexpected error fetching album details for album $albumId (user ${userId.value})" }
-      EnrichmentError.ALBUM_DETAILS_FETCH_FAILED.left()
+    val artists = json.get("artists")
+    val primaryArtistId = artists?.firstOrNull()?.get("id")?.asText() ?: return null
+    val primaryArtistName = artists.firstOrNull()?.get("name")?.asText()
+    val additionalArtistIds = if (artists != null && artists.size() > 1) {
+      (1 until artists.size()).map { artists.get(it).get("id").asText() }
+    } else {
+      null
     }
-  }
+    val additionalArtistNames = if (artists != null && artists.size() > 1) {
+      (1 until artists.size()).map { artists.get(it).get("name").asText() }
+    } else {
+      null
+    }
 
-  private fun parseAlbumDetails(json: JsonNode): AppAlbum? {
-    if (json.isNull || !json.has("id")) return null
-    return AppAlbum(
-      albumId = json.get("id").asText(),
-      albumTitle = json.get("name")?.asText(),
-      imageLink = json.get("images")?.firstOrNull()?.get("url")?.asText(),
-      genres = json.get("genres")?.map { it.asText() } ?: emptyList(),
-      artistId = json.get("artists")?.firstOrNull()?.get("id")?.asText(),
+    val albumNode = json.get("album")
+    val albumId = albumNode?.get("id")?.asText() ?: return null
+    val albumName = albumNode.get("name")?.asText()
+
+    val track = AppTrack(
+      trackId = json.get("id").asText(),
+      trackTitle = json.get("name")?.asText() ?: "",
+      albumId = albumId,
+      albumName = albumName,
+      artistId = primaryArtistId,
+      artistName = primaryArtistName,
+      additionalArtistIds = additionalArtistIds ?: emptyList(),
+      additionalArtistNames = additionalArtistNames,
+      discNumber = json.get("disc_number")?.asInt(),
+      durationMs = json.get("duration_ms")?.asLong(),
+      trackNumber = json.get("track_number")?.asInt(),
+      type = json.get("type")?.asText(),
     )
+
+    val albumArtists = albumNode.get("artists")
+    val albumPrimaryArtistId = albumArtists?.firstOrNull()?.get("id")?.asText()
+    val albumPrimaryArtistName = albumArtists?.firstOrNull()?.get("name")?.asText()
+    val albumAdditionalArtistIds = if (albumArtists != null && albumArtists.size() > 1) {
+      (1 until albumArtists.size()).map { albumArtists.get(it).get("id").asText() }
+    } else {
+      null
+    }
+    val albumAdditionalArtistNames = if (albumArtists != null && albumArtists.size() > 1) {
+      (1 until albumArtists.size()).map { albumArtists.get(it).get("name").asText() }
+    } else {
+      null
+    }
+
+    val album = AppAlbum(
+      albumId = albumId,
+      albumType = albumNode.get("album_type")?.asText(),
+      totalTracks = albumNode.get("total_tracks")?.asInt(),
+      albumTitle = albumName,
+      imageLink = albumNode.get("images")?.firstOrNull()?.get("url")?.asText(),
+      releaseDate = albumNode.get("release_date")?.asText(),
+      releaseDatePrecision = albumNode.get("release_date_precision")?.asText(),
+      type = albumNode.get("type")?.asText(),
+      artistId = albumPrimaryArtistId,
+      artistName = albumPrimaryArtistName,
+      additionalArtistIds = albumAdditionalArtistIds,
+      additionalArtistNames = albumAdditionalArtistNames,
+    )
+
+    return TrackSyncResult(track = track, album = album)
   }
 
     companion object : KLogging()

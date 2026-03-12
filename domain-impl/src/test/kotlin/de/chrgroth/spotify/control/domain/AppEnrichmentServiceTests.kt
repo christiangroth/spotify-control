@@ -12,7 +12,6 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.verify
-import io.mockk.verifyOrder
 import org.junit.jupiter.api.Test
 
 class AppEnrichmentServiceTests {
@@ -41,7 +40,6 @@ class AppEnrichmentServiceTests {
     fun `upserts artists and enqueues EnrichArtistDetails`() {
         every { appArtistRepository.upsertAll(any()) } just runs
         every { appTrackRepository.upsertAll(any()) } just runs
-        every { appTrackRepository.findByTrackIds(any()) } returns emptyList()
         every { outboxPort.enqueue(any()) } just runs
 
         service.upsertAndEnqueueEnrichment(listOf(artist1), emptyList(), userId)
@@ -54,7 +52,6 @@ class AppEnrichmentServiceTests {
     fun `upserts tracks and enqueues EnrichTrackDetails`() {
         every { appArtistRepository.upsertAll(any()) } just runs
         every { appTrackRepository.upsertAll(any()) } just runs
-        every { appTrackRepository.findByTrackIds(setOf("track-1")) } returns listOf(track1)
         every { outboxPort.enqueue(any()) } just runs
 
         service.upsertAndEnqueueEnrichment(emptyList(), listOf(track1), userId)
@@ -64,43 +61,27 @@ class AppEnrichmentServiceTests {
     }
 
     @Test
-    fun `enqueues EnrichAlbumDetails for tracks that already have albumId`() {
+    fun `does not enqueue EnrichAlbumDetails even when track has albumId`() {
         val trackWithAlbum = track1.copy(albumId = "album-1")
         every { appArtistRepository.upsertAll(any()) } just runs
         every { appTrackRepository.upsertAll(any()) } just runs
-        every { appTrackRepository.findByTrackIds(setOf("track-1")) } returns listOf(trackWithAlbum)
         every { outboxPort.enqueue(any()) } just runs
 
-        service.upsertAndEnqueueEnrichment(emptyList(), listOf(track1), userId)
+        service.upsertAndEnqueueEnrichment(emptyList(), listOf(trackWithAlbum), userId)
 
         verify { outboxPort.enqueue(DomainOutboxEvent.EnrichTrackDetails("track-1", userId)) }
-        verify { outboxPort.enqueue(DomainOutboxEvent.EnrichAlbumDetails("album-1", userId)) }
+        verify(exactly = 0) { outboxPort.enqueue(match { it.key == "EnrichAlbumDetails" }) }
     }
 
     @Test
-    fun `does not enqueue EnrichAlbumDetails when track has no albumId`() {
+    fun `enqueues both artist and track enrichment events`() {
         every { appArtistRepository.upsertAll(any()) } just runs
         every { appTrackRepository.upsertAll(any()) } just runs
-        every { appTrackRepository.findByTrackIds(setOf("track-1")) } returns listOf(track1)
-        every { outboxPort.enqueue(any()) } just runs
-
-        service.upsertAndEnqueueEnrichment(emptyList(), listOf(track1), userId)
-
-        verify(exactly = 0) { outboxPort.enqueue(match { it is DomainOutboxEvent.EnrichAlbumDetails }) }
-    }
-
-    @Test
-    fun `enqueues all three enrichment event types when track has albumId`() {
-        val trackWithAlbum = track1.copy(albumId = "album-1")
-        every { appArtistRepository.upsertAll(any()) } just runs
-        every { appTrackRepository.upsertAll(any()) } just runs
-        every { appTrackRepository.findByTrackIds(setOf("track-1")) } returns listOf(trackWithAlbum)
         every { outboxPort.enqueue(any()) } just runs
 
         service.upsertAndEnqueueEnrichment(listOf(artist1), listOf(track1), userId)
 
         verify { outboxPort.enqueue(DomainOutboxEvent.EnrichArtistDetails("artist-1", userId)) }
         verify { outboxPort.enqueue(DomainOutboxEvent.EnrichTrackDetails("track-1", userId)) }
-        verify { outboxPort.enqueue(DomainOutboxEvent.EnrichAlbumDetails("album-1", userId)) }
     }
 }

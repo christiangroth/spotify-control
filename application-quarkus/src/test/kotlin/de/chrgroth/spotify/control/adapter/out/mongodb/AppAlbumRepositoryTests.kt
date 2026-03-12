@@ -14,7 +14,18 @@ class AppAlbumRepositoryTests {
     @Inject
     lateinit var appAlbumRepository: AppAlbumRepositoryPort
 
-    private fun album(suffix: String) = AppAlbum(albumId = "album-$suffix-${UUID.randomUUID()}")
+    private fun album(suffix: String) = AppAlbum(
+        albumId = "album-$suffix-${UUID.randomUUID()}",
+        albumType = "album",
+        totalTracks = 10,
+        albumTitle = "Album $suffix",
+        imageLink = "https://img.example.com/cover-$suffix.jpg",
+        releaseDate = "2023-01-01",
+        releaseDatePrecision = "day",
+        type = "album",
+        artistId = "artist-$suffix",
+        artistName = "Artist $suffix",
+    )
 
     @Test
     fun `upsertAll persists new items and findByAlbumIds returns them`() {
@@ -25,35 +36,44 @@ class AppAlbumRepositoryTests {
 
         assertThat(result).hasSize(1)
         assertThat(result[0].albumId).isEqualTo(item.albumId)
+        assertThat(result[0].albumTitle).isEqualTo(item.albumTitle)
+        assertThat(result[0].artistId).isEqualTo(item.artistId)
+        assertThat(result[0].artistName).isEqualTo(item.artistName)
+        assertThat(result[0].albumType).isEqualTo(item.albumType)
+        assertThat(result[0].totalTracks).isEqualTo(item.totalTracks)
+        assertThat(result[0].releaseDate).isEqualTo(item.releaseDate)
+        assertThat(result[0].lastEnrichmentDate).isNotNull()
     }
 
     @Test
-    fun `upsertAll does not overwrite existing enriched fields`() {
-        val albumId = "album-nooverwrite-${UUID.randomUUID()}"
-        appAlbumRepository.upsertAll(listOf(AppAlbum(albumId = albumId)))
-        appAlbumRepository.updateEnrichmentData(albumId, "Original Title", null, emptyList(), null)
+    fun `upsertAll overwrites existing fields on re-upsert`() {
+        val albumId = "album-overwrite-${UUID.randomUUID()}"
+        appAlbumRepository.upsertAll(listOf(AppAlbum(albumId = albumId, albumTitle = "Original Title")))
 
-        // Second upsertAll should not overwrite albumTitle already set by enrichment
-        appAlbumRepository.upsertAll(listOf(AppAlbum(albumId = albumId)))
+        appAlbumRepository.upsertAll(listOf(AppAlbum(albumId = albumId, albumTitle = "Updated Title")))
 
         val result = appAlbumRepository.findByAlbumIds(setOf(albumId))
         assertThat(result).hasSize(1)
-        assertThat(result[0].albumTitle).isEqualTo("Original Title")
+        assertThat(result[0].albumTitle).isEqualTo("Updated Title")
     }
 
     @Test
-    fun `updateEnrichmentData updates all enrichment fields`() {
-        val item = album("enrich")
+    fun `upsertAll persists additional artist fields`() {
+        val albumId = "album-multi-artist-${UUID.randomUUID()}"
+        val item = AppAlbum(
+            albumId = albumId,
+            albumTitle = "Collab Album",
+            artistId = "artist-1",
+            artistName = "Artist One",
+            additionalArtistIds = listOf("artist-2"),
+            additionalArtistNames = listOf("Artist Two"),
+        )
         appAlbumRepository.upsertAll(listOf(item))
 
-        appAlbumRepository.updateEnrichmentData(item.albumId, "Title", "https://img.example.com/cover.jpg", listOf("Rock"), "artist-1")
-
-        val result = appAlbumRepository.findByAlbumIds(setOf(item.albumId))
+        val result = appAlbumRepository.findByAlbumIds(setOf(albumId))
         assertThat(result).hasSize(1)
-        assertThat(result[0].albumTitle).isEqualTo("Title")
-        assertThat(result[0].imageLink).isEqualTo("https://img.example.com/cover.jpg")
-        assertThat(result[0].genres).containsExactly("Rock")
-        assertThat(result[0].artistId).isEqualTo("artist-1")
+        assertThat(result[0].additionalArtistIds).containsExactly("artist-2")
+        assertThat(result[0].additionalArtistNames).containsExactly("Artist Two")
     }
 
     @Test
