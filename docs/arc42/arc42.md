@@ -8,7 +8,7 @@ spotify-control is a private Spotify playlist manager for a small, allow-listed 
 
 **Implemented features:**
 
-1. **Playback Tracking** – Spotify `recently_played` and `currently_playing` are polled regularly and stored. Partial plays (tracks not played to completion) are detected via observation sessions and stored separately.
+1. **Playback Tracking** – Spotify `recently_played` and `currently_playing` are polled regularly and stored. Partial plays (tracks not played to completion) are detected via observation sessions and written directly to `app_playback`.
 
 2. **Playlist Mirror** – Local copy of selected Spotify playlists. Sync is driven by snapshot IDs – a full track sync is only performed when Spotify reports a change.
 
@@ -123,7 +123,6 @@ Implements all repository interfaces defined in `domain-api`. Manages the MongoD
 | `spotify_currently_playing`       | Currently playing track observations per user.                                                                                  |
 | `spotify_playlist`                | Full playlist data including all tracks.                                                                                        |
 | `spotify_playlist_metadata`       | Playlist metadata: name, snapshot ID, sync status.                                                                              |
-| `spotify_recently_partial_played` | Partial play events (plays that did not complete a full track).                                                                 |
 | `spotify_recently_played`         | Raw recently played track events (append-only).                                                                                 |
 | `starters`                        | One-time startup bean execution state (managed by `de.chrgroth.quarkus.starters`).                                             |
 
@@ -187,7 +186,7 @@ CurrentlyPlayingFetchJob (every 20s)
 RecentlyPlayedFetchJob (every 10min)
     → enqueue FetchRecentlyPlayed (to-spotify-playback partition, per user)
     → Spotify GET /v1/me/player/recently-played → new items stored in spotify_recently_played
-    → convert partial plays → new items stored in spotify_recently_partial_played
+    → convert partial plays → new items stored directly in app_playback
     → if any new data: enqueue AppendPlaybackData (domain partition)
 ```
 
@@ -199,11 +198,11 @@ The `spotify_currently_playing` collection accumulates observations of what the 
 - It is not the most recently observed non-completed session (which may still be active).
 - The maximum observed progress exceeds the configured minimum (default: 25 seconds).
 
-For each convertible session, a `RecentlyPartialPlayedItem` is created with the observed play duration and written to `spotify_recently_partial_played`. Converted and completed track observations are then deleted from `spotify_currently_playing`.
+For each convertible session, an `AppPlaybackItem` is created with the observed play duration and written directly to `app_playback`. Artist and track metadata are upserted into `app_artist` and `app_track`, and enrichment events are enqueued. Converted and completed track observations are then deleted from `spotify_currently_playing`.
 
 ## Playback Data Processing Flow
 
-Raw playback data from `spotify_recently_played` and `spotify_recently_partial_played` is processed into the normalised `app_*` collections by `PlaybackDataAdapter`. There are two modes:
+Raw playback data from `spotify_recently_played` is processed into the normalised `app_*` collections by `PlaybackDataAdapter`. There are two modes:
 
 **Append (triggered automatically):** After new raw data arrives, `AppendPlaybackData` is enqueued on the `domain` partition. The adapter first loads all artists with `INACTIVE` playback processing status, then filters raw playback items to skip tracks whose primary artist is inactive. For remaining items it fetches all source items newer than the most recent `app_playback` entry for the user, deduplicates against existing `app_playback` timestamps, then:
 1. Upserts artist metadata into `app_artist` (artistId, artistName) — enriched genres and imageLink are preserved on re-encounter.

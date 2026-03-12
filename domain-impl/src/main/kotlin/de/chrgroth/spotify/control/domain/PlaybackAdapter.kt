@@ -11,7 +11,6 @@ import de.chrgroth.spotify.control.domain.model.AppPlaybackItem
 import de.chrgroth.spotify.control.domain.model.AppTrack
 import de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus
 import de.chrgroth.spotify.control.domain.model.CurrentlyPlayingItem
-import de.chrgroth.spotify.control.domain.model.RecentlyPartialPlayedItem
 import de.chrgroth.spotify.control.domain.model.RecentlyPlayedItem
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
@@ -22,7 +21,6 @@ import de.chrgroth.spotify.control.domain.port.out.CurrentlyPlayingRepositoryPor
 import de.chrgroth.spotify.control.domain.port.out.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.PlaybackStatePort
-import de.chrgroth.spotify.control.domain.port.out.RecentlyPartialPlayedRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.RecentlyPlayedRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyPlaybackPort
@@ -39,7 +37,6 @@ class PlaybackAdapter(
     private val spotifyPlayback: SpotifyPlaybackPort,
     private val currentlyPlayingRepository: CurrentlyPlayingRepositoryPort,
     private val recentlyPlayedRepository: RecentlyPlayedRepositoryPort,
-    private val recentlyPartialPlayedRepository: RecentlyPartialPlayedRepositoryPort,
     private val appPlaybackRepository: AppPlaybackRepositoryPort,
     private val appArtistRepository: AppArtistRepositoryPort,
     private val outboxPort: OutboxPort,
@@ -127,7 +124,11 @@ class PlaybackAdapter(
     }
 
     val newComputedCount = if (convertibleSessions.isNotEmpty()) {
-      val partialItems = convertibleSessions.map { session ->
+      val inactiveArtistIds = appArtistRepository.findByPlaybackProcessingStatus(ArtistPlaybackProcessingStatus.INACTIVE)
+        .map { it.artistId }
+        .toSet()
+
+      val playbackItems = convertibleSessions.mapNotNull { session ->
         val firstObservedAt = session.items.minOf { it.observedAt }
         val lastObservedAtForSession = session.items.maxOf { it.observedAt }
         val nextItem = sortedItems.firstOrNull { it.observedAt > lastObservedAtForSession && it.trackId != session.trackId }
@@ -137,23 +138,38 @@ class PlaybackAdapter(
           session.items.maxOf { it.progressMs }
         }
         val representative = session.items.maxBy { it.progressMs }
-        RecentlyPartialPlayedItem(
-          spotifyUserId = userId,
-          trackId = session.trackId,
-          trackName = representative.trackName,
-          artistIds = representative.artistIds,
-          artistNames = representative.artistNames,
+        if (representative.artistIds.firstOrNull() in inactiveArtistIds) return@mapNotNull null
+        AppPlaybackItem(
+          userId = userId,
           playedAt = firstObservedAt,
-          playedSeconds = playedMs / MS_PER_SECOND,
+          trackId = session.trackId,
+          secondsPlayed = playedMs / MS_PER_SECOND,
         )
       }
-      val existingPlayedAts = recentlyPartialPlayedRepository.findExistingPlayedAts(userId, partialItems.map { it.playedAt }.toSet())
-      val newPartial = partialItems.filter { it.playedAt !in existingPlayedAts }
-      if (newPartial.isNotEmpty()) {
-        logger.info { "Persisting ${newPartial.size} recently partial played items for user: ${userId.value}" }
-        recentlyPartialPlayedRepository.saveAll(newPartial)
+
+      val existingPlayedAts = appPlaybackRepository.findExistingPlayedAts(userId, playbackItems.map { it.playedAt }.toSet())
+      val newItems = playbackItems.filter { it.playedAt !in existingPlayedAts }
+      if (newItems.isNotEmpty()) {
+        logger.info { "Persisting ${newItems.size} partial play items to app_playback for user: ${userId.value}" }
+        appPlaybackRepository.saveAll(newItems)
+
+        val artists = convertibleSessions.flatMap { session ->
+          val representative = session.items.maxBy { it.progressMs }
+          representative.artistIds.mapIndexedNotNull { index, artistId ->
+            val name = representative.artistNames.getOrNull(index) ?: return@mapIndexedNotNull null
+            AppArtist(artistId = artistId, artistName = name)
+          }
+        }.distinctBy { it.artistId }
+
+        val tracks = convertibleSessions.mapNotNull { session ->
+          val representative = session.items.maxBy { it.progressMs }
+          val artistId = representative.artistIds.firstOrNull() ?: return@mapNotNull null
+          AppTrack(trackId = session.trackId, trackTitle = representative.trackName, artistId = artistId, additionalArtistIds = representative.artistIds.drop(1))
+        }.distinctBy { it.trackId }
+
+        appEnrichmentService.upsertAndEnqueueEnrichment(artists, tracks, userId)
       }
-      newPartial.size
+      newItems.size
     } else {
       0
     }
@@ -196,18 +212,26 @@ class PlaybackAdapter(
 
     override fun appendPlaybackData(userId: UserId) {
         logger.info { "Appending playback data for user: ${userId.value}" }
-        val since = appPlaybackRepository.findMostRecentPlayedAt(userId)
-        val recentlyPlayed = recentlyPlayedRepository.findSince(userId, since)
-        val partialPlayed = recentlyPartialPlayedRepository.findSince(userId, since)
+        // Use null as since to load all recently played items: partial plays are now written
+        // directly to app_playback with firstObservedAt as playedAt, which can be newer than
+        // recently played playedAt timestamps. Using appPlaybackRepository.findMostRecentPlayedAt()
+        // would skip recently played items older than the most recent partial play.
+        val recentlyPlayed = recentlyPlayedRepository.findSince(userId, null)
 
         val inactiveArtistIds = appArtistRepository.findByPlaybackProcessingStatus(ArtistPlaybackProcessingStatus.INACTIVE)
             .map { it.artistId }
             .toSet()
 
         val filteredRecentlyPlayed = recentlyPlayed.filter { it.artistIds.firstOrNull() !in inactiveArtistIds }
-        val filteredPartialPlayed = partialPlayed.filter { it.artistIds.firstOrNull() !in inactiveArtistIds }
 
-        val allPlaybackItems = buildPlaybackItems(filteredRecentlyPlayed, filteredPartialPlayed)
+        val allPlaybackItems = filteredRecentlyPlayed.map { item ->
+            AppPlaybackItem(
+                userId = item.spotifyUserId,
+                playedAt = item.playedAt,
+                trackId = item.trackId,
+                secondsPlayed = 0L,
+            )
+        }
         if (allPlaybackItems.isEmpty()) {
             logger.info { "No new playback items to append for user: ${userId.value}" }
             return
@@ -223,59 +247,23 @@ class PlaybackAdapter(
             return
         }
 
-        val artists = buildArtists(filteredRecentlyPlayed, filteredPartialPlayed)
-        val tracks = buildTracks(filteredRecentlyPlayed, filteredPartialPlayed)
+        val artists = filteredRecentlyPlayed.flatMap { item ->
+            item.artistIds.mapIndexedNotNull { index, artistId ->
+                val name = item.artistNames.getOrNull(index) ?: return@mapIndexedNotNull null
+                AppArtist(artistId = artistId, artistName = name)
+            }
+        }.distinctBy { it.artistId }
+
+        val tracks = filteredRecentlyPlayed.mapNotNull { item ->
+            val artistId = item.artistIds.firstOrNull() ?: return@mapNotNull null
+            AppTrack(trackId = item.trackId, trackTitle = item.trackName, artistId = artistId, additionalArtistIds = item.artistIds.drop(1))
+        }.distinctBy { it.trackId }
 
         logger.info { "Persisting ${newPlaybackItems.size} new app_playback items for user: ${userId.value}" }
         appPlaybackRepository.saveAll(newPlaybackItems)
 
         appEnrichmentService.upsertAndEnqueueEnrichment(artists, tracks, userId)
     }
-
-    private fun buildPlaybackItems(
-        recentlyPlayed: List<RecentlyPlayedItem>,
-        partialPlayed: List<RecentlyPartialPlayedItem>,
-    ) = recentlyPlayed.map { item ->
-        AppPlaybackItem(
-            userId = item.spotifyUserId,
-            playedAt = item.playedAt,
-            trackId = item.trackId,
-            secondsPlayed = 0L, // Spotify recently played API does not include play duration
-        )
-    } + partialPlayed.map { item ->
-        AppPlaybackItem(
-            userId = item.spotifyUserId,
-            playedAt = item.playedAt,
-            trackId = item.trackId,
-            secondsPlayed = item.playedSeconds,
-        )
-    }
-
-    private fun buildArtists(
-        recentlyPlayed: List<RecentlyPlayedItem>,
-        partialPlayed: List<RecentlyPartialPlayedItem>,
-    ) = (recentlyPlayed.flatMap { item ->
-        item.artistIds.mapIndexedNotNull { index, artistId ->
-            val name = item.artistNames.getOrNull(index) ?: return@mapIndexedNotNull null
-            AppArtist(artistId = artistId, artistName = name)
-        }
-    } + partialPlayed.flatMap { item ->
-        item.artistIds.mapIndexedNotNull { index, artistId ->
-            val name = item.artistNames.getOrNull(index) ?: return@mapIndexedNotNull null
-            AppArtist(artistId = artistId, artistName = name)
-        }
-    }).distinctBy { it.artistId }
-
-    private fun buildTracks(
-        recentlyPlayed: List<RecentlyPlayedItem>,
-        partialPlayed: List<RecentlyPartialPlayedItem>,
-    ) = (recentlyPlayed.mapNotNull { item ->
-        val artistId = item.artistIds.firstOrNull() ?: return@mapNotNull null
-        AppTrack(trackId = item.trackId, trackTitle = item.trackName, artistId = artistId, additionalArtistIds = item.artistIds.drop(1))
-    } + partialPlayed.mapNotNull { item ->
-        val artistId = item.artistIds.firstOrNull() ?: return@mapNotNull null
-        AppTrack(trackId = item.trackId, trackTitle = item.trackName, artistId = artistId, additionalArtistIds = item.artistIds.drop(1))
-    }).distinctBy { it.trackId }
 
     // --- Outbox Handlers ---
 

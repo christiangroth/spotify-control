@@ -19,9 +19,6 @@ class MongoIndexInitializer {
     lateinit var currentlyPlayingDocumentRepository: SpotifyCurrentlyPlayingDocumentRepository
 
     @Inject
-    lateinit var recentlyPartialPlayedDocumentRepository: SpotifyRecentlyPartialPlayedDocumentRepository
-
-    @Inject
     lateinit var appPlaybackDocumentRepository: AppPlaybackDocumentRepository
 
     @Inject
@@ -44,11 +41,6 @@ class MongoIndexInitializer {
         currentlyPlayingDocumentRepository.mongoCollection().createIndex(
             Document("spotifyUserId", 1).append("trackId", 1).append("observedAt", 1),
             IndexOptions().name("spotifyUserId_1_trackId_1_observedAt_1"),
-        )
-
-        recentlyPartialPlayedDocumentRepository.mongoCollection().createIndex(
-            Document("spotifyUserId", 1).append("playedAt", 1),
-            IndexOptions().name("rpp_spotifyUserId_1_playedAt_1"),
         )
 
         appPlaybackDocumentRepository.mongoCollection().createIndex(
