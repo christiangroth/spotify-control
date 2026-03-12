@@ -138,7 +138,8 @@ class DashboardAdapter(
 
         val secondsByGenre = mutableMapOf<String, Long>()
         for ((artistId, seconds) in secondsByArtistId) {
-            val genres = statsArtistMap[artistId]?.genres ?: emptyList()
+            val artist = statsArtistMap[artistId]
+            val genres = listOfNotNull(artist?.genre) + (artist?.additionalGenres ?: emptyList())
             for (genre in genres) {
                 secondsByGenre.merge(genre, seconds, Long::plus)
             }

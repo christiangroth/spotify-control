@@ -30,8 +30,10 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
                     Filters.eq("_id", item.artistId),
                     Updates.combine(
                         Updates.set("artistName", item.artistName),
-                        Updates.setOnInsert("genres", item.genres),
+                        Updates.setOnInsert("genre", item.genre),
+                        Updates.setOnInsert("additionalGenres", item.additionalGenres),
                         Updates.setOnInsert("imageLink", item.imageLink),
+                        Updates.setOnInsert("type", item.type),
                         Updates.setOnInsert("playbackProcessingStatus", item.playbackProcessingStatus.name),
                     ),
                     upsertOptions,
@@ -76,15 +78,17 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
                 .map { it.toDomain() }
         }
 
-    override fun updateEnrichmentData(artistId: String, artistName: String, genres: List<String>, imageLink: String?) {
+    override fun updateEnrichmentData(artistId: String, artistName: String, genre: String?, additionalGenres: List<String>?, imageLink: String?, type: String?) {
         val now = java.time.Instant.now()
         mongoQueryMetrics.timed("app_artist.updateEnrichmentData") {
             appArtistDocumentRepository.mongoCollection().updateOne(
                 Filters.eq("_id", artistId),
                 Updates.combine(
                     Updates.set("artistName", artistName),
-                    Updates.set("genres", genres),
+                    Updates.set("genre", genre),
+                    Updates.set("additionalGenres", additionalGenres),
                     Updates.set("imageLink", imageLink),
+                    Updates.set("type", type),
                     Updates.set("lastEnrichmentDate", now),
                 ),
             )
@@ -103,8 +107,10 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
     private fun AppArtistDocument.toDomain() = AppArtist(
         artistId = id,
         artistName = artistName,
-        genres = genres,
+        genre = genre,
+        additionalGenres = additionalGenres,
         imageLink = imageLink,
+        type = type,
         lastEnrichmentDate = lastEnrichmentDate?.toKotlinInstant(),
         playbackProcessingStatus = playbackProcessingStatus,
     )

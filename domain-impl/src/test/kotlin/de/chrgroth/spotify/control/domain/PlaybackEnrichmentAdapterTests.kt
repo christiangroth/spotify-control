@@ -50,17 +50,19 @@ class PlaybackEnrichmentAdapterTests {
         val spotifyArtist = AppArtist(
             artistId = artistId,
             artistName = "Real Artist Name",
-            genres = listOf("pop"),
+            genre = "pop",
+            additionalGenres = null,
             imageLink = "https://example.com/image.jpg",
+            type = "artist",
         )
         every { appArtistRepository.findByArtistIds(setOf(artistId)) } returns listOf(AppArtist(artistId = artistId, artistName = ""))
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { spotifyCatalog.getArtist(userId, accessToken, artistId) } returns spotifyArtist.right()
-        every { appArtistRepository.updateEnrichmentData(artistId, "Real Artist Name", listOf("pop"), "https://example.com/image.jpg") } just runs
+        every { appArtistRepository.updateEnrichmentData(artistId, "Real Artist Name", "pop", null, "https://example.com/image.jpg", "artist") } just runs
 
         adapter.enrichArtistDetails(artistId, userId)
 
-        verify { appArtistRepository.updateEnrichmentData(artistId, "Real Artist Name", listOf("pop"), "https://example.com/image.jpg") }
+        verify { appArtistRepository.updateEnrichmentData(artistId, "Real Artist Name", "pop", null, "https://example.com/image.jpg", "artist") }
     }
 
     @Test
@@ -76,7 +78,7 @@ class PlaybackEnrichmentAdapterTests {
         adapter.enrichArtistDetails(artistId, userId)
 
         verify(exactly = 0) { spotifyCatalog.getArtist(any(), any(), any()) }
-        verify(exactly = 0) { appArtistRepository.updateEnrichmentData(any(), any(), any(), any()) }
+        verify(exactly = 0) { appArtistRepository.updateEnrichmentData(any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -91,16 +93,18 @@ class PlaybackEnrichmentAdapterTests {
         val spotifyArtist = AppArtist(
             artistId = artistId,
             artistName = "Recovered Name",
-            genres = listOf("rock"),
+            genre = "rock",
+            additionalGenres = listOf("indie"),
             imageLink = "https://example.com/image.jpg",
+            type = "artist",
         )
         every { appArtistRepository.findByArtistIds(setOf(artistId)) } returns listOf(artistWithBlankName)
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { spotifyCatalog.getArtist(userId, accessToken, artistId) } returns spotifyArtist.right()
-        every { appArtistRepository.updateEnrichmentData(artistId, "Recovered Name", listOf("rock"), "https://example.com/image.jpg") } just runs
+        every { appArtistRepository.updateEnrichmentData(artistId, "Recovered Name", "rock", listOf("indie"), "https://example.com/image.jpg", "artist") } just runs
 
         adapter.enrichArtistDetails(artistId, userId)
 
-        verify { appArtistRepository.updateEnrichmentData(artistId, "Recovered Name", listOf("rock"), "https://example.com/image.jpg") }
+        verify { appArtistRepository.updateEnrichmentData(artistId, "Recovered Name", "rock", listOf("indie"), "https://example.com/image.jpg", "artist") }
     }
 }

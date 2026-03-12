@@ -71,17 +71,19 @@ class AppArtistRepositoryTests {
     }
 
     @Test
-    fun `updateEnrichmentData updates artistName genres and imageLink`() {
+    fun `updateEnrichmentData updates artistName genre additionalGenres imageLink and type`() {
         val item = artist("enrich").copy(artistName = "Old Name")
         appArtistRepository.upsertAll(listOf(item))
 
-        appArtistRepository.updateEnrichmentData(item.artistId, "New Name", listOf("pop"), "https://example.com/image.jpg")
+        appArtistRepository.updateEnrichmentData(item.artistId, "New Name", "pop", listOf("indie", "rock"), "https://example.com/image.jpg", "artist")
 
         val result = appArtistRepository.findByArtistIds(setOf(item.artistId))
         assertThat(result).hasSize(1)
         assertThat(result[0].artistName).isEqualTo("New Name")
-        assertThat(result[0].genres).containsExactly("pop")
+        assertThat(result[0].genre).isEqualTo("pop")
+        assertThat(result[0].additionalGenres).containsExactly("indie", "rock")
         assertThat(result[0].imageLink).isEqualTo("https://example.com/image.jpg")
+        assertThat(result[0].type).isEqualTo("artist")
         assertThat(result[0].lastEnrichmentDate).isNotNull()
     }
 
