@@ -91,21 +91,9 @@ class SpotifyCatalogAdapter(
   }
 
   private fun parseTrackSyncResult(json: JsonNode): TrackSyncResult? {
-    if (json.isNull || !json.has("id")) return null
-
-    val artists = json.get("artists")
+    val artists = json.takeIf { !it.isNull && it.has("id") }?.get("artists")
     val primaryArtistId = artists?.firstOrNull()?.get("id")?.asText() ?: return null
     val primaryArtistName = artists.firstOrNull()?.get("name")?.asText()
-    val additionalArtistIds = if (artists != null && artists.size() > 1) {
-      (1 until artists.size()).map { artists.get(it).get("id").asText() }
-    } else {
-      null
-    }
-    val additionalArtistNames = if (artists != null && artists.size() > 1) {
-      (1 until artists.size()).map { artists.get(it).get("name").asText() }
-    } else {
-      null
-    }
 
     val albumNode = json.get("album")
     val albumId = albumNode?.get("id")?.asText() ?: return null
@@ -118,8 +106,8 @@ class SpotifyCatalogAdapter(
       albumName = albumName,
       artistId = primaryArtistId,
       artistName = primaryArtistName,
-      additionalArtistIds = additionalArtistIds ?: emptyList(),
-      additionalArtistNames = additionalArtistNames,
+      additionalArtistIds = artists.additionalIds { get("id").asText() } ?: emptyList(),
+      additionalArtistNames = artists.additionalIds { get("name").asText() },
       discNumber = json.get("disc_number")?.asInt(),
       durationMs = json.get("duration_ms")?.asLong(),
       trackNumber = json.get("track_number")?.asInt(),
@@ -127,19 +115,6 @@ class SpotifyCatalogAdapter(
     )
 
     val albumArtists = albumNode.get("artists")
-    val albumPrimaryArtistId = albumArtists?.firstOrNull()?.get("id")?.asText()
-    val albumPrimaryArtistName = albumArtists?.firstOrNull()?.get("name")?.asText()
-    val albumAdditionalArtistIds = if (albumArtists != null && albumArtists.size() > 1) {
-      (1 until albumArtists.size()).map { albumArtists.get(it).get("id").asText() }
-    } else {
-      null
-    }
-    val albumAdditionalArtistNames = if (albumArtists != null && albumArtists.size() > 1) {
-      (1 until albumArtists.size()).map { albumArtists.get(it).get("name").asText() }
-    } else {
-      null
-    }
-
     val album = AppAlbum(
       albumId = albumId,
       totalTracks = albumNode.get("total_tracks")?.asInt(),
@@ -148,14 +123,17 @@ class SpotifyCatalogAdapter(
       releaseDate = albumNode.get("release_date")?.asText(),
       releaseDatePrecision = albumNode.get("release_date_precision")?.asText(),
       type = albumNode.get("album_type")?.asText(),
-      artistId = albumPrimaryArtistId,
-      artistName = albumPrimaryArtistName,
-      additionalArtistIds = albumAdditionalArtistIds,
-      additionalArtistNames = albumAdditionalArtistNames,
+      artistId = albumArtists?.firstOrNull()?.get("id")?.asText(),
+      artistName = albumArtists?.firstOrNull()?.get("name")?.asText(),
+      additionalArtistIds = albumArtists.additionalIds { get("id").asText() },
+      additionalArtistNames = albumArtists.additionalIds { get("name").asText() },
     )
 
     return TrackSyncResult(track = track, album = album)
   }
+
+  private fun JsonNode?.additionalIds(extractor: JsonNode.() -> String): List<String>? =
+    if (this == null || size() <= 1) null else (1 until size()).map { get(it).extractor() }
 
     companion object : KLogging()
 }
