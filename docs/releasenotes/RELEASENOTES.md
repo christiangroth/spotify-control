@@ -1,3 +1,12 @@
+# 0.47.0 (2026.03.12)
+
+## New Features
+* sync-artist-data: Artist information is now more detailed with genre classification and artist type synced from Spotify.
+
+
+
+---
+
 # 0.46.5 (2026.03.12)
 
 ## Bugfixes / Chore
