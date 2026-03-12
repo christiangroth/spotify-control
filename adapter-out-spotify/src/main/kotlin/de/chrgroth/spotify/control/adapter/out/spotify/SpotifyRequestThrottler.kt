@@ -21,6 +21,6 @@ class SpotifyRequestThrottler {
     }
 
     companion object {
-        private const val THROTTLE_INTERVAL_MS = 5000L
+        private const val THROTTLE_INTERVAL_MS = 10000L
     }
 }
