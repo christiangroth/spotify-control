@@ -163,7 +163,7 @@ Provided via [christiangroth/quarkus-outbox](https://github.com/christiangroth/q
 
 #### `de.chrgroth.quarkus.starters`
 
-Provided via [christiangroth/quarkus-starters](https://github.com/christiangroth/quarkus-starters) (GitHub Packages). Three artifacts:
+Provided via [christiangroth/quarkus-one-time-starters](https://github.com/christiangroth/quarkus-one-time-starters) (GitHub Packages). Three artifacts:
 
 - `domain-api` – contracts: `Starter`, `StarterSkipPredicate`, `StarterCompletionFlag`
 - `domain-impl` – execution orchestration and startup observer
