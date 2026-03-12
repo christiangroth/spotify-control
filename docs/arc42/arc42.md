@@ -1,36 +1,22 @@
 # spotify-control
 
-**About arc42**
-
-arc42, the template for documentation of software and system
-architecture.
-
-Template Version 9.0-EN. (based upon AsciiDoc version), July 2025
-
-Created, maintained and © by Dr. Peter Hruschka, Dr. Gernot Starke and
-contributors. See <https://arc42.org>.
-
 # Introduction and Goals
 
 ## Requirements Overview
 
 spotify-control is a private Spotify playlist manager for a small, allow-listed set of users.
-It provides smarter playlist management than Spotify itself, personal listening statistics, and automatic playlist maintenance based on fixed rules.
 
-**Core features (by priority):**
+**Implemented features:**
 
-1. **Playback Tracking** – Spotify `recently_played` is polled regularly and stored as raw events. Goal: collect data as early as possible to avoid missing listening history.
+1. **Playback Tracking** – Spotify `recently_played` and `currently_playing` are polled regularly and stored. Partial plays (tracks not played to completion) are detected via observation sessions and stored separately.
 
-2. **Playlist Mirror** – Local copy of relevant Spotify playlists (selected by the user). Each playlist has a type (free-definable enum). Sync via snapshot IDs – a full sync is only performed when a change is detected.
+2. **Playlist Mirror** – Local copy of selected Spotify playlists. Sync is driven by snapshot IDs – a full track sync is only performed when Spotify reports a change.
 
-3. **Automatic Playlist Maintenance** – Fixed rules:
-   - **All-Invariant:** The `All` playlist is the union of all yearly playlists. It is rarely edited manually, but may contain tracks not present on any other synchronized playlist.
-   - **No Duplicates:** Neither on yearly playlists nor on `All`.
-   - **Album Upgrade:** A track from a single/EP is replaced by the album version once the album is released. Matching is done via track name + artist. Requires user confirmation (not fully automatic).
+3. **Catalog Enrichment** – Artist genres and images, track album references, and album details (title, cover, genres) are fetched from the Spotify API and stored in deduplicated `app_artist`, `app_track`, and `app_album` collections.
 
-4. **Genre Management** – Spotify provides genres only at the artist level. Genres are derived from the artist to tracks (`genre.source = "artist"`). The user can override genres per album/release (`genre.source = "override"`). Overrides may trigger re-enrichment and re-aggregation.
+4. **Listening Statistics** – Playback data is aggregated into a per-user dashboard showing total play counts, daily play trends, top artists, top tracks, and recently played items.
 
-5. **Reports & Listening Statistics** – Spotify Wrapped-style, but available at any time and in more detail. Based on locally collected data. Visualization via MongoDB Charts (embedded) or simple custom visualizations in the frontend using JavaScript.
+5. **Artist Playback Filtering** – Users can mark artists as `ACTIVE`, `INACTIVE`, or `UNDECIDED`. Tracks from `INACTIVE` artists are excluded from playback processing.
 
 ## Quality Goals
 
@@ -57,11 +43,11 @@ It provides smarter playlist management than Spotify itself, personal listening 
 
 spotify-control interacts with the following external systems:
 
-| External System     | Direction      | Description                                                                  |
-|---------------------|----------------|------------------------------------------------------------------------------|
-| Spotify API         | bidirectional  | Read recently played tracks, playlists, artists; write playlist edits        |
-| MongoDB Atlas       | bidirectional  | Persistent storage for all domain data (tracks, playlists, events, etc.)     |
-| User (browser)      | bidirectional  | Web UI for dashboard, admin, charts, and action endpoints                    |
+| External System     | Direction      | Description                                                              |
+|---------------------|----------------|--------------------------------------------------------------------------|
+| Spotify API         | bidirectional  | Read recently played tracks, playlists, artists; OAuth 2.0 login        |
+| MongoDB Atlas       | bidirectional  | Persistent storage for all domain data (tracks, playlists, events, etc.) |
+| User (browser)      | bidirectional  | Web UI for dashboard, settings, and documentation                        |
 
 ## Technical Context
 
@@ -72,15 +58,14 @@ spotify-control interacts with the following external systems:
 | Web UI                | Quarkus Qute SSR, htmx, Bootstrap 5, Server-Sent Events |
 | Scheduled jobs        | Quarkus scheduler                                       |
 | Internal event bus    | CDI Events (in-process)                                 |
-| Async task queue      | Persistent Outbox (`de.chrgroth.quarkus.outbox:domain-api` + `domain-impl` + `adapter-out-persistence-mongodb`)          |
+| Async task queue      | Persistent Outbox (`de.chrgroth.quarkus.outbox`)        |
 
 # Solution Strategy
 
 - **Hexagonal Architecture** – The application is structured using hexagonal (ports and adapters) architecture to cleanly separate domain logic from infrastructure concerns.
 - **Outbox Pattern** – All Spotify API operations are routed through a persistent outbox to ensure reliability and rate limit handling. No direct Spotify calls are made outside `adapter-out-spotify`.
-- **Server-Side Rendering** – The frontend uses Quarkus Qute templates with htmx for dynamic interactions, eliminating the need for a separate frontend project, build toolchain, or JavaScript framework.
-- **Allow-listed User System** – Access is restricted to users whose Spotify user IDs appear in a configured allow list. Multiple users may be allowed, but no self-service registration exists. This keeps the system private while supporting a small group.
-- **Incremental Phases** – The system is built in deployable increments (phases), each providing a complete and useful feature set before moving to the next.
+- **Server-Side Rendering** – The frontend uses Quarkus Qute templates with htmx for dynamic interactions, eliminating the need for a separate frontend project or JavaScript framework.
+- **Allow-listed User System** – Access is restricted to users whose Spotify user IDs appear in a configured allow list. Multiple users are supported, but no self-service registration exists.
 
 # Building Block View
 
@@ -88,21 +73,33 @@ spotify-control interacts with the following external systems:
 
 The system is composed of the following Gradle modules:
 
-| Module                  | Role                                                                                  |
-|-------------------------|---------------------------------------------------------------------------------------|
-| `adapter-in-web`        | REST endpoints, OAuth callback, SSE endpoints, action endpoints                       |
-| `adapter-in-scheduler`  | Scheduled jobs for polling Spotify and syncing data                                   |
-| `adapter-in-starter`    | One-time startup bean implementations for data migrations and bugfixes                |
-| `adapter-in-outbox`     | Outbox event dispatcher – routes outbox events to the correct domain port handler     |
-| `adapter-out-mongodb`   | Repository implementations for MongoDB                                                |
-| `adapter-out-spotify`   | Spotify API client, token refresh, token bucket rate limiting, backoff                |
-| `adapter-out-outbox`    | Outbox adapter for writing new tasks into the outbox                                  |
-| `adapter-out-scheduler` | Scheduler info provider for the health page                                           |
-| `application-quarkus`   | Quarkus application bundling and configuration                                        |
-| `domain-api`            | Ports (interfaces) – defines the contracts between domain and adapters                |
-| `domain-impl`           | Domain services, domain objects, CDI events                                           |
+| Module                  | Role                                                                              |
+|-------------------------|-----------------------------------------------------------------------------------|
+| `adapter-in-outbox`     | Outbox event dispatcher – routes outbox events to the correct domain port handler |
+| `adapter-in-scheduler`  | Scheduled jobs for polling Spotify and syncing data                               |
+| `adapter-in-starter`    | One-time startup bean implementations for data migrations and bugfixes            |
+| `adapter-in-web`        | REST endpoints, OAuth callback, SSE endpoints, action endpoints                   |
+| `adapter-out-mongodb`   | Repository implementations for MongoDB                                            |
+| `adapter-out-outbox`    | Outbox adapter for writing new tasks into the outbox                              |
+| `adapter-out-scheduler` | Scheduler info provider for the health page                                       |
+| `adapter-out-spotify`   | Spotify API client, token refresh, token bucket rate limiting, backoff            |
+| `application-quarkus`   | Quarkus application bundling and configuration                                    |
+| `domain-api`            | Ports (interfaces) – defines the contracts between domain and adapters            |
+| `domain-impl`           | Domain services and business logic                                                |
 
-> **External dependency – `de.chrgroth.quarkus.starters`:** One-time startup bean library (GitHub Packages: `christiangroth/quarkus-starters`). Three artifacts are consumed: `domain-api` (public contract – `Starter`, `StarterSkipPredicate`, `StarterCompletionFlag`), `domain-impl` (execution orchestration and startup observer), `adapter-out-persistence-mongodb` (MongoDB persistence for starter state). All classes are in the `de.chrgroth.quarkus.starters` package. See [starters.md](starters.md) for architecture details and usage guidance.
+![Module overview](https://kroki.io/plantuml/svg/bVPBasMwDL37K0TuYWznMdqsDHoYG_Sww-hBid3U1LaC7dB1o_8-x05bl-QQLD29KO9JzsJ5tL7XirmDNB1a1NCQ7sgI4zf-pARY0Xg0rRIZRZOhZm9JC_C2zytuj5yO0rSwQ-XyChc77JV_o9BY_gp4fJr7JvwxgAqbQ2upN_yVFFn42ksvBpwsFzZhlQokdmYMGx_SorJ0dMIWgA7qFLNGUc-h2HTk5e4Ey891LLuUYycZR481OgHFO5mWVhUsvUIXaZrXjF3dQzG-VjbBgSVVRKlZfW3qQXLCAb6RY-eFLaUpqfc1_WyHrtKkZMJxzV7wXgkbaTGbcoZtXRgpnnCOoo71cIba-V7jijRKc5XIY1qGScADjInUnYoNUj7t8THonzMajJV6GCNPCmI8pWTDCOHcNAbWzDgCPMNLW9nmi-VdVB0ux3gToCxf4kDCE-PRW2x7B6Sh5tBlYTnG0hmh5DIDbqYy8Gogx25yWewCz7FhuHe3UsKyK7sQhocf9h8)
+
+### `adapter-in-outbox`
+
+Dispatches outbox events to the appropriate domain port handler. Implements `OutboxTaskDispatcher` – receives a deserialized `DomainOutboxEvent` and calls the correct `handle(event)` method on the domain port.
+
+### `adapter-in-scheduler`
+
+Contains Quarkus `@Scheduled` jobs that trigger domain actions at configured intervals. All jobs skip execution via `skipExecutionIf = StarterSkipPredicate::class` until all starters have completed.
+
+### `adapter-in-starter`
+
+Contains concrete `Starter` implementations acting as inbound adapters: they receive a startup trigger from `de.chrgroth.quarkus.starters` and call into the domain via port interfaces. Each starter executes exactly once in production mode. Used for one-time data migrations, schema changes, and bugfixes.
 
 ### `adapter-in-web`
 
@@ -114,43 +111,63 @@ Implements all repository interfaces defined in `domain-api`. Manages the MongoD
 
 #### MongoDB Collections
 
-| Collection                    | Description                                                                                           |
-|-------------------------------|-------------------------------------------------------------------------------------------------------|
-| `app_user`                    | Spotify user profile with encrypted access and refresh tokens.                                        |
-| `spotify_playlist`            | Full playlist data including all tracks.                                                              |
-| `spotify_playlist_metadata`   | Playlist metadata: name, snapshot ID, sync status.                                                    |
-| `spotify_recently_played`     | Raw recently played track events (append-only).                                                       |
-| `spotify_currently_playing`   | Currently playing track observations per user.                                                        |
-| `spotify_recently_partial_played`     | Partial play events (plays that did not complete a full track).                                       |
-| `app_playback`                | Processed playback events combining `spotify_recently_played` and `spotify_recently_partial_played`.          |
-| `app_track`                   | Deduplicated track metadata: title, main artist reference, additional artist references, album reference, lastEnrichmentDate. |
-| `app_artist`                  | Deduplicated artist metadata: name, genres, imageLink, lastEnrichmentDate, playbackProcessingStatus (UNDECIDED/ACTIVE/INACTIVE). |
-| `app_album`                   | Deduplicated album metadata: title, cover image, genres, main artist reference, lastEnrichmentDate.                           |
-| `starters`                    | One-time startup bean execution state (managed by `de.chrgroth.quarkus.starters:adapter-out-persistence-mongodb`). |
-| `outbox`                      | Persistent outbox task queue (managed by `de.chrgroth.quarkus.outbox:adapter-out-persistence-mongodb`).                                         |
-| `outbox_archive`              | Archived completed/failed outbox tasks (managed by `de.chrgroth.quarkus.outbox:adapter-out-persistence-mongodb`).                               |
+| Collection                        | Description                                                                                                                     |
+|-----------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
+| `app_album`                       | Deduplicated album metadata: title, cover image, genres, main artist reference, lastEnrichmentDate.                             |
+| `app_artist`                      | Deduplicated artist metadata: name, genres, imageLink, lastEnrichmentDate, playbackProcessingStatus (UNDECIDED/ACTIVE/INACTIVE). |
+| `app_playback`                    | Processed playback events combining recently played and partial played data.                                                    |
+| `app_track`                       | Deduplicated track metadata: title, main artist reference, additional artist references, album reference, lastEnrichmentDate.   |
+| `app_user`                        | Spotify user profile with encrypted access and refresh tokens.                                                                  |
+| `outbox`                          | Persistent outbox task queue (managed by `de.chrgroth.quarkus.outbox`).                                                        |
+| `outbox_archive`                  | Archived completed/failed outbox tasks (managed by `de.chrgroth.quarkus.outbox`).                                              |
+| `spotify_currently_playing`       | Currently playing track observations per user.                                                                                  |
+| `spotify_playlist`                | Full playlist data including all tracks.                                                                                        |
+| `spotify_playlist_metadata`       | Playlist metadata: name, snapshot ID, sync status.                                                                              |
+| `spotify_recently_partial_played` | Partial play events (plays that did not complete a full track).                                                                 |
+| `spotify_recently_played`         | Raw recently played track events (append-only).                                                                                 |
+| `starters`                        | One-time startup bean execution state (managed by `de.chrgroth.quarkus.starters`).                                             |
+
+### `adapter-out-outbox`
+
+Implements `OutboxPort` and `OutboxManagementPort`. Bridges the domain to the `de.chrgroth.quarkus.outbox` library for writing and managing outbox tasks.
+
+### `adapter-out-scheduler`
+
+Implements `CronjobInfoPort`. Provides scheduled job metadata (name, next execution, running state) to the health page via the Quarkus `Scheduler` API.
 
 ### `adapter-out-spotify`
 
-Encapsulates all communication with the Spotify Web API. Handles token refresh, rate limiting via a token bucket (~50 requests/30s), and backoff for hidden 24h bulk limits.
+Encapsulates all communication with the Spotify Web API. Handles token refresh, rate limiting (10s throttle on the `to-spotify` partition), and backoff for hidden 24h bulk limits.
+
+### `application-quarkus`
+
+Bundles all modules into the runnable Quarkus application. Contains test infrastructure and integration tests (`@QuarkusTest`).
+
+### `domain-api`
+
+Defines all port interfaces (`port.in.*`, `port.out.*`), domain models, outbox event types (`DomainOutboxEvent`), and outbox partitions (`DomainOutboxPartition`).
 
 ### `domain-impl`
 
-Contains the core business logic: playback data processing, playlist synchronization, artist catalog management, user profile handling, and dashboard statistics computation.
+Contains the core business logic: playback data processing, playlist synchronization, artist catalog management, user profile handling, dashboard statistics computation, and token encryption.
 
-### `de.chrgroth.quarkus.outbox`
+### External Dependencies
 
-The outbox is provided as an external library (`de.chrgroth.quarkus.outbox`, package `de.chrgroth.outbox`) via [christiangroth/quarkus-outbox](https://github.com/christiangroth/quarkus-outbox).
+#### `de.chrgroth.quarkus.outbox`
 
-`domain-api` defines the outbox contracts (package `de.chrgroth.outbox`): `OutboxPartition`, `OutboxEvent`, `OutboxRepository`, `OutboxTask`, `OutboxTaskDispatcher`, `OutboxTaskResult`, `RetryPolicy`, and the associated enums and data types. Domain-facing modules depend only on this API module.
+Provided via [christiangroth/quarkus-outbox](https://github.com/christiangroth/quarkus-outbox) (GitHub Packages). Three artifacts:
 
-`domain-impl` provides the core Quarkus implementation (package `de.chrgroth.outbox`): `OutboxImpl`, `OutboxProcessor`, `OutboxWakeupService`, `OutboxStartupRecovery`, and `OutboxPartitionWorker`.
+- `domain-api` – outbox contracts: `OutboxPartition`, `OutboxEvent`, `OutboxTaskDispatcher`, `OutboxTaskResult`, `RetryPolicy`, and associated types
+- `domain-impl` – Quarkus implementation: `OutboxImpl`, `OutboxProcessor`, `OutboxWakeupService`, `OutboxStartupRecovery`, `OutboxPartitionWorker`
+- `adapter-out-persistence-mongodb` – MongoDB persistence: at-least-once delivery, atomic claim, partition-level pause/resume, task deduplication, priority ordering
 
-`adapter-out-persistence-mongodb` provides the MongoDB persistence layer (package `de.chrgroth.outbox`): persistent task storage, atomic claim via `findOneAndUpdate`, at-least-once delivery with configurable retry backoff, partition-level pause/resume, task deduplication, priority-based ordering, and a conflated `Channel<Unit>` per partition for event-driven wakeup. See [outbox.md](outbox.md) for architecture details and usage guidance.
+#### `de.chrgroth.quarkus.starters`
 
-### `adapter-in-starter`
+Provided via [christiangroth/quarkus-starters](https://github.com/christiangroth/quarkus-starters) (GitHub Packages). Three artifacts:
 
-Contains concrete `Starter` implementations acting as inbound adapters: they receive a startup trigger from the `de.chrgroth.quarkus.starters` library and call into the domain via port interfaces. Each starter executes exactly once in production mode. Used for one-time data migrations, schema changes, and bugfixes.
+- `domain-api` – contracts: `Starter`, `StarterSkipPredicate`, `StarterCompletionFlag`
+- `domain-impl` – execution orchestration and startup observer
+- `adapter-out-persistence-mongodb` – MongoDB persistence for starter execution state
 
 ## Level 2
 
@@ -158,20 +175,20 @@ Contains concrete `Starter` implementations acting as inbound adapters: they rec
 
 # Runtime View
 
-## Album Upgrade Flow
-
-*Planned – not yet implemented.*
-
 ## Playback Polling Flow
 
+![Playback polling sequence](https://kroki.io/plantuml/svg/jVRNj9MwEL3nV4x6SqStuuGIVLSBdhEHxEJ7XKlynenGamIbe9yl_HpsxynJUmBvtufNe28-kjtLzJDr2swehdTMsA46JRVvjOoQyDgcRWzDavUs5BMcWGvHkRoPzLV0ryRtxE-Eshyn4XeHkmNljHreNoIfJVoLZZb5OAkuNJMEs6-OmaOzj3LDG6xdi2YGzIINtynyoWXnPePHqmaaEkyzKeaLo7368Sjzz0o-qdX7IqJUfJ0iN1qROJyhevjUC_b3rGbE9swizBJFjHbhnGXLJaxPaM7w5tbXx5WsLSyXWTQL83feDrwFlL5wh_dIvPngjEFJ7TmY9y3MC-8iIHtLHn0VBrlGA86iKUai5S10QjrC_4h-Q34hw_ovklPQS0FS89SQuU5th9g-EkoG9UQ2yDdM1i3mV4sZ9BOhR39cb2FxKhcdLgI7moSIXfZxp70RGhJ2fCDc6Z4x-5f8tLBXiC9Myoilxq0bm2Fao6wvZgbw7irYr8QpWI-98l_LSHqU2QenDJfppElCFXWHpV_5tYyTqVXHhHzNMP4kKK732Ve4C3SWbuKZjMdf70IIDwvx0vhaGsGbKhKtkJho7U163AbG9Ab57-UqsjvP6n9EvwA)
+
 ```
-PlaybackPollJob (every 5 min)
-    → FetchCurrentlyPlaying (to-spotify-playback partition)
-        → Spotify GET /v1/me/player → stored in spotify_currently_playing
-    → FetchRecentlyPlayed (to-spotify-playback partition)
-        → Spotify GET /v1/me/player/recently-played → new items stored in spotify_recently_played
-        → convert partial plays (see below) → new items stored in spotify_recently_partial_played
-        → if any new data: enqueue AppendPlaybackData (domain partition)
+CurrentlyPlayingFetchJob (every 20s)
+    → enqueue FetchCurrentlyPlaying (to-spotify-playback partition, per user)
+    → Spotify GET /v1/me/player → stored in spotify_currently_playing
+
+RecentlyPlayedFetchJob (every 10min)
+    → enqueue FetchRecentlyPlayed (to-spotify-playback partition, per user)
+    → Spotify GET /v1/me/player/recently-played → new items stored in spotify_recently_played
+    → convert partial plays → new items stored in spotify_recently_partial_played
+    → if any new data: enqueue AppendPlaybackData (domain partition)
 ```
 
 ## Currently Playing → Partial Play Conversion
@@ -195,28 +212,11 @@ Raw playback data from `spotify_recently_played` and `spotify_recently_partial_p
 4. Enqueues one `EnrichArtistDetails(artistId, userId)` per artist and one `EnrichTrackDetails(trackId, userId)` per track on the `to-spotify` partition. Deduplication by entity ID ensures no duplicate pending events.
 
 **Enrich (auto-enqueued after each append, one event per entity on `to-spotify`):**
-- `EnrichArtistDetails(artistId, userId)`: skipped if genres are already populated; otherwise calls `GET /v1/artists/{id}` and updates `app_artist` with genres and imageLink.
-- `EnrichTrackDetails(trackId, userId)`: skipped if albumId is already populated; otherwise calls `GET /v1/tracks/{id}`, updates `app_track.albumId`, creates a stub `app_album` entry, and enqueues `EnrichAlbumDetails(albumId, userId)`.
-- `EnrichAlbumDetails(albumId, userId)`: skipped if albumTitle is already populated; otherwise calls `GET /v1/albums/{id}` and updates `app_album` with albumTitle, imageLink, genres, and artistId (main artist).
+- `EnrichArtistDetails(artistId, userId)`: skipped if already enriched; otherwise calls `GET /v1/artists/{id}` and updates `app_artist` with genres and imageLink.
+- `EnrichTrackDetails(trackId, userId)`: skipped if already enriched; otherwise calls `GET /v1/tracks/{id}`, updates `app_track.albumId`, creates a stub `app_album` entry, and enqueues `EnrichAlbumDetails(albumId, userId)`.
+- `EnrichAlbumDetails(albumId, userId)`: skipped if already enriched; otherwise calls `GET /v1/albums/{id}` and updates `app_album` with albumTitle, imageLink, genres, and artistId (main artist).
 
 **Rebuild (user-triggered from Settings):** Deletes all `app_playback` entries for the user and re-runs the Append logic from scratch over all source data.
-
-```
-AppendPlaybackData (domain partition)
-    since = app_playback.findMostRecentPlayedAt(userId)
-    recentlyPlayed  = spotify_recently_played.findSince(userId, since)
-    partialPlayed   = spotify_recently_partial_played.findSince(userId, since)
-    → filter out items where primary artistId has playbackProcessingStatus=INACTIVE
-    → deduplicate by playedAt against existing app_playback entries
-    → upsertAll(app_artist)
-    → upsertAll(app_track)
-    → saveAll(app_playback)
-    // TODO: upsertAll(app_album) once albumId is available from Spotify track data
-
-RebuildPlaybackData (domain partition)
-    → deleteAllByUserId(app_playback)
-    → AppendPlaybackData(userId) [since=null → processes all source data]
-```
 
 ## Artist Playback Processing
 
@@ -232,12 +232,19 @@ When an artist is set from `INACTIVE` back to `ACTIVE` or `UNDECIDED`, a `Rebuil
 
 ## Playlist Sync Flow
 
+![Playlist sync sequence](https://kroki.io/plantuml/svg/hVPJbtswEL3zKwY-yUACwdcALuLCSepD0RR2bwGMCTW2CFNDlktTtei_l6SlwHa63Mh5b95CQbc-oAux08IfFFt02EFn2MjWmY4guEgniG-xMS-K97BD7U-RhnYYdbg3HNbqB8FsdrpGXyOxpIVz5mXTKnlg8h5mQiQ8KKkscoDJ54juEP0Tr2VLTdTkJoAefL6dMx819lr5sGjQhoFm8ZzzKYZn8_2Jq4-G92b5flpYpkzPmWtrgtr1sHhcHQ2Pd9FgwGf0BJNBoqBdPgsxn8MHE53uYT4XJSJcv0sh4AaIU91IX2wSIF9Nk1vGjtYJX_csxwYr3hmoLDmInty06AZzPUSAkjMow9llEBhtWuRGU3WpNtqNEjfwcLeB-tus7qi2A9EPpFImUaTpkhWBZ7S-NQFWSy_-lXuZ3gYqmTLsU_NXWTCs-9Ti_1GzwN-jvgrWP1Xzqw4O5eEyc7TpxcK4vB1Xrt5Mth0FzB_zzwJo7TY_c17N52J22f2OnZLtotCWSU5pfzUMN5k_zMQtcZP-pt8)
+
 ```
-PlaylistCheckJob (every 15 min)
-    → GET /v1/me/playlists → fetch all snapshot IDs in one request
-    → compare with local snapshot IDs
-    → for each changed playlist: write SyncPlaylist event to outbox
-    → full sync of changed playlists (tracks, artists, albums)
+PlaylistSyncJob (hourly at :30)
+    → enqueue SyncPlaylistInfo (to-spotify partition, per user)
+    → Spotify GET /v1/me/playlists → compare snapshot IDs
+    → for each changed playlist: enqueue SyncPlaylistData
+
+SyncPlaylistData (to-spotify partition)
+    → Spotify GET /v1/playlists/{id}/tracks
+    → upsert spotify_playlist, spotify_playlist_metadata
+    → upsert app_artist, app_track stubs
+    → enqueue EnrichArtistDetails, EnrichTrackDetails (to-spotify)
 ```
 
 # Deployment View
@@ -280,7 +287,7 @@ Build the application as a Quarkus native Docker image, push to the GitHub Conta
 - **Release plugin** – `net.researchgate.release` manages version bumping and Git tagging
 - **Release-Notes plugin** – custom Gradle plugin (`de.chrgroth.gradle.plugins.release-notes`) maintained in https://github.com/christiangroth/gradle-release-notes-plugin
 - **CI/CD** – the GitHub Actions workflow (`gradle.yml`) runs `./gradlew build` on every push; runs `./gradlew release` only on pushes to `main`; after release, the Docker stack file is copied to the VPS via SCP and the stack is deployed via SSH
-- **Snippet requirement** – every branch that is not `main` or `dependabot/*` **must** contain at least one release note snippet in `docs/releasenotes/releasenotes-snippets/`; the build fails without it. Create snippets with the corresponding Gradle tasks (`releasenotesCreateFeature`, `releasenotesCreateBugfix`, …); filenames follow the pattern `{branch-last-segment}-{type}.md`
+- **Snippet requirement** – every branch that is not `main` or `dependabot/*` **must** contain at least one release note snippet in `docs/releasenotes/snippets/`; the build fails without it. Create snippets with the corresponding Gradle tasks (`releasenotesCreateFeature`, `releasenotesCreateBugfix`, …); filenames follow the pattern `{branch-last-segment}-{type}.md`
 
 ### Spotify OAuth Redirect URIs
 
@@ -303,22 +310,23 @@ Tests follow the *Test Your Boundaries* principle mapped to the hexagonal archit
 | 2 – Outbound adapters | Outbound port interface | None – real infra (MongoDB dev-service, Spotify mock) | `application-quarkus` | `@QuarkusTest` |
 | 3 – Inbound adapters | HTTP endpoint / scheduler `run()` | CDI mocks via `@InjectMock` | `application-quarkus` | `@QuarkusTest` + REST Assured |
 | 4 – App wiring | Health/metrics endpoints | None | `application-quarkus` | `@QuarkusTest` |
+| 5 – Adapter-local logic | Class under test | MockK mocks | individual adapter module | JUnit 5 + MockK |
 
-Domain services (Layer 1) never depend on Quarkus or any infrastructure. Adapter tests (Layers 2–3) start the full runtime once per test class; startup cost is amortised across all tests in the class.
+Layer 5 applies to adapter modules where the logic is pure (e.g. `adapter-in-starter`, `adapter-out-scheduler`).
 
 ## Authentication and Access Control
 
 - Spotify OAuth 2.0 Authorization Code Flow.
 - In the OAuth callback: the Spotify user ID is checked against `APP_ALLOWED_SPOTIFY_USER_IDS` (environment variable, comma-separated list). If the ID is not present in the list, the session is invalidated and nothing is persisted.
 - A `User` document is upserted in the `app_user` MongoDB collection only after a successful allow-list check. Both access and refresh tokens are stored encrypted (AES-256-GCM) using `APP_TOKEN_ENCRYPTION_KEY`.
-- Session-based authentication for all endpoints, including action endpoints. The session stores only the Spotify user ID – never tokens.
+- Session-based authentication for all endpoints. The session stores only the Spotify user ID – never tokens.
 - `return_to` parameter stored in the session for redirect after login.
 - A CSRF `state` parameter is generated per authorization request and validated in the callback.
 - Token refresh is handled by `adapter-out-spotify` before each Spotify API call; the refreshed token is persisted back to MongoDB.
 
 ## Error Handling
 
-All domain failures are represented as typed `DomainError` values wrapped in Arrow's `Either<DomainError, T>`. This replaces ad-hoc sealed result classes and uncaught exceptions.
+All domain failures are represented as typed `DomainError` values wrapped in Arrow's `Either<DomainError, T>`.
 
 - Port interfaces return `Either<DomainError, T>` instead of raw domain objects or throwing exceptions.
 - Infrastructure adapters (`adapter-out-*`) catch all exceptions at the adapter boundary and convert them to typed `Either.Left<DomainError>` values – no exceptions cross port boundaries.
@@ -332,11 +340,11 @@ All Spotify API operations and domain-level async tasks are routed through a per
 
 **Partitions and event types:**
 
-| Partition          | Event Types                                                                                      |
-|--------------------|--------------------------------------------------------------------------------------------------|
-| `to-spotify`       | `UpdateUserProfile`, `SyncPlaylistInfo`, `SyncPlaylistData`, `EnrichArtistDetails`, `EnrichTrackDetails`, `EnrichAlbumDetails` |
-| `to-spotify-playback` | `FetchCurrentlyPlaying`, `FetchRecentlyPlayed`                                               |
-| `domain`           | `RebuildPlaybackData`, `AppendPlaybackData`                                                      |
+| Partition             | Throttle | Rate limit pause | Event Types                                                                                            |
+|-----------------------|----------|------------------|--------------------------------------------------------------------------------------------------------|
+| `to-spotify`          | 10s      | yes              | `UpdateUserProfile`, `SyncPlaylistInfo`, `SyncPlaylistData`, `EnrichArtistDetails`, `EnrichTrackDetails`, `EnrichAlbumDetails` |
+| `to-spotify-playback` | none     | no               | `FetchCurrentlyPlaying`, `FetchRecentlyPlayed`                                                         |
+| `domain`              | none     | no               | `RebuildPlaybackData`, `AppendPlaybackData`                                                             |
 
 Successfully processed events are moved to `outbox_archive` (audit log). Internal triggers between services use CDI events (not the outbox).
 
@@ -344,28 +352,20 @@ Successfully processed events are moved to `outbox_archive` (audit log). Interna
 
 Backend services notify SSE streams via CDI events. The SSE endpoint delivers the initial state on connect, then pushes named update events to connected clients via per-user reactive streams.
 
-## Genre Management
-
-*Planned – not yet implemented.*
-
-## MongoDB Charts Contract
-
-*Planned – not yet implemented. When implemented, `aggregations_*` collections will be the public API contract for MongoDB Charts. Field names must be stable; contract tests will validate schema on every build.*
-
 ## Scheduler Jobs
 
-| Job                          | Interval           | Outbox Event(s)                                                       |
-|------------------------------|--------------------|-----------------------------------------------------------------------|
-| `CurrentlyPlayingFetchJob`   | every 20 seconds   | `FetchCurrentlyPlaying` (per user)                                    |
-| `RecentlyPlayedFetchJob`     | every 10 minutes   | `FetchRecentlyPlayed` (per user) → auto-enqueues `AppendPlaybackData` |
-| `PlaylistSyncJob`            | hourly (at :30)    | `SyncPlaylistInfo` (per user)                                         |
-| `UserProfileUpdateJob`       | daily at 04:00     | `UpdateUserProfile` (per user)                                        |
+| Job                          | Interval         | Outbox Event(s)                                                       |
+|------------------------------|------------------|-----------------------------------------------------------------------|
+| `CurrentlyPlayingFetchJob`   | every 20 seconds | `FetchCurrentlyPlaying` (per user)                                    |
+| `RecentlyPlayedFetchJob`     | every 10 minutes | `FetchRecentlyPlayed` (per user) → auto-enqueues `AppendPlaybackData` |
+| `PlaylistSyncJob`            | hourly (at :30)  | `SyncPlaylistInfo` (per user)                                         |
+| `UserProfileUpdateJob`       | daily at 04:00   | `UpdateUserProfile` (per user)                                        |
 
 All scheduler jobs skip execution via `skipExecutionIf = StarterSkipPredicate::class` until all starters have completed successfully.
 
 ## Starters
 
-One-time startup beans for data migrations, schema changes, and one-time bugfixes. Each starter executes exactly once in `NORMAL` (prod) mode; failed starters are retried on the next application start. The Quarkus scheduler is blocked until all starters succeed. See [starters.md](starters.md) for architecture details and usage guidance.
+One-time startup beans for data migrations, schema changes, and one-time bugfixes. Each starter executes exactly once in `NORMAL` (prod) mode; failed starters are retried on the next application start. The Quarkus scheduler is blocked until all starters succeed.
 
 ## Frontend Approach
 
@@ -376,7 +376,6 @@ No separate frontend project. The UI is rendered server-side using Quarkus Qute 
 - CSS: Bootstrap 5 via WebJar
 - Interactivity: htmx via WebJar
 - Icons: Font Awesome via WebJar
-- Charts: MongoDB Charts Embedding SDK
 - Live Updates: Server-Sent Events via htmx `hx-ext="sse"`
 - Markdown rendering: marked via WebJar (docs and release notes pages)
 
@@ -406,8 +405,7 @@ APP_TOKEN_ENCRYPTION_KEY
 | [0004](../adr/0004-using-ai-coding-agents.md) | Using AI Coding Agents |
 | [0005](../adr/0005-markdown-rendering-library.md) | Markdown Rendering Library: marked |
 | [0006](../adr/0006-error-handling-concept.md) | Error Handling: Arrow Either&lt;DomainError, T&gt; |
-
-See [outbox.md](outbox.md) for outbox-specific design decisions.
+| [0007](../adr/0007-persistent-outbox-pattern.md) | Persistent Outbox for Spotify API Operations |
 
 # Quality Requirements
 
@@ -421,16 +419,32 @@ See [outbox.md](outbox.md) for outbox-specific design decisions.
 
 # Risks and Technical Debts
 
-*work in progress*
+## Risks
+
+| Risk | Probability | Impact | Mitigation |
+|------|-------------|--------|------------|
+| Spotify API breaking changes | Medium | High | No versioned Spotify SDK; changes require adapter updates. Monitor Spotify changelog. |
+| Spotify API rate limiting | High | Medium | `to-spotify` partition throttles at 10s per request. `pauseOnRateLimit` stops the partition on 429 responses. |
+| Token encryption key loss | Low | High | If `APP_TOKEN_ENCRYPTION_KEY` is lost, all stored tokens are invalid and users must re-authenticate. Key must be backed up securely. |
+| MongoDB Atlas outage | Low | High | No local fallback. Application becomes unavailable. MongoDB Atlas provides its own replication and backup. |
+
+## Technical Debts
+
+| Item | Description |
+|------|-------------|
+| `HelloWorldStarter` | Demo starter with no production purpose; can be removed. |
+| Enrichment completeness | `app_artist`, `app_track`, and `app_album` entries that existed before enrichment was introduced may lack genres, imageLink, or albumTitle until re-enriched. |
+| Partial-play detection accuracy | Partial play detection relies on polling frequency; very short plays near the end of a track may be missed or misclassified. |
+| Test coverage for domain adapters | Domain adapter integration (e.g. `PlaybackDataAdapter`, `PlaylistSyncAdapter`) is not yet covered by `@QuarkusTest` boundary tests. |
 
 # Glossary
 
-| Term                    | Definition                                                                                                            |
-|-------------------------|-----------------------------------------------------------------------------------------------------------------------|
-| Starter                 | A one-time startup bean (`de.chrgroth.quarkus.starters`) that executes arbitrary logic exactly once in production; used for data migrations, schema changes, and one-time bugfixes |
-| Outbox                  | A persistent task queue used to reliably dispatch Spotify API calls and domain events asynchronously                  |
-| Snapshot ID             | A Spotify-provided identifier that changes whenever a playlist is modified; used to detect changes efficiently        |
-| Enrichment              | The process of fetching and storing additional metadata (genres, album details, images) from Spotify for artists, tracks, and albums |
-| SSE                     | Server-Sent Events – a mechanism for the server to push real-time updates to the browser                              |
-| Token Bucket            | A rate limiting mechanism used to throttle Spotify API requests (~50 requests per 30 seconds)                        |
-| CDI Event               | Contexts and Dependency Injection event – used for in-process communication between Quarkus beans                    |
+| Term        | Definition                                                                                                            |
+|-------------|-----------------------------------------------------------------------------------------------------------------------|
+| CDI Event   | Contexts and Dependency Injection event – used for in-process communication between Quarkus beans                    |
+| Enrichment  | The process of fetching and storing additional metadata (genres, album details, images) from Spotify for artists, tracks, and albums |
+| Outbox      | A persistent task queue used to reliably dispatch Spotify API calls and domain events asynchronously                  |
+| Snapshot ID | A Spotify-provided identifier that changes whenever a playlist is modified; used to detect changes efficiently        |
+| SSE         | Server-Sent Events – a mechanism for the server to push real-time updates to the browser                              |
+| Starter     | A one-time startup bean (`de.chrgroth.quarkus.starters`) that executes arbitrary logic exactly once in production; used for data migrations, schema changes, and one-time bugfixes |
+| Token Bucket | A rate limiting mechanism used to throttle Spotify API requests                                                      |
