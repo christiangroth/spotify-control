@@ -57,10 +57,9 @@ class HealthPageTests {
       .get("/health")
       .then()
       .statusCode(200)
-      .body(containsString("EventSource"))
+      .body(containsString("sse-utils.js"))
+      .body(containsString("connectSse"))
       .body(containsString("/health/events"))
-      .body(containsString("setInterval"))
-      .body(containsString("60000"))
   }
 
   @Test
