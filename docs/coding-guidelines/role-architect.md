@@ -54,11 +54,21 @@ domain-impl
 
 ## Testing Strategy
 
-1. **Unit tests** – domain logic, no Quarkus context, fast and isolated
-2. **Integration tests** (`@QuarkusTest`) – adapters, repositories against embedded MongoDB, OAuth callback
-3. **Contract tests** – schema stability of aggregation collections; outbox event payload structure
+Tests follow the *Test Your Boundaries* principle mapped to the hexagonal architecture:
 
-Priority: Domain logic > Contract tests > Adapter integration > REST endpoints
+| Layer | Entry point | Test doubles | Module | Framework |
+|-------|-------------|--------------|--------|-----------|
+| 1 – Domain logic | Inbound port (`*Port` in `domain-api`) | MockK mocks for all outbound ports | `domain-impl` | JUnit 5 + MockK |
+| 2 – Outbound adapters | Outbound port interface | None – real infra (MongoDB dev-service, Spotify mock) | `application-quarkus` | `@QuarkusTest` |
+| 3 – Inbound adapters | HTTP endpoint / scheduler `run()` | CDI mocks via `@InjectMock` | `application-quarkus` | `@QuarkusTest` + REST Assured |
+| 4 – App wiring | Health/metrics endpoints | None | `application-quarkus` | `@QuarkusTest` |
+| 5 – Adapter-local logic | Class under test | MockK mocks | individual adapter module | JUnit 5 + MockK |
+
+Layer 5 applies to adapter modules where the logic is pure (no Quarkus context needed), e.g. `adapter-in-starter` starters and `adapter-out-scheduler` info providers.
+
+**Priority:** Domain logic (L1) > Contract tests > Outbound adapters (L2) > Inbound adapters (L3) > App wiring (L4)
+
+**Contract tests:** Outbox event payload round-trips are mandatory. Any schema break must fail the build.
 
 ## Design Principles
 
