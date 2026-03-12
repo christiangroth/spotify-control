@@ -1,3 +1,13 @@
+# 0.46.3 (2026.03.12)
+
+## Bugfixes / Chore
+* fix-health-ui-outbox-tasks: Health UI is now updated via SSE when the number of outbox tasks changes.
+* group-outgoing-requests-by-type: Outgoing Spotify API requests are now grouped by endpoint type in request stats and metrics (e.g. `/v1/tracks/{id}` instead of individual track IDs).
+
+
+
+---
+
 # 0.46.2 (2026.03.12)
 
 ## Bugfixes / Chore
