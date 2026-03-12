@@ -386,24 +386,25 @@ class HealthPageTests {
   }
 
   @Test
-  fun `health page outbox document count is clickable when greater than zero`() {
+  fun `health page outbox document count is shown statically`() {
     given()
       .`when`()
       .get("/health")
       .then()
       .statusCode(200)
-      .body(containsString("toggleOutboxDetail"))
+      .body(not(containsString("toggleOutboxDetail")))
       .body(containsString("outbox-doc-count"))
   }
 
   @Test
-  fun `health page outbox detail row javascript function is present`() {
+  fun `health page outbox detail row is expanded by default`() {
     given()
       .`when`()
       .get("/health")
       .then()
       .statusCode(200)
       .body(containsString("outbox-detail-row"))
-      .body(containsString("toggleOutboxDetail"))
+      .body(not(containsString("toggleOutboxDetail")))
+      .body(not(containsString("display:none;border-color")))
   }
 }

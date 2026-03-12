@@ -1,7 +1,7 @@
 function fadeUpdate(elementId, url, callback) {
     var el = document.getElementById(elementId);
     if (!el) return;
-    el.style.transition = 'opacity 3.0s ease';
+    el.style.transition = 'opacity 0.5s ease';
     el.style.opacity = '0';
     fetch(url)
         .then(function (r) { return r.text(); })
