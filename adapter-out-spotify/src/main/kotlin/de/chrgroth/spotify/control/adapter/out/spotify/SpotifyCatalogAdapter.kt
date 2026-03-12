@@ -45,7 +45,7 @@ class SpotifyCatalogAdapter(
         .header("Authorization", "Bearer ${accessToken.value}")
         .GET()
         .build()
-      val response = httpMetrics.timed(request.uri()) {
+      val response = httpMetrics.timed("/v1/artists/{id}") {
         httpClient.send(request, HttpResponse.BodyHandlers.ofString())
       }
       val errorResult = response.checkRateLimitOrError(logger, EnrichmentError.ARTIST_DETAILS_FETCH_FAILED)
@@ -76,7 +76,7 @@ class SpotifyCatalogAdapter(
         .header("Authorization", "Bearer ${accessToken.value}")
         .GET()
         .build()
-      val response = httpMetrics.timed(request.uri()) {
+      val response = httpMetrics.timed("/v1/tracks/{id}") {
         httpClient.send(request, HttpResponse.BodyHandlers.ofString())
       }
       val errorResult = response.checkRateLimitOrError(logger, EnrichmentError.TRACK_DETAILS_FETCH_FAILED)
@@ -105,7 +105,7 @@ class SpotifyCatalogAdapter(
         .header("Authorization", "Bearer ${accessToken.value}")
         .GET()
         .build()
-      val response = httpMetrics.timed(request.uri()) {
+      val response = httpMetrics.timed("/v1/albums/{id}") {
         httpClient.send(request, HttpResponse.BodyHandlers.ofString())
       }
       val errorResult = response.checkRateLimitOrError(logger, EnrichmentError.ALBUM_DETAILS_FETCH_FAILED)

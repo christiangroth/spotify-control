@@ -10,7 +10,6 @@ import jakarta.annotation.PostConstruct
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.enterprise.inject.Any
 import jakarta.enterprise.inject.Instance
-import java.net.URI
 import java.net.http.HttpResponse
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
@@ -33,24 +32,23 @@ class SpotifyHttpMetrics(
             .register(meterRegistry)
     }
 
-    fun <T> timed(uri: URI, block: () -> HttpResponse<T>): HttpResponse<T> {
+    fun <T> timed(urlTemplate: String, block: () -> HttpResponse<T>): HttpResponse<T> {
         val startMs = System.currentTimeMillis()
         val response = block()
         val durationMs = System.currentTimeMillis() - startMs
-        record(uri, response.statusCode(), durationMs)
+        record(urlTemplate, response.statusCode(), durationMs)
         return response
     }
 
-    private fun record(uri: URI, statusCode: Int, durationMs: Long) {
-        val endpoint = "${uri.host}${uri.path}"
-        timers.getOrPut("${endpoint}_${statusCode}") {
+    private fun record(urlTemplate: String, statusCode: Int, durationMs: Long) {
+        timers.getOrPut("${urlTemplate}_${statusCode}") {
             Timer.builder("spotify.request")
-                .tag("url", endpoint)
+                .tag("url", urlTemplate)
                 .tag("status", statusCode.toString())
                 .register(meterRegistry)
         }.record(durationMs, TimeUnit.MILLISECONDS)
 
-        val deque = requestTimestamps.getOrPut(endpoint) { ConcurrentLinkedDeque() }
+        val deque = requestTimestamps.getOrPut(urlTemplate) { ConcurrentLinkedDeque() }
         deque.add(Instant.now())
         pruneOldEntries(deque)
         requestStatsObservers.forEach { it.onRequestRecorded() }
