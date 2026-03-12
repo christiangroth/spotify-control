@@ -45,7 +45,9 @@ class DomainOutboxTaskDispatcher(
             is DomainOutboxEvent.EnrichTrackDetails -> catalog.handle(event)
             is DomainOutboxEvent.EnrichAlbumDetails -> catalog.handle(event)
         }
-        outboxTaskCountObservers.forEach { it.onOutboxTaskCountChanged() }
+        if (result is OutboxTaskResult.Success) {
+            outboxTaskCountObservers.forEach { it.onOutboxTaskCountChanged() }
+        }
         return result
     }
 }
