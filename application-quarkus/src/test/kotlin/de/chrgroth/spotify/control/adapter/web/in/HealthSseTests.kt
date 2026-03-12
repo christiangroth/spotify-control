@@ -3,6 +3,7 @@ package de.chrgroth.spotify.control.adapter.web.`in`
 import de.chrgroth.spotify.control.adapter.`in`.web.HealthSseAdapter
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
+import de.chrgroth.spotify.control.domain.port.out.OutboxTaskCountObserver
 import de.chrgroth.spotify.control.domain.port.out.OutgoingRequestStatsObserver
 import de.chrgroth.outbox.OutboxPartitionObserver
 import io.quarkus.test.junit.QuarkusTest
@@ -26,6 +27,9 @@ class HealthSseTests {
 
     @Inject
     lateinit var outboxPartitionObserver: OutboxPartitionObserver
+
+    @Inject
+    lateinit var outboxTaskCountObserver: OutboxTaskCountObserver
 
     @Test
     fun `sse endpoint delivers refresh-outgoing-http-calls event when outgoing request is recorded`() {
@@ -60,6 +64,26 @@ class HealthSseTests {
             )
 
         outboxPartitionObserver.onPartitionActivated(DomainOutboxPartition.ToSpotify)
+
+        assertTrue(latch.await(5, TimeUnit.SECONDS), "SSE refresh event should be received within 5 seconds")
+        assertEquals(listOf("refresh-outbox-partitions"), received.toList())
+
+        cancellable.cancel()
+    }
+
+    @Test
+    fun `sse endpoint delivers refresh-outbox-partitions event when outbox task count changes`() {
+        val userId = UserId("test-user-health-sse-outbox-count")
+        val received = CopyOnWriteArrayList<String>()
+        val latch = CountDownLatch(1)
+
+        val cancellable: Cancellable = healthSseService.stream(userId)
+            .subscribe().with(
+                { event: String -> received.add(event); latch.countDown() },
+                { _: Throwable -> /* ignore errors */ },
+            )
+
+        outboxTaskCountObserver.onOutboxTaskCountChanged()
 
         assertTrue(latch.await(5, TimeUnit.SECONDS), "SSE refresh event should be received within 5 seconds")
         assertEquals(listOf("refresh-outbox-partitions"), received.toList())

@@ -6,11 +6,14 @@ import de.chrgroth.spotify.control.domain.port.`in`.CatalogPort
 import de.chrgroth.spotify.control.domain.port.`in`.PlaybackPort
 import de.chrgroth.spotify.control.domain.port.`in`.PlaylistPort
 import de.chrgroth.spotify.control.domain.port.`in`.UserProfilePort
+import de.chrgroth.spotify.control.domain.port.out.OutboxTaskCountObserver
 import de.chrgroth.outbox.OutboxPartition
 import de.chrgroth.outbox.OutboxTask
 import de.chrgroth.outbox.OutboxTaskDispatcher
 import de.chrgroth.outbox.OutboxTaskResult
 import jakarta.enterprise.context.ApplicationScoped
+import jakarta.enterprise.inject.Any
+import jakarta.enterprise.inject.Instance
 
 @ApplicationScoped
 @Suppress("Unused")
@@ -19,6 +22,7 @@ class DomainOutboxTaskDispatcher(
     private val catalog: CatalogPort,
     private val playlist: PlaylistPort,
     private val userProfile: UserProfilePort,
+    @param:Any private val outboxTaskCountObservers: Instance<OutboxTaskCountObserver>,
 ) : OutboxTaskDispatcher {
 
     override val partitions: List<OutboxPartition> = DomainOutboxPartition.all
@@ -29,7 +33,7 @@ class DomainOutboxTaskDispatcher(
         } catch (e: IllegalArgumentException) {
             return OutboxTaskResult.Failed("Unknown event type: ${task.eventType}", e)
         }
-        return when (event) {
+        val result = when (event) {
             is DomainOutboxEvent.FetchCurrentlyPlaying -> playback.handle(event)
             is DomainOutboxEvent.FetchRecentlyPlayed -> playback.handle(event)
             is DomainOutboxEvent.UpdateUserProfile -> userProfile.handle(event)
@@ -41,5 +45,7 @@ class DomainOutboxTaskDispatcher(
             is DomainOutboxEvent.EnrichTrackDetails -> catalog.handle(event)
             is DomainOutboxEvent.EnrichAlbumDetails -> catalog.handle(event)
         }
+        outboxTaskCountObservers.forEach { it.onOutboxTaskCountChanged() }
+        return result
     }
 }
