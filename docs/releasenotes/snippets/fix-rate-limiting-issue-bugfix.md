@@ -1,0 +1,1 @@
+* fix-rate-limiting-issue: Increased Spotify catalog API throttle interval from 5s to 10s to reduce rate limiting during bulk catalog enrichment.
