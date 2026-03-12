@@ -1,3 +1,23 @@
+# 0.46.4 (2026.03.12)
+
+## Bugfixes / Chore
+* fix-expand-tape-outbox-events: Outbox event details on health page are now expanded by default and can no longer be collapsed.
+* fix-expand-tape-outbox-events: Reduced fade animation duration on SSE update events.
+
+
+
+---
+
+# 0.46.3 (2026.03.12)
+
+## Bugfixes / Chore
+* fix-health-ui-outbox-tasks: Health UI is now updated via SSE when the number of outbox tasks changes.
+* group-outgoing-requests-by-type: Outgoing Spotify API requests are now grouped by endpoint type in request stats and metrics (e.g. `/v1/tracks/{id}` instead of individual track IDs).
+
+
+
+---
+
 # 0.46.2 (2026.03.12)
 
 ## Bugfixes / Chore
