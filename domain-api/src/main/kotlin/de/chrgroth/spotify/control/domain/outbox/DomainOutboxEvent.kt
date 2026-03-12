@@ -143,6 +143,34 @@ sealed interface DomainOutboxEvent : OutboxEvent {
     }
 
     /**
+     * Bulk-fetches track/album details for up to [BATCH_SIZE] tracks from the Spotify API
+     * using GET /v1/tracks?ids=..., updates app_track.albumId for each track, and upserts
+     * the corresponding app_album entries. Automatically falls back to individual
+     * [EnrichTrackDetails]-style requests when the bulk endpoint becomes unavailable.
+     * Deduplication is by the sorted set of trackIds (track data is shared across users).
+     * payload = "${userId.value}:trackId1,trackId2,..."
+     */
+    data class EnrichTrackDetailsBulk(val trackIds: List<String>, val userId: UserId) : DomainOutboxEvent {
+        override val key = KEY
+        override fun deduplicationKey() = "$KEY:${trackIds.sorted().joinToString(",")}"
+        override val partition = DomainOutboxPartition.ToSpotify
+        override fun toPayload() = "${userId.value}:${trackIds.joinToString(",")}"
+
+        companion object {
+            const val KEY = "EnrichTrackDetailsBulk"
+            const val BATCH_SIZE = 50
+            fun fromPayload(payload: String): EnrichTrackDetailsBulk {
+                val colonIndex = payload.indexOf(':')
+                require(colonIndex > 0 && colonIndex < payload.length - 1) { "Invalid EnrichTrackDetailsBulk payload: $payload" }
+                return EnrichTrackDetailsBulk(
+                    userId = UserId(payload.substring(0, colonIndex)),
+                    trackIds = payload.substring(colonIndex + 1).split(","),
+                )
+            }
+        }
+    }
+
+    /**
      * Fetches album details for a single album from the Spotify API,
      * and updates app_album with albumTitle, imageLink, genres, and artistId.
      * Deduplication is by albumId only (album data is shared across users).
@@ -178,6 +206,7 @@ sealed interface DomainOutboxEvent : OutboxEvent {
             AppendPlaybackData.KEY -> AppendPlaybackData(UserId(payload))
             EnrichArtistDetails.KEY -> EnrichArtistDetails.fromPayload(payload)
             EnrichTrackDetails.KEY -> EnrichTrackDetails.fromPayload(payload)
+            EnrichTrackDetailsBulk.KEY -> EnrichTrackDetailsBulk.fromPayload(payload)
             EnrichAlbumDetails.KEY -> EnrichAlbumDetails.fromPayload(payload)
             else -> throw IllegalArgumentException("Unknown outbox event type: $key")
         }

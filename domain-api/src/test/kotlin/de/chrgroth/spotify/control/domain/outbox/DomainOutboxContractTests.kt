@@ -20,6 +20,7 @@ class DomainOutboxContractTests {
         DomainOutboxEvent.AppendPlaybackData(UserId("user-1")),
         DomainOutboxEvent.EnrichArtistDetails("artist-1", UserId("user-1")),
         DomainOutboxEvent.EnrichTrackDetails("track-1", UserId("user-1")),
+        DomainOutboxEvent.EnrichTrackDetailsBulk(listOf("track-1", "track-2"), UserId("user-1")),
         DomainOutboxEvent.EnrichAlbumDetails("album-1", UserId("user-1")),
     )
 

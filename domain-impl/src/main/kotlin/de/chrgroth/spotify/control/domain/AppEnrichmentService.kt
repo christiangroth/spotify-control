@@ -15,10 +15,12 @@ import mu.KLogging
  * three-stage enrichment pipeline on the throttled `to-spotify` outbox partition:
  *
  * 1. [DomainOutboxEvent.EnrichArtistDetails] — one per artist
- * 2. [DomainOutboxEvent.EnrichTrackDetails]  — one per track; auto-chains to EnrichAlbumDetails
- *    when the albumId is fetched from Spotify
+ * 2. [DomainOutboxEvent.EnrichTrackDetailsBulk] — one per batch of up to [DomainOutboxEvent.EnrichTrackDetailsBulk.BATCH_SIZE]
+ *    tracks; uses the bulk GET /v1/tracks?ids=... endpoint and auto-chains to EnrichAlbumDetails
+ *    for each resolved albumId; transparently falls back to individual requests if the bulk
+ *    endpoint is removed.
  * 3. [DomainOutboxEvent.EnrichAlbumDetails]  — one per albumId that is already known in
- *    app_track; needed because EnrichTrackDetails is skipped for pre-enriched tracks, so
+ *    app_track; needed because EnrichTrackDetailsBulk is skipped for pre-enriched tracks, so
  *    album enrichment would otherwise be missed for those tracks.
  *
  * All enrichment handlers implement "skip if already enriched" so duplicate events are harmless.
@@ -39,11 +41,11 @@ class AppEnrichmentService(
         }
 
         appTrackRepository.upsertAll(tracks)
-        tracks.forEach { track ->
-            outboxPort.enqueue(DomainOutboxEvent.EnrichTrackDetails(track.trackId, userId))
+        tracks.chunked(DomainOutboxEvent.EnrichTrackDetailsBulk.BATCH_SIZE).forEach { chunk ->
+            outboxPort.enqueue(DomainOutboxEvent.EnrichTrackDetailsBulk(chunk.map { it.trackId }, userId))
         }
 
-        // EnrichTrackDetails is skipped when albumId is already populated.  For those tracks the
+        // EnrichTrackDetailsBulk is skipped when albumId is already populated.  For those tracks the
         // album enrichment must be triggered directly so previously-synced albums are not missed.
         if (tracks.isNotEmpty()) {
             val trackIds = tracks.map { it.trackId }.toSet()

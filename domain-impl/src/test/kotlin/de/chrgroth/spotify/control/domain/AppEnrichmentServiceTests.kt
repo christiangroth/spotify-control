@@ -51,7 +51,7 @@ class AppEnrichmentServiceTests {
     }
 
     @Test
-    fun `upserts tracks and enqueues EnrichTrackDetails`() {
+    fun `upserts tracks and enqueues EnrichTrackDetailsBulk`() {
         every { appArtistRepository.upsertAll(any()) } just runs
         every { appTrackRepository.upsertAll(any()) } just runs
         every { appTrackRepository.findByTrackIds(setOf("track-1")) } returns listOf(track1)
@@ -60,7 +60,7 @@ class AppEnrichmentServiceTests {
         service.upsertAndEnqueueEnrichment(emptyList(), listOf(track1), userId)
 
         verify { appTrackRepository.upsertAll(listOf(track1)) }
-        verify { outboxPort.enqueue(DomainOutboxEvent.EnrichTrackDetails("track-1", userId)) }
+        verify { outboxPort.enqueue(DomainOutboxEvent.EnrichTrackDetailsBulk(listOf("track-1"), userId)) }
     }
 
     @Test
@@ -73,7 +73,7 @@ class AppEnrichmentServiceTests {
 
         service.upsertAndEnqueueEnrichment(emptyList(), listOf(track1), userId)
 
-        verify { outboxPort.enqueue(DomainOutboxEvent.EnrichTrackDetails("track-1", userId)) }
+        verify { outboxPort.enqueue(DomainOutboxEvent.EnrichTrackDetailsBulk(listOf("track-1"), userId)) }
         verify { outboxPort.enqueue(DomainOutboxEvent.EnrichAlbumDetails("album-1", userId)) }
     }
 
@@ -100,7 +100,23 @@ class AppEnrichmentServiceTests {
         service.upsertAndEnqueueEnrichment(listOf(artist1), listOf(track1), userId)
 
         verify { outboxPort.enqueue(DomainOutboxEvent.EnrichArtistDetails("artist-1", userId)) }
-        verify { outboxPort.enqueue(DomainOutboxEvent.EnrichTrackDetails("track-1", userId)) }
+        verify { outboxPort.enqueue(DomainOutboxEvent.EnrichTrackDetailsBulk(listOf("track-1"), userId)) }
         verify { outboxPort.enqueue(DomainOutboxEvent.EnrichAlbumDetails("album-1", userId)) }
+    }
+
+    @Test
+    fun `batches tracks into chunks of BATCH_SIZE for EnrichTrackDetailsBulk`() {
+        val batchSize = DomainOutboxEvent.EnrichTrackDetailsBulk.BATCH_SIZE
+        val manyTracks = (1..batchSize + 1).map {
+            AppTrack(trackId = "track-$it", trackTitle = "Track $it", artistId = "artist-1")
+        }
+        every { appArtistRepository.upsertAll(any()) } just runs
+        every { appTrackRepository.upsertAll(any()) } just runs
+        every { appTrackRepository.findByTrackIds(manyTracks.map { it.trackId }.toSet()) } returns manyTracks
+        every { outboxPort.enqueue(any()) } just runs
+
+        service.upsertAndEnqueueEnrichment(emptyList(), manyTracks, userId)
+
+        verify(exactly = 2) { outboxPort.enqueue(match { it is DomainOutboxEvent.EnrichTrackDetailsBulk }) }
     }
 }
