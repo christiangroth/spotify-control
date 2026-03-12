@@ -1,6 +1,7 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
 import de.chrgroth.spotify.control.domain.model.UserId
+import de.chrgroth.spotify.control.domain.port.out.OutboxTaskCountObserver
 import de.chrgroth.spotify.control.domain.port.out.OutgoingRequestStatsObserver
 import de.chrgroth.outbox.OutboxPartition
 import de.chrgroth.outbox.OutboxPartitionObserver
@@ -11,7 +12,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 
 @ApplicationScoped
-class HealthSseAdapter : OutboxPartitionObserver, OutgoingRequestStatsObserver {
+class HealthSseAdapter : OutboxPartitionObserver, OutgoingRequestStatsObserver, OutboxTaskCountObserver {
 
     private val emittersByUser = ConcurrentHashMap<String, CopyOnWriteArrayList<MultiEmitter<in String>>>()
 
@@ -30,6 +31,8 @@ class HealthSseAdapter : OutboxPartitionObserver, OutgoingRequestStatsObserver {
     override fun onPartitionActivated(partition: OutboxPartition) = notifyAllUsers("refresh-outbox-partitions")
 
     override fun onRequestRecorded() = notifyAllUsers("refresh-outgoing-http-calls")
+
+    override fun onOutboxTaskCountChanged() = notifyAllUsers("refresh-outbox-partitions")
 
     private fun notifyAllUsers(event: String) = emittersByUser.keys.toList().forEach { emitToUser(it, event) }
 
