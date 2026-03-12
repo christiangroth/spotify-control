@@ -42,7 +42,7 @@ class SpotifyHttpMetrics(
     }
 
     private fun record(uri: URI, statusCode: Int, durationMs: Long) {
-        val endpoint = "${uri.host}${uri.path}"
+        val endpoint = normalizeEndpoint("${uri.host}${uri.path}")
         timers.getOrPut("${endpoint}_${statusCode}") {
             Timer.builder("spotify.request")
                 .tag("url", endpoint)
@@ -68,6 +68,9 @@ class SpotifyHttpMetrics(
             }
             .sortedBy { it.endpoint }
     }
+
+    private fun normalizeEndpoint(endpoint: String): String =
+        endpoint.replace(Regex("/[A-Za-z0-9]{16,}(?=/|$)"), "/{id}")
 
     private fun pruneOldEntries(deque: ConcurrentLinkedDeque<Instant>) {
         val cutoff = Instant.now().minusSeconds(WINDOW_SECONDS)
