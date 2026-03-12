@@ -14,7 +14,7 @@ jobs:
           java-version: '25'
           distribution: 'temurin'
       - uses: gradle/actions/setup-gradle@v5
-      - run: ./gradlew --stacktrace build
+      - run: ./gradlew build
         env:
           GHCR_PAT: ${{ secrets.GHCR_PAT }}
 
@@ -70,7 +70,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - run: ./gradlew --stacktrace release -x test -x testNative -x koverHtmlReport -x koverVerify
+      - run: ./gradlew release -x test -x testNative -x koverHtmlReport -x koverVerify
         env:
           GHCR_PAT: ${{ secrets.GHCR_PAT }}
       - run: |
