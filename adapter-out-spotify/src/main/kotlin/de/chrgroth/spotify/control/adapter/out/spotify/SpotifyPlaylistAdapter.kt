@@ -80,7 +80,7 @@ class SpotifyPlaylistAdapter(
           .header("Authorization", "Bearer ${accessToken.value}")
           .GET()
           .build()
-        val response = httpMetrics.timed(request.uri()) {
+        val response = httpMetrics.timed("/v1/playlists/{id}/items") {
           httpClient.send(request, HttpResponse.BodyHandlers.ofString())
         }
         val errorResult = response.checkRateLimitOrError(logger, PlaylistSyncError.PLAYLIST_TRACKS_FETCH_FAILED)

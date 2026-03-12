@@ -40,7 +40,7 @@ class SpotifyPlaybackAdapter(
         .header("Authorization", "Bearer ${accessToken.value}")
         .GET()
         .build()
-      val response = httpMetrics.timed(request.uri()) {
+      val response = httpMetrics.timed("/v1/me/player/currently-playing") {
         httpClient.send(request, HttpResponse.BodyHandlers.ofString())
       }
       if (response.statusCode() == HTTP_NO_CONTENT) {
@@ -92,7 +92,7 @@ class SpotifyPlaybackAdapter(
                     .header("Authorization", "Bearer ${accessToken.value}")
                     .GET()
                     .build()
-                val response = httpMetrics.timed(request.uri()) {
+                val response = httpMetrics.timed("/v1/me/player/recently-played") {
                     httpClient.send(request, HttpResponse.BodyHandlers.ofString())
                 }
                 val errorResult = response.checkRateLimitOrError(logger, PlaybackError.RECENTLY_PLAYED_FETCH_FAILED)
