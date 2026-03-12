@@ -11,6 +11,7 @@ dependencies {
   implementation(project(":adapter-in-web"))
   implementation(project(":adapter-out-mongodb"))
   implementation(project(":adapter-out-outbox"))
+  implementation(project(":adapter-out-scheduler"))
   implementation(project(":adapter-out-spotify"))
   implementation(project(":domain-impl"))
 

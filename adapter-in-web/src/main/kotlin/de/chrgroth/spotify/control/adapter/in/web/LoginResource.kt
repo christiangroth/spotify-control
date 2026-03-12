@@ -34,7 +34,7 @@ class LoginResource {
   @Produces(MediaType.TEXT_HTML)
   fun index(@QueryParam("error") error: String?): Response {
     if (!securityIdentity.isAnonymous) {
-      return Response.temporaryRedirect(URI.create("/ui/dashboard")).build()
+      return Response.temporaryRedirect(URI.create("/dashboard")).build()
     }
     return Response.ok(loginTemplate.data("errorMessage", error?.let { errorMessage(it) })).build()
   }

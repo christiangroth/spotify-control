@@ -95,7 +95,7 @@ class OAuthResource {
                         Response.temporaryRedirect(URI.create("/?error=${encryptError.code}")).build()
                     },
                     ifRight = { cookieValue ->
-                        Response.temporaryRedirect(URI.create("/ui/dashboard"))
+                        Response.temporaryRedirect(URI.create("/dashboard"))
                             .cookie(
                                 NewCookie.Builder(SpotifyCookieAuthMechanism.COOKIE_NAME)
                                     .value(cookieValue)

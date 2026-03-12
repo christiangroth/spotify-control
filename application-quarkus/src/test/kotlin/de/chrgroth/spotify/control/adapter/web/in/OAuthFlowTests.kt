@@ -83,7 +83,7 @@ class OAuthFlowTests {
             .get("/oauth/callback")
             .then()
             .statusCode(307)
-            .header("Location", org.hamcrest.CoreMatchers.endsWith("/ui/dashboard"))
+            .header("Location", org.hamcrest.CoreMatchers.endsWith("/dashboard"))
             .extract()
             .response()
 
@@ -129,7 +129,7 @@ class OAuthFlowTests {
             .get("/")
             .then()
             .statusCode(307)
-            .header("Location", org.hamcrest.CoreMatchers.endsWith("/ui/dashboard"))
+            .header("Location", org.hamcrest.CoreMatchers.endsWith("/dashboard"))
     }
 
     @Test
@@ -151,7 +151,7 @@ class OAuthFlowTests {
         given()
             .redirects().follow(false)
             .`when`()
-            .get("/ui/dashboard")
+            .get("/dashboard")
             .then()
             .statusCode(307)
             .header("Location", org.hamcrest.CoreMatchers.endsWith("/"))
