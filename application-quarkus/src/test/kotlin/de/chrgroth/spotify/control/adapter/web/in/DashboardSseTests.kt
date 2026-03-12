@@ -1,6 +1,6 @@
 package de.chrgroth.spotify.control.adapter.web.`in`
 
-import de.chrgroth.spotify.control.adapter.`in`.web.ui.DashboardSseService
+import de.chrgroth.spotify.control.adapter.`in`.web.DashboardSseAdapter
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.out.DashboardRefreshPort
 import io.quarkus.test.junit.QuarkusTest
@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit
 class DashboardSseTests {
 
     @Inject
-    lateinit var dashboardSseService: DashboardSseService
+    lateinit var dashboardSseService: DashboardSseAdapter
 
     @Inject
     lateinit var dashboardRefreshPort: DashboardRefreshPort

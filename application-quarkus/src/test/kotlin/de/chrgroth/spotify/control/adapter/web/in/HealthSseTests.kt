@@ -1,6 +1,6 @@
 package de.chrgroth.spotify.control.adapter.web.`in`
 
-import de.chrgroth.spotify.control.adapter.`in`.web.ui.HealthSseService
+import de.chrgroth.spotify.control.adapter.`in`.web.HealthSseAdapter
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
 import de.chrgroth.spotify.control.domain.port.out.OutgoingRequestStatsObserver
@@ -19,7 +19,7 @@ import java.util.concurrent.TimeUnit
 class HealthSseTests {
 
     @Inject
-    lateinit var healthSseService: HealthSseService
+    lateinit var healthSseService: HealthSseAdapter
 
     @Inject
     lateinit var outgoingRequestStatsObserver: OutgoingRequestStatsObserver
