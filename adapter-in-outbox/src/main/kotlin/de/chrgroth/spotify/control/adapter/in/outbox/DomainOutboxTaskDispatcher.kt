@@ -52,5 +52,6 @@ class DomainOutboxTaskDispatcher(
       is DomainOutboxEvent.SyncTrackDetails -> catalog.handle(event)
       is DomainOutboxEvent.SyncMissingArtists -> catalog.handle(event)
       is DomainOutboxEvent.SyncMissingTracks -> catalog.handle(event)
+      is DomainOutboxEvent.ResyncCatalog -> catalog.handle(event)
     }
 }

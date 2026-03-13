@@ -131,8 +131,26 @@ class CatalogAdapter(
             }
     }
 
-    private fun syncMissingArtists(): Either<DomainError, Int> {
-        val userId = userRepository.findAll().firstOrNull()?.spotifyUserId
+    override fun resyncCatalog(): Either<DomainError, Unit> {
+        val allArtistIds = appArtistRepository.findAll().map { it.artistId }
+        val allTrackIds = appTrackRepository.findAll().map { it.id.value }
+        logger.info { "Re-syncing catalog: ${allArtistIds.size} artist(s) and ${allTrackIds.size} track(s) added to sync pool" }
+        if (allArtistIds.isNotEmpty()) syncPoolRepository.addArtists(allArtistIds)
+        if (allTrackIds.isNotEmpty()) syncPoolRepository.addTracks(allTrackIds)
+        return Unit.right()
+    }
+
+    override fun resyncArtist(artistId: String): Either<DomainError, Unit> {
+        appArtistRepository.findByArtistIds(setOf(artistId)).firstOrNull()
+            ?: return ArtistSettingsError.ARTIST_NOT_FOUND.left()
+        logger.info { "Re-syncing artist $artistId and all their tracks" }
+        syncPoolRepository.addArtists(listOf(artistId))
+        val trackIds = appTrackRepository.findByArtistId(ArtistId(artistId)).map { it.id.value }
+        if (trackIds.isNotEmpty()) syncPoolRepository.addTracks(trackIds)
+        return Unit.right()
+    }
+
+    private fun syncMissingArtists(): Either<DomainError, Int> {        val userId = userRepository.findAll().firstOrNull()?.spotifyUserId
         if (userId == null) {
             logger.debug { "No users available, skipping syncMissingArtists" }
             return 0.right()
@@ -190,80 +208,42 @@ class CatalogAdapter(
 
     // --- Outbox Handlers ---
 
-    override fun handle(event: DomainOutboxEvent.SyncArtistDetails): OutboxTaskResult = try {
-        when (val result = syncArtistDetails(event.artistId, event.userId)) {
-            is Either.Right -> OutboxTaskResult.Success
-            is Either.Left -> when (val error = result.value) {
-                is SpotifyRateLimitError -> {
-                    logger.warn { "Rate limited on SyncArtistDetails artist ${event.artistId} (user ${event.userId.value}), retry after ${error.retryAfter.seconds}s" }
-                    OutboxTaskResult.RateLimited(error.retryAfter)
-                }
-                else -> {
-                    logger.error { "Failed to sync artist ${event.artistId} for user ${event.userId.value}: ${error.code}" }
-                    OutboxTaskResult.Failed("Failed to sync artist: ${error.code}")
-                }
-            }
+    override fun handle(event: DomainOutboxEvent.SyncArtistDetails): OutboxTaskResult =
+        handleOutboxTask("SyncArtistDetails[artist=${event.artistId},user=${event.userId.value}]") {
+            syncArtistDetails(event.artistId, event.userId)
         }
-    } catch (e: Exception) {
-        logger.error(e) { "Unexpected error in handle(SyncArtistDetails) for artist ${event.artistId} (user ${event.userId.value})" }
-        OutboxTaskResult.Failed("Unexpected error in sync: ${e.message}", e)
-    }
 
-    override fun handle(event: DomainOutboxEvent.SyncTrackDetails): OutboxTaskResult = try {
-        when (val result = syncTrackDetails(event.trackId, event.userId)) {
-            is Either.Right -> OutboxTaskResult.Success
-            is Either.Left -> when (val error = result.value) {
-                is SpotifyRateLimitError -> {
-                    logger.warn { "Rate limited on SyncTrackDetails for track ${event.trackId} (user ${event.userId.value}), retry after ${error.retryAfter.seconds}s" }
-                    OutboxTaskResult.RateLimited(error.retryAfter)
-                }
-                else -> {
-                    logger.error { "Failed to sync track ${event.trackId} for user ${event.userId.value}: ${error.code}" }
-                    OutboxTaskResult.Failed("Failed to sync track: ${error.code}")
-                }
-            }
+    override fun handle(event: DomainOutboxEvent.SyncTrackDetails): OutboxTaskResult =
+        handleOutboxTask("SyncTrackDetails[track=${event.trackId},user=${event.userId.value}]") {
+            syncTrackDetails(event.trackId, event.userId)
         }
-    } catch (e: Exception) {
-        logger.error(e) { "Unexpected error in handle(SyncTrackDetails) for track ${event.trackId} (user ${event.userId.value})" }
-        OutboxTaskResult.Failed("Unexpected error in sync: ${e.message}", e)
-    }
 
-    override fun handle(event: DomainOutboxEvent.SyncMissingArtists): OutboxTaskResult = try {
-        when (val result = syncMissingArtists()) {
-            is Either.Right -> OutboxTaskResult.Success
-            is Either.Left -> when (val error = result.value) {
-                is SpotifyRateLimitError -> {
-                    logger.warn { "Rate limited on SyncMissingArtists, retry after ${error.retryAfter.seconds}s" }
-                    OutboxTaskResult.RateLimited(error.retryAfter)
-                }
-                else -> {
-                    logger.error { "Failed to sync missing artists: ${error.code}" }
-                    OutboxTaskResult.Failed("Failed to sync missing artists: ${error.code}")
-                }
-            }
-        }
-    } catch (e: Exception) {
-        logger.error(e) { "Unexpected error in handle(SyncMissingArtists)" }
-        OutboxTaskResult.Failed("Unexpected error in sync: ${e.message}", e)
-    }
+    override fun handle(event: DomainOutboxEvent.SyncMissingArtists): OutboxTaskResult =
+        handleOutboxTask("SyncMissingArtists") { syncMissingArtists() }
 
-    override fun handle(event: DomainOutboxEvent.SyncMissingTracks): OutboxTaskResult = try {
-        when (val result = syncMissingTracks()) {
+    override fun handle(event: DomainOutboxEvent.SyncMissingTracks): OutboxTaskResult =
+        handleOutboxTask("SyncMissingTracks") { syncMissingTracks() }
+
+    override fun handle(event: DomainOutboxEvent.ResyncCatalog): OutboxTaskResult =
+        handleOutboxTask("ResyncCatalog") { resyncCatalog() }
+
+    private fun handleOutboxTask(taskDescription: String, operation: () -> Either<DomainError, *>): OutboxTaskResult = try {
+        when (val result = operation()) {
             is Either.Right -> OutboxTaskResult.Success
             is Either.Left -> when (val error = result.value) {
                 is SpotifyRateLimitError -> {
-                    logger.warn { "Rate limited on SyncMissingTracks, retry after ${error.retryAfter.seconds}s" }
+                    logger.warn { "Rate limited on $taskDescription, retry after ${error.retryAfter.seconds}s" }
                     OutboxTaskResult.RateLimited(error.retryAfter)
                 }
                 else -> {
-                    logger.error { "Failed to sync missing tracks: ${error.code}" }
-                    OutboxTaskResult.Failed("Failed to sync missing tracks: ${error.code}")
+                    logger.error { "Failed $taskDescription: ${error.code}" }
+                    OutboxTaskResult.Failed("Failed $taskDescription: ${error.code}")
                 }
             }
         }
     } catch (e: Exception) {
-        logger.error(e) { "Unexpected error in handle(SyncMissingTracks)" }
-        OutboxTaskResult.Failed("Unexpected error in sync: ${e.message}", e)
+        logger.error(e) { "Unexpected error in $taskDescription" }
+        OutboxTaskResult.Failed("Unexpected error in $taskDescription: ${e.message}", e)
     }
 
     companion object : KLogging() {

@@ -177,6 +177,21 @@ sealed interface DomainOutboxEvent : OutboxEvent {
         }
     }
 
+    /**
+     * Re-adds all known artist and track IDs to app_sync_pool so that they are picked up by the
+     * SyncMissingArtists / SyncMissingTracks bulk-sync jobs and refreshed from Spotify.
+     * Deduplication ensures only one instance is queued at a time.
+     */
+    data class ResyncCatalog(val placeholder: String = "") : DomainOutboxEvent {
+        override val key = KEY
+        override fun deduplicationKey() = KEY
+        override val partition = DomainOutboxPartition.Domain
+        override fun toPayload() = ""
+
+        companion object {
+            const val KEY = "ResyncCatalog"
+        }
+    }
 
     companion object {
         fun fromKey(key: String, payload: String): DomainOutboxEvent = when (key) {
@@ -191,6 +206,7 @@ sealed interface DomainOutboxEvent : OutboxEvent {
             SyncTrackDetails.KEY, SyncTrackDetails.LEGACY_KEY -> SyncTrackDetails.fromPayload(payload)
             SyncMissingArtists.KEY -> SyncMissingArtists()
             SyncMissingTracks.KEY -> SyncMissingTracks()
+            ResyncCatalog.KEY -> ResyncCatalog()
             else -> throw IllegalArgumentException("Unknown outbox event type: $key")
         }
     }
