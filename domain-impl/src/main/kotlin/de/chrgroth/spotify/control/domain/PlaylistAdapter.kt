@@ -113,7 +113,7 @@ class PlaylistAdapter(
                 )
             }
 
-            appSyncService.upsertAndAddToSyncPool(artistStubs, trackStubs, userId)
+            appSyncService.upsertAndAddToSyncPool(artistStubs, trackStubs)
         }
     }
 

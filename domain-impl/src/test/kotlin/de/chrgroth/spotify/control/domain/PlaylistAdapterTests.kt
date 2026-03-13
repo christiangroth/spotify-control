@@ -436,7 +436,7 @@ class PlaylistAdapterTests {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { spotifyPlaylist.getPlaylistTracks(userId, accessToken, "p1") } returns playlist.right()
         every { playlistRepository.save(userId, playlist) } just runs
-        every { appSyncService.upsertAndAddToSyncPool(any(), any(), any()) } just runs
+        every { appSyncService.upsertAndAddToSyncPool(any(), any()) } just runs
 
         val result = adapter.syncPlaylistData(userId, "p1")
 
@@ -452,7 +452,7 @@ class PlaylistAdapterTests {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { spotifyPlaylist.getPlaylistTracks(userId, accessToken, "p1") } returns playlist.right()
         every { playlistRepository.save(userId, playlist) } just runs
-        every { appSyncService.upsertAndAddToSyncPool(any(), any(), any()) } just runs
+        every { appSyncService.upsertAndAddToSyncPool(any(), any()) } just runs
 
         adapter.syncPlaylistData(userId, "p1")
 
@@ -468,7 +468,6 @@ class PlaylistAdapterTests {
                         tracks[0].artistId.value == "artist-1" &&
                         tracks[0].additionalArtistIds.isEmpty()
                 },
-                userId,
             )
         }
     }

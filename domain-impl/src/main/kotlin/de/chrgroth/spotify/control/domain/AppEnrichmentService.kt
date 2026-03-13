@@ -27,7 +27,7 @@ class AppSyncService(
     private val syncPoolRepository: AppSyncPoolRepositoryPort,
 ) {
 
-    fun upsertAndAddToSyncPool(artists: List<AppArtist>, tracks: List<AppTrack>, userId: UserId) {
+    fun upsertAndAddToSyncPool(artists: List<AppArtist>, tracks: List<AppTrack>) {
         if (artists.isEmpty() && tracks.isEmpty()) return
 
         appArtistRepository.upsertAll(artists)

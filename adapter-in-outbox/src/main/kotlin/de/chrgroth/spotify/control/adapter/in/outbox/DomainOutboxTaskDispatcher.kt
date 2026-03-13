@@ -28,27 +28,29 @@ class DomainOutboxTaskDispatcher(
     override val partitions: List<OutboxPartition> = DomainOutboxPartition.all
 
     override fun dispatch(task: OutboxTask): OutboxTaskResult {
-        val event = try {
-            DomainOutboxEvent.fromKey(task.eventType, task.payload)
+        try {
+          val result = dispatchEvent(DomainOutboxEvent.fromKey(task.eventType, task.payload))
+          if (result is OutboxTaskResult.Success) {
+            outboxTaskCountObservers.forEach { it.onOutboxTaskCountChanged() }
+          }
+          return result
         } catch (e: IllegalArgumentException) {
             return OutboxTaskResult.Failed("Unknown event type: ${task.eventType}", e)
         }
-        val result = when (event) {
-            is DomainOutboxEvent.FetchCurrentlyPlaying -> playback.handle(event)
-            is DomainOutboxEvent.FetchRecentlyPlayed -> playback.handle(event)
-            is DomainOutboxEvent.UpdateUserProfile -> userProfile.handle(event)
-            is DomainOutboxEvent.SyncPlaylistInfo -> playlist.handle(event)
-            is DomainOutboxEvent.SyncPlaylistData -> playlist.handle(event)
-            is DomainOutboxEvent.RebuildPlaybackData -> playback.handle(event)
-            is DomainOutboxEvent.AppendPlaybackData -> playback.handle(event)
-            is DomainOutboxEvent.SyncArtistDetails -> catalog.handle(event)
-            is DomainOutboxEvent.SyncTrackDetails -> catalog.handle(event)
-            is DomainOutboxEvent.SyncMissingArtists -> catalog.handle(event)
-            is DomainOutboxEvent.SyncMissingTracks -> catalog.handle(event)
-        }
-        if (result is OutboxTaskResult.Success) {
-            outboxTaskCountObservers.forEach { it.onOutboxTaskCountChanged() }
-        }
-        return result
+    }
+
+  private fun dispatchEvent(event: DomainOutboxEvent): OutboxTaskResult =
+      when (event) {
+      is DomainOutboxEvent.FetchCurrentlyPlaying -> playback.handle(event)
+      is DomainOutboxEvent.FetchRecentlyPlayed -> playback.handle(event)
+      is DomainOutboxEvent.UpdateUserProfile -> userProfile.handle(event)
+      is DomainOutboxEvent.SyncPlaylistInfo -> playlist.handle(event)
+      is DomainOutboxEvent.SyncPlaylistData -> playlist.handle(event)
+      is DomainOutboxEvent.RebuildPlaybackData -> playback.handle(event)
+      is DomainOutboxEvent.AppendPlaybackData -> playback.handle(event)
+      is DomainOutboxEvent.SyncArtistDetails -> catalog.handle(event)
+      is DomainOutboxEvent.SyncTrackDetails -> catalog.handle(event)
+      is DomainOutboxEvent.SyncMissingArtists -> catalog.handle(event)
+      is DomainOutboxEvent.SyncMissingTracks -> catalog.handle(event)
     }
 }

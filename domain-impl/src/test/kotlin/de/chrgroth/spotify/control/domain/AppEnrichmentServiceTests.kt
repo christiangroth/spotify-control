@@ -31,7 +31,7 @@ class AppEnrichmentServiceTests {
 
     @Test
     fun `does nothing when both lists are empty`() {
-        service.upsertAndAddToSyncPool(emptyList(), emptyList(), userId)
+        service.upsertAndAddToSyncPool(emptyList(), emptyList())
 
         verify(exactly = 0) { appArtistRepository.upsertAll(any()) }
         verify(exactly = 0) { appTrackRepository.upsertAll(any()) }
@@ -45,7 +45,7 @@ class AppEnrichmentServiceTests {
         every { appTrackRepository.upsertAll(any()) } just runs
         every { syncPoolRepository.addArtists(any()) } just runs
 
-        service.upsertAndAddToSyncPool(listOf(artist1), emptyList(), userId)
+        service.upsertAndAddToSyncPool(listOf(artist1), emptyList())
 
         verify { appArtistRepository.upsertAll(listOf(artist1)) }
         verify { syncPoolRepository.addArtists(listOf("artist-1")) }
@@ -57,7 +57,7 @@ class AppEnrichmentServiceTests {
         every { appTrackRepository.upsertAll(any()) } just runs
         every { syncPoolRepository.addTracks(any()) } just runs
 
-        service.upsertAndAddToSyncPool(emptyList(), listOf(track1), userId)
+        service.upsertAndAddToSyncPool(emptyList(), listOf(track1))
 
         verify { appTrackRepository.upsertAll(listOf(track1)) }
         verify { syncPoolRepository.addTracks(listOf("track-1")) }
@@ -70,7 +70,7 @@ class AppEnrichmentServiceTests {
         every { appTrackRepository.upsertAll(any()) } just runs
         every { syncPoolRepository.addTracks(any()) } just runs
 
-        service.upsertAndAddToSyncPool(emptyList(), listOf(trackWithAlbum), userId)
+        service.upsertAndAddToSyncPool(emptyList(), listOf(trackWithAlbum))
 
         verify { syncPoolRepository.addTracks(listOf("track-1")) }
     }
@@ -82,7 +82,7 @@ class AppEnrichmentServiceTests {
         every { syncPoolRepository.addArtists(any()) } just runs
         every { syncPoolRepository.addTracks(any()) } just runs
 
-        service.upsertAndAddToSyncPool(listOf(artist1), listOf(track1), userId)
+        service.upsertAndAddToSyncPool(listOf(artist1), listOf(track1))
 
         verify { syncPoolRepository.addArtists(listOf("artist-1")) }
         verify { syncPoolRepository.addTracks(listOf("track-1")) }

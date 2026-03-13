@@ -235,7 +235,7 @@ class PlaybackAdapter(
         logger.info { "Persisting ${newPlaybackItems.size} new app_playback items for user: ${userId.value}" }
         appPlaybackRepository.saveAll(newPlaybackItems)
 
-        appSyncService.upsertAndAddToSyncPool(artists, tracks, userId)
+        appSyncService.upsertAndAddToSyncPool(artists, tracks)
     }
 
     private fun buildPlaybackItems(
