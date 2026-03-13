@@ -1,0 +1,1 @@
+* update-release-notes-document: Fixed release notes not being up to date in the Docker container by ensuring the release notes are fully generated and written before the Quarkus application is rebuilt during release.
