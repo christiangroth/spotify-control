@@ -16,11 +16,13 @@ import de.chrgroth.spotify.control.domain.port.out.CurrentlyPlayingRepositoryPor
 import de.chrgroth.spotify.control.domain.port.out.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.PlaybackStatePort
+import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.RecentlyPartialPlayedRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.RecentlyPlayedRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyPlaybackPort
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
+import de.chrgroth.spotify.control.domain.port.`in`.CatalogPort
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -49,6 +51,8 @@ class RecentlyPlayedAdapterTests {
     private val dashboardRefresh: DashboardRefreshPort = mockk(relaxed = true)
     private val playbackState: PlaybackStatePort = mockk(relaxed = true)
     private val appEnrichmentService: AppEnrichmentService = mockk(relaxed = true)
+    private val catalog: CatalogPort = mockk(relaxed = true)
+    private val playlistRepository: PlaylistRepositoryPort = mockk(relaxed = true)
 
     private val adapter = PlaybackAdapter(
         userRepository,
@@ -63,6 +67,8 @@ class RecentlyPlayedAdapterTests {
         dashboardRefresh,
         playbackState,
         appEnrichmentService,
+        catalog,
+        playlistRepository,
         minimumProgressSeconds = 25L,
     )
 

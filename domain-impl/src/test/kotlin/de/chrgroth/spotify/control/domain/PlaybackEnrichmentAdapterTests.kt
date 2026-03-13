@@ -16,7 +16,6 @@ import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppPlaybackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
-import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyCatalogPort
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
@@ -36,7 +35,6 @@ class PlaybackEnrichmentAdapterTests {
     private val appAlbumRepository: AppAlbumRepositoryPort = mockk()
     private val appPlaybackRepository: AppPlaybackRepositoryPort = mockk(relaxed = true)
     private val userRepository: UserRepositoryPort = mockk(relaxed = true)
-    private val playlistRepository: PlaylistRepositoryPort = mockk(relaxed = true)
     private val outboxPort: OutboxPort = mockk()
 
     private val adapter = CatalogAdapter(
@@ -47,7 +45,6 @@ class PlaybackEnrichmentAdapterTests {
         appAlbumRepository,
         appPlaybackRepository,
         userRepository,
-        playlistRepository,
         outboxPort,
     )
 

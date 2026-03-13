@@ -74,7 +74,7 @@ class PlaybackSettingsResource {
   @Produces(MediaType.APPLICATION_JSON)
   fun syncArtistPlaybackFromPlaylists(): Response {
     val userId = UserId(securityIdentity.principal.name)
-    catalog.syncArtistPlaybackFromPlaylists(userId)
+    playback.syncArtistPlaybackFromPlaylists(userId)
     return Response.ok(mapOf("status" to "ok")).build()
   }
 
