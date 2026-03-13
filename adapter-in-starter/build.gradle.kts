@@ -9,6 +9,7 @@ dependencies {
 
   implementation(enforcedPlatform(libs.quarkusBom))
   implementation("io.quarkus:quarkus-arc")
+  implementation("io.quarkus:quarkus-mongodb-client")
 }
 
 allOpen {

@@ -9,6 +9,7 @@ kotlin = "2.3.10"
 kotlinLogging = "3.0.5"
 kotlinxCoroutines = "1.10.2"
 kotlinxDatetime = "0.7.1"
+kotlinxSerialization = "1.7.3"
 kover = "0.9.7"
 marked = "17.0.3"
 mockk = "1.14.9"
@@ -25,9 +26,11 @@ bootstrap = { module = "org.webjars:bootstrap", version.ref = "bootstrap" }
 detekt = { module = "dev.detekt:detekt-gradle-plugin", version.ref = "detekt" }
 junit = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
 kotlinGradlePlugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
+kotlinGradleSerializationPlugin = { module = "org.jetbrains.kotlin:kotlin-serialization", version.ref = "kotlin" }
 kotlinLogging = { module = "io.github.microutils:kotlin-logging", version.ref = "kotlinLogging" }
 kotlinxCoroutinesCore = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
 kotlinxDatetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime-jvm", version.ref = "kotlinxDatetime" }
+kotlinxSerializationJson = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 kover = { module = "org.jetbrains.kotlinx:kover-gradle-plugin", version.ref = "kover" }
 marked = { module = "org.webjars.npm:marked", version.ref = "marked" }
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
@@ -43,6 +46,7 @@ quarkusStartersAdapterOutPersistenceMongodb = { module = "de.chrgroth.quarkus.st
 [plugins]
 allopen = { id = "org.jetbrains.kotlin.plugin.allopen", version.ref = "kotlin" }
 buildTimeTracker = { id = "com.asarkar.gradle.build-time-tracker", version.ref = "buildTimeTracker" }
+kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 quarkus = { id = "io.quarkus", version.ref = "quarkus" }
 release = { id = "net.researchgate.release", version.ref = "release" }
 versionCatalogUpdate = { id = "nl.littlerobots.version-catalog-update", version.ref = "versionCatalogUpdate" }

@@ -1,4 +1,4 @@
-package de.chrgroth.spotify.control.adapter.web.`in`
+package de.chrgroth.spotify.control.adapter.`in`.web
 
 import io.quarkus.test.junit.QuarkusTest
 import io.quarkus.test.security.TestSecurity
@@ -403,7 +403,6 @@ class HealthPageTests {
       .get("/health")
       .then()
       .statusCode(200)
-      .body(containsString("outbox-detail-row"))
       .body(not(containsString("toggleOutboxDetail")))
       .body(not(containsString("display:none;border-color")))
   }

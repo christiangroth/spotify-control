@@ -1,4 +1,4 @@
-package de.chrgroth.spotify.control.adapter.web.`in`
+package de.chrgroth.spotify.control.adapter.`in`.web
 
 import de.chrgroth.spotify.control.adapter.`in`.web.HealthSseAdapter
 import de.chrgroth.spotify.control.domain.model.UserId

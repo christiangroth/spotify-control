@@ -9,10 +9,12 @@ import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
 import de.chrgroth.spotify.control.domain.model.AppArtist
 import de.chrgroth.spotify.control.domain.model.AppPlaybackItem
 import de.chrgroth.spotify.control.domain.model.AppTrack
+import de.chrgroth.spotify.control.domain.model.ArtistId
 import de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus
 import de.chrgroth.spotify.control.domain.model.CurrentlyPlayingItem
 import de.chrgroth.spotify.control.domain.model.RecentlyPartialPlayedItem
 import de.chrgroth.spotify.control.domain.model.RecentlyPlayedItem
+import de.chrgroth.spotify.control.domain.model.TrackId
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.PlaybackPort
@@ -271,11 +273,11 @@ class PlaybackAdapter(
         partialPlayed: List<RecentlyPartialPlayedItem>,
     ) = (recentlyPlayed.mapNotNull { item ->
         val artistId = item.artistIds.firstOrNull() ?: return@mapNotNull null
-        AppTrack(trackId = item.trackId, trackTitle = item.trackName, artistId = artistId, additionalArtistIds = item.artistIds.drop(1))
+        AppTrack(id = TrackId(item.trackId), title = item.trackName, artistId = ArtistId(artistId), additionalArtistIds = item.artistIds.drop(1).map { ArtistId(it) })
     } + partialPlayed.mapNotNull { item ->
         val artistId = item.artistIds.firstOrNull() ?: return@mapNotNull null
-        AppTrack(trackId = item.trackId, trackTitle = item.trackName, artistId = artistId, additionalArtistIds = item.artistIds.drop(1))
-    }).distinctBy { it.trackId }
+        AppTrack(id = TrackId(item.trackId), title = item.trackName, artistId = ArtistId(artistId), additionalArtistIds = item.artistIds.drop(1).map { ArtistId(it) })
+    }).distinctBy { it.id }
 
     // --- Outbox Handlers ---
 

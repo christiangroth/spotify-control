@@ -1,3 +1,67 @@
+# 0.48.3 (2026.03.13)
+
+## Bugfixes / Chore
+* fix-artists-titles-readability: Artist names on /settings/playback are now readable with white text on the dark background.
+
+
+
+---
+
+# 0.48.2 (2026.03.13)
+
+## Bugfixes / Chore
+* create-copilot-environment-setup-yml: Added Copilot environment setup to enable building with authenticated GitHub Package Registry dependencies.
+* data-migration-new-entity-structures: Migrates Track title, Album title, and Artist genre fields to updated entity structures.
+* fix-gradle-dependencies: Remove Jitpack.io repository as all dependencies are available on Maven Central.
+* remove-json-handling-spotify: Replaced Jackson dependency with kotlinx-serialization for Spotify API response handling.
+
+
+
+---
+
+# 0.48.1 (2026.03.13)
+
+## Bugfixes / Chore
+* cleanup-recently-partial-played: Cleaned up obsolete `recently_partial_played` MongoDB collection.
+
+
+
+---
+
+# 0.48.0 (2026.03.13)
+
+## New Features
+* sync-album-data-on-track-sync: Track enrichment now populates additional track fields (disc number, duration, track number, type) and embeds artist names directly in the track document.
+* sync-album-data-on-track-sync: Album data is now synced as part of track enrichment, eliminating the separate album enrichment step.
+* sync-album-data-on-track-sync: Album documents now include release date, album type, total tracks, and embedded artist information from the Spotify track API response.
+* sync-album-data-on-track-sync: All artists on a track are now queued for enrichment when track details are synced.
+
+
+
+---
+
+# 0.47.0 (2026.03.12)
+
+## New Features
+* sync-artist-data: Artist information is now more detailed with genre classification and artist type synced from Spotify.
+
+
+
+---
+
+# 0.46.5 (2026.03.12)
+
+## Bugfixes / Chore
+* code-review-hexagonal-architecture: Renamed `SpotifyAccessTokenService` to `SpotifyAccessTokenAdapter` for consistent hexagonal naming conventions.
+* code-review-hexagonal-architecture: Fixed test package names for web adapter tests from `adapter.web.in` to `adapter.in.web`.
+* code-review-hexagonal-architecture: Rewrote arc42 documentation: removed all unimplemented feature references, added PlantUML diagrams via kroki, sorted modules alphabetically, restructured external dependencies, filled out Risks and Technical Debts.
+* code-review-hexagonal-architecture: Added ADR 0007 documenting the Persistent Outbox Pattern decision.
+* code-review-hexagonal-architecture: Updated coding guidelines: corrected outbox partition names, aligned test strategy description with actual implementation.
+
+
+
+---
+
 # 0.46.4 (2026.03.12)
 
 ## Bugfixes / Chore

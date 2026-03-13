@@ -17,8 +17,6 @@ interface CatalogPort {
     ): Either<DomainError, Unit>
     fun enrichArtistDetails(artistId: String, userId: UserId): Either<DomainError, Unit>
     fun enrichTrackDetails(trackId: String, userId: UserId): Either<DomainError, Unit>
-    fun enrichAlbumDetails(albumId: String, userId: UserId): Either<DomainError, Unit>
     fun handle(event: DomainOutboxEvent.EnrichArtistDetails): OutboxTaskResult
     fun handle(event: DomainOutboxEvent.EnrichTrackDetails): OutboxTaskResult
-    fun handle(event: DomainOutboxEvent.EnrichAlbumDetails): OutboxTaskResult
 }

@@ -19,7 +19,7 @@ import mu.KLogging
 
 @ApplicationScoped
 @Suppress("Unused")
-class SpotifyAccessTokenService(
+class SpotifyAccessTokenAdapter(
     private val spotifyAuth: SpotifyAuthPort,
     private val userRepository: UserRepositoryPort,
     private val tokenEncryption: TokenEncryptionPort,

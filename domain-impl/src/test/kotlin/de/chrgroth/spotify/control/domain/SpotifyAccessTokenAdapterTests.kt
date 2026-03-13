@@ -24,13 +24,13 @@ import kotlin.time.Clock
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
 
-class SpotifyAccessTokenServiceTests {
+class SpotifyAccessTokenAdapterTests {
 
     private val spotifyAuth: SpotifyAuthPort = mockk()
     private val userRepository: UserRepositoryPort = mockk()
     private val tokenEncryption: TokenEncryptionPort = mockk()
 
-    private val service = SpotifyAccessTokenService(spotifyAuth, userRepository, tokenEncryption)
+    private val adapter = SpotifyAccessTokenAdapter(spotifyAuth, userRepository, tokenEncryption)
 
     private val userId = UserId("user-1")
 
@@ -49,7 +49,7 @@ class SpotifyAccessTokenServiceTests {
         every { userRepository.findById(userId) } returns user
         every { tokenEncryption.decrypt("enc-access") } returns "plain-access".right()
 
-        val result = service.getValidAccessToken(userId)
+        val result = adapter.getValidAccessToken(userId)
 
         assertThat(result).isEqualTo(AccessToken("plain-access"))
         verify(exactly = 0) { spotifyAuth.refreshToken(any()) }
@@ -68,7 +68,7 @@ class SpotifyAccessTokenServiceTests {
         every { tokenEncryption.encrypt("new-access") } returns "enc-new-access".right()
         every { userRepository.upsert(any()) } just runs
 
-        val result = service.getValidAccessToken(userId)
+        val result = adapter.getValidAccessToken(userId)
 
         assertThat(result).isEqualTo(AccessToken("new-access"))
         verify { spotifyAuth.refreshToken(RefreshToken("plain-refresh")) }
@@ -92,7 +92,7 @@ class SpotifyAccessTokenServiceTests {
         every { tokenEncryption.encrypt("new-refresh") } returns "enc-new-refresh".right()
         every { userRepository.upsert(any()) } just runs
 
-        service.getValidAccessToken(userId)
+        adapter.getValidAccessToken(userId)
 
         val upsertedSlot = slot<User>()
         verify { userRepository.upsert(capture(upsertedSlot)) }
@@ -103,7 +103,7 @@ class SpotifyAccessTokenServiceTests {
     fun `throws when user not found`() {
         every { userRepository.findById(userId) } returns null
 
-        assertThatThrownBy { service.getValidAccessToken(userId) }
+        assertThatThrownBy { adapter.getValidAccessToken(userId) }
             .isInstanceOf(IllegalArgumentException::class.java)
             .hasMessageContaining("user-1")
     }
@@ -115,7 +115,7 @@ class SpotifyAccessTokenServiceTests {
         every { tokenEncryption.decrypt("enc-refresh") } returns "plain-refresh".right()
         every { spotifyAuth.refreshToken(RefreshToken("plain-refresh")) } returns AuthError.TOKEN_REFRESH_FAILED.left()
 
-        assertThatThrownBy { service.getValidAccessToken(userId) }
+        assertThatThrownBy { adapter.getValidAccessToken(userId) }
             .isInstanceOf(IllegalStateException::class.java)
             .hasMessageContaining("user-1")
     }
