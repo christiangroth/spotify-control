@@ -9,13 +9,13 @@ import kotlin.time.Instant
  * durationMs, trackNumber, type) are populated by EnrichTrackDetails.
  */
 data class AppTrack(
-    val trackId: String,
-    val trackTitle: String,
-    val albumId: String? = null,
+    val id: TrackId,
+    val title: String,
+    val albumId: AlbumId? = null,
     val albumName: String? = null,
-    val artistId: String,
+    val artistId: ArtistId,
     val artistName: String? = null,
-    val additionalArtistIds: List<String> = emptyList(),
+    val additionalArtistIds: List<ArtistId> = emptyList(),
     val additionalArtistNames: List<String>? = null,
     val discNumber: Int? = null,
     val durationMs: Long? = null,

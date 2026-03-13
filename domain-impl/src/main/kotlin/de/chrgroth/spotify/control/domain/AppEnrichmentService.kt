@@ -2,6 +2,8 @@ package de.chrgroth.spotify.control.domain
 
 import de.chrgroth.spotify.control.domain.model.AppArtist
 import de.chrgroth.spotify.control.domain.model.AppTrack
+import de.chrgroth.spotify.control.domain.model.ArtistId
+import de.chrgroth.spotify.control.domain.model.TrackId
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
@@ -38,7 +40,7 @@ class AppEnrichmentService(
 
         appTrackRepository.upsertAll(tracks)
         tracks.forEach { track ->
-            outboxPort.enqueue(DomainOutboxEvent.EnrichTrackDetails(track.trackId, userId))
+            outboxPort.enqueue(DomainOutboxEvent.EnrichTrackDetails(track.id.value, userId))
         }
     }
 

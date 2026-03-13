@@ -10,7 +10,7 @@ class AppAlbumDocument {
     @BsonId
     lateinit var id: String  // Set to albumId value; maps to MongoDB _id
     var totalTracks: Int? = null
-    var albumTitle: String? = null
+    var title: String? = null
     var imageLink: String? = null
     var releaseDate: String? = null
     var releaseDatePrecision: String? = null

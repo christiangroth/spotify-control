@@ -8,10 +8,13 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.EnrichmentError
 import de.chrgroth.spotify.control.domain.model.AccessToken
+import de.chrgroth.spotify.control.domain.model.AlbumId
 import de.chrgroth.spotify.control.domain.model.AppAlbum
 import de.chrgroth.spotify.control.domain.model.AppArtist
 import de.chrgroth.spotify.control.domain.model.AppTrack
+import de.chrgroth.spotify.control.domain.model.ArtistId
 import de.chrgroth.spotify.control.domain.model.TrackSyncResult
+import de.chrgroth.spotify.control.domain.model.TrackId
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
 import de.chrgroth.spotify.control.domain.port.out.SpotifyCatalogPort
@@ -100,13 +103,13 @@ class SpotifyCatalogAdapter(
     val albumName = albumNode.get("name")?.asText()
 
     val track = AppTrack(
-      trackId = json.get("id").asText(),
-      trackTitle = json.get("name")?.asText() ?: "",
-      albumId = albumId,
+      id = TrackId(json.get("id").asText()),
+      title = json.get("name")?.asText() ?: "",
+      albumId = AlbumId(albumId),
       albumName = albumName,
-      artistId = primaryArtistId,
+      artistId = ArtistId(primaryArtistId),
       artistName = primaryArtistName,
-      additionalArtistIds = artists.additionalIds { get("id").asText() } ?: emptyList(),
+      additionalArtistIds = artists.additionalIds { get("id").asText() }?.map { ArtistId(it) } ?: emptyList(),
       additionalArtistNames = artists.additionalIds { get("name").asText() },
       discNumber = json.get("disc_number")?.asInt(),
       durationMs = json.get("duration_ms")?.asLong(),
@@ -116,16 +119,16 @@ class SpotifyCatalogAdapter(
 
     val albumArtists = albumNode.get("artists")
     val album = AppAlbum(
-      albumId = albumId,
+      id = AlbumId(albumId),
       totalTracks = albumNode.get("total_tracks")?.asInt(),
-      albumTitle = albumName,
+      title = albumName,
       imageLink = albumNode.get("images")?.firstOrNull()?.get("url")?.asText(),
       releaseDate = albumNode.get("release_date")?.asText(),
       releaseDatePrecision = albumNode.get("release_date_precision")?.asText(),
       type = albumNode.get("album_type")?.asText(),
-      artistId = albumArtists?.firstOrNull()?.get("id")?.asText(),
+      artistId = albumArtists?.firstOrNull()?.get("id")?.asText()?.let { ArtistId(it) },
       artistName = albumArtists?.firstOrNull()?.get("name")?.asText(),
-      additionalArtistIds = albumArtists.additionalIds { get("id").asText() },
+      additionalArtistIds = albumArtists.additionalIds { get("id").asText() }?.map { ArtistId(it) },
       additionalArtistNames = albumArtists.additionalIds { get("name").asText() },
     )
 

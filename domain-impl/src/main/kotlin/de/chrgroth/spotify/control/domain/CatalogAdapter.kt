@@ -10,6 +10,8 @@ import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
 import de.chrgroth.spotify.control.domain.model.AppArtist
 import de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus
+import de.chrgroth.spotify.control.domain.model.ArtistId
+import de.chrgroth.spotify.control.domain.model.TrackId
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.CatalogPort
@@ -59,7 +61,7 @@ class CatalogAdapter(
 
         when (status) {
             ArtistPlaybackProcessingStatus.INACTIVE -> {
-                val trackIds = appTrackRepository.findByArtistId(artistId).map { it.trackId }.toSet()
+                val trackIds = appTrackRepository.findByArtistId(ArtistId(artistId)).map { it.id.value }.toSet()
                 if (trackIds.isNotEmpty()) {
                     logger.info { "Deleting app_playback for ${trackIds.size} tracks of artist $artistId" }
                     appPlaybackRepository.deleteAllByTrackIds(trackIds)
@@ -101,7 +103,7 @@ class CatalogAdapter(
     }
 
     override fun enrichTrackDetails(trackId: String, userId: UserId): Either<DomainError, Unit> {
-        val existing = appTrackRepository.findByTrackIds(setOf(trackId)).firstOrNull()
+        val existing = appTrackRepository.findByTrackIds(setOf(TrackId(trackId))).firstOrNull()
         if (existing?.lastEnrichmentDate != null) {
             logger.debug { "Track $trackId already enriched, skipping" }
             return Unit.right()
@@ -114,11 +116,12 @@ class CatalogAdapter(
                     appTrackRepository.updateTrackEnrichmentData(result.track)
                     appAlbumRepository.upsertAll(listOf(result.album))
                     val allArtistIds = (listOf(result.track.artistId) + result.track.additionalArtistIds)
+                        .map { it.value }
                         .filter { it.isNotBlank() }
                     allArtistIds.forEach { artistId ->
                         outboxPort.enqueue(DomainOutboxEvent.EnrichArtistDetails(artistId, userId))
                     }
-                    logger.info { "Updated enrichment data for track $trackId → album ${result.album.albumId}" }
+                    logger.info { "Updated enrichment data for track $trackId → album ${result.album.id.value}" }
                 } else {
                     logger.warn { "No data returned from Spotify for track $trackId" }
                 }

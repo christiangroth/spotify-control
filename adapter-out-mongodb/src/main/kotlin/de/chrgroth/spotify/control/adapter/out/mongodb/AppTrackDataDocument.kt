@@ -9,7 +9,7 @@ class AppTrackDocument {
 
     @BsonId
     lateinit var id: String  // Set to trackId value; maps to MongoDB _id
-    lateinit var trackTitle: String
+    lateinit var title: String
     var albumId: String? = null
     var albumName: String? = null
     lateinit var artistId: String

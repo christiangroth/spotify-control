@@ -1,6 +1,8 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
+import de.chrgroth.spotify.control.domain.model.AlbumId
 import de.chrgroth.spotify.control.domain.model.AppAlbum
+import de.chrgroth.spotify.control.domain.model.ArtistId
 import de.chrgroth.spotify.control.domain.port.out.AppAlbumRepositoryPort
 import io.quarkus.test.junit.QuarkusTest
 import jakarta.inject.Inject
@@ -15,14 +17,14 @@ class AppAlbumRepositoryTests {
     lateinit var appAlbumRepository: AppAlbumRepositoryPort
 
     private fun album(suffix: String) = AppAlbum(
-        albumId = "album-$suffix-${UUID.randomUUID()}",
+        id = AlbumId("album-$suffix-${UUID.randomUUID()}"),
         totalTracks = 10,
-        albumTitle = "Album $suffix",
+        title = "Album $suffix",
         imageLink = "https://img.example.com/cover-$suffix.jpg",
         releaseDate = "2023-01-01",
         releaseDatePrecision = "day",
         type = "album",
-        artistId = "artist-$suffix",
+        artistId = ArtistId("artist-$suffix"),
         artistName = "Artist $suffix",
     )
 
@@ -31,11 +33,11 @@ class AppAlbumRepositoryTests {
         val item = album("new")
         appAlbumRepository.upsertAll(listOf(item))
 
-        val result = appAlbumRepository.findByAlbumIds(setOf(item.albumId))
+        val result = appAlbumRepository.findByAlbumIds(setOf(item.id))
 
         assertThat(result).hasSize(1)
-        assertThat(result[0].albumId).isEqualTo(item.albumId)
-        assertThat(result[0].albumTitle).isEqualTo(item.albumTitle)
+        assertThat(result[0].id).isEqualTo(item.id)
+        assertThat(result[0].title).isEqualTo(item.title)
         assertThat(result[0].artistId).isEqualTo(item.artistId)
         assertThat(result[0].artistName).isEqualTo(item.artistName)
         assertThat(result[0].type).isEqualTo(item.type)
@@ -47,37 +49,37 @@ class AppAlbumRepositoryTests {
     @Test
     fun `upsertAll overwrites existing fields on re-upsert`() {
         val albumId = "album-overwrite-${UUID.randomUUID()}"
-        appAlbumRepository.upsertAll(listOf(AppAlbum(albumId = albumId, albumTitle = "Original Title")))
+        appAlbumRepository.upsertAll(listOf(AppAlbum(id = AlbumId(albumId), title = "Original Title")))
 
-        appAlbumRepository.upsertAll(listOf(AppAlbum(albumId = albumId, albumTitle = "Updated Title")))
+        appAlbumRepository.upsertAll(listOf(AppAlbum(id = AlbumId(albumId), title = "Updated Title")))
 
-        val result = appAlbumRepository.findByAlbumIds(setOf(albumId))
+        val result = appAlbumRepository.findByAlbumIds(setOf(AlbumId(albumId)))
         assertThat(result).hasSize(1)
-        assertThat(result[0].albumTitle).isEqualTo("Updated Title")
+        assertThat(result[0].title).isEqualTo("Updated Title")
     }
 
     @Test
     fun `upsertAll persists additional artist fields`() {
         val albumId = "album-multi-artist-${UUID.randomUUID()}"
         val item = AppAlbum(
-            albumId = albumId,
-            albumTitle = "Collab Album",
-            artistId = "artist-1",
+            id = AlbumId(albumId),
+            title = "Collab Album",
+            artistId = ArtistId("artist-1"),
             artistName = "Artist One",
-            additionalArtistIds = listOf("artist-2"),
+            additionalArtistIds = listOf(ArtistId("artist-2")),
             additionalArtistNames = listOf("Artist Two"),
         )
         appAlbumRepository.upsertAll(listOf(item))
 
-        val result = appAlbumRepository.findByAlbumIds(setOf(albumId))
+        val result = appAlbumRepository.findByAlbumIds(setOf(AlbumId(albumId)))
         assertThat(result).hasSize(1)
-        assertThat(result[0].additionalArtistIds).containsExactly("artist-2")
+        assertThat(result[0].additionalArtistIds).containsExactly(ArtistId("artist-2"))
         assertThat(result[0].additionalArtistNames).containsExactly("Artist Two")
     }
 
     @Test
     fun `findByAlbumIds returns empty list for unknown albumIds`() {
-        val result = appAlbumRepository.findByAlbumIds(setOf("unknown-album-${UUID.randomUUID()}"))
+        val result = appAlbumRepository.findByAlbumIds(setOf(AlbumId("unknown-album-${UUID.randomUUID()}")))
         assertThat(result).isEmpty()
     }
 

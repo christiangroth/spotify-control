@@ -2,6 +2,9 @@ package de.chrgroth.spotify.control.domain
 
 import de.chrgroth.spotify.control.domain.model.AppArtist
 import de.chrgroth.spotify.control.domain.model.AppTrack
+import de.chrgroth.spotify.control.domain.model.AlbumId
+import de.chrgroth.spotify.control.domain.model.ArtistId
+import de.chrgroth.spotify.control.domain.model.TrackId
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
@@ -25,7 +28,7 @@ class AppEnrichmentServiceTests {
     private val userId = UserId("user-1")
 
     private val artist1 = AppArtist(artistId = "artist-1", artistName = "Artist One")
-    private val track1 = AppTrack(trackId = "track-1", trackTitle = "Track One", artistId = "artist-1")
+    private val track1 = AppTrack(id = TrackId("track-1"), title = "Track One", artistId = ArtistId("artist-1"))
 
     @Test
     fun `does nothing when both lists are empty`() {
@@ -62,7 +65,7 @@ class AppEnrichmentServiceTests {
 
     @Test
     fun `does not enqueue EnrichAlbumDetails even when track has albumId`() {
-        val trackWithAlbum = track1.copy(albumId = "album-1")
+        val trackWithAlbum = track1.copy(albumId = AlbumId("album-1"))
         every { appArtistRepository.upsertAll(any()) } just runs
         every { appTrackRepository.upsertAll(any()) } just runs
         every { outboxPort.enqueue(any()) } just runs

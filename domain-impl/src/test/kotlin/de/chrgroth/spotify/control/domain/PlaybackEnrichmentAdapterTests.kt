@@ -2,9 +2,12 @@ package de.chrgroth.spotify.control.domain
 
 import arrow.core.right
 import de.chrgroth.spotify.control.domain.model.AccessToken
+import de.chrgroth.spotify.control.domain.model.AlbumId
 import de.chrgroth.spotify.control.domain.model.AppAlbum
 import de.chrgroth.spotify.control.domain.model.AppArtist
 import de.chrgroth.spotify.control.domain.model.AppTrack
+import de.chrgroth.spotify.control.domain.model.ArtistId
+import de.chrgroth.spotify.control.domain.model.TrackId
 import de.chrgroth.spotify.control.domain.model.TrackSyncResult
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
@@ -112,11 +115,11 @@ class PlaybackEnrichmentAdapterTests {
     fun `enrichTrackDetails updates track and album from Spotify response`() {
         val trackId = "track-1"
         val track = AppTrack(
-            trackId = trackId,
-            trackTitle = "Track One",
-            albumId = "album-1",
+            id = TrackId(trackId),
+            title = "Track One",
+            albumId = AlbumId("album-1"),
             albumName = "Album One",
-            artistId = "artist-1",
+            artistId = ArtistId("artist-1"),
             artistName = "Artist One",
             discNumber = 1,
             durationMs = 200000,
@@ -124,14 +127,14 @@ class PlaybackEnrichmentAdapterTests {
             type = "track",
         )
         val album = AppAlbum(
-            albumId = "album-1",
-            albumTitle = "Album One",
-            artistId = "artist-1",
+            id = AlbumId("album-1"),
+            title = "Album One",
+            artistId = ArtistId("artist-1"),
             artistName = "Artist One",
         )
         val syncResult = TrackSyncResult(track = track, album = album)
 
-        every { appTrackRepository.findByTrackIds(setOf(trackId)) } returns listOf(AppTrack(trackId = trackId, trackTitle = "Track One", artistId = "artist-1"))
+        every { appTrackRepository.findByTrackIds(setOf(TrackId(trackId))) } returns listOf(AppTrack(id = TrackId(trackId), title = "Track One", artistId = ArtistId("artist-1")))
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { spotifyCatalog.getTrack(userId, accessToken, trackId) } returns syncResult.right()
         every { appTrackRepository.updateTrackEnrichmentData(track) } just runs
@@ -149,16 +152,16 @@ class PlaybackEnrichmentAdapterTests {
     fun `enrichTrackDetails enqueues EnrichArtistDetails for all track artists`() {
         val trackId = "track-multi-artist"
         val track = AppTrack(
-            trackId = trackId,
-            trackTitle = "Collab Track",
-            albumId = "album-1",
-            artistId = "artist-1",
-            additionalArtistIds = listOf("artist-2", "artist-3"),
+            id = TrackId(trackId),
+            title = "Collab Track",
+            albumId = AlbumId("album-1"),
+            artistId = ArtistId("artist-1"),
+            additionalArtistIds = listOf(ArtistId("artist-2"), ArtistId("artist-3")),
         )
-        val album = AppAlbum(albumId = "album-1", albumTitle = "Album One")
+        val album = AppAlbum(id = AlbumId("album-1"), title = "Album One")
         val syncResult = TrackSyncResult(track = track, album = album)
 
-        every { appTrackRepository.findByTrackIds(setOf(trackId)) } returns listOf(AppTrack(trackId = trackId, trackTitle = "Collab Track", artistId = "artist-1"))
+        every { appTrackRepository.findByTrackIds(setOf(TrackId(trackId))) } returns listOf(AppTrack(id = TrackId(trackId), title = "Collab Track", artistId = ArtistId("artist-1")))
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { spotifyCatalog.getTrack(userId, accessToken, trackId) } returns syncResult.right()
         every { appTrackRepository.updateTrackEnrichmentData(track) } just runs
@@ -176,12 +179,12 @@ class PlaybackEnrichmentAdapterTests {
     fun `enrichTrackDetails skips update when track already enriched`() {
         val trackId = "track-already-enriched"
         val enrichedTrack = AppTrack(
-            trackId = trackId,
-            trackTitle = "Known Track",
-            artistId = "artist-1",
+            id = TrackId(trackId),
+            title = "Known Track",
+            artistId = ArtistId("artist-1"),
             lastEnrichmentDate = kotlin.time.Clock.System.now(),
         )
-        every { appTrackRepository.findByTrackIds(setOf(trackId)) } returns listOf(enrichedTrack)
+        every { appTrackRepository.findByTrackIds(setOf(TrackId(trackId))) } returns listOf(enrichedTrack)
 
         adapter.enrichTrackDetails(trackId, userId)
 

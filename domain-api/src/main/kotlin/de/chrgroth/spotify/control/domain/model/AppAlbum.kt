@@ -9,16 +9,16 @@ import kotlin.time.Instant
  * album type, total tracks, and artist information.
  */
 data class AppAlbum(
-    val albumId: String,
+    val id: AlbumId,
     val totalTracks: Int? = null,
-    val albumTitle: String? = null,
+    val title: String? = null,
     val imageLink: String? = null,
     val releaseDate: String? = null,
     val releaseDatePrecision: String? = null,
     val type: String? = null,
-    val artistId: String? = null,
+    val artistId: ArtistId? = null,
     val artistName: String? = null,
-    val additionalArtistIds: List<String>? = null,
+    val additionalArtistIds: List<ArtistId>? = null,
     val additionalArtistNames: List<String>? = null,
     val genreOverrides: List<String>? = null,
     val lastEnrichmentDate: Instant? = null,
