@@ -2,15 +2,22 @@
 
 ## Build & Test Commands
 
+> **Important:** The build requires a `GHCR_PAT` environment variable (a GitHub Personal Access Token
+> with `read:packages` scope) to resolve dependencies and plugins from private GitHub Package
+> Registries (`christiangroth/gradle-release-notes-plugin`, `christiangroth/quarkus-outbox`,
+> `christiangroth/quarkus-starters`). It also requires Java 25. Copilot agents do not have access to
+> these credentials – **do not attempt to run any Gradle commands**.
+
 ```bash
 # Run full build (includes tests and static analysis)
-./gradlew build
+# Requires: GHCR_PAT env var, Java 25 (JAVA_HOME=/usr/lib/jvm/temurin-25-jdk-amd64)
+GHCR_PAT=$(gh auth token) JAVA_HOME=/usr/lib/jvm/temurin-25-jdk-amd64 ./gradlew build
 
 # Run tests only
-./gradlew test
+GHCR_PAT=$(gh auth token) JAVA_HOME=/usr/lib/jvm/temurin-25-jdk-amd64 ./gradlew test
 
 # Start application in dev mode (live reload)
-./gradlew :application-quarkus:quarkusDev
+GHCR_PAT=$(gh auth token) JAVA_HOME=/usr/lib/jvm/temurin-25-jdk-amd64 ./gradlew :application-quarkus:quarkusDev
 ```
 
 ## Documentation
