@@ -178,6 +178,23 @@ sealed interface DomainOutboxEvent : OutboxEvent {
     }
 
     /**
+     * Peeks up to 10 album IDs from app_sync_pool and fetches all their tracks via GET /v1/albums/{id}.
+     * All returned tracks (not only those originally requested) are upserted. Successfully synced album
+     * IDs are removed from the pool; unsynced IDs remain for the next retry.
+     * Deduplication ensures only one instance is queued at a time.
+     */
+    data class SyncMissingAlbums(val placeholder: String = "") : DomainOutboxEvent {
+        override val key = KEY
+        override fun deduplicationKey() = KEY
+        override val partition = DomainOutboxPartition.ToSpotify
+        override fun toPayload() = ""
+
+        companion object {
+            const val KEY = "SyncMissingAlbums"
+        }
+    }
+
+    /**
      * Re-adds all known artist and track IDs to app_sync_pool so that they are picked up by the
      * SyncMissingArtists / SyncMissingTracks bulk-sync jobs and refreshed from Spotify.
      * Deduplication ensures only one instance is queued at a time.
@@ -194,6 +211,7 @@ sealed interface DomainOutboxEvent : OutboxEvent {
     }
 
     companion object {
+        @Suppress("CyclomaticComplexMethod")
         fun fromKey(key: String, payload: String): DomainOutboxEvent = when (key) {
             FetchCurrentlyPlaying.KEY -> FetchCurrentlyPlaying(UserId(payload))
             FetchRecentlyPlayed.KEY -> FetchRecentlyPlayed(UserId(payload))
@@ -206,6 +224,7 @@ sealed interface DomainOutboxEvent : OutboxEvent {
             SyncTrackDetails.KEY, SyncTrackDetails.LEGACY_KEY -> SyncTrackDetails.fromPayload(payload)
             SyncMissingArtists.KEY -> SyncMissingArtists()
             SyncMissingTracks.KEY -> SyncMissingTracks()
+            SyncMissingAlbums.KEY -> SyncMissingAlbums()
             ResyncCatalog.KEY -> ResyncCatalog()
             else -> throw IllegalArgumentException("Unknown outbox event type: $key")
         }
