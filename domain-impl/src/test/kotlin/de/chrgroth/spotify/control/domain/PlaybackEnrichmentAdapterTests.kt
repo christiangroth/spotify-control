@@ -134,7 +134,8 @@ class PlaybackEnrichmentAdapterTests {
         )
         val syncResult = TrackSyncResult(track = track, album = album)
 
-        every { appTrackRepository.findByTrackIds(setOf(TrackId(trackId))) } returns listOf(AppTrack(id = TrackId(trackId), title = "Track One", artistId = ArtistId("artist-1")))
+        val existingTrack = AppTrack(id = TrackId(trackId), title = "Track One", artistId = ArtistId("artist-1"))
+        every { appTrackRepository.findByTrackIds(setOf(TrackId(trackId))) } returns listOf(existingTrack)
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { spotifyCatalog.getTrack(userId, accessToken, trackId) } returns syncResult.right()
         every { appTrackRepository.updateTrackEnrichmentData(track) } just runs
@@ -161,7 +162,8 @@ class PlaybackEnrichmentAdapterTests {
         val album = AppAlbum(id = AlbumId("album-1"), title = "Album One")
         val syncResult = TrackSyncResult(track = track, album = album)
 
-        every { appTrackRepository.findByTrackIds(setOf(TrackId(trackId))) } returns listOf(AppTrack(id = TrackId(trackId), title = "Collab Track", artistId = ArtistId("artist-1")))
+        val existingTrack2 = AppTrack(id = TrackId(trackId), title = "Collab Track", artistId = ArtistId("artist-1"))
+        every { appTrackRepository.findByTrackIds(setOf(TrackId(trackId))) } returns listOf(existingTrack2)
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { spotifyCatalog.getTrack(userId, accessToken, trackId) } returns syncResult.right()
         every { appTrackRepository.updateTrackEnrichmentData(track) } just runs
