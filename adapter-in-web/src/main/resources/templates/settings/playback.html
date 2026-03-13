@@ -14,7 +14,7 @@
         <hr class="my-4" style="border-color:#333;">
 
         <h2 class="fs-5 fw-semibold mb-2">Catalog Re-sync</h2>
-        <p class="text-secondary small mb-3">Re-queue all artists and tracks for re-sync from Spotify. Use this to refresh catalog metadata (genres, images, track details) that may have changed since the last sync. The catalog is also re-synced automatically every week.</p>
+        <p class="text-secondary small mb-3">Re-queue all artists and tracks for re-sync from Spotify. Use this to refresh catalog metadata (genres, images, track details) that may have changed since the last sync.</p>
         <button id="resync-catalog-btn" class="btn btn-spotify btn-sm">Re-sync Catalog</button>
 
         <hr class="my-4" style="border-color:#333;">
@@ -49,6 +49,7 @@
                                     {/if}
                                     <span class="flex-grow-1 text-truncate small" style="min-width:0" title="{artist.artistName}">{artist.artistName}</span>
                                     <div class="d-flex gap-1 flex-shrink-0">
+                                        <button class="btn btn-sm btn-outline-secondary artist-resync-btn py-0 px-1" data-artist-id="{artist.artistId}" title="Re-sync artist" aria-label="Re-sync artist">↻</button>
                                         <button class="btn btn-sm btn-outline-success artist-status-btn py-0 px-1" data-artist-id="{artist.artistId}" data-new-status="ACTIVE" title="Set Active">✓</button>
                                         <button class="btn btn-sm btn-outline-danger artist-status-btn py-0 px-1" data-artist-id="{artist.artistId}" data-new-status="INACTIVE" title="Set Inactive">✗</button>
                                     </div>
@@ -80,6 +81,7 @@
                                     {/if}
                                     <span class="flex-grow-1 text-truncate small" style="min-width:0" title="{artist.artistName}">{artist.artistName}</span>
                                     <div class="d-flex gap-1 flex-shrink-0">
+                                        <button class="btn btn-sm btn-outline-secondary artist-resync-btn py-0 px-1" data-artist-id="{artist.artistId}" title="Re-sync artist" aria-label="Re-sync artist">↻</button>
                                         <button class="btn btn-sm btn-outline-danger artist-status-btn py-0 px-1" data-artist-id="{artist.artistId}" data-new-status="INACTIVE" title="Set Inactive">✗</button>
                                     </div>
                                 </div>
@@ -110,6 +112,7 @@
                                     {/if}
                                     <span class="flex-grow-1 text-truncate small" style="min-width:0" title="{artist.artistName}">{artist.artistName}</span>
                                     <div class="d-flex gap-1 flex-shrink-0">
+                                        <button class="btn btn-sm btn-outline-secondary artist-resync-btn py-0 px-1" data-artist-id="{artist.artistId}" title="Re-sync artist" aria-label="Re-sync artist">↻</button>
                                         <button class="btn btn-sm btn-outline-success artist-status-btn py-0 px-1" data-artist-id="{artist.artistId}" data-new-status="ACTIVE" title="Set Active">✓</button>
                                     </div>
                                 </div>
@@ -169,6 +172,13 @@
                 });
             });
         })();
+
+        document.querySelectorAll('.artist-resync-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                const artistId = this.getAttribute('data-artist-id');
+                postWithButton(this, '/settings/playback/artists/' + encodeURIComponent(artistId) + '/resync', 'Artist re-sync enqueued.', 'Re-sync failed');
+            });
+        });
 
         document.querySelectorAll('.artist-status-btn').forEach(function(btn) {
             btn.addEventListener('click', function() {

@@ -1,6 +1,5 @@
 package de.chrgroth.spotify.control.domain
 
-import arrow.core.right
 import de.chrgroth.outbox.OutboxTaskResult
 import de.chrgroth.spotify.control.domain.model.AppArtist
 import de.chrgroth.spotify.control.domain.model.AppTrack
@@ -47,6 +46,46 @@ class CatalogAdapterTests {
     private val artist2 = AppArtist(artistId = "artist-2", artistName = "Artist Two", playbackProcessingStatus = ArtistPlaybackProcessingStatus.UNDECIDED)
     private val track1 = AppTrack(id = TrackId("track-1"), title = "Track One", artistId = ArtistId("artist-1"))
     private val track2 = AppTrack(id = TrackId("track-2"), title = "Track Two", artistId = ArtistId("artist-2"))
+
+    // --- resyncArtist tests ---
+
+    @Test
+    fun `resyncArtist returns error when artist not found`() {
+        every { appArtistRepository.findByArtistIds(setOf("artist-1")) } returns emptyList()
+
+        val result = adapter.resyncArtist("artist-1")
+
+        assertThat(result.isLeft()).isTrue()
+        verify(exactly = 0) { syncPoolRepository.addArtists(any()) }
+        verify(exactly = 0) { syncPoolRepository.addTracks(any()) }
+    }
+
+    @Test
+    fun `resyncArtist adds artist and their tracks to sync pool`() {
+        every { appArtistRepository.findByArtistIds(setOf("artist-1")) } returns listOf(artist1)
+        every { appTrackRepository.findByArtistId(ArtistId("artist-1")) } returns listOf(track1)
+        every { syncPoolRepository.addArtists(any()) } just runs
+        every { syncPoolRepository.addTracks(any()) } just runs
+
+        val result = adapter.resyncArtist("artist-1")
+
+        assertThat(result.isRight()).isTrue()
+        verify { syncPoolRepository.addArtists(listOf("artist-1")) }
+        verify { syncPoolRepository.addTracks(listOf("track-1")) }
+    }
+
+    @Test
+    fun `resyncArtist adds artist to sync pool when they have no tracks`() {
+        every { appArtistRepository.findByArtistIds(setOf("artist-1")) } returns listOf(artist1)
+        every { appTrackRepository.findByArtistId(ArtistId("artist-1")) } returns emptyList()
+        every { syncPoolRepository.addArtists(any()) } just runs
+
+        val result = adapter.resyncArtist("artist-1")
+
+        assertThat(result.isRight()).isTrue()
+        verify { syncPoolRepository.addArtists(listOf("artist-1")) }
+        verify(exactly = 0) { syncPoolRepository.addTracks(any()) }
+    }
 
     // --- resyncCatalog tests ---
 
