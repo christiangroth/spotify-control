@@ -1,3 +1,12 @@
+# 0.48.3 (2026.03.13)
+
+## Bugfixes / Chore
+* fix-artists-titles-readability: Artist names on /settings/playback are now readable with white text on the dark background.
+
+
+
+---
+
 # 0.48.2 (2026.03.13)
 
 ## Bugfixes / Chore
