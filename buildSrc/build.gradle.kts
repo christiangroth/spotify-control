@@ -10,6 +10,7 @@ repositories {
 
 dependencies {
   implementation(libs.kotlinGradlePlugin)
+  implementation(libs.kotlinGradleSerializationPlugin)
   implementation(libs.detekt)
   implementation(libs.kover)
 }
