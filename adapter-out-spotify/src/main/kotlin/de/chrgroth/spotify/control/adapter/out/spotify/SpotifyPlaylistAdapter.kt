@@ -89,7 +89,7 @@ class SpotifyPlaylistAdapter(
           snapshotId = tracksResponse.snapshotId
         }
         tracksResponse.items.forEach { item ->
-          val track = item.track ?: return@forEach
+          val track = item.item ?: return@forEach
           if (track.type != "track") {
             logger.info { "Ignoring non-track playlist item of type '${track.type}'" }
             return@forEach
