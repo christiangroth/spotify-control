@@ -1,3 +1,15 @@
+# 0.48.2 (2026.03.13)
+
+## Bugfixes / Chore
+* create-copilot-environment-setup-yml: Added Copilot environment setup to enable building with authenticated GitHub Package Registry dependencies.
+* data-migration-new-entity-structures: Migrates Track title, Album title, and Artist genre fields to updated entity structures.
+* fix-gradle-dependencies: Remove Jitpack.io repository as all dependencies are available on Maven Central.
+* remove-json-handling-spotify: Replaced Jackson dependency with kotlinx-serialization for Spotify API response handling.
+
+
+
+---
+
 # 0.48.1 (2026.03.13)
 
 ## Bugfixes / Chore
