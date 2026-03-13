@@ -23,7 +23,7 @@ class HealthPageTests {
   }
 
   @Test
-  fun `health page displays health section with communication, cronjobs and mongodb sub-headings`() {
+  fun `health page displays health section with communication, cronjobs, mongodb and configuration sub-headings`() {
     given()
       .`when`()
       .get("/health")
@@ -33,6 +33,7 @@ class HealthPageTests {
       .body(containsString("Communication"))
       .body(containsString("Cronjobs"))
       .body(containsString("MongoDB"))
+      .body(containsString("Configuration"))
       .body(containsString("Outgoing HTTP Requests"))
       .body(containsString("Outbox Partitions"))
       .body(containsString("Collections"))
@@ -394,6 +395,85 @@ class HealthPageTests {
       .statusCode(200)
       .body(not(containsString("toggleOutboxDetail")))
       .body(containsString("outbox-doc-count"))
+  }
+
+  @Test
+  fun `health page displays configuration sub-heading at end of health section`() {
+    given()
+      .`when`()
+      .get("/health")
+      .then()
+      .statusCode(200)
+      .body(containsString("Configuration"))
+      .body(containsString("""id="health-section""""))
+  }
+
+  @Test
+  fun `health page configuration section contains config and environment tables`() {
+    given()
+      .`when`()
+      .get("/health")
+      .then()
+      .statusCode(200)
+      .body(containsString("""data-testid="config-table""""))
+      .body(containsString("""data-testid="env-table""""))
+  }
+
+  @Test
+  fun `health page configuration tables show key and value columns`() {
+    given()
+      .`when`()
+      .get("/health")
+      .then()
+      .statusCode(200)
+      .body(containsString("""data-testid="config-table""""))
+      .body(containsString("""data-testid="env-table""""))
+      .body(containsString("Key"))
+      .body(containsString("Value"))
+  }
+
+  @Test
+  fun `health page configuration config table contains known config keys`() {
+    given()
+      .`when`()
+      .get("/health")
+      .then()
+      .statusCode(200)
+      .body(containsString("app.health.masked-config-keys"))
+      .body(containsString("app.health.masked-env-keys"))
+  }
+
+  @Test
+  fun `health page configuration masks sensitive config values`() {
+    given()
+      .`when`()
+      .get("/health")
+      .then()
+      .statusCode(200)
+      .body(containsString("app.token-encryption-key"))
+      .body(not(containsString("AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=")))
+  }
+
+  @Test
+  fun `health page configuration config table subtitle is Config`() {
+    given()
+      .`when`()
+      .get("/health")
+      .then()
+      .statusCode(200)
+      .body(containsString("""data-testid="config-table""""))
+      .body(containsString("Config"))
+  }
+
+  @Test
+  fun `health page configuration environment table subtitle is Environment`() {
+    given()
+      .`when`()
+      .get("/health")
+      .then()
+      .statusCode(200)
+      .body(containsString("""data-testid="env-table""""))
+      .body(containsString("Environment"))
   }
 
   @Test
