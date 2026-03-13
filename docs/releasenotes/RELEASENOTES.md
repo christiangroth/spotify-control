@@ -1,3 +1,12 @@
+# 0.50.1 (2026.03.13)
+
+## Bugfixes / Chore
+* update-release-notes-document: Fixed release notes not being up to date in the Docker container by ensuring the release notes are fully generated and written before the Quarkus application is rebuilt during release.
+
+
+
+---
+
 # 0.50.0 (2026.03.13)
 
 ## New Features
