@@ -58,6 +58,13 @@ class SpotifyMockResource {
     @Suppress("UnusedParameter")
     fun playlistTracks(@PathParam("playlistId") playlistId: String): String = PLAYLIST_TRACKS_RESPONSE
 
+    @GET
+    @Path("/v1/albums/{albumId}")
+    @PermitAll
+    @Produces(MediaType.APPLICATION_JSON)
+    @Suppress("UnusedParameter")
+    fun albumTracks(@PathParam("albumId") albumId: String): String = ALBUM_RESPONSE
+
     companion object {
         private const val TOKEN_RESPONSE =
             """{"access_token":"mock-access-token","refresh_token":"mock-refresh-token","expires_in":3600,"token_type":"Bearer"}"""
@@ -69,5 +76,7 @@ class SpotifyMockResource {
             """{"items":[{"track":{"id":"track-1","name":"Track One","type":"track","is_local":false,"artists":[{"id":"artist-1","name":"Artist One"}]},"played_at":"2024-01-01T12:00:00.000Z"},{"track":{"id":"episode-1","name":"Podcast Episode One","type":"episode"},"played_at":"2024-01-01T11:00:00.000Z"},{"track":{"id":"local-1","name":"Local Track","type":"track","is_local":true,"artists":[{"id":"","name":"Local Artist"}]},"played_at":"2024-01-01T10:00:00.000Z"}],"next":null}"""
         private const val PLAYLIST_TRACKS_RESPONSE =
             """{"snapshot_id":"mock-snapshot-1","items":[{"item":{"id":"track-1","name":"Track One","type":"track","artists":[{"id":"artist-1","name":"Artist One"}]}},{"item":{"id":"episode-1","name":"Podcast Episode One","type":"episode"}},{"item":null}],"next":null}"""
+        private const val ALBUM_RESPONSE =
+            """{"id":"album-1","name":"Album One","album_type":"album","total_tracks":2,"artists":[{"id":"artist-1","name":"Artist One"}],"images":[{"url":"https://example.com/cover.jpg"}],"release_date":"2024-01-01","release_date_precision":"day","tracks":{"items":[{"id":"track-1","name":"Track One","type":"track","is_local":false,"artists":[{"id":"artist-1","name":"Artist One"}],"disc_number":1,"track_number":1,"duration_ms":180000},{"id":"track-2","name":"Track Two","type":"track","is_local":false,"artists":[{"id":"artist-1","name":"Artist One"}],"disc_number":1,"track_number":2,"duration_ms":200000}],"next":null,"total":2}}"""
     }
 }
