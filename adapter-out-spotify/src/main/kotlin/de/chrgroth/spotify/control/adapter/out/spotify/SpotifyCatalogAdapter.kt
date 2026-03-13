@@ -19,7 +19,6 @@ import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
 import de.chrgroth.spotify.control.domain.port.out.SpotifyCatalogPort
 import jakarta.enterprise.context.ApplicationScoped
-import kotlinx.serialization.json.Json
 import mu.KLogging
 import org.eclipse.microprofile.config.inject.ConfigProperty
 import java.net.URI
@@ -55,7 +54,7 @@ class SpotifyCatalogAdapter(
       }
       val errorResult = response.checkRateLimitOrError(logger, EnrichmentError.ARTIST_DETAILS_FETCH_FAILED)
       if (errorResult != null) return errorResult
-      val artist = json.decodeFromString<SpotifyArtistResponse>(response.body())
+      val artist = spotifyJson.decodeFromString<SpotifyArtistResponse>(response.body())
       val allGenres = artist.genres
       AppArtist(
         artistId = artist.id,
@@ -88,7 +87,7 @@ class SpotifyCatalogAdapter(
       }
       val errorResult = response.checkRateLimitOrError(logger, EnrichmentError.TRACK_DETAILS_FETCH_FAILED)
       if (errorResult != null) return errorResult
-      parseTrackSyncResult(json.decodeFromString<SpotifyTrackResponse>(response.body())).right()
+      parseTrackSyncResult(spotifyJson.decodeFromString<SpotifyTrackResponse>(response.body())).right()
     } catch (e: Exception) {
       logger.error(e) { "Unexpected error fetching track details for track $trackId (user ${userId.value})" }
       EnrichmentError.TRACK_DETAILS_FETCH_FAILED.left()
@@ -134,8 +133,6 @@ class SpotifyCatalogAdapter(
   private fun <T, R> List<T>.additionalItems(extractor: T.() -> R): List<R>? =
     if (size <= 1) null else (1 until size).map { get(it).extractor() }
 
-    companion object : KLogging() {
-        private val json = Json { ignoreUnknownKeys = true }
-    }
+    companion object : KLogging()
 }
 

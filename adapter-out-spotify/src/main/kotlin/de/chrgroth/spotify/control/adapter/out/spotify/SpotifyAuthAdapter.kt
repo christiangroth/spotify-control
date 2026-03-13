@@ -15,7 +15,6 @@ import de.chrgroth.spotify.control.domain.model.SpotifyRefreshedTokens
 import de.chrgroth.spotify.control.domain.model.SpotifyTokens
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAuthPort
 import jakarta.enterprise.context.ApplicationScoped
-import kotlinx.serialization.json.Json
 import mu.KLogging
 import org.eclipse.microprofile.config.inject.ConfigProperty
 import java.net.URI
@@ -72,7 +71,7 @@ class SpotifyAuthAdapter(
             }
             val errorResult = response.checkRateLimitOrError(logger, AuthError.PROFILE_FETCH_FAILED)
             if (errorResult != null) return errorResult
-            val profile = json.decodeFromString<SpotifyUserProfileResponse>(response.body())
+            val profile = spotifyJson.decodeFromString<SpotifyUserProfileResponse>(response.body())
             SpotifyProfile(
                 id = SpotifyProfileId(profile.id),
                 displayName = profile.displayName,
@@ -114,11 +113,9 @@ class SpotifyAuthAdapter(
             logger.error { "Spotify token endpoint request failed: ${response.statusCode()} - ${response.body()}" }
             return null
         }
-        return json.decodeFromString<SpotifyTokenResponse>(response.body())
+        return spotifyJson.decodeFromString<SpotifyTokenResponse>(response.body())
     }
 
-    companion object : KLogging() {
-        private val json = Json { ignoreUnknownKeys = true }
-    }
+    companion object : KLogging()
 }
 

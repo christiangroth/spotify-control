@@ -14,7 +14,6 @@ import de.chrgroth.spotify.control.domain.model.RecentlyPlayedItem
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.out.SpotifyPlaybackPort
 import jakarta.enterprise.context.ApplicationScoped
-import kotlinx.serialization.json.Json
 import mu.KLogging
 import org.eclipse.microprofile.config.inject.ConfigProperty
 import java.net.URI
@@ -49,7 +48,7 @@ class SpotifyPlaybackAdapter(
       }
       val errorResult = response.checkRateLimitOrError(logger, PlaybackError.CURRENTLY_PLAYING_FETCH_FAILED)
       if (errorResult != null) return errorResult
-      val currentlyPlaying = json.decodeFromString<SpotifyCurrentlyPlayingResponse>(response.body())
+      val currentlyPlaying = spotifyJson.decodeFromString<SpotifyCurrentlyPlayingResponse>(response.body())
       parseCurrentlyPlayingItem(userId, currentlyPlaying).right()
     } catch (e: Exception) {
       logger.error(e) { "Unexpected error during currently playing fetch" }
@@ -96,7 +95,7 @@ class SpotifyPlaybackAdapter(
                 }
                 val errorResult = response.checkRateLimitOrError(logger, PlaybackError.RECENTLY_PLAYED_FETCH_FAILED)
                 if (errorResult != null) return errorResult
-                val recentlyPlayed = json.decodeFromString<SpotifyRecentlyPlayedResponse>(response.body())
+                val recentlyPlayed = spotifyJson.decodeFromString<SpotifyRecentlyPlayedResponse>(response.body())
                 recentlyPlayed.items.mapNotNullTo(allItems) { item ->
                     parseRecentlyPlayedItem(userId, item.track, item.playedAt)
                 }
@@ -130,7 +129,6 @@ class SpotifyPlaybackAdapter(
 
     companion object : KLogging() {
         private const val HTTP_NO_CONTENT = 204
-        private val json = Json { ignoreUnknownKeys = true }
     }
 }
 

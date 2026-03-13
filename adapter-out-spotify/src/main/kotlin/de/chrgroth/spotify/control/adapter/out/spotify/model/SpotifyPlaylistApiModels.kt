@@ -1,0 +1,33 @@
+package de.chrgroth.spotify.control.adapter.out.spotify.model
+
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+
+@Serializable
+internal data class SpotifyOwner(val id: String)
+
+@Serializable
+internal data class SpotifyPlaylistResponse(
+    val id: String,
+    val name: String,
+    @SerialName("snapshot_id") val snapshotId: String,
+    val owner: SpotifyOwner,
+)
+
+@Serializable
+internal data class SpotifyUserPlaylistsResponse(
+    val items: List<SpotifyPlaylistResponse> = emptyList(),
+    val next: String? = null,
+)
+
+@Serializable
+internal data class SpotifyPlaylistTrackObject(
+    val track: SpotifyTrackResponse? = null,
+)
+
+@Serializable
+internal data class SpotifyPlaylistTracksResponse(
+    val items: List<SpotifyPlaylistTrackObject> = emptyList(),
+    val next: String? = null,
+    @SerialName("snapshot_id") val snapshotId: String? = null,
+)

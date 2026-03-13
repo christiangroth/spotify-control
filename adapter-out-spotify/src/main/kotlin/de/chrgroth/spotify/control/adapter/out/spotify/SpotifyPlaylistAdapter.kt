@@ -15,7 +15,6 @@ import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
 import de.chrgroth.spotify.control.domain.port.out.SpotifyPlaylistPort
 import jakarta.enterprise.context.ApplicationScoped
-import kotlinx.serialization.json.Json
 import mu.KLogging
 import org.eclipse.microprofile.config.inject.ConfigProperty
 import java.net.URI
@@ -48,7 +47,7 @@ class SpotifyPlaylistAdapter(
                 val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
                 val errorResult = response.checkRateLimitOrError(logger, PlaylistSyncError.PLAYLIST_FETCH_FAILED)
                 if (errorResult != null) return errorResult
-                val playlistsResponse = json.decodeFromString<SpotifyUserPlaylistsResponse>(response.body())
+                val playlistsResponse = spotifyJson.decodeFromString<SpotifyUserPlaylistsResponse>(response.body())
                 playlistsResponse.items.forEach { playlist ->
                     items.add(
                         SpotifyPlaylistItem(
@@ -85,7 +84,7 @@ class SpotifyPlaylistAdapter(
         }
         val errorResult = response.checkRateLimitOrError(logger, PlaylistSyncError.PLAYLIST_TRACKS_FETCH_FAILED)
         if (errorResult != null) return errorResult
-        val tracksResponse = json.decodeFromString<SpotifyPlaylistTracksResponse>(response.body())
+        val tracksResponse = spotifyJson.decodeFromString<SpotifyPlaylistTracksResponse>(response.body())
         if (snapshotId == null) {
           snapshotId = tracksResponse.snapshotId
         }
@@ -117,8 +116,6 @@ class SpotifyPlaylistAdapter(
     }
   }
 
-    companion object : KLogging() {
-        private val json = Json { ignoreUnknownKeys = true }
-    }
+    companion object : KLogging()
 }
 
