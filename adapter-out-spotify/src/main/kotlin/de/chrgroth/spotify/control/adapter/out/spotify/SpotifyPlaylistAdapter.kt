@@ -3,8 +3,8 @@ package de.chrgroth.spotify.control.adapter.out.spotify
 import arrow.core.Either
 import arrow.core.left
 import arrow.core.right
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.ObjectMapper
+import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyPlaylistTracksResponse
+import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyUserPlaylistsResponse
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.PlaylistSyncError
 import de.chrgroth.spotify.control.domain.model.AccessToken
@@ -32,7 +32,6 @@ class SpotifyPlaylistAdapter(
 ) : SpotifyPlaylistPort {
 
     private val httpClient = HttpClient.newHttpClient()
-    private val objectMapper = ObjectMapper()
 
     override fun getPlaylists(userId: UserId, accessToken: AccessToken): Either<DomainError, List<SpotifyPlaylistItem>> {
         return try {
@@ -48,18 +47,18 @@ class SpotifyPlaylistAdapter(
                 val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
                 val errorResult = response.checkRateLimitOrError(logger, PlaylistSyncError.PLAYLIST_FETCH_FAILED)
                 if (errorResult != null) return errorResult
-                val json: JsonNode = objectMapper.readTree(response.body())
-                json.get("items")?.forEach { item ->
+                val playlistsResponse = spotifyJson.decodeFromString<SpotifyUserPlaylistsResponse>(response.body())
+                playlistsResponse.items.forEach { playlist ->
                     items.add(
                         SpotifyPlaylistItem(
-                            id = item.get("id").asText(),
-                            name = item.get("name").asText(),
-                            snapshotId = item.get("snapshot_id").asText(),
-                            ownerId = item.get("owner").get("id").asText(),
+                            id = playlist.id,
+                            name = playlist.name,
+                            snapshotId = playlist.snapshotId,
+                            ownerId = playlist.owner.id,
                         ),
                     )
                 }
-                nextUrl = json.get("next")?.takeIf { !it.isNull }?.asText()
+                nextUrl = playlistsResponse.next
             }
             items.right()
         } catch (e: Exception) {
@@ -85,29 +84,26 @@ class SpotifyPlaylistAdapter(
         }
         val errorResult = response.checkRateLimitOrError(logger, PlaylistSyncError.PLAYLIST_TRACKS_FETCH_FAILED)
         if (errorResult != null) return errorResult
-        val responseBody = response.body()
-        val json: JsonNode = objectMapper.readTree(responseBody)
+        val tracksResponse = spotifyJson.decodeFromString<SpotifyPlaylistTracksResponse>(response.body())
         if (snapshotId == null) {
-          snapshotId = json.get("snapshot_id")?.asText()
+          snapshotId = tracksResponse.snapshotId
         }
-        json.get("items")?.forEach { item ->
-          logger.info { "Processing item: $item" }
-          val track = item.get("item")?.takeIf { !it.isNull } ?: return@forEach
-          val type = track.get("type")?.asText()
-          if (type != "track") {
-            logger.info { "Ignoring non-track playlist item of type '$type'" }
+        tracksResponse.items.forEach { item ->
+          val track = item.item ?: return@forEach
+          if (track.type != "track") {
+            logger.info { "Ignoring non-track playlist item of type '${track.type}'" }
             return@forEach
           }
           tracks.add(
             PlaylistTrack(
-              trackId = track.get("id").asText(),
-              trackName = track.get("name").asText(),
-              artistIds = track.get("artists").map { it.get("id").asText() },
-              artistNames = track.get("artists").map { it.get("name").asText() },
+              trackId = track.id,
+              trackName = track.name,
+              artistIds = track.artists.map { it.id },
+              artistNames = track.artists.map { it.name },
             ),
           )
         }
-        nextUrl = json.get("next")?.takeIf { !it.isNull }?.asText()
+        nextUrl = tracksResponse.next
       }
       Playlist(
         spotifyPlaylistId = playlistId,

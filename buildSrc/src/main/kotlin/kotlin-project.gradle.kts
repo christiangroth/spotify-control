@@ -4,6 +4,7 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_3
 
 plugins {
   kotlin("jvm")
+  kotlin("plugin.serialization")
 
   `java-library`
   `java-test-fixtures`
