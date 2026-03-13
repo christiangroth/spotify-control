@@ -1,3 +1,14 @@
+# 0.51.0 (2026.03.13)
+
+## New Features
+* add-re-sync-functionality: Added catalog re-sync functionality to refresh artist and track metadata from Spotify.
+* add-re-sync-functionality: Catalog is automatically re-synced every week via a scheduled job.
+* add-re-sync-functionality: Added "Re-sync Catalog" button in Playback Settings to trigger a manual catalog re-sync.
+
+
+
+---
+
 # 0.50.1 (2026.03.13)
 
 ## Bugfixes / Chore
