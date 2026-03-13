@@ -131,13 +131,13 @@ class CatalogAdapter(
             }
     }
 
-    override fun syncMissingArtists(): Either<DomainError, Int> {
+    private fun syncMissingArtists(): Either<DomainError, Int> {
         val userId = userRepository.findAll().firstOrNull()?.spotifyUserId
         if (userId == null) {
             logger.debug { "No users available, skipping syncMissingArtists" }
             return 0.right()
         }
-        val artistIds = syncPoolRepository.popArtists(BULK_LIMIT)
+        val artistIds = syncPoolRepository.peekArtists(BULK_LIMIT)
         if (artistIds.isEmpty()) {
             logger.debug { "No artists in sync pool" }
             return 0.right()
@@ -148,24 +148,21 @@ class CatalogAdapter(
             .flatMap { artists ->
                 if (artists.isNotEmpty()) {
                     appArtistRepository.upsertAll(artists)
-                }
-                val syncedIds = artists.map { it.artistId }.toSet()
-                val failedIds = artistIds.filterNot { it in syncedIds }
-                if (failedIds.isNotEmpty()) {
-                    logger.warn { "Bulk artist sync returned no data for ${failedIds.size} IDs, falling back to per-item sync" }
-                    fallbackSyncArtists(userId, failedIds)
+                    val syncedIds = artists.map { it.artistId }
+                    syncPoolRepository.removeArtists(syncedIds)
+                    logger.info { "Synced ${artists.size} artists; ${artistIds.size - artists.size} not returned by Spotify will be retried" }
                 }
                 artists.size.right()
             }
     }
 
-    override fun syncMissingTracks(): Either<DomainError, Int> {
+    private fun syncMissingTracks(): Either<DomainError, Int> {
         val userId = userRepository.findAll().firstOrNull()?.spotifyUserId
         if (userId == null) {
             logger.debug { "No users available, skipping syncMissingTracks" }
             return 0.right()
         }
-        val trackIds = syncPoolRepository.popTracks(BULK_LIMIT)
+        val trackIds = syncPoolRepository.peekTracks(BULK_LIMIT)
         if (trackIds.isEmpty()) {
             logger.debug { "No tracks in sync pool" }
             return 0.right()
@@ -177,48 +174,18 @@ class CatalogAdapter(
                 if (results.isNotEmpty()) {
                     appTrackRepository.upsertAll(results.map { it.track })
                     appAlbumRepository.upsertAll(results.map { it.album })
+                    val syncedTrackIds = results.map { it.track.id.value }
+                    syncPoolRepository.removeTracks(syncedTrackIds)
                     val artistIds = results.flatMap { result ->
                         (listOf(result.track.artistId) + result.track.additionalArtistIds).map { it.value }
                     }.filter { it.isNotBlank() }.distinct()
                     if (artistIds.isNotEmpty()) {
                         syncPoolRepository.addArtists(artistIds)
                     }
-                }
-                val syncedIds = results.map { it.track.id.value }.toSet()
-                val failedIds = trackIds.filterNot { it in syncedIds }
-                if (failedIds.isNotEmpty()) {
-                    logger.warn { "Bulk track sync returned no data for ${failedIds.size} IDs, falling back to per-item sync" }
-                    fallbackSyncTracks(userId, failedIds)
+                    logger.info { "Synced ${results.size} tracks; ${trackIds.size - results.size} not returned by Spotify will be retried" }
                 }
                 results.size.right()
             }
-    }
-
-    private fun fallbackSyncArtists(userId: UserId, artistIds: List<String>) {
-        val accessToken = spotifyAccessToken.getValidAccessToken(userId)
-        artistIds.forEach { artistId ->
-            when (val result = spotifyCatalog.getArtist(userId, accessToken, artistId)) {
-                is Either.Right -> result.value?.let { artist ->
-                    appArtistRepository.upsertAll(listOf(artist))
-                    logger.info { "Fallback: synced artist $artistId" }
-                } ?: logger.warn { "Fallback: no data from Spotify for artist $artistId" }
-                is Either.Left -> logger.error { "Fallback: failed to sync artist $artistId: ${result.value.code}" }
-            }
-        }
-    }
-
-    private fun fallbackSyncTracks(userId: UserId, trackIds: List<String>) {
-        val accessToken = spotifyAccessToken.getValidAccessToken(userId)
-        trackIds.forEach { trackId ->
-            when (val result = spotifyCatalog.getTrack(userId, accessToken, trackId)) {
-                is Either.Right -> result.value?.let { syncResult ->
-                    appTrackRepository.upsertAll(listOf(syncResult.track))
-                    appAlbumRepository.upsertAll(listOf(syncResult.album))
-                    logger.info { "Fallback: synced track $trackId" }
-                } ?: logger.warn { "Fallback: no data from Spotify for track $trackId" }
-                is Either.Left -> logger.error { "Fallback: failed to sync track $trackId: ${result.value.code}" }
-            }
-        }
     }
 
     // --- Outbox Handlers ---
@@ -258,6 +225,44 @@ class CatalogAdapter(
         }
     } catch (e: Exception) {
         logger.error(e) { "Unexpected error in handle(SyncTrackDetails) for track ${event.trackId} (user ${event.userId.value})" }
+        OutboxTaskResult.Failed("Unexpected error in sync: ${e.message}", e)
+    }
+
+    override fun handle(event: DomainOutboxEvent.SyncMissingArtists): OutboxTaskResult = try {
+        when (val result = syncMissingArtists()) {
+            is Either.Right -> OutboxTaskResult.Success
+            is Either.Left -> when (val error = result.value) {
+                is SpotifyRateLimitError -> {
+                    logger.warn { "Rate limited on SyncMissingArtists, retry after ${error.retryAfter.seconds}s" }
+                    OutboxTaskResult.RateLimited(error.retryAfter)
+                }
+                else -> {
+                    logger.error { "Failed to sync missing artists: ${error.code}" }
+                    OutboxTaskResult.Failed("Failed to sync missing artists: ${error.code}")
+                }
+            }
+        }
+    } catch (e: Exception) {
+        logger.error(e) { "Unexpected error in handle(SyncMissingArtists)" }
+        OutboxTaskResult.Failed("Unexpected error in sync: ${e.message}", e)
+    }
+
+    override fun handle(event: DomainOutboxEvent.SyncMissingTracks): OutboxTaskResult = try {
+        when (val result = syncMissingTracks()) {
+            is Either.Right -> OutboxTaskResult.Success
+            is Either.Left -> when (val error = result.value) {
+                is SpotifyRateLimitError -> {
+                    logger.warn { "Rate limited on SyncMissingTracks, retry after ${error.retryAfter.seconds}s" }
+                    OutboxTaskResult.RateLimited(error.retryAfter)
+                }
+                else -> {
+                    logger.error { "Failed to sync missing tracks: ${error.code}" }
+                    OutboxTaskResult.Failed("Failed to sync missing tracks: ${error.code}")
+                }
+            }
+        }
+    } catch (e: Exception) {
+        logger.error(e) { "Unexpected error in handle(SyncMissingTracks)" }
         OutboxTaskResult.Failed("Unexpected error in sync: ${e.message}", e)
     }
 

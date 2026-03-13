@@ -17,8 +17,8 @@ interface CatalogPort {
     ): Either<DomainError, Unit>
     fun syncArtistDetails(artistId: String, userId: UserId): Either<DomainError, Unit>
     fun syncTrackDetails(trackId: String, userId: UserId): Either<DomainError, Unit>
-    fun syncMissingArtists(): Either<DomainError, Int>
-    fun syncMissingTracks(): Either<DomainError, Int>
     fun handle(event: DomainOutboxEvent.SyncArtistDetails): OutboxTaskResult
     fun handle(event: DomainOutboxEvent.SyncTrackDetails): OutboxTaskResult
+    fun handle(event: DomainOutboxEvent.SyncMissingArtists): OutboxTaskResult
+    fun handle(event: DomainOutboxEvent.SyncMissingTracks): OutboxTaskResult
 }

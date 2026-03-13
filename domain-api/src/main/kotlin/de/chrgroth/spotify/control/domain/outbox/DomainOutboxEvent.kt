@@ -145,6 +145,38 @@ sealed interface DomainOutboxEvent : OutboxEvent {
         }
     }
 
+    /**
+     * Peeks up to 50 artist IDs from app_sync_pool and syncs them via the Spotify bulk artists endpoint.
+     * Successfully synced IDs are removed from the pool; unsynced IDs remain for the next retry.
+     * Deduplication ensures only one instance is queued at a time.
+     */
+    data class SyncMissingArtists(val placeholder: String = "") : DomainOutboxEvent {
+        override val key = KEY
+        override fun deduplicationKey() = KEY
+        override val partition = DomainOutboxPartition.ToSpotify
+        override fun toPayload() = ""
+
+        companion object {
+            const val KEY = "SyncMissingArtists"
+        }
+    }
+
+    /**
+     * Peeks up to 50 track IDs from app_sync_pool and syncs them via the Spotify bulk tracks endpoint.
+     * Successfully synced IDs are removed from the pool; unsynced IDs remain for the next retry.
+     * Deduplication ensures only one instance is queued at a time.
+     */
+    data class SyncMissingTracks(val placeholder: String = "") : DomainOutboxEvent {
+        override val key = KEY
+        override fun deduplicationKey() = KEY
+        override val partition = DomainOutboxPartition.ToSpotify
+        override fun toPayload() = ""
+
+        companion object {
+            const val KEY = "SyncMissingTracks"
+        }
+    }
+
 
     companion object {
         fun fromKey(key: String, payload: String): DomainOutboxEvent = when (key) {
@@ -157,6 +189,8 @@ sealed interface DomainOutboxEvent : OutboxEvent {
             AppendPlaybackData.KEY -> AppendPlaybackData(UserId(payload))
             SyncArtistDetails.KEY, SyncArtistDetails.LEGACY_KEY -> SyncArtistDetails.fromPayload(payload)
             SyncTrackDetails.KEY, SyncTrackDetails.LEGACY_KEY -> SyncTrackDetails.fromPayload(payload)
+            SyncMissingArtists.KEY -> SyncMissingArtists()
+            SyncMissingTracks.KEY -> SyncMissingTracks()
             else -> throw IllegalArgumentException("Unknown outbox event type: $key")
         }
     }

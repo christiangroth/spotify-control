@@ -19,27 +19,37 @@ class AppSyncPoolRepositoryAdapter : AppSyncPoolRepositoryPort {
 
     override fun addArtists(artistIds: List<String>) {
         if (artistIds.isEmpty()) return
-        addToPool("ARTIST", artistIds)
+        addToPool(SyncPoolType.ARTIST, artistIds)
     }
 
     override fun addTracks(trackIds: List<String>) {
         if (trackIds.isEmpty()) return
-        addToPool("TRACK", trackIds)
+        addToPool(SyncPoolType.TRACK, trackIds)
     }
 
-    override fun popArtists(max: Int): List<String> = popFromPool("ARTIST", max)
+    override fun peekArtists(max: Int): List<String> = peekFromPool(SyncPoolType.ARTIST, max)
 
-    override fun popTracks(max: Int): List<String> = popFromPool("TRACK", max)
+    override fun peekTracks(max: Int): List<String> = peekFromPool(SyncPoolType.TRACK, max)
 
-    private fun addToPool(type: String, ids: List<String>) {
+    override fun removeArtists(artistIds: List<String>) {
+        if (artistIds.isEmpty()) return
+        removeFromPool(SyncPoolType.ARTIST, artistIds)
+    }
+
+    override fun removeTracks(trackIds: List<String>) {
+        if (trackIds.isEmpty()) return
+        removeFromPool(SyncPoolType.TRACK, trackIds)
+    }
+
+    private fun addToPool(type: SyncPoolType, ids: List<String>) {
         val collection = appSyncPoolDocumentRepository.mongoCollection()
         val upsertOptions = UpdateOptions().upsert(true)
-        mongoQueryMetrics.timed("app_sync_pool.add.$type") {
+        mongoQueryMetrics.timed("app_sync_pool.add.${type.name}") {
             ids.forEach { id ->
                 collection.updateOne(
-                    Filters.eq("_id", "$type:$id"),
+                    Filters.eq("_id", "${type.name}:$id"),
                     Updates.combine(
-                        Updates.setOnInsert("type", type),
+                        Updates.setOnInsert("type", type.name),
                         Updates.setOnInsert("spotifyId", id),
                     ),
                     upsertOptions,
@@ -48,19 +58,23 @@ class AppSyncPoolRepositoryAdapter : AppSyncPoolRepositoryPort {
         }
     }
 
-    private fun popFromPool(type: String, max: Int): List<String> {
+    private fun peekFromPool(type: SyncPoolType, max: Int): List<String> {
         val collection = appSyncPoolDocumentRepository.mongoCollection()
-        return mongoQueryMetrics.timed("app_sync_pool.pop.$type") {
-            val docs = collection
-                .find(Filters.eq("type", type))
+        return mongoQueryMetrics.timed("app_sync_pool.peek.${type.name}") {
+            collection
+                .find(Filters.eq("type", type.name))
                 .limit(max)
+                .map { it.spotifyId }
                 .toList()
-            if (docs.isNotEmpty()) {
-                val ids = docs.map { it.id }
-                collection.deleteMany(Filters.`in`("_id", ids))
-                logger.debug { "Popped ${docs.size} $type IDs from sync pool" }
-            }
-            docs.map { it.spotifyId }
+        }
+    }
+
+    private fun removeFromPool(type: SyncPoolType, ids: List<String>) {
+        val collection = appSyncPoolDocumentRepository.mongoCollection()
+        val documentIds = ids.map { "${type.name}:$it" }
+        mongoQueryMetrics.timed("app_sync_pool.remove.${type.name}") {
+            collection.deleteMany(Filters.`in`("_id", documentIds))
+            logger.debug { "Removed ${ids.size} ${type.name} IDs from sync pool" }
         }
     }
 
