@@ -11,7 +11,7 @@ import mu.KLogging
 
 /**
  * Shared service that upserts app_artist and app_track stubs then adds them to the sync pool
- * for bulk processing by [SyncMissingArtistsJob] and [SyncMissingTracksJob]:
+ * for bulk processing by SyncMissingArtistsJob and SyncMissingTracksJob:
  *
  * 1. Artist and track stubs are upserted to app_artist and app_track collections immediately
  *    so that playback data can reference them.

@@ -12,6 +12,7 @@ class SyncMissingArtistsJob(
     private val catalog: CatalogPort,
 ) {
 
+    // Runs at :00, :10, :20, :30, :40, :50 of each hour (staggered with SyncMissingTracksJob)
     @Scheduled(cron = "0 0/10 * * * ?", skipExecutionIf = StarterSkipPredicate::class)
     fun run() {
         logger.info { "Running scheduled sync for missing artists" }
