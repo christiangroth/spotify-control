@@ -41,7 +41,7 @@ class AppAlbumRepositoryAdapter : AppAlbumRepositoryPort {
                         Updates.set("artistName", item.artistName),
                         Updates.set("additionalArtistIds", item.additionalArtistIds?.map { it.value }),
                         Updates.set("additionalArtistNames", item.additionalArtistNames),
-                        Updates.set("lastEnrichmentDate", now),
+                        Updates.set("lastSync", now),
                     ),
                     upsertOptions,
                 )
@@ -71,7 +71,7 @@ class AppAlbumRepositoryAdapter : AppAlbumRepositoryPort {
         additionalArtistIds = additionalArtistIds?.map { ArtistId(it) },
         additionalArtistNames = additionalArtistNames,
         genreOverrides = genreOverrides,
-        lastEnrichmentDate = lastEnrichmentDate?.toKotlinInstant(),
+        lastSync = lastSync?.toKotlinInstant(),
     )
 
     companion object : KLogging()

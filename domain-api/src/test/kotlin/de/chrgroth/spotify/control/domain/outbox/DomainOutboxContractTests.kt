@@ -18,8 +18,8 @@ class DomainOutboxContractTests {
         DomainOutboxEvent.SyncPlaylistData(UserId("user-1"), "playlist-1"),
         DomainOutboxEvent.RebuildPlaybackData(UserId("user-1")),
         DomainOutboxEvent.AppendPlaybackData(UserId("user-1")),
-        DomainOutboxEvent.EnrichArtistDetails("artist-1", UserId("user-1")),
-        DomainOutboxEvent.EnrichTrackDetails("track-1", UserId("user-1")),
+        DomainOutboxEvent.SyncArtistDetails("artist-1", UserId("user-1")),
+        DomainOutboxEvent.SyncTrackDetails("track-1", UserId("user-1")),
     )
 
     @Test

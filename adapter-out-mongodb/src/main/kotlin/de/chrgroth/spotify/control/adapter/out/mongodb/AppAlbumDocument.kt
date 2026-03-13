@@ -20,5 +20,5 @@ class AppAlbumDocument {
     var additionalArtistIds: List<String>? = null
     var additionalArtistNames: List<String>? = null
     var genreOverrides: List<String>? = null
-    var lastEnrichmentDate: Instant? = null
+    var lastSync: Instant? = null
 }

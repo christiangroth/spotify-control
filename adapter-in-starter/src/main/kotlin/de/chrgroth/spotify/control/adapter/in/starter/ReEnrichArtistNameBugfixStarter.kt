@@ -26,12 +26,12 @@ class ReEnrichArtistNameBugfixStarter(
         }
         val user = userRepository.findAll().firstOrNull()
         if (user == null) {
-            logger.warn { "No users found, cannot enqueue artist re-enrichment for ${artists.size} artist(s)" }
+            logger.warn { "No users found, cannot enqueue artist re-sync for ${artists.size} artist(s)" }
             return
         }
-        logger.info { "Enqueuing re-enrichment for ${artists.size} artist(s) with imageLink but missing name" }
+        logger.info { "Enqueuing re-sync for ${artists.size} artist(s) with imageLink but missing name" }
         artists.forEach { artist ->
-            outboxPort.enqueue(DomainOutboxEvent.EnrichArtistDetails(artist.artistId, user.spotifyUserId))
+            outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails(artist.artistId, user.spotifyUserId))
         }
     }
 

@@ -35,7 +35,7 @@ class PlaylistAdapter(
     private val spotifyPlaylist: SpotifyPlaylistPort,
     private val outboxPort: OutboxPort,
     private val dashboardRefresh: DashboardRefreshPort,
-    private val appEnrichmentService: AppEnrichmentService,
+    private val appSyncService: AppSyncService,
 ) : PlaylistPort {
 
     override fun enqueueUpdates() {
@@ -113,7 +113,7 @@ class PlaylistAdapter(
                 )
             }
 
-            appEnrichmentService.upsertAndEnqueueEnrichment(artistStubs, trackStubs, userId)
+            appSyncService.upsertAndAddToSyncPool(artistStubs, trackStubs, userId)
         }
     }
 

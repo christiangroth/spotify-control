@@ -43,7 +43,7 @@ class AppAlbumRepositoryTests {
         assertThat(result[0].type).isEqualTo(item.type)
         assertThat(result[0].totalTracks).isEqualTo(item.totalTracks)
         assertThat(result[0].releaseDate).isEqualTo(item.releaseDate)
-        assertThat(result[0].lastEnrichmentDate).isNotNull()
+        assertThat(result[0].lastSync).isNotNull()
     }
 
     @Test

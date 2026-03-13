@@ -57,9 +57,9 @@ class AppTrackRepositoryAdapter : AppTrackRepositoryPort {
             appTrackDocumentRepository.list("artistId = ?1", artistId.value).map { it.toDomain() }
         }
 
-    override fun updateTrackEnrichmentData(track: AppTrack) {
+    override fun updateTrackSyncData(track: AppTrack) {
         val now = java.time.Instant.now()
-        mongoQueryMetrics.timed("app_track.updateTrackEnrichmentData") {
+        mongoQueryMetrics.timed("app_track.updateTrackSyncData") {
             appTrackDocumentRepository.mongoCollection().updateOne(
                 Filters.eq("_id", track.id.value),
                 Updates.combine(
@@ -72,7 +72,7 @@ class AppTrackRepositoryAdapter : AppTrackRepositoryPort {
                     Updates.set("durationMs", track.durationMs),
                     Updates.set("trackNumber", track.trackNumber),
                     Updates.set("type", track.type),
-                    Updates.set("lastEnrichmentDate", now),
+                    Updates.set("lastSync", now),
                 ),
             )
         }
@@ -91,7 +91,7 @@ class AppTrackRepositoryAdapter : AppTrackRepositoryPort {
         durationMs = durationMs,
         trackNumber = trackNumber,
         type = type,
-        lastEnrichmentDate = lastEnrichmentDate?.toKotlinInstant(),
+        lastSync = lastSync?.toKotlinInstant(),
     )
 
     companion object : KLogging()

@@ -47,7 +47,7 @@ class PlaybackAdapter(
     private val outboxPort: OutboxPort,
     private val dashboardRefresh: DashboardRefreshPort,
     private val playbackState: PlaybackStatePort,
-    private val appEnrichmentService: AppEnrichmentService,
+    private val appSyncService: AppSyncService,
     @ConfigProperty(name = "app.playback.minimum-progress-seconds", defaultValue = "25")
     minimumProgressSeconds: Long,
 ) : PlaybackPort {
@@ -231,7 +231,7 @@ class PlaybackAdapter(
         logger.info { "Persisting ${newPlaybackItems.size} new app_playback items for user: ${userId.value}" }
         appPlaybackRepository.saveAll(newPlaybackItems)
 
-        appEnrichmentService.upsertAndEnqueueEnrichment(artists, tracks, userId)
+        appSyncService.upsertAndAddToSyncPool(artists, tracks, userId)
     }
 
     private fun buildPlaybackItems(
