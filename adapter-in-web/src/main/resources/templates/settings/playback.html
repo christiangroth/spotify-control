@@ -15,7 +15,14 @@
 
         <h2 class="fs-5 fw-semibold mb-2">Catalog Re-sync</h2>
         <p class="text-secondary small mb-3">Re-queue all artists and tracks for re-sync from Spotify. Use this to refresh catalog metadata (genres, images, track details) that may have changed since the last sync.</p>
-        <button id="resync-catalog-btn" class="btn btn-spotify btn-sm">Re-sync Catalog</button>
+        <button id="resync-catalog-btn" class="btn btn-spotify btn-sm mb-4">Re-sync Catalog</button>
+
+        <h3 class="fs-6 fw-semibold mb-2">Re-sync Artist</h3>
+        <p class="text-secondary small mb-2">Re-queue a specific artist and all their tracks for re-sync from Spotify.</p>
+        <div class="position-relative" style="max-width:400px;">
+            <input type="text" id="artist-resync-search" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="Search artist…" autocomplete="off" aria-label="Search artist for re-sync" aria-autocomplete="list" aria-expanded="false">
+            <div id="artist-resync-dropdown" class="position-absolute w-100 d-none" style="z-index:100;max-height:220px;overflow-y:auto;background:#1a1a1a;border:1px solid #444;border-radius:0 0 4px 4px;" role="listbox" aria-label="Artist search results"></div>
+        </div>
 
         <hr class="my-4" style="border-color:#333;">
 
@@ -38,7 +45,7 @@
                         {#else}
                         <ul class="list-group list-group-flush" id="list-undecided">
                             {#for artist in undecidedArtists}
-                            <li class="list-group-item bg-dark border-secondary text-white py-2 px-3" data-artist-name="{artist.artistName}">
+                            <li class="list-group-item bg-dark border-secondary text-white py-2 px-3" data-artist-name="{artist.artistName}" data-artist-id="{artist.artistId}">
                                 <div class="d-flex align-items-center gap-2">
                                     {#if artist.imageLink}
                                     <img src="{artist.imageLink}" alt="{artist.artistName}" width="36" height="36" class="rounded-circle flex-shrink-0" style="object-fit:cover;">
@@ -49,7 +56,6 @@
                                     {/if}
                                     <span class="flex-grow-1 text-truncate small" style="min-width:0" title="{artist.artistName}">{artist.artistName}</span>
                                     <div class="d-flex gap-1 flex-shrink-0">
-                                        <button class="btn btn-sm btn-outline-secondary artist-resync-btn py-0 px-1" data-artist-id="{artist.artistId}" title="Re-sync artist" aria-label="Re-sync artist">↻</button>
                                         <button class="btn btn-sm btn-outline-success artist-status-btn py-0 px-1" data-artist-id="{artist.artistId}" data-new-status="ACTIVE" title="Set Active">✓</button>
                                         <button class="btn btn-sm btn-outline-danger artist-status-btn py-0 px-1" data-artist-id="{artist.artistId}" data-new-status="INACTIVE" title="Set Inactive">✗</button>
                                     </div>
@@ -70,7 +76,7 @@
                         {#else}
                         <ul class="list-group list-group-flush" id="list-active">
                             {#for artist in activeArtists}
-                            <li class="list-group-item bg-dark border-secondary text-white py-2 px-3" data-artist-name="{artist.artistName}">
+                            <li class="list-group-item bg-dark border-secondary text-white py-2 px-3" data-artist-name="{artist.artistName}" data-artist-id="{artist.artistId}">
                                 <div class="d-flex align-items-center gap-2">
                                     {#if artist.imageLink}
                                     <img src="{artist.imageLink}" alt="{artist.artistName}" width="36" height="36" class="rounded-circle flex-shrink-0" style="object-fit:cover;">
@@ -81,7 +87,6 @@
                                     {/if}
                                     <span class="flex-grow-1 text-truncate small" style="min-width:0" title="{artist.artistName}">{artist.artistName}</span>
                                     <div class="d-flex gap-1 flex-shrink-0">
-                                        <button class="btn btn-sm btn-outline-secondary artist-resync-btn py-0 px-1" data-artist-id="{artist.artistId}" title="Re-sync artist" aria-label="Re-sync artist">↻</button>
                                         <button class="btn btn-sm btn-outline-danger artist-status-btn py-0 px-1" data-artist-id="{artist.artistId}" data-new-status="INACTIVE" title="Set Inactive">✗</button>
                                     </div>
                                 </div>
@@ -101,7 +106,7 @@
                         {#else}
                         <ul class="list-group list-group-flush" id="list-inactive">
                             {#for artist in inactiveArtists}
-                            <li class="list-group-item bg-dark border-secondary text-white py-2 px-3" data-artist-name="{artist.artistName}">
+                            <li class="list-group-item bg-dark border-secondary text-white py-2 px-3" data-artist-name="{artist.artistName}" data-artist-id="{artist.artistId}">
                                 <div class="d-flex align-items-center gap-2">
                                     {#if artist.imageLink}
                                     <img src="{artist.imageLink}" alt="{artist.artistName}" width="36" height="36" class="rounded-circle flex-shrink-0" style="object-fit:cover;">
@@ -112,7 +117,6 @@
                                     {/if}
                                     <span class="flex-grow-1 text-truncate small" style="min-width:0" title="{artist.artistName}">{artist.artistName}</span>
                                     <div class="d-flex gap-1 flex-shrink-0">
-                                        <button class="btn btn-sm btn-outline-secondary artist-resync-btn py-0 px-1" data-artist-id="{artist.artistId}" title="Re-sync artist" aria-label="Re-sync artist">↻</button>
                                         <button class="btn btn-sm btn-outline-success artist-status-btn py-0 px-1" data-artist-id="{artist.artistId}" data-new-status="ACTIVE" title="Set Active">✓</button>
                                     </div>
                                 </div>
@@ -173,12 +177,84 @@
             });
         })();
 
-        document.querySelectorAll('.artist-resync-btn').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                const artistId = this.getAttribute('data-artist-id');
-                postWithButton(this, '/settings/playback/artists/' + encodeURIComponent(artistId) + '/resync', 'Artist re-sync enqueued.', 'Re-sync failed');
+        (function() {
+            var input = document.getElementById('artist-resync-search');
+            var dropdown = document.getElementById('artist-resync-dropdown');
+
+            var cachedArtists = null;
+            function getAllArtists() {
+                if (cachedArtists) return cachedArtists;
+                var seen = {};
+                var artists = [];
+                document.querySelectorAll('li[data-artist-id]').forEach(function(li) {
+                    var id = li.getAttribute('data-artist-id');
+                    if (id && !seen[id]) {
+                        seen[id] = true;
+                        artists.push({ id: id, name: li.getAttribute('data-artist-name') || '' });
+                    }
+                });
+                cachedArtists = artists;
+                return cachedArtists;
+            }
+
+            function buildDropdownItem(artist) {
+                var item = document.createElement('div');
+                item.className = 'd-flex align-items-center justify-content-between px-3 py-2';
+                item.style.borderBottom = '1px solid #333';
+                item.setAttribute('role', 'option');
+
+                var nameSpan = document.createElement('span');
+                nameSpan.className = 'small text-white text-truncate flex-grow-1';
+                nameSpan.style.minWidth = '0';
+                nameSpan.textContent = artist.name;
+
+                var btn = document.createElement('button');
+                btn.className = 'btn btn-sm btn-outline-secondary py-0 px-2 flex-shrink-0 ms-2';
+                btn.textContent = 'Re-sync';
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    postWithButton(btn, '/settings/playback/artists/' + encodeURIComponent(artist.id) + '/resync', 'Artist re-sync enqueued.', 'Re-sync failed');
+                });
+
+                item.appendChild(nameSpan);
+                item.appendChild(btn);
+                return item;
+            }
+
+            input.addEventListener('input', function() {
+                var query = this.value.trim();
+                dropdown.innerHTML = '';
+                if (!query) {
+                    dropdown.classList.add('d-none');
+                    input.setAttribute('aria-expanded', 'false');
+                    return;
+                }
+                var regex;
+                try {
+                    regex = new RegExp(query, 'i');
+                } catch(e) {
+                    regex = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+                }
+                var matches = getAllArtists().filter(function(a) { return regex.test(a.name); });
+                if (matches.length === 0) {
+                    dropdown.classList.add('d-none');
+                    input.setAttribute('aria-expanded', 'false');
+                    return;
+                }
+                matches.forEach(function(artist) {
+                    dropdown.appendChild(buildDropdownItem(artist));
+                });
+                dropdown.classList.remove('d-none');
+                input.setAttribute('aria-expanded', 'true');
             });
-        });
+
+            document.addEventListener('click', function(e) {
+                if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+                    dropdown.classList.add('d-none');
+                    input.setAttribute('aria-expanded', 'false');
+                }
+            });
+        })();
 
         document.querySelectorAll('.artist-status-btn').forEach(function(btn) {
             btn.addEventListener('click', function() {
