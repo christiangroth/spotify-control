@@ -78,6 +78,21 @@ class PlaybackSettingsResource {
     return Response.ok(mapOf("status" to "ok")).build()
   }
 
+  @POST
+  @Authenticated
+  @Path("/resync-catalog")
+  @Produces(MediaType.APPLICATION_JSON)
+  fun resyncCatalog(): Response {
+    return catalog.resyncCatalog().fold(
+      ifLeft = { error ->
+        Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+          .entity(mapOf("error" to "Re-sync failed: ${error.code}"))
+          .build()
+      },
+      ifRight = { Response.ok(mapOf("status" to "ok")).build() },
+    )
+  }
+
   @PUT
   @Authenticated
   @Path("/artists/{artistId}/status")

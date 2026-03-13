@@ -131,8 +131,16 @@ class CatalogAdapter(
             }
     }
 
-    private fun syncMissingArtists(): Either<DomainError, Int> {
-        val userId = userRepository.findAll().firstOrNull()?.spotifyUserId
+    override fun resyncCatalog(): Either<DomainError, Unit> {
+        val allArtistIds = appArtistRepository.findAll().map { it.artistId }
+        val allTrackIds = appTrackRepository.findAll().map { it.id.value }
+        logger.info { "Re-syncing catalog: ${allArtistIds.size} artist(s) and ${allTrackIds.size} track(s) added to sync pool" }
+        if (allArtistIds.isNotEmpty()) syncPoolRepository.addArtists(allArtistIds)
+        if (allTrackIds.isNotEmpty()) syncPoolRepository.addTracks(allTrackIds)
+        return Unit.right()
+    }
+
+    private fun syncMissingArtists(): Either<DomainError, Int> {        val userId = userRepository.findAll().firstOrNull()?.spotifyUserId
         if (userId == null) {
             logger.debug { "No users available, skipping syncMissingArtists" }
             return 0.right()
@@ -264,6 +272,19 @@ class CatalogAdapter(
     } catch (e: Exception) {
         logger.error(e) { "Unexpected error in handle(SyncMissingTracks)" }
         OutboxTaskResult.Failed("Unexpected error in sync: ${e.message}", e)
+    }
+
+    override fun handle(event: DomainOutboxEvent.ResyncCatalog): OutboxTaskResult = try {
+        when (val result = resyncCatalog()) {
+            is Either.Right -> OutboxTaskResult.Success
+            is Either.Left -> {
+                logger.error { "Failed to re-sync catalog: ${result.value.code}" }
+                OutboxTaskResult.Failed("Failed to re-sync catalog: ${result.value.code}")
+            }
+        }
+    } catch (e: Exception) {
+        logger.error(e) { "Unexpected error in handle(ResyncCatalog)" }
+        OutboxTaskResult.Failed("Unexpected error in re-sync: ${e.message}", e)
     }
 
     companion object : KLogging() {
