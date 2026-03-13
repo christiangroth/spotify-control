@@ -2,8 +2,15 @@ package de.chrgroth.spotify.control.domain
 
 import arrow.core.right
 import de.chrgroth.spotify.control.domain.model.AccessToken
+import de.chrgroth.spotify.control.domain.model.AlbumId
+import de.chrgroth.spotify.control.domain.model.AppAlbum
 import de.chrgroth.spotify.control.domain.model.AppArtist
+import de.chrgroth.spotify.control.domain.model.AppTrack
+import de.chrgroth.spotify.control.domain.model.ArtistId
+import de.chrgroth.spotify.control.domain.model.TrackId
+import de.chrgroth.spotify.control.domain.model.TrackSyncResult
 import de.chrgroth.spotify.control.domain.model.UserId
+import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.out.AppAlbumRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppPlaybackRepositoryPort
@@ -106,5 +113,89 @@ class PlaybackEnrichmentAdapterTests {
         adapter.enrichArtistDetails(artistId, userId)
 
         verify { appArtistRepository.updateEnrichmentData(artistId, "Recovered Name", "rock", listOf("indie"), "https://example.com/image.jpg", "artist") }
+    }
+
+    @Test
+    fun `enrichTrackDetails updates track and album from Spotify response`() {
+        val trackId = "track-1"
+        val track = AppTrack(
+            id = TrackId(trackId),
+            title = "Track One",
+            albumId = AlbumId("album-1"),
+            albumName = "Album One",
+            artistId = ArtistId("artist-1"),
+            artistName = "Artist One",
+            discNumber = 1,
+            durationMs = 200000,
+            trackNumber = 3,
+            type = "track",
+        )
+        val album = AppAlbum(
+            id = AlbumId("album-1"),
+            title = "Album One",
+            artistId = ArtistId("artist-1"),
+            artistName = "Artist One",
+        )
+        val syncResult = TrackSyncResult(track = track, album = album)
+
+        val existingTrack = AppTrack(id = TrackId(trackId), title = "Track One", artistId = ArtistId("artist-1"))
+        every { appTrackRepository.findByTrackIds(setOf(TrackId(trackId))) } returns listOf(existingTrack)
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { spotifyCatalog.getTrack(userId, accessToken, trackId) } returns syncResult.right()
+        every { appTrackRepository.updateTrackEnrichmentData(track) } just runs
+        every { appAlbumRepository.upsertAll(listOf(album)) } just runs
+        every { outboxPort.enqueue(any()) } just runs
+
+        adapter.enrichTrackDetails(trackId, userId)
+
+        verify { appTrackRepository.updateTrackEnrichmentData(track) }
+        verify { appAlbumRepository.upsertAll(listOf(album)) }
+        verify { outboxPort.enqueue(DomainOutboxEvent.EnrichArtistDetails("artist-1", userId)) }
+    }
+
+    @Test
+    fun `enrichTrackDetails enqueues EnrichArtistDetails for all track artists`() {
+        val trackId = "track-multi-artist"
+        val track = AppTrack(
+            id = TrackId(trackId),
+            title = "Collab Track",
+            albumId = AlbumId("album-1"),
+            artistId = ArtistId("artist-1"),
+            additionalArtistIds = listOf(ArtistId("artist-2"), ArtistId("artist-3")),
+        )
+        val album = AppAlbum(id = AlbumId("album-1"), title = "Album One")
+        val syncResult = TrackSyncResult(track = track, album = album)
+
+        val existingTrack2 = AppTrack(id = TrackId(trackId), title = "Collab Track", artistId = ArtistId("artist-1"))
+        every { appTrackRepository.findByTrackIds(setOf(TrackId(trackId))) } returns listOf(existingTrack2)
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { spotifyCatalog.getTrack(userId, accessToken, trackId) } returns syncResult.right()
+        every { appTrackRepository.updateTrackEnrichmentData(track) } just runs
+        every { appAlbumRepository.upsertAll(listOf(album)) } just runs
+        every { outboxPort.enqueue(any()) } just runs
+
+        adapter.enrichTrackDetails(trackId, userId)
+
+        verify { outboxPort.enqueue(DomainOutboxEvent.EnrichArtistDetails("artist-1", userId)) }
+        verify { outboxPort.enqueue(DomainOutboxEvent.EnrichArtistDetails("artist-2", userId)) }
+        verify { outboxPort.enqueue(DomainOutboxEvent.EnrichArtistDetails("artist-3", userId)) }
+    }
+
+    @Test
+    fun `enrichTrackDetails skips update when track already enriched`() {
+        val trackId = "track-already-enriched"
+        val enrichedTrack = AppTrack(
+            id = TrackId(trackId),
+            title = "Known Track",
+            artistId = ArtistId("artist-1"),
+            lastEnrichmentDate = kotlin.time.Clock.System.now(),
+        )
+        every { appTrackRepository.findByTrackIds(setOf(TrackId(trackId))) } returns listOf(enrichedTrack)
+
+        adapter.enrichTrackDetails(trackId, userId)
+
+        verify(exactly = 0) { spotifyCatalog.getTrack(any(), any(), any()) }
+        verify(exactly = 0) { appTrackRepository.updateTrackEnrichmentData(any()) }
+        verify(exactly = 0) { appAlbumRepository.upsertAll(any()) }
     }
 }

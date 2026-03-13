@@ -43,7 +43,6 @@ class DomainOutboxTaskDispatcher(
             is DomainOutboxEvent.AppendPlaybackData -> playback.handle(event)
             is DomainOutboxEvent.EnrichArtistDetails -> catalog.handle(event)
             is DomainOutboxEvent.EnrichTrackDetails -> catalog.handle(event)
-            is DomainOutboxEvent.EnrichAlbumDetails -> catalog.handle(event)
         }
         if (result is OutboxTaskResult.Success) {
             outboxTaskCountObservers.forEach { it.onOutboxTaskCountChanged() }

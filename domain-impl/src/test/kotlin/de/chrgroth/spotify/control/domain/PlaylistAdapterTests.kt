@@ -463,9 +463,9 @@ class PlaylistAdapterTests {
                 },
                 match { tracks: List<AppTrack> ->
                     tracks.size == 1 &&
-                        tracks[0].trackId == "track-1" &&
-                        tracks[0].trackTitle == "Track One" &&
-                        tracks[0].artistId == "artist-1" &&
+                        tracks[0].id.value == "track-1" &&
+                        tracks[0].title == "Track One" &&
+                        tracks[0].artistId.value == "artist-1" &&
                         tracks[0].additionalArtistIds.isEmpty()
                 },
                 userId,

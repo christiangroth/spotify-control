@@ -8,9 +8,10 @@ import de.chrgroth.outbox.OutboxTaskResult
 import de.chrgroth.spotify.control.domain.error.ArtistSettingsError
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
-import de.chrgroth.spotify.control.domain.model.AppAlbum
 import de.chrgroth.spotify.control.domain.model.AppArtist
 import de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus
+import de.chrgroth.spotify.control.domain.model.ArtistId
+import de.chrgroth.spotify.control.domain.model.TrackId
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.CatalogPort
@@ -60,7 +61,7 @@ class CatalogAdapter(
 
         when (status) {
             ArtistPlaybackProcessingStatus.INACTIVE -> {
-                val trackIds = appTrackRepository.findByArtistId(artistId).map { it.trackId }.toSet()
+                val trackIds = appTrackRepository.findByArtistId(ArtistId(artistId)).map { it.id.value }.toSet()
                 if (trackIds.isNotEmpty()) {
                     logger.info { "Deleting app_playback for ${trackIds.size} tracks of artist $artistId" }
                     appPlaybackRepository.deleteAllByTrackIds(trackIds)
@@ -102,42 +103,27 @@ class CatalogAdapter(
     }
 
     override fun enrichTrackDetails(trackId: String, userId: UserId): Either<DomainError, Unit> {
-        val existing = appTrackRepository.findByTrackIds(setOf(trackId)).firstOrNull()
+        val existing = appTrackRepository.findByTrackIds(setOf(TrackId(trackId))).firstOrNull()
         if (existing?.lastEnrichmentDate != null) {
             logger.debug { "Track $trackId already enriched, skipping" }
             return Unit.right()
         }
-        logger.info { "Fetching album id for track $trackId (user ${userId.value})" }
+        logger.info { "Fetching track/album details for track $trackId (user ${userId.value})" }
         val accessToken = spotifyAccessToken.getValidAccessToken(userId)
         return spotifyCatalog.getTrack(userId, accessToken, trackId)
-            .flatMap { albumId ->
-                if (albumId != null) {
-                    appAlbumRepository.upsertAll(listOf(AppAlbum(albumId = albumId)))
-                    appTrackRepository.updateAlbumId(trackId, albumId)
-                    outboxPort.enqueue(DomainOutboxEvent.EnrichAlbumDetails(albumId, userId))
-                    logger.info { "Updated albumId for track $trackId → album $albumId" }
+            .flatMap { result ->
+                if (result != null) {
+                    appTrackRepository.updateTrackEnrichmentData(result.track)
+                    appAlbumRepository.upsertAll(listOf(result.album))
+                    val allArtistIds = (listOf(result.track.artistId) + result.track.additionalArtistIds)
+                        .map { it.value }
+                        .filter { it.isNotBlank() }
+                    allArtistIds.forEach { artistId ->
+                        outboxPort.enqueue(DomainOutboxEvent.EnrichArtistDetails(artistId, userId))
+                    }
+                    logger.info { "Updated enrichment data for track $trackId → album ${result.album.id.value}" }
                 } else {
                     logger.warn { "No data returned from Spotify for track $trackId" }
-                }
-                Unit.right()
-            }
-    }
-
-    override fun enrichAlbumDetails(albumId: String, userId: UserId): Either<DomainError, Unit> {
-        val existing = appAlbumRepository.findByAlbumIds(setOf(albumId)).firstOrNull()
-        if (existing?.lastEnrichmentDate != null) {
-            logger.debug { "Album $albumId already enriched, skipping" }
-            return Unit.right()
-        }
-        logger.info { "Fetching album details for album $albumId (user ${userId.value})" }
-        val accessToken = spotifyAccessToken.getValidAccessToken(userId)
-        return spotifyCatalog.getAlbum(userId, accessToken, albumId)
-            .flatMap { detail ->
-                if (detail != null) {
-                    appAlbumRepository.updateEnrichmentData(detail.albumId, detail.albumTitle, detail.imageLink, detail.genres, detail.artistId)
-                    logger.info { "Updated enrichment data for album $albumId: '${detail.albumTitle}'" }
-                } else {
-                    logger.warn { "No data returned from Spotify for album $albumId" }
                 }
                 Unit.right()
             }
@@ -180,25 +166,6 @@ class CatalogAdapter(
         }
     } catch (e: Exception) {
         logger.error(e) { "Unexpected error in handle(EnrichTrackDetails) for track ${event.trackId} (user ${event.userId.value})" }
-        OutboxTaskResult.Failed("Unexpected error in enrich: ${e.message}", e)
-    }
-
-    override fun handle(event: DomainOutboxEvent.EnrichAlbumDetails): OutboxTaskResult = try {
-        when (val result = enrichAlbumDetails(event.albumId, event.userId)) {
-            is Either.Right -> OutboxTaskResult.Success
-            is Either.Left -> when (val error = result.value) {
-                is SpotifyRateLimitError -> {
-                    logger.warn { "Rate limited on EnrichAlbumDetails for album ${event.albumId} (user ${event.userId.value}), retry after ${error.retryAfter.seconds}s" }
-                    OutboxTaskResult.RateLimited(error.retryAfter)
-                }
-                else -> {
-                    logger.error { "Failed to enrich album ${event.albumId} for user ${event.userId.value}: ${error.code}" }
-                    OutboxTaskResult.Failed("Failed to enrich album: ${error.code}")
-                }
-            }
-        }
-    } catch (e: Exception) {
-        logger.error(e) { "Unexpected error in handle(EnrichAlbumDetails) for album ${event.albumId} (user ${event.userId.value})" }
         OutboxTaskResult.Failed("Unexpected error in enrich: ${e.message}", e)
     }
 

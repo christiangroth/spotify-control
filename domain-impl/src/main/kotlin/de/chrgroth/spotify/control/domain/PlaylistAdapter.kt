@@ -9,8 +9,10 @@ import de.chrgroth.spotify.control.domain.error.PlaylistSyncError
 import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
 import de.chrgroth.spotify.control.domain.model.AppArtist
 import de.chrgroth.spotify.control.domain.model.AppTrack
+import de.chrgroth.spotify.control.domain.model.ArtistId
 import de.chrgroth.spotify.control.domain.model.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.PlaylistSyncStatus
+import de.chrgroth.spotify.control.domain.model.TrackId
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.PlaylistPort
@@ -104,10 +106,10 @@ class PlaylistAdapter(
                     return@mapNotNull null
                 }
                 AppTrack(
-                    trackId = track.trackId,
-                    trackTitle = track.trackName,
-                    artistId = artistId,
-                    additionalArtistIds = track.artistIds.drop(1),
+                    id = TrackId(track.trackId),
+                    title = track.trackName,
+                    artistId = ArtistId(artistId),
+                    additionalArtistIds = track.artistIds.drop(1).map { ArtistId(it) },
                 )
             }
 

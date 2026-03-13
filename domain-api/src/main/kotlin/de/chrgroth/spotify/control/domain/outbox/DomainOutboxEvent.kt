@@ -119,7 +119,8 @@ sealed interface DomainOutboxEvent : OutboxEvent {
 
     /**
      * Fetches track/album details for a single track from the Spotify API,
-     * updates app_track.albumId, and upserts the app_album entry.
+     * updates app_track with all enrichment fields, upserts app_album with the album data,
+     * and enqueues EnrichArtistDetails for all track artists not yet enriched.
      * Deduplication is by trackId only (track data is shared across users).
      * payload = "$trackId:${userId.value}"
      */
@@ -142,30 +143,6 @@ sealed interface DomainOutboxEvent : OutboxEvent {
         }
     }
 
-    /**
-     * Fetches album details for a single album from the Spotify API,
-     * and updates app_album with albumTitle, imageLink, genres, and artistId.
-     * Deduplication is by albumId only (album data is shared across users).
-     * payload = "$albumId:${userId.value}"
-     */
-    data class EnrichAlbumDetails(val albumId: String, val userId: UserId) : DomainOutboxEvent {
-        override val key = KEY
-        override fun deduplicationKey() = "$KEY:$albumId"
-        override val partition = DomainOutboxPartition.ToSpotify
-        override fun toPayload() = "$albumId:${userId.value}"
-
-        companion object {
-            const val KEY = "EnrichAlbumDetails"
-            fun fromPayload(payload: String): EnrichAlbumDetails {
-                val colonIndex = payload.indexOf(':')
-                require(colonIndex > 0 && colonIndex < payload.length - 1) { "Invalid EnrichAlbumDetails payload: $payload" }
-                return EnrichAlbumDetails(
-                    albumId = payload.substring(0, colonIndex),
-                    userId = UserId(payload.substring(colonIndex + 1)),
-                )
-            }
-        }
-    }
 
     companion object {
         fun fromKey(key: String, payload: String): DomainOutboxEvent = when (key) {
@@ -178,7 +155,6 @@ sealed interface DomainOutboxEvent : OutboxEvent {
             AppendPlaybackData.KEY -> AppendPlaybackData(UserId(payload))
             EnrichArtistDetails.KEY -> EnrichArtistDetails.fromPayload(payload)
             EnrichTrackDetails.KEY -> EnrichTrackDetails.fromPayload(payload)
-            EnrichAlbumDetails.KEY -> EnrichAlbumDetails.fromPayload(payload)
             else -> throw IllegalArgumentException("Unknown outbox event type: $key")
         }
     }

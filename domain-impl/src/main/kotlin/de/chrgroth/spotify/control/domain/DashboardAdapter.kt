@@ -7,6 +7,7 @@ import de.chrgroth.spotify.control.domain.model.ListeningStats
 import de.chrgroth.spotify.control.domain.model.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.RecentlyPlayedItem
 import de.chrgroth.spotify.control.domain.model.TopEntry
+import de.chrgroth.spotify.control.domain.model.TrackId
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.DashboardPort
 import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
@@ -63,7 +64,7 @@ class DashboardAdapter(
 
         val recentPlaybackItems = appPlaybackRepository.findRecentlyPlayed(userId, recentlyPlayedLimit)
         val trackIds = recentPlaybackItems.map { it.trackId }.toSet()
-        val trackMap = appTrackRepository.findByTrackIds(trackIds).associateBy { it.trackId }
+        val trackMap = appTrackRepository.findByTrackIds(trackIds.map { TrackId(it) }.toSet()).associateBy { it.id.value }
         val allArtistIds = trackMap.values.flatMap { it.allArtistIds() }.toSet()
         val artistMap = appArtistRepository.findByArtistIds(allArtistIds).associateBy { it.artistId }
         val recentlyPlayedTracks = recentPlaybackItems.map { playback ->
@@ -73,7 +74,7 @@ class DashboardAdapter(
             RecentlyPlayedItem(
                 spotifyUserId = playback.userId,
                 trackId = playback.trackId,
-                trackName = track?.trackTitle ?: playback.trackId,
+                trackName = track?.title ?: playback.trackId,
                 artistIds = trackArtistIds,
                 artistNames = artistNames,
                 playedAt = playback.playedAt,
@@ -103,14 +104,14 @@ class DashboardAdapter(
             .mapValues { (_, items) -> items.sumOf { it.secondsPlayed } }
 
         val statsTrackIds = secondsByTrackId.keys
-        val statsTrackMap = appTrackRepository.findByTrackIds(statsTrackIds).associateBy { it.trackId }
+        val statsTrackMap = appTrackRepository.findByTrackIds(statsTrackIds.map { TrackId(it) }.toSet()).associateBy { it.id.value }
 
         val topTracks = secondsByTrackId.entries
             .sortedByDescending { it.value }
             .take(topEntriesLimit)
             .map { (trackId, seconds) ->
                 TopEntry(
-                    name = statsTrackMap[trackId]?.trackTitle ?: trackId,
+                    name = statsTrackMap[trackId]?.title ?: trackId,
                     totalMinutes = seconds / SECONDS_PER_MINUTE,
                 )
             }
@@ -169,4 +170,4 @@ class DashboardAdapter(
     }
 }
 
-private fun AppTrack.allArtistIds(): List<String> = listOfNotNull(artistId) + additionalArtistIds
+private fun AppTrack.allArtistIds(): List<String> = listOf(artistId.value) + additionalArtistIds.map { it.value }
