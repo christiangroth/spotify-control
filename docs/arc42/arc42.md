@@ -138,7 +138,7 @@ Implements `CronjobInfoPort`. Provides scheduled job metadata (name, next execut
 
 ### `adapter-out-spotify`
 
-Encapsulates all communication with the Spotify Web API. Handles token refresh, rate limiting (10s throttle on the `to-spotify` partition), and backoff for hidden 24h bulk limits. Implements bulk fetch endpoints (GET /v1/artists and GET /v1/tracks) with per-item fallback.
+Encapsulates all communication with the Spotify Web API. Handles token refresh, rate limiting (10s throttle on the `to-spotify` partition), and backoff for hidden 24h bulk limits. Implements bulk fetch endpoints (`GET /v1/artists?ids=`, `GET /v1/tracks?ids=`, `GET /v1/albums/{id}`) with per-item fallback for the direct track endpoint.
 
 ### `application-quarkus`
 
@@ -210,12 +210,15 @@ Raw playback data from `spotify_recently_played` and `spotify_recently_partial_p
 1. Upserts artist metadata into `app_artist` (artistId, artistName) — enriched genres and imageLink are preserved on re-encounter.
 2. Upserts track metadata into `app_track` (trackId, trackTitle, artistId, additionalArtistIds) — albumId is preserved if already enriched.
 3. Appends new entries to `app_playback` (userId, playedAt, trackId, secondsPlayed). The document `_id` is a composite of `${userId}:${playedAt.toEpochMilli()}:${trackId}` for natural deduplication.
-4. Enqueues one `EnrichArtistDetails(artistId, userId)` per artist and one `EnrichTrackDetails(trackId, userId)` per track on the `to-spotify` partition. Deduplication by entity ID ensures no duplicate pending events.
+4. Adds artist IDs to `app_sync_pool` and track IDs to `app_sync_pool` for later bulk sync.
 
-**Enrich (auto-enqueued after each append, one event per entity on `to-spotify`):**
-- `EnrichArtistDetails(artistId, userId)`: skipped if already enriched; otherwise calls `GET /v1/artists/{id}` and updates `app_artist` with genres and imageLink.
-- `EnrichTrackDetails(trackId, userId)`: skipped if already enriched; otherwise calls `GET /v1/tracks/{id}`, updates `app_track.albumId`, creates a stub `app_album` entry, and enqueues `EnrichAlbumDetails(albumId, userId)`.
-- `EnrichAlbumDetails(albumId, userId)`: skipped if already enriched; otherwise calls `GET /v1/albums/{id}` and updates `app_album` with albumTitle, imageLink, genres, and artistId (main artist).
+**Catalog Sync (bulk-scheduled, `to-spotify` partition):**
+- `SyncMissingArtists`: bulk-syncs up to 50 pending artist IDs from `app_sync_pool` via `GET /v1/artists?ids=`. Updates `app_artist` with genres and imageLink. Runs every 10 minutes (at :00, :10, …).
+- `SyncMissingTracks`: bulk-syncs up to 50 pending track IDs from `app_sync_pool`. For tracks with a known `albumId`, fetches all tracks for that album via `GET /v1/albums/{id}` (all album tracks are stored, not only the requested subset). Tracks without a known `albumId` or not found in the album response fall back to `GET /v1/tracks?ids=`. After syncing, track artists are added to `app_sync_pool` for artist sync. Runs every 10 minutes (at :05, :15, …).
+
+**Per-item sync (on-demand, `to-spotify` partition):**
+- `SyncArtistDetails(artistId, userId)`: skipped if already synced; otherwise calls `GET /v1/artists/{id}` and updates `app_artist` with genres and imageLink.
+- `SyncTrackDetails(trackId, userId)`: skipped if already synced; otherwise calls `GET /v1/tracks/{id}`, updates `app_track` sync fields and album reference, upserts `app_album`, and enqueues `SyncArtistDetails` for all track artists.
 
 **Rebuild (user-triggered from Settings):** Deletes all `app_playback` entries for the user and re-runs the Append logic from scratch over all source data.
 
@@ -245,7 +248,7 @@ SyncPlaylistData (to-spotify partition)
     → Spotify GET /v1/playlists/{id}/tracks
     → upsert spotify_playlist, spotify_playlist_metadata
     → upsert app_artist, app_track stubs
-    → enqueue EnrichArtistDetails, EnrichTrackDetails (to-spotify)
+    → add artist and track IDs to app_sync_pool for bulk catalog sync
 ```
 
 # Deployment View
@@ -343,7 +346,7 @@ All Spotify API operations and domain-level async tasks are routed through a per
 
 | Partition             | Throttle | Rate limit pause | Event Types                                                                                            |
 |-----------------------|----------|------------------|--------------------------------------------------------------------------------------------------------|
-| `to-spotify`          | 10s      | yes              | `UpdateUserProfile`, `SyncPlaylistInfo`, `SyncPlaylistData`, `EnrichArtistDetails`, `EnrichTrackDetails`, `EnrichAlbumDetails` |
+| `to-spotify`          | 10s      | yes              | `UpdateUserProfile`, `SyncPlaylistInfo`, `SyncPlaylistData`, `SyncArtistDetails`, `SyncTrackDetails`, `SyncMissingArtists`, `SyncMissingTracks`, `ResyncCatalog` |
 | `to-spotify-playback` | none     | no               | `FetchCurrentlyPlaying`, `FetchRecentlyPlayed`                                                         |
 | `domain`              | none     | no               | `RebuildPlaybackData`, `AppendPlaybackData`                                                             |
 
@@ -355,12 +358,14 @@ Backend services notify SSE streams via CDI events. The SSE endpoint delivers th
 
 ## Scheduler Jobs
 
-| Job                          | Interval         | Outbox Event(s)                                                       |
-|------------------------------|------------------|-----------------------------------------------------------------------|
-| `CurrentlyPlayingFetchJob`   | every 20 seconds | `FetchCurrentlyPlaying` (per user)                                    |
-| `RecentlyPlayedFetchJob`     | every 10 minutes | `FetchRecentlyPlayed` (per user) → auto-enqueues `AppendPlaybackData` |
-| `PlaylistSyncJob`            | hourly (at :30)  | `SyncPlaylistInfo` (per user)                                         |
-| `UserProfileUpdateJob`       | daily at 04:00   | `UpdateUserProfile` (per user)                                        |
+| Job                          | Interval                      | Outbox Event(s)                                                       |
+|------------------------------|-------------------------------|-----------------------------------------------------------------------|
+| `CurrentlyPlayingFetchJob`   | every 20 seconds              | `FetchCurrentlyPlaying` (per user)                                    |
+| `RecentlyPlayedFetchJob`     | every 10 minutes              | `FetchRecentlyPlayed` (per user) → auto-enqueues `AppendPlaybackData` |
+| `PlaylistSyncJob`            | hourly (at :30)               | `SyncPlaylistInfo` (per user)                                         |
+| `SyncMissingArtistsJob`      | every 10 minutes (at :00)     | `SyncMissingArtists`                                                  |
+| `SyncMissingTracksJob`       | every 10 minutes (at :05)     | `SyncMissingTracks`                                                   |
+| `UserProfileUpdateJob`       | daily at 04:00                | `UpdateUserProfile` (per user)                                        |
 
 All scheduler jobs skip execution via `skipExecutionIf = StarterSkipPredicate::class` until all starters have completed successfully.
 
