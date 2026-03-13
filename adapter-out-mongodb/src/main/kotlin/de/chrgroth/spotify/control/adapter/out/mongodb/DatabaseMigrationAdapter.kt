@@ -31,5 +31,17 @@ class DatabaseMigrationAdapter(
         logger.info { "Successfully renamed collection '$from' to '$to'" }
     }
 
+    override fun dropCollectionIfExists(name: String) {
+        val database = mongoClient.getDatabase(databaseName)
+        val existingCollections = database.listCollectionNames().toList()
+        if (name !in existingCollections) {
+            logger.info { "Collection '$name' does not exist, skipping drop" }
+            return
+        }
+        logger.info { "Dropping collection '$name'" }
+        database.getCollection(name).drop()
+        logger.info { "Successfully dropped collection '$name'" }
+    }
+
     companion object : KLogging()
 }
