@@ -1,4 +1,4 @@
-function postWithButton(btn, url, successMsg, errorPrefix) {
+function postWithButton(btn, url, successMsg, errorPrefix, onSuccess) {
     btn.disabled = true;
     fetch(url, { method: 'POST' })
     .then(function(response) {
@@ -9,6 +9,7 @@ function postWithButton(btn, url, successMsg, errorPrefix) {
     .then(function(result) {
         if (result.ok) {
             showBanner(successMsg, 'success');
+            if (onSuccess) onSuccess();
         } else {
             showBanner(errorPrefix + ': ' + (result.data.error || 'Unknown error'), 'danger');
         }

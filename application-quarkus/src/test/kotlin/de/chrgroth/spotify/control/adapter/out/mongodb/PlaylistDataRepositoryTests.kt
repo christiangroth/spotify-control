@@ -1,11 +1,16 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
 import de.chrgroth.spotify.control.domain.model.Playlist
+import de.chrgroth.spotify.control.domain.model.PlaylistInfo
+import de.chrgroth.spotify.control.domain.model.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.PlaylistTrack
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
 import io.quarkus.test.junit.QuarkusTest
 import jakarta.inject.Inject
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.hours
+import kotlin.time.Instant
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.util.UUID
@@ -28,6 +33,17 @@ class PlaylistDataRepositoryTests {
             ),
         ),
     )
+
+    private fun buildPlaylistInfo(playlistId: String, syncStatus: PlaylistSyncStatus = PlaylistSyncStatus.PASSIVE): PlaylistInfo {
+        val now = Clock.System.now().let { Instant.fromEpochMilliseconds(it.toEpochMilliseconds()) }
+        return PlaylistInfo(
+            spotifyPlaylistId = playlistId,
+            snapshotId = "snap-1",
+            lastSnapshotIdSyncTime = now - 1.hours,
+            name = "Playlist $playlistId",
+            syncStatus = syncStatus,
+        )
+    }
 
     @Test
     fun `findByUserIdAndPlaylistId returns null when no playlist exists`() {
@@ -77,5 +93,94 @@ class PlaylistDataRepositoryTests {
         assertThat(playlistRepository.findByUserIdAndPlaylistId(userId2, "playlist-2")).isNotNull
         assertThat(playlistRepository.findByUserIdAndPlaylistId(userId1, "playlist-2")).isNull()
         assertThat(playlistRepository.findByUserIdAndPlaylistId(userId2, "playlist-1")).isNull()
+    }
+
+    @Test
+    fun `findArtistIdsInActivePlaylists returns artist ids from active playlists`() {
+        val userId = UserId("test-${UUID.randomUUID()}")
+        val playlistId = "playlist-active-${UUID.randomUUID()}"
+        val artistId = "artist-active-${UUID.randomUUID()}"
+
+        playlistRepository.saveAll(userId, listOf(buildPlaylistInfo(playlistId, PlaylistSyncStatus.ACTIVE)))
+        playlistRepository.save(
+            userId,
+            Playlist(
+                spotifyPlaylistId = playlistId,
+                snapshotId = "snap-1",
+                tracks = listOf(
+                    PlaylistTrack(
+                        trackId = "track-x",
+                        trackName = "Track X",
+                        artistIds = listOf(artistId),
+                        artistNames = listOf("Artist X"),
+                    ),
+                ),
+            ),
+        )
+
+        val result = playlistRepository.findArtistIdsInActivePlaylists()
+
+        assertThat(result).contains(artistId)
+    }
+
+    @Test
+    fun `findArtistIdsInActivePlaylists does not include artists from passive playlists`() {
+        val userId = UserId("test-${UUID.randomUUID()}")
+        val playlistId = "playlist-passive-${UUID.randomUUID()}"
+        val artistId = "artist-passive-${UUID.randomUUID()}"
+
+        playlistRepository.saveAll(userId, listOf(buildPlaylistInfo(playlistId, PlaylistSyncStatus.PASSIVE)))
+        playlistRepository.save(
+            userId,
+            Playlist(
+                spotifyPlaylistId = playlistId,
+                snapshotId = "snap-1",
+                tracks = listOf(
+                    PlaylistTrack(
+                        trackId = "track-y",
+                        trackName = "Track Y",
+                        artistIds = listOf(artistId),
+                        artistNames = listOf("Artist Y"),
+                    ),
+                ),
+            ),
+        )
+
+        val result = playlistRepository.findArtistIdsInActivePlaylists()
+
+        assertThat(result).doesNotContain(artistId)
+    }
+
+    @Test
+    fun `findArtistIdsInActivePlaylists collects artists from multiple active playlists across users`() {
+        val userId1 = UserId("test-${UUID.randomUUID()}")
+        val userId2 = UserId("test-${UUID.randomUUID()}")
+        val playlistId1 = "playlist-multi-1-${UUID.randomUUID()}"
+        val playlistId2 = "playlist-multi-2-${UUID.randomUUID()}"
+        val artistId1 = "artist-multi-1-${UUID.randomUUID()}"
+        val artistId2 = "artist-multi-2-${UUID.randomUUID()}"
+
+        playlistRepository.saveAll(userId1, listOf(buildPlaylistInfo(playlistId1, PlaylistSyncStatus.ACTIVE)))
+        playlistRepository.save(
+            userId1,
+            Playlist(
+                spotifyPlaylistId = playlistId1,
+                snapshotId = "snap-1",
+                tracks = listOf(PlaylistTrack("t1", "T1", listOf(artistId1), listOf("A1"))),
+            ),
+        )
+        playlistRepository.saveAll(userId2, listOf(buildPlaylistInfo(playlistId2, PlaylistSyncStatus.ACTIVE)))
+        playlistRepository.save(
+            userId2,
+            Playlist(
+                spotifyPlaylistId = playlistId2,
+                snapshotId = "snap-1",
+                tracks = listOf(PlaylistTrack("t2", "T2", listOf(artistId2), listOf("A2"))),
+            ),
+        )
+
+        val result = playlistRepository.findArtistIdsInActivePlaylists()
+
+        assertThat(result).contains(artistId1, artistId2)
     }
 }

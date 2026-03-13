@@ -32,7 +32,7 @@
                         {#else}
                         <ul class="list-group list-group-flush" id="list-undecided">
                             {#for artist in undecidedArtists}
-                            <li class="list-group-item bg-dark border-secondary py-2 px-3" data-artist-name="{artist.artistName}">
+                            <li class="list-group-item bg-dark border-secondary text-white py-2 px-3" data-artist-name="{artist.artistName}">
                                 <div class="d-flex align-items-center gap-2">
                                     {#if artist.imageLink}
                                     <img src="{artist.imageLink}" alt="{artist.artistName}" width="36" height="36" class="rounded-circle flex-shrink-0" style="object-fit:cover;">
@@ -63,7 +63,7 @@
                         {#else}
                         <ul class="list-group list-group-flush" id="list-active">
                             {#for artist in activeArtists}
-                            <li class="list-group-item bg-dark border-secondary py-2 px-3" data-artist-name="{artist.artistName}">
+                            <li class="list-group-item bg-dark border-secondary text-white py-2 px-3" data-artist-name="{artist.artistName}">
                                 <div class="d-flex align-items-center gap-2">
                                     {#if artist.imageLink}
                                     <img src="{artist.imageLink}" alt="{artist.artistName}" width="36" height="36" class="rounded-circle flex-shrink-0" style="object-fit:cover;">
@@ -93,7 +93,7 @@
                         {#else}
                         <ul class="list-group list-group-flush" id="list-inactive">
                             {#for artist in inactiveArtists}
-                            <li class="list-group-item bg-dark border-secondary py-2 px-3" data-artist-name="{artist.artistName}">
+                            <li class="list-group-item bg-dark border-secondary text-white py-2 px-3" data-artist-name="{artist.artistName}">
                                 <div class="d-flex align-items-center gap-2">
                                     {#if artist.imageLink}
                                     <img src="{artist.imageLink}" alt="{artist.artistName}" width="36" height="36" class="rounded-circle flex-shrink-0" style="object-fit:cover;">
@@ -115,10 +115,21 @@
                 </div>
             </div>
         </div>
+        <div class="row mt-3">
+            <div class="col-12">
+                <button id="sync-from-playlists-btn" class="btn btn-spotify btn-sm">Update from playlists</button>
+            </div>
+        </div>
     </div>
     <script>
         document.getElementById('rebuild-playback-btn').addEventListener('click', function() {
             postWithButton(this, '/settings/playback/rebuild', 'Playback data rebuild enqueued successfully.', 'Rebuild failed');
+        });
+
+        document.getElementById('sync-from-playlists-btn').addEventListener('click', function() {
+            postWithButton(this, '/settings/playback/sync-from-playlists', 'Artist playback state synced from playlists. Reloading...', 'Sync failed', function() {
+                setTimeout(function() { window.location.reload(); }, 1000);
+            });
         });
 
         (function() {

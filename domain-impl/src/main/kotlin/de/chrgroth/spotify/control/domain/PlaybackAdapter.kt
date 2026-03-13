@@ -17,6 +17,7 @@ import de.chrgroth.spotify.control.domain.model.RecentlyPlayedItem
 import de.chrgroth.spotify.control.domain.model.TrackId
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
+import de.chrgroth.spotify.control.domain.port.`in`.CatalogPort
 import de.chrgroth.spotify.control.domain.port.`in`.PlaybackPort
 import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppPlaybackRepositoryPort
@@ -24,6 +25,7 @@ import de.chrgroth.spotify.control.domain.port.out.CurrentlyPlayingRepositoryPor
 import de.chrgroth.spotify.control.domain.port.out.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.PlaybackStatePort
+import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.RecentlyPartialPlayedRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.RecentlyPlayedRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
@@ -48,6 +50,8 @@ class PlaybackAdapter(
     private val dashboardRefresh: DashboardRefreshPort,
     private val playbackState: PlaybackStatePort,
     private val appSyncService: AppSyncService,
+    private val catalog: CatalogPort,
+    private val playlistRepository: PlaylistRepositoryPort,
     @ConfigProperty(name = "app.playback.minimum-progress-seconds", defaultValue = "25")
     minimumProgressSeconds: Long,
 ) : PlaybackPort {
@@ -278,6 +282,32 @@ class PlaybackAdapter(
         val artistId = item.artistIds.firstOrNull() ?: return@mapNotNull null
         AppTrack(id = TrackId(item.trackId), title = item.trackName, artistId = ArtistId(artistId), additionalArtistIds = item.artistIds.drop(1).map { ArtistId(it) })
     }).distinctBy { it.id }
+
+    // --- Artist Playback Sync ---
+
+    override fun syncArtistPlaybackFromPlaylists(userId: UserId) {
+        val activePlaylistArtistIds = playlistRepository.findArtistIdsInActivePlaylists()
+        logger.info { "Found ${activePlaylistArtistIds.size} artist(s) in active playlists" }
+
+        ArtistPlaybackProcessingStatus.entries.forEach { currentStatus ->
+            val artists = appArtistRepository.findByPlaybackProcessingStatus(currentStatus)
+            artists.forEach { artist ->
+                val inActivePlaylist = artist.artistId in activePlaylistArtistIds
+                val newStatus = when (currentStatus) {
+                    ArtistPlaybackProcessingStatus.UNDECIDED ->
+                        if (inActivePlaylist) ArtistPlaybackProcessingStatus.ACTIVE else ArtistPlaybackProcessingStatus.INACTIVE
+                    ArtistPlaybackProcessingStatus.ACTIVE ->
+                        if (!inActivePlaylist) ArtistPlaybackProcessingStatus.INACTIVE else null
+                    ArtistPlaybackProcessingStatus.INACTIVE ->
+                        if (inActivePlaylist) ArtistPlaybackProcessingStatus.ACTIVE else null
+                }
+                if (newStatus != null) {
+                    logger.info { "Sync from playlists: updating artist ${artist.artistId} from $currentStatus to $newStatus" }
+                    catalog.updateArtistPlaybackProcessingStatus(artist.artistId, newStatus, userId)
+                }
+            }
+        }
+    }
 
     // --- Outbox Handlers ---
 
