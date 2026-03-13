@@ -1,3 +1,12 @@
+# 0.49.0 (2026.03.13)
+
+## New Features
+* sync-artist-playback-state: Added "Update from playlists" button on the playback settings page to automatically sync artist playback processing states based on their presence in active playlists.
+
+
+
+---
+
 # 0.48.4 (2026.03.13)
 
 ## Bugfixes / Chore
