@@ -1,7 +1,6 @@
 plugins {
   id("kotlin-project")
   alias(libs.plugins.allopen)
-  alias(libs.plugins.kotlinSerialization)
 }
 
 dependencies {

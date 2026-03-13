@@ -4,6 +4,12 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
+internal data class SpotifyImage(val url: String)
+
+@Serializable
+internal data class SpotifyArtistRef(val id: String, val name: String)
+
+@Serializable
 internal data class SpotifyArtistResponse(
     val id: String,
     val name: String,
