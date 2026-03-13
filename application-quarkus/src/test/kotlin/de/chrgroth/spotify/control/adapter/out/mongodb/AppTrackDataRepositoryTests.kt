@@ -76,11 +76,11 @@ class AppTrackDataRepositoryTests {
     }
 
     @Test
-    fun `updateTrackEnrichmentData updates all enrichment fields`() {
-        val item = trackData("enrich")
+    fun `updateTrackSyncData updates all sync fields`() {
+        val item = trackData("sync")
         appTrackRepository.upsertAll(listOf(item))
 
-        val enriched = item.copy(
+        val synced = item.copy(
             albumId = AlbumId("album-1"),
             albumName = "Album One",
             artistName = "Artist Name",
@@ -91,7 +91,7 @@ class AppTrackDataRepositoryTests {
             trackNumber = 5,
             type = "track",
         )
-        appTrackRepository.updateTrackEnrichmentData(enriched)
+        appTrackRepository.updateTrackSyncData(synced)
 
         val result = appTrackRepository.findByTrackIds(setOf(item.id))
         assertThat(result).hasSize(1)
@@ -104,6 +104,6 @@ class AppTrackDataRepositoryTests {
         assertThat(result[0].durationMs).isEqualTo(210000)
         assertThat(result[0].trackNumber).isEqualTo(5)
         assertThat(result[0].type).isEqualTo("track")
-        assertThat(result[0].lastEnrichmentDate).isNotNull()
+        assertThat(result[0].lastSync).isNotNull()
     }
 }

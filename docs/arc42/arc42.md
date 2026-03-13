@@ -12,7 +12,7 @@ spotify-control is a private Spotify playlist manager for a small, allow-listed 
 
 2. **Playlist Mirror** – Local copy of selected Spotify playlists. Sync is driven by snapshot IDs – a full track sync is only performed when Spotify reports a change.
 
-3. **Catalog Enrichment** – Artist genres and images, track album references, and album details (title, cover, genres) are fetched from the Spotify API and stored in deduplicated `app_artist`, `app_track`, and `app_album` collections.
+3. **Catalog Sync** – Artist genres and images, track album references, and album details (title, cover, genres) are fetched from the Spotify API and stored in deduplicated `app_artist`, `app_track`, and `app_album` collections.
 
 4. **Listening Statistics** – Playback data is aggregated into a per-user dashboard showing total play counts, daily play trends, top artists, top tracks, and recently played items.
 
@@ -113,10 +113,11 @@ Implements all repository interfaces defined in `domain-api`. Manages the MongoD
 
 | Collection                        | Description                                                                                                                     |
 |-----------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
-| `app_album`                       | Deduplicated album metadata: title, cover image, genres, main artist reference, lastEnrichmentDate.                             |
-| `app_artist`                      | Deduplicated artist metadata: name, genres, imageLink, lastEnrichmentDate, playbackProcessingStatus (UNDECIDED/ACTIVE/INACTIVE). |
+| `app_album`                       | Deduplicated album metadata: title, cover image, genres, main artist reference, lastSync.                             |
+| `app_artist`                      | Deduplicated artist metadata: name, genres, imageLink, lastSync, playbackProcessingStatus (UNDECIDED/ACTIVE/INACTIVE). |
 | `app_playback`                    | Processed playback events combining recently played and partial played data.                                                    |
-| `app_track`                       | Deduplicated track metadata: title, main artist reference, additional artist references, album reference, lastEnrichmentDate.   |
+| `app_sync_pool`                   | Pending sync entries: Spotify IDs of artists and tracks awaiting bulk sync from the Spotify API.                        |
+| `app_track`                       | Deduplicated track metadata: title, main artist reference, additional artist references, album reference, lastSync.   |
 | `app_user`                        | Spotify user profile with encrypted access and refresh tokens.                                                                  |
 | `outbox`                          | Persistent outbox task queue (managed by `de.chrgroth.quarkus.outbox`).                                                        |
 | `outbox_archive`                  | Archived completed/failed outbox tasks (managed by `de.chrgroth.quarkus.outbox`).                                              |
@@ -137,7 +138,7 @@ Implements `CronjobInfoPort`. Provides scheduled job metadata (name, next execut
 
 ### `adapter-out-spotify`
 
-Encapsulates all communication with the Spotify Web API. Handles token refresh, rate limiting (10s throttle on the `to-spotify` partition), and backoff for hidden 24h bulk limits.
+Encapsulates all communication with the Spotify Web API. Handles token refresh, rate limiting (10s throttle on the `to-spotify` partition), and backoff for hidden 24h bulk limits. Implements bulk fetch endpoints (GET /v1/artists and GET /v1/tracks) with per-item fallback.
 
 ### `application-quarkus`
 

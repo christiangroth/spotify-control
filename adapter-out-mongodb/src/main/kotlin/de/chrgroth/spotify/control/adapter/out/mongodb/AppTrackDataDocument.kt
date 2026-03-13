@@ -20,5 +20,5 @@ class AppTrackDocument {
     var durationMs: Long? = null
     var trackNumber: Int? = null
     var type: String? = null
-    var lastEnrichmentDate: Instant? = null
+    var lastSync: Instant? = null
 }

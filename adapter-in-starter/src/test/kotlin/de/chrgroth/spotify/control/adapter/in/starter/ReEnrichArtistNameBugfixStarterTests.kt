@@ -56,19 +56,19 @@ class ReEnrichArtistNameBugfixStarterTests {
     }
 
     @Test
-    fun `artist with imageLink and blank name - enrichment enqueued`() {
+    fun `artist with imageLink and blank name - sync enqueued`() {
         every { appArtistRepository.findWithImageLinkAndBlankName() } returns listOf(
             AppArtist(
                 artistId = "a1",
                 artistName = "",
                 imageLink = "https://img.example.com/1.jpg",
-                lastEnrichmentDate = Clock.System.now(),
+                lastSync = Clock.System.now(),
             ),
         )
 
         starter.execute()
 
-        verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.EnrichArtistDetails("a1", userId)) }
+        verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails("a1", userId)) }
     }
 
     @Test
@@ -92,7 +92,7 @@ class ReEnrichArtistNameBugfixStarterTests {
 
         starter.execute()
 
-        verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.EnrichArtistDetails("a1", userId)) }
-        verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.EnrichArtistDetails("a3", userId)) }
+        verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails("a1", userId)) }
+        verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails("a3", userId)) }
     }
 }

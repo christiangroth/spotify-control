@@ -41,12 +41,12 @@ class PlaylistAdapterTests {
     private val spotifyPlaylist: SpotifyPlaylistPort = mockk()
     private val outboxPort: OutboxPort = mockk()
     private val dashboardRefresh: DashboardRefreshPort = mockk()
-    private val appEnrichmentService: AppEnrichmentService = mockk()
+    private val appSyncService: AppSyncService = mockk()
 
     private val adapter = PlaylistAdapter(
         userRepository, playlistRepository,
         spotifyAccessToken, spotifyPlaylist,
-        outboxPort, dashboardRefresh, appEnrichmentService,
+        outboxPort, dashboardRefresh, appSyncService,
     )
 
     private val userId = UserId("user-1")
@@ -436,7 +436,7 @@ class PlaylistAdapterTests {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { spotifyPlaylist.getPlaylistTracks(userId, accessToken, "p1") } returns playlist.right()
         every { playlistRepository.save(userId, playlist) } just runs
-        every { appEnrichmentService.upsertAndEnqueueEnrichment(any(), any(), any()) } just runs
+        every { appSyncService.upsertAndAddToSyncPool(any(), any()) } just runs
 
         val result = adapter.syncPlaylistData(userId, "p1")
 
@@ -445,19 +445,19 @@ class PlaylistAdapterTests {
     }
 
     @Test
-    fun `syncPlaylistData enqueues enrichment for playlist tracks and artists`() {
+    fun `syncPlaylistData adds playlist tracks and artists to sync pool`() {
         val user = buildUser()
         val playlist = buildPlaylist("p1")
         every { userRepository.findById(userId) } returns user
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { spotifyPlaylist.getPlaylistTracks(userId, accessToken, "p1") } returns playlist.right()
         every { playlistRepository.save(userId, playlist) } just runs
-        every { appEnrichmentService.upsertAndEnqueueEnrichment(any(), any(), any()) } just runs
+        every { appSyncService.upsertAndAddToSyncPool(any(), any()) } just runs
 
         adapter.syncPlaylistData(userId, "p1")
 
         verify {
-            appEnrichmentService.upsertAndEnqueueEnrichment(
+            appSyncService.upsertAndAddToSyncPool(
                 match { artists: List<AppArtist> ->
                     artists.size == 1 && artists[0].artistId == "artist-1" && artists[0].artistName == "Artist One"
                 },
@@ -468,7 +468,6 @@ class PlaylistAdapterTests {
                         tracks[0].artistId.value == "artist-1" &&
                         tracks[0].additionalArtistIds.isEmpty()
                 },
-                userId,
             )
         }
     }

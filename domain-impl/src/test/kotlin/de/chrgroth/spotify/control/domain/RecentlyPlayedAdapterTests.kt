@@ -50,7 +50,7 @@ class RecentlyPlayedAdapterTests {
     private val outboxPort: OutboxPort = mockk(relaxed = true)
     private val dashboardRefresh: DashboardRefreshPort = mockk(relaxed = true)
     private val playbackState: PlaybackStatePort = mockk(relaxed = true)
-    private val appEnrichmentService: AppEnrichmentService = mockk(relaxed = true)
+    private val appSyncService: AppSyncService = mockk(relaxed = true)
     private val catalog: CatalogPort = mockk(relaxed = true)
     private val playlistRepository: PlaylistRepositoryPort = mockk(relaxed = true)
 
@@ -66,7 +66,7 @@ class RecentlyPlayedAdapterTests {
         outboxPort,
         dashboardRefresh,
         playbackState,
-        appEnrichmentService,
+        appSyncService,
         catalog,
         playlistRepository,
         minimumProgressSeconds = 25L,

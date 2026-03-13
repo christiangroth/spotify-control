@@ -2,45 +2,42 @@ package de.chrgroth.spotify.control.domain
 
 import de.chrgroth.spotify.control.domain.model.AppArtist
 import de.chrgroth.spotify.control.domain.model.AppTrack
-import de.chrgroth.spotify.control.domain.model.ArtistId
-import de.chrgroth.spotify.control.domain.model.TrackId
 import de.chrgroth.spotify.control.domain.model.UserId
-import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.AppSyncPoolRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.OutboxPort
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
 
 /**
- * Shared service that upserts app_artist and app_track stubs then enqueues the enrichment
- * pipeline on the throttled `to-spotify` outbox partition:
+ * Shared service that upserts app_artist and app_track stubs then adds them to the sync pool
+ * for bulk processing by SyncMissingArtistsJob and SyncMissingTracksJob:
  *
- * 1. [DomainOutboxEvent.EnrichArtistDetails] — one per artist
- * 2. [DomainOutboxEvent.EnrichTrackDetails]  — one per track; fetches full track details,
- *    updates app_track with all fields, upserts app_album, and enqueues EnrichArtistDetails
- *    for all track artists.
+ * 1. Artist and track stubs are upserted to app_artist and app_track collections immediately
+ *    so that playback data can reference them.
+ * 2. Their IDs are added to app_sync_pool for bulk sync via the Spotify API in the next
+ *    scheduled run of the sync jobs (every 10 minutes, staggered by 5 minutes).
  *
- * All enrichment handlers implement "skip if already enriched" so duplicate events are harmless.
+ * The sync jobs use bulk Spotify API endpoints with a fallback to per-item requests.
  */
 @ApplicationScoped
-class AppEnrichmentService(
+class AppSyncService(
     private val appArtistRepository: AppArtistRepositoryPort,
     private val appTrackRepository: AppTrackRepositoryPort,
-    private val outboxPort: OutboxPort,
+    private val syncPoolRepository: AppSyncPoolRepositoryPort,
 ) {
 
-    fun upsertAndEnqueueEnrichment(artists: List<AppArtist>, tracks: List<AppTrack>, userId: UserId) {
+    fun upsertAndAddToSyncPool(artists: List<AppArtist>, tracks: List<AppTrack>) {
         if (artists.isEmpty() && tracks.isEmpty()) return
 
         appArtistRepository.upsertAll(artists)
-        artists.forEach { artist ->
-            outboxPort.enqueue(DomainOutboxEvent.EnrichArtistDetails(artist.artistId, userId))
+        if (artists.isNotEmpty()) {
+            syncPoolRepository.addArtists(artists.map { it.artistId })
         }
 
         appTrackRepository.upsertAll(tracks)
-        tracks.forEach { track ->
-            outboxPort.enqueue(DomainOutboxEvent.EnrichTrackDetails(track.id.value, userId))
+        if (tracks.isNotEmpty()) {
+            syncPoolRepository.addTracks(tracks.map { it.id.value })
         }
     }
 

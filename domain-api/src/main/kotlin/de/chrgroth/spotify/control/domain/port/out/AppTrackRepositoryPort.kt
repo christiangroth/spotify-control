@@ -8,5 +8,5 @@ interface AppTrackRepositoryPort {
     fun upsertAll(items: List<AppTrack>)
     fun findByTrackIds(trackIds: Set<TrackId>): List<AppTrack>
     fun findByArtistId(artistId: ArtistId): List<AppTrack>
-    fun updateTrackEnrichmentData(track: AppTrack)
+    fun updateTrackSyncData(track: AppTrack)
 }

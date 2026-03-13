@@ -15,6 +15,6 @@ class AppArtistDocument {
     var additionalGenres: List<String>? = null
     var imageLink: String? = null
     var type: String? = null
-    var lastEnrichmentDate: Instant? = null
+    var lastSync: Instant? = null
     var playbackProcessingStatus: ArtistPlaybackProcessingStatus = ArtistPlaybackProcessingStatus.UNDECIDED
 }

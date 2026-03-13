@@ -42,3 +42,13 @@ internal data class SpotifyTrackResponse(
     @SerialName("disc_number") val discNumber: Int? = null,
     @SerialName("track_number") val trackNumber: Int? = null,
 )
+
+@Serializable
+internal data class SpotifyArtistsResponse(
+    val artists: List<SpotifyArtistResponse?> = emptyList(),
+)
+
+@Serializable
+internal data class SpotifyTracksResponse(
+    val tracks: List<SpotifyTrackResponse?> = emptyList(),
+)

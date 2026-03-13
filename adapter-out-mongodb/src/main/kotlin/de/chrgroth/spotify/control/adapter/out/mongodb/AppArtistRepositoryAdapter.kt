@@ -78,9 +78,9 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
                 .map { it.toDomain() }
         }
 
-    override fun updateEnrichmentData(artistId: String, artistName: String, genre: String?, additionalGenres: List<String>?, imageLink: String?, type: String?) {
+    override fun updateSyncData(artistId: String, artistName: String, genre: String?, additionalGenres: List<String>?, imageLink: String?, type: String?) {
         val now = java.time.Instant.now()
-        mongoQueryMetrics.timed("app_artist.updateEnrichmentData") {
+        mongoQueryMetrics.timed("app_artist.updateSyncData") {
             appArtistDocumentRepository.mongoCollection().updateOne(
                 Filters.eq("_id", artistId),
                 Updates.combine(
@@ -89,7 +89,7 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
                     Updates.set("additionalGenres", additionalGenres),
                     Updates.set("imageLink", imageLink),
                     Updates.set("type", type),
-                    Updates.set("lastEnrichmentDate", now),
+                    Updates.set("lastSync", now),
                 ),
             )
         }
@@ -111,7 +111,7 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
         additionalGenres = additionalGenres,
         imageLink = imageLink,
         type = type,
-        lastEnrichmentDate = lastEnrichmentDate?.toKotlinInstant(),
+        lastSync = lastSync?.toKotlinInstant(),
         playbackProcessingStatus = playbackProcessingStatus,
     )
 
