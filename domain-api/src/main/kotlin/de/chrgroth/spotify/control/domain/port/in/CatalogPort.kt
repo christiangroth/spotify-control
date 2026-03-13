@@ -15,6 +15,7 @@ interface CatalogPort {
         status: ArtistPlaybackProcessingStatus,
         userId: UserId,
     ): Either<DomainError, Unit>
+    fun syncArtistPlaybackFromPlaylists(userId: UserId)
     fun enrichArtistDetails(artistId: String, userId: UserId): Either<DomainError, Unit>
     fun enrichTrackDetails(trackId: String, userId: UserId): Either<DomainError, Unit>
     fun handle(event: DomainOutboxEvent.EnrichArtistDetails): OutboxTaskResult

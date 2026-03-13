@@ -9,4 +9,5 @@ interface PlaylistRepositoryPort {
     fun saveAll(userId: UserId, playlists: List<PlaylistInfo>)
     fun findByUserIdAndPlaylistId(userId: UserId, playlistId: String): Playlist?
     fun save(userId: UserId, playlist: Playlist)
+    fun findArtistIdsInActivePlaylists(): Set<String>
 }

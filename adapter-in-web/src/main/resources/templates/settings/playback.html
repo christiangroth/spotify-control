@@ -115,10 +115,21 @@
                 </div>
             </div>
         </div>
+        <div class="row mt-3">
+            <div class="col-12">
+                <button id="sync-from-playlists-btn" class="btn btn-spotify btn-sm">Update from playlists</button>
+            </div>
+        </div>
     </div>
     <script>
         document.getElementById('rebuild-playback-btn').addEventListener('click', function() {
             postWithButton(this, '/settings/playback/rebuild', 'Playback data rebuild enqueued successfully.', 'Rebuild failed');
+        });
+
+        document.getElementById('sync-from-playlists-btn').addEventListener('click', function() {
+            postWithButton(this, '/settings/playback/sync-from-playlists', 'Artist playback state synced from playlists. Reloading...', 'Sync failed', function() {
+                setTimeout(function() { window.location.reload(); }, 1000);
+            });
         });
 
         (function() {

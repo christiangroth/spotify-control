@@ -20,6 +20,7 @@ import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppPlaybackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
+import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyCatalogPort
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
@@ -36,6 +37,7 @@ class CatalogAdapter(
     private val appAlbumRepository: AppAlbumRepositoryPort,
     private val appPlaybackRepository: AppPlaybackRepositoryPort,
     private val userRepository: UserRepositoryPort,
+    private val playlistRepository: PlaylistRepositoryPort,
     private val outboxPort: OutboxPort,
 ) : CatalogPort {
 
@@ -78,6 +80,30 @@ class CatalogAdapter(
         }
 
         return Unit.right()
+    }
+
+    override fun syncArtistPlaybackFromPlaylists(userId: UserId) {
+        val activePlaylistArtistIds = playlistRepository.findArtistIdsInActivePlaylists()
+        logger.info { "Found ${activePlaylistArtistIds.size} artist(s) in active playlists" }
+
+        ArtistPlaybackProcessingStatus.entries.forEach { currentStatus ->
+            val artists = appArtistRepository.findByPlaybackProcessingStatus(currentStatus)
+            artists.forEach { artist ->
+                val inActivePlaylist = artist.artistId in activePlaylistArtistIds
+                val newStatus = when (currentStatus) {
+                    ArtistPlaybackProcessingStatus.UNDECIDED ->
+                        if (inActivePlaylist) ArtistPlaybackProcessingStatus.ACTIVE else ArtistPlaybackProcessingStatus.INACTIVE
+                    ArtistPlaybackProcessingStatus.ACTIVE ->
+                        if (!inActivePlaylist) ArtistPlaybackProcessingStatus.INACTIVE else null
+                    ArtistPlaybackProcessingStatus.INACTIVE ->
+                        if (inActivePlaylist) ArtistPlaybackProcessingStatus.ACTIVE else null
+                }
+                if (newStatus != null) {
+                    logger.info { "Sync from playlists: updating artist ${artist.artistId} from $currentStatus to $newStatus" }
+                    updateArtistPlaybackProcessingStatus(artist.artistId, newStatus, userId)
+                }
+            }
+        }
     }
 
     // --- Enrichment ---

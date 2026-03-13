@@ -68,6 +68,16 @@ class PlaybackSettingsResource {
     return Response.ok(mapOf("status" to "ok")).build()
   }
 
+  @POST
+  @Authenticated
+  @Path("/sync-from-playlists")
+  @Produces(MediaType.APPLICATION_JSON)
+  fun syncArtistPlaybackFromPlaylists(): Response {
+    val userId = UserId(securityIdentity.principal.name)
+    catalog.syncArtistPlaybackFromPlaylists(userId)
+    return Response.ok(mapOf("status" to "ok")).build()
+  }
+
   @PUT
   @Authenticated
   @Path("/artists/{artistId}/status")
