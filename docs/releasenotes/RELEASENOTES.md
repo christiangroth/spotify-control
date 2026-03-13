@@ -1,3 +1,12 @@
+# 0.48.4 (2026.03.13)
+
+## Bugfixes / Chore
+* add-link-to-spotify-api: Added link to Spotify Web API documentation in the Technical dropdown menu.
+
+
+
+---
+
 # 0.48.3 (2026.03.13)
 
 ## Bugfixes / Chore
