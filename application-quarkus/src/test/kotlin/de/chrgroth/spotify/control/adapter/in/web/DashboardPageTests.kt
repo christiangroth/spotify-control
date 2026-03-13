@@ -36,6 +36,18 @@ class DashboardPageTests {
   }
 
   @Test
+  fun `dashboard page displays spotify api link in dropdown`() {
+    given()
+      .`when`()
+      .get("/dashboard")
+      .then()
+      .statusCode(200)
+      .body(containsString("""data-testid="spotify-api-link""""))
+      .body(containsString("https://developer.spotify.com/documentation/web-api"))
+      .body(containsString("API"))
+  }
+
+  @Test
   fun `dashboard page displays stats section`() {
     given()
       .`when`()
