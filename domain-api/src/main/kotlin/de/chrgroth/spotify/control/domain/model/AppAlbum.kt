@@ -4,7 +4,7 @@ import kotlin.time.Instant
 
 /**
  * Processed album metadata, shared across all users to avoid duplication in app_track.
- * All fields are populated by SyncTrackDetails from the album object embedded in the
+ * All fields are populated by SyncMissingTracks from the album object embedded in the
  * Spotify track API response. The embedded album object includes images, release date,
  * album type, total tracks, and artist information.
  */
