@@ -1,3 +1,12 @@
+# 0.48.1 (2026.03.13)
+
+## Bugfixes / Chore
+* cleanup-recently-partial-played: Cleaned up obsolete `recently_partial_played` MongoDB collection.
+
+
+
+---
+
 # 0.48.0 (2026.03.13)
 
 ## New Features
