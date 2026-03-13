@@ -55,7 +55,71 @@ class PlaybackEnrichmentAdapterTests {
     private val accessToken = AccessToken("access-token")
 
     @Test
-    fun `syncMissingTracks updates tracks and albums from Spotify bulk response`() {
+    fun `syncArtistDetails updates artistName from Spotify response`() {
+        val artistId = "artist-1"
+        val spotifyArtist = AppArtist(
+            artistId = artistId,
+            artistName = "Real Artist Name",
+            genre = "pop",
+            additionalGenres = null,
+            imageLink = "https://example.com/image.jpg",
+            type = "artist",
+        )
+        every { appArtistRepository.findByArtistIds(setOf(artistId)) } returns listOf(AppArtist(artistId = artistId, artistName = ""))
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { spotifyCatalog.getArtist(userId, accessToken, artistId) } returns spotifyArtist.right()
+        every { appArtistRepository.updateSyncData(artistId, "Real Artist Name", "pop", null, "https://example.com/image.jpg", "artist") } just runs
+
+        adapter.syncArtistDetails(artistId, userId)
+
+        verify { appArtistRepository.updateSyncData(artistId, "Real Artist Name", "pop", null, "https://example.com/image.jpg", "artist") }
+    }
+
+    @Test
+    fun `syncArtistDetails skips update when artist already synced`() {
+        val artistId = "artist-already-synced"
+        val syncedArtist = AppArtist(
+            artistId = artistId,
+            artistName = "Known Artist",
+            lastSync = kotlin.time.Clock.System.now(),
+        )
+        every { appArtistRepository.findByArtistIds(setOf(artistId)) } returns listOf(syncedArtist)
+
+        adapter.syncArtistDetails(artistId, userId)
+
+        verify(exactly = 0) { spotifyCatalog.getArtist(any(), any(), any()) }
+        verify(exactly = 0) { appArtistRepository.updateSyncData(any(), any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `syncArtistDetails re-syncs when artist has syncDate but blank name`() {
+        val artistId = "artist-blank-name"
+        val artistWithBlankName = AppArtist(
+            artistId = artistId,
+            artistName = "",
+            imageLink = "https://example.com/image.jpg",
+            lastSync = kotlin.time.Clock.System.now(),
+        )
+        val spotifyArtist = AppArtist(
+            artistId = artistId,
+            artistName = "Recovered Name",
+            genre = "rock",
+            additionalGenres = listOf("indie"),
+            imageLink = "https://example.com/image.jpg",
+            type = "artist",
+        )
+        every { appArtistRepository.findByArtistIds(setOf(artistId)) } returns listOf(artistWithBlankName)
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { spotifyCatalog.getArtist(userId, accessToken, artistId) } returns spotifyArtist.right()
+        every { appArtistRepository.updateSyncData(artistId, "Recovered Name", "rock", listOf("indie"), "https://example.com/image.jpg", "artist") } just runs
+
+        adapter.syncArtistDetails(artistId, userId)
+
+        verify { appArtistRepository.updateSyncData(artistId, "Recovered Name", "rock", listOf("indie"), "https://example.com/image.jpg", "artist") }
+    }
+
+    @Test
+    fun `syncTrackDetails updates track and album from Spotify response`() {
         val trackId = "track-1"
         val track = AppTrack(
             id = TrackId(trackId),
@@ -77,23 +141,23 @@ class PlaybackEnrichmentAdapterTests {
         )
         val syncResult = TrackSyncResult(track = track, album = album)
 
-        every { userRepository.findAll() } returns listOf(mockk { every { spotifyUserId } returns userId })
-        every { syncPoolRepository.peekTracks(any()) } returns listOf(trackId)
+        val existingTrack = AppTrack(id = TrackId(trackId), title = "Track One", artistId = ArtistId("artist-1"))
+        every { appTrackRepository.findByTrackIds(setOf(TrackId(trackId))) } returns listOf(existingTrack)
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
-        every { spotifyCatalog.getTracks(userId, accessToken, listOf(trackId)) } returns listOf(syncResult).right()
-        every { appTrackRepository.upsertAll(listOf(track)) } just runs
+        every { spotifyCatalog.getTrack(userId, accessToken, trackId) } returns syncResult.right()
+        every { appTrackRepository.updateTrackSyncData(track) } just runs
         every { appAlbumRepository.upsertAll(listOf(album)) } just runs
+        every { outboxPort.enqueue(any()) } just runs
 
-        adapter.handle(DomainOutboxEvent.SyncMissingTracks())
+        adapter.syncTrackDetails(trackId, userId)
 
-        verify { appTrackRepository.upsertAll(listOf(track)) }
+        verify { appTrackRepository.updateTrackSyncData(track) }
         verify { appAlbumRepository.upsertAll(listOf(album)) }
-        verify { syncPoolRepository.removeTracks(listOf(trackId)) }
-        verify { syncPoolRepository.addArtists(listOf("artist-1")) }
+        verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails("artist-1", userId)) }
     }
 
     @Test
-    fun `syncMissingTracks adds all track artists to artist pool`() {
+    fun `syncTrackDetails enqueues SyncArtistDetails for all track artists`() {
         val trackId = "track-multi-artist"
         val track = AppTrack(
             id = TrackId(trackId),
@@ -105,59 +169,36 @@ class PlaybackEnrichmentAdapterTests {
         val album = AppAlbum(id = AlbumId("album-1"), title = "Album One")
         val syncResult = TrackSyncResult(track = track, album = album)
 
-        every { userRepository.findAll() } returns listOf(mockk { every { spotifyUserId } returns userId })
-        every { syncPoolRepository.peekTracks(any()) } returns listOf(trackId)
+        val existingTrack2 = AppTrack(id = TrackId(trackId), title = "Collab Track", artistId = ArtistId("artist-1"))
+        every { appTrackRepository.findByTrackIds(setOf(TrackId(trackId))) } returns listOf(existingTrack2)
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
-        every { spotifyCatalog.getTracks(userId, accessToken, listOf(trackId)) } returns listOf(syncResult).right()
-        every { appTrackRepository.upsertAll(any()) } just runs
-        every { appAlbumRepository.upsertAll(any()) } just runs
+        every { spotifyCatalog.getTrack(userId, accessToken, trackId) } returns syncResult.right()
+        every { appTrackRepository.updateTrackSyncData(track) } just runs
+        every { appAlbumRepository.upsertAll(listOf(album)) } just runs
+        every { outboxPort.enqueue(any()) } just runs
 
-        adapter.handle(DomainOutboxEvent.SyncMissingTracks())
+        adapter.syncTrackDetails(trackId, userId)
 
-        verify { syncPoolRepository.addArtists(listOf("artist-1", "artist-2", "artist-3")) }
+        verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails("artist-1", userId)) }
+        verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails("artist-2", userId)) }
+        verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails("artist-3", userId)) }
     }
 
     @Test
-    fun `syncMissingTracks does nothing when pool is empty`() {
-        every { userRepository.findAll() } returns listOf(mockk { every { spotifyUserId } returns userId })
-        every { syncPoolRepository.peekTracks(any()) } returns emptyList()
-
-        adapter.handle(DomainOutboxEvent.SyncMissingTracks())
-
-        verify(exactly = 0) { spotifyCatalog.getTracks(any(), any(), any()) }
-        verify(exactly = 0) { appTrackRepository.upsertAll(any()) }
-    }
-
-    @Test
-    fun `syncMissingArtists updates artists from Spotify bulk response`() {
-        val artistId = "artist-1"
-        val artist = AppArtist(
-            artistId = artistId,
-            artistName = "Real Artist Name",
-            genre = "pop",
-            imageLink = "https://example.com/image.jpg",
+    fun `syncTrackDetails skips update when track already synced`() {
+        val trackId = "track-already-synced"
+        val syncedTrack = AppTrack(
+            id = TrackId(trackId),
+            title = "Known Track",
+            artistId = ArtistId("artist-1"),
+            lastSync = kotlin.time.Clock.System.now(),
         )
+        every { appTrackRepository.findByTrackIds(setOf(TrackId(trackId))) } returns listOf(syncedTrack)
 
-        every { userRepository.findAll() } returns listOf(mockk { every { spotifyUserId } returns userId })
-        every { syncPoolRepository.peekArtists(any()) } returns listOf(artistId)
-        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
-        every { spotifyCatalog.getArtists(userId, accessToken, listOf(artistId)) } returns listOf(artist).right()
-        every { appArtistRepository.upsertAll(listOf(artist)) } just runs
+        adapter.syncTrackDetails(trackId, userId)
 
-        adapter.handle(DomainOutboxEvent.SyncMissingArtists())
-
-        verify { appArtistRepository.upsertAll(listOf(artist)) }
-        verify { syncPoolRepository.removeArtists(listOf(artistId)) }
-    }
-
-    @Test
-    fun `syncMissingArtists does nothing when pool is empty`() {
-        every { userRepository.findAll() } returns listOf(mockk { every { spotifyUserId } returns userId })
-        every { syncPoolRepository.peekArtists(any()) } returns emptyList()
-
-        adapter.handle(DomainOutboxEvent.SyncMissingArtists())
-
-        verify(exactly = 0) { spotifyCatalog.getArtists(any(), any(), any()) }
-        verify(exactly = 0) { appArtistRepository.upsertAll(any()) }
+        verify(exactly = 0) { spotifyCatalog.getTrack(any(), any(), any()) }
+        verify(exactly = 0) { appTrackRepository.updateTrackSyncData(any()) }
+        verify(exactly = 0) { appAlbumRepository.upsertAll(any()) }
     }
 }

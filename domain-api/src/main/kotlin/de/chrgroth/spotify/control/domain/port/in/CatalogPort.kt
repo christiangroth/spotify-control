@@ -15,6 +15,10 @@ interface CatalogPort {
         status: ArtistPlaybackProcessingStatus,
         userId: UserId,
     ): Either<DomainError, Unit>
+    fun syncArtistDetails(artistId: String, userId: UserId): Either<DomainError, Unit>
+    fun syncTrackDetails(trackId: String, userId: UserId): Either<DomainError, Unit>
+    fun handle(event: DomainOutboxEvent.SyncArtistDetails): OutboxTaskResult
+    fun handle(event: DomainOutboxEvent.SyncTrackDetails): OutboxTaskResult
     fun handle(event: DomainOutboxEvent.SyncMissingArtists): OutboxTaskResult
     fun handle(event: DomainOutboxEvent.SyncMissingTracks): OutboxTaskResult
 }

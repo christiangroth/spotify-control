@@ -11,6 +11,7 @@ import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
 import de.chrgroth.spotify.control.domain.model.AppArtist
 import de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus
 import de.chrgroth.spotify.control.domain.model.ArtistId
+import de.chrgroth.spotify.control.domain.model.TrackId
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.CatalogPort
@@ -83,6 +84,53 @@ class CatalogAdapter(
 
     // --- Catalog Sync ---
 
+    override fun syncArtistDetails(artistId: String, userId: UserId): Either<DomainError, Unit> {
+        val existing = appArtistRepository.findByArtistIds(setOf(artistId)).firstOrNull()
+        if (existing?.lastSync != null && existing.artistName.isNotBlank()) {
+            logger.debug { "Artist $artistId already synced, skipping" }
+            return Unit.right()
+        }
+        logger.info { "Fetching genre details for artist $artistId (user ${userId.value})" }
+        val accessToken = spotifyAccessToken.getValidAccessToken(userId)
+        return spotifyCatalog.getArtist(userId, accessToken, artistId)
+            .flatMap { detail ->
+                if (detail != null) {
+                    appArtistRepository.updateSyncData(detail.artistId, detail.artistName, detail.genre, detail.additionalGenres, detail.imageLink, detail.type)
+                    logger.info { "Updated sync data for artist $artistId: genre=${detail.genre}, additionalGenres=${detail.additionalGenres}" }
+                } else {
+                    logger.warn { "No data returned from Spotify for artist $artistId" }
+                }
+                Unit.right()
+            }
+    }
+
+    override fun syncTrackDetails(trackId: String, userId: UserId): Either<DomainError, Unit> {
+        val existing = appTrackRepository.findByTrackIds(setOf(TrackId(trackId))).firstOrNull()
+        if (existing?.lastSync != null) {
+            logger.debug { "Track $trackId already synced, skipping" }
+            return Unit.right()
+        }
+        logger.info { "Fetching track/album details for track $trackId (user ${userId.value})" }
+        val accessToken = spotifyAccessToken.getValidAccessToken(userId)
+        return spotifyCatalog.getTrack(userId, accessToken, trackId)
+            .flatMap { result ->
+                if (result != null) {
+                    appTrackRepository.updateTrackSyncData(result.track)
+                    appAlbumRepository.upsertAll(listOf(result.album))
+                    val allArtistIds = (listOf(result.track.artistId) + result.track.additionalArtistIds)
+                        .map { it.value }
+                        .filter { it.isNotBlank() }
+                    allArtistIds.forEach { artistId ->
+                        outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails(artistId, userId))
+                    }
+                    logger.info { "Updated sync data for track $trackId → album ${result.album.id.value}" }
+                } else {
+                    logger.warn { "No data returned from Spotify for track $trackId" }
+                }
+                Unit.right()
+            }
+    }
+
     private fun syncMissingArtists(): Either<DomainError, Int> {
         val userId = userRepository.findAll().firstOrNull()?.spotifyUserId
         if (userId == null) {
@@ -141,6 +189,44 @@ class CatalogAdapter(
     }
 
     // --- Outbox Handlers ---
+
+    override fun handle(event: DomainOutboxEvent.SyncArtistDetails): OutboxTaskResult = try {
+        when (val result = syncArtistDetails(event.artistId, event.userId)) {
+            is Either.Right -> OutboxTaskResult.Success
+            is Either.Left -> when (val error = result.value) {
+                is SpotifyRateLimitError -> {
+                    logger.warn { "Rate limited on SyncArtistDetails artist ${event.artistId} (user ${event.userId.value}), retry after ${error.retryAfter.seconds}s" }
+                    OutboxTaskResult.RateLimited(error.retryAfter)
+                }
+                else -> {
+                    logger.error { "Failed to sync artist ${event.artistId} for user ${event.userId.value}: ${error.code}" }
+                    OutboxTaskResult.Failed("Failed to sync artist: ${error.code}")
+                }
+            }
+        }
+    } catch (e: Exception) {
+        logger.error(e) { "Unexpected error in handle(SyncArtistDetails) for artist ${event.artistId} (user ${event.userId.value})" }
+        OutboxTaskResult.Failed("Unexpected error in sync: ${e.message}", e)
+    }
+
+    override fun handle(event: DomainOutboxEvent.SyncTrackDetails): OutboxTaskResult = try {
+        when (val result = syncTrackDetails(event.trackId, event.userId)) {
+            is Either.Right -> OutboxTaskResult.Success
+            is Either.Left -> when (val error = result.value) {
+                is SpotifyRateLimitError -> {
+                    logger.warn { "Rate limited on SyncTrackDetails for track ${event.trackId} (user ${event.userId.value}), retry after ${error.retryAfter.seconds}s" }
+                    OutboxTaskResult.RateLimited(error.retryAfter)
+                }
+                else -> {
+                    logger.error { "Failed to sync track ${event.trackId} for user ${event.userId.value}: ${error.code}" }
+                    OutboxTaskResult.Failed("Failed to sync track: ${error.code}")
+                }
+            }
+        }
+    } catch (e: Exception) {
+        logger.error(e) { "Unexpected error in handle(SyncTrackDetails) for track ${event.trackId} (user ${event.userId.value})" }
+        OutboxTaskResult.Failed("Unexpected error in sync: ${e.message}", e)
+    }
 
     override fun handle(event: DomainOutboxEvent.SyncMissingArtists): OutboxTaskResult = try {
         when (val result = syncMissingArtists()) {
