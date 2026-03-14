@@ -38,6 +38,29 @@ class AppSyncPoolRepositoryAdapter : AppSyncPoolRepositoryPort {
 
     override fun peekAlbums(max: Int): List<String> = peekFromPool(SyncPoolType.ALBUM, max)
 
+    override fun markArtistsEnqueued(artistIds: List<String>) {
+        if (artistIds.isEmpty()) return
+        markEnqueuedInPool(SyncPoolType.ARTIST, artistIds)
+    }
+
+    override fun markTracksEnqueued(trackIds: List<String>) {
+        if (trackIds.isEmpty()) return
+        markEnqueuedInPool(SyncPoolType.TRACK, trackIds)
+    }
+
+    override fun markAlbumsEnqueued(albumIds: List<String>) {
+        if (albumIds.isEmpty()) return
+        markEnqueuedInPool(SyncPoolType.ALBUM, albumIds)
+    }
+
+    override fun resetEnqueued() {
+        val collection = appSyncPoolDocumentRepository.mongoCollection()
+        mongoQueryMetrics.timed("app_sync_pool.resetEnqueued") {
+            collection.updateMany(Filters.empty(), Updates.set("enqueued", false))
+            logger.debug { "Reset enqueued flag for all sync pool items" }
+        }
+    }
+
     override fun removeArtists(artistIds: List<String>) {
         if (artistIds.isEmpty()) return
         removeFromPool(SyncPoolType.ARTIST, artistIds)
@@ -63,6 +86,7 @@ class AppSyncPoolRepositoryAdapter : AppSyncPoolRepositoryPort {
                     Updates.combine(
                         Updates.setOnInsert("type", type.name),
                         Updates.setOnInsert("spotifyId", id),
+                        Updates.set("enqueued", false),
                     ),
                     upsertOptions,
                 )
@@ -74,10 +98,19 @@ class AppSyncPoolRepositoryAdapter : AppSyncPoolRepositoryPort {
         val collection = appSyncPoolDocumentRepository.mongoCollection()
         return mongoQueryMetrics.timed("app_sync_pool.peek.${type.name}") {
             collection
-                .find(Filters.eq("type", type.name))
+                .find(Filters.and(Filters.eq("type", type.name), Filters.ne("enqueued", true)))
                 .limit(max)
                 .map { it.spotifyId }
                 .toList()
+        }
+    }
+
+    private fun markEnqueuedInPool(type: SyncPoolType, ids: List<String>) {
+        val collection = appSyncPoolDocumentRepository.mongoCollection()
+        val documentIds = ids.map { "${type.name}:$it" }
+        mongoQueryMetrics.timed("app_sync_pool.markEnqueued.${type.name}") {
+            collection.updateMany(Filters.`in`("_id", documentIds), Updates.set("enqueued", true))
+            logger.debug { "Marked ${ids.size} ${type.name} IDs as enqueued in sync pool" }
         }
     }
 
