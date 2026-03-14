@@ -345,11 +345,66 @@ class CatalogAdapterTests {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { appTrackRepository.findByTrackIds(setOf(TrackId("track-1"))) } returns listOf(trackWithAlbum1)
         every { spotifyCatalog.getAlbumTracks(userId, accessToken, "album-1") } returns SyncError.TRACK_DETAILS_FETCH_FAILED.left()
+        every { syncPoolRepository.addTracks(any()) } just runs
 
         val result = adapter.handle(DomainOutboxEvent.SyncMissingTracks(listOf("track-1")))
 
         assertThat(result).isInstanceOf(OutboxTaskResult.Failed::class.java)
         verify(exactly = 0) { appTrackRepository.upsertAll(any()) }
+        verify { syncPoolRepository.addTracks(listOf("track-1")) }
+    }
+
+    @Test
+    fun `handle SyncMissingTracks album endpoint rate limit does not reset enqueued`() {
+        val rateLimitError = de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError(java.time.Duration.ofSeconds(30))
+        every { userRepository.findAll() } returns listOf(buildUser())
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { appTrackRepository.findByTrackIds(setOf(TrackId("track-1"))) } returns listOf(trackWithAlbum1)
+        every { spotifyCatalog.getAlbumTracks(userId, accessToken, "album-1") } returns rateLimitError.left()
+
+        val result = adapter.handle(DomainOutboxEvent.SyncMissingTracks(listOf("track-1")))
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.RateLimited::class.java)
+        verify(exactly = 0) { syncPoolRepository.addTracks(any()) }
+    }
+
+    @Test
+    fun `handle SyncMissingTracks resets enqueued for album tracks and no-album tracks when album endpoint fails`() {
+        val trackWithoutAlbum = AppTrack(id = TrackId("track-2"), title = "Track Two", artistId = ArtistId("artist-1"))
+        every { userRepository.findAll() } returns listOf(buildUser())
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { appTrackRepository.findByTrackIds(setOf(TrackId("track-1"), TrackId("track-2"))) } returns
+            listOf(trackWithAlbum1, trackWithoutAlbum)
+        every { spotifyCatalog.getAlbumTracks(userId, accessToken, "album-1") } returns SyncError.TRACK_DETAILS_FETCH_FAILED.left()
+        every { syncPoolRepository.addTracks(any()) } just runs
+
+        adapter.handle(DomainOutboxEvent.SyncMissingTracks(listOf("track-1", "track-2")))
+
+        verify { syncPoolRepository.addTracks(listOf("track-1")) }
+        verify { syncPoolRepository.addTracks(listOf("track-2")) }
+    }
+
+    @Test
+    fun `handle SyncMissingTracks resets enqueued for tracks not returned by direct endpoint`() {
+        val trackWithoutAlbum1 = AppTrack(id = TrackId("track-1"), title = "Track One", artistId = ArtistId("artist-1"))
+        val trackWithoutAlbum2 = AppTrack(id = TrackId("track-2"), title = "Track Two", artistId = ArtistId("artist-1"))
+        val directResult = TrackSyncResult(track = trackWithAlbum1, album = album1)
+        every { userRepository.findAll() } returns listOf(buildUser())
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { appTrackRepository.findByTrackIds(setOf(TrackId("track-1"), TrackId("track-2"))) } returns
+            listOf(trackWithoutAlbum1, trackWithoutAlbum2)
+        every { spotifyCatalog.getTracks(userId, accessToken, listOf("track-1", "track-2")) } returns listOf(directResult).right()
+        every { appTrackRepository.upsertAll(any()) } just runs
+        every { appAlbumRepository.upsertAll(any()) } just runs
+        every { syncPoolRepository.removeTracks(any()) } just runs
+        every { syncPoolRepository.addArtists(any()) } just runs
+        every { syncPoolRepository.addAlbums(any()) } just runs
+        every { syncPoolRepository.addTracks(any()) } just runs
+
+        adapter.handle(DomainOutboxEvent.SyncMissingTracks(listOf("track-1", "track-2")))
+
+        verify { syncPoolRepository.removeTracks(listOf("track-1")) }
+        verify { syncPoolRepository.addTracks(listOf("track-2")) }
     }
 
     // --- syncMissingAlbums tests ---
@@ -403,11 +458,26 @@ class CatalogAdapterTests {
         every { userRepository.findAll() } returns listOf(buildUser())
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { spotifyCatalog.getAlbumTracks(userId, accessToken, "album-1") } returns SyncError.TRACK_DETAILS_FETCH_FAILED.left()
+        every { syncPoolRepository.addAlbums(any()) } just runs
 
         val result = adapter.handle(DomainOutboxEvent.SyncMissingAlbums("album-1"))
 
         assertThat(result).isInstanceOf(OutboxTaskResult.Failed::class.java)
         verify(exactly = 0) { appTrackRepository.upsertAll(any()) }
+        verify { syncPoolRepository.addAlbums(listOf("album-1")) }
+    }
+
+    @Test
+    fun `handle SyncMissingAlbums album endpoint rate limit does not reset enqueued`() {
+        val rateLimitError = de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError(java.time.Duration.ofSeconds(30))
+        every { userRepository.findAll() } returns listOf(buildUser())
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { spotifyCatalog.getAlbumTracks(userId, accessToken, "album-1") } returns rateLimitError.left()
+
+        val result = adapter.handle(DomainOutboxEvent.SyncMissingAlbums("album-1"))
+
+        assertThat(result).isInstanceOf(OutboxTaskResult.RateLimited::class.java)
+        verify(exactly = 0) { syncPoolRepository.addAlbums(any()) }
     }
 
     // --- syncMissingArtists disables bulk fetch on explicit endpoint-gone error ---
@@ -417,10 +487,12 @@ class CatalogAdapterTests {
         every { userRepository.findAll() } returns listOf(buildUser())
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { spotifyCatalog.getArtists(userId, accessToken, listOf("artist-1")) } returns SyncError.BULK_ENDPOINT_GONE.left()
+        every { syncPoolRepository.addArtists(any()) } just runs
 
         adapter.handle(DomainOutboxEvent.SyncMissingArtists(listOf("artist-1")))
 
         verify { useBulkFetchState.disableBulkFetch() }
+        verify { syncPoolRepository.addArtists(listOf("artist-1")) }
     }
 
     @Test
@@ -428,10 +500,12 @@ class CatalogAdapterTests {
         every { userRepository.findAll() } returns listOf(buildUser())
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { spotifyCatalog.getArtists(userId, accessToken, listOf("artist-1")) } returns SyncError.ARTIST_DETAILS_FETCH_FAILED.left()
+        every { syncPoolRepository.addArtists(any()) } just runs
 
         adapter.handle(DomainOutboxEvent.SyncMissingArtists(listOf("artist-1")))
 
         verify(exactly = 0) { useBulkFetchState.disableBulkFetch() }
+        verify { syncPoolRepository.addArtists(listOf("artist-1")) }
     }
 
     @Test
@@ -444,6 +518,22 @@ class CatalogAdapterTests {
         adapter.handle(DomainOutboxEvent.SyncMissingArtists(listOf("artist-1")))
 
         verify(exactly = 0) { useBulkFetchState.disableBulkFetch() }
+        verify(exactly = 0) { syncPoolRepository.addArtists(any()) }
+    }
+
+    @Test
+    fun `handle SyncMissingArtists resets enqueued for artists not returned by Spotify`() {
+        every { userRepository.findAll() } returns listOf(buildUser())
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { spotifyCatalog.getArtists(userId, accessToken, listOf("artist-1", "artist-2")) } returns listOf(artist1).right()
+        every { appArtistRepository.upsertAll(any()) } just runs
+        every { syncPoolRepository.removeArtists(any()) } just runs
+        every { syncPoolRepository.addArtists(any()) } just runs
+
+        adapter.handle(DomainOutboxEvent.SyncMissingArtists(listOf("artist-1", "artist-2")))
+
+        verify { syncPoolRepository.removeArtists(listOf("artist-1")) }
+        verify { syncPoolRepository.addArtists(listOf("artist-2")) }
     }
 
     // --- syncDirectTracks disables bulk fetch on explicit endpoint-gone error ---
@@ -455,10 +545,12 @@ class CatalogAdapterTests {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { appTrackRepository.findByTrackIds(setOf(TrackId("track-1"))) } returns listOf(trackWithoutAlbum)
         every { spotifyCatalog.getTracks(userId, accessToken, listOf("track-1")) } returns SyncError.BULK_ENDPOINT_GONE.left()
+        every { syncPoolRepository.addTracks(any()) } just runs
 
         adapter.handle(DomainOutboxEvent.SyncMissingTracks(listOf("track-1")))
 
         verify { useBulkFetchState.disableBulkFetch() }
+        verify { syncPoolRepository.addTracks(listOf("track-1")) }
     }
 
     @Test
@@ -468,10 +560,12 @@ class CatalogAdapterTests {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { appTrackRepository.findByTrackIds(setOf(TrackId("track-1"))) } returns listOf(trackWithoutAlbum)
         every { spotifyCatalog.getTracks(userId, accessToken, listOf("track-1")) } returns SyncError.TRACK_DETAILS_FETCH_FAILED.left()
+        every { syncPoolRepository.addTracks(any()) } just runs
 
         adapter.handle(DomainOutboxEvent.SyncMissingTracks(listOf("track-1")))
 
         verify(exactly = 0) { useBulkFetchState.disableBulkFetch() }
+        verify { syncPoolRepository.addTracks(listOf("track-1")) }
     }
 
     @Test
@@ -486,5 +580,6 @@ class CatalogAdapterTests {
         adapter.handle(DomainOutboxEvent.SyncMissingTracks(listOf("track-1")))
 
         verify(exactly = 0) { useBulkFetchState.disableBulkFetch() }
+        verify(exactly = 0) { syncPoolRepository.addTracks(any()) }
     }
 }

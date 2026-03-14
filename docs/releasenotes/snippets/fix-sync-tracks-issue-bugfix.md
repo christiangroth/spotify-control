@@ -1,2 +1,2 @@
-* fix-sync-tracks-issue: Track sync no longer fails for the entire batch when a single album lookup returns a 403 Forbidden response from Spotify.
-* fix-sync-tracks-issue: Tracks whose album fetch fails with a non-rate-limit error now fall back to direct track sync instead of aborting the whole task.
+* fix-sync-tracks-issue: Spotify HTTP errors (e.g. 403 Forbidden) on an album or artist lookup are now logged with the full error payload.
+* fix-sync-tracks-issue: Sync pool items not processed due to errors are now reset to pending so they are retried on the next sync run instead of being stuck.
