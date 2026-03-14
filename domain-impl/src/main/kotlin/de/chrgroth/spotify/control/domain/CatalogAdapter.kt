@@ -261,48 +261,32 @@ class CatalogAdapter(
         }
     }
 
-    private fun syncMissingAlbums(albumIds: List<String>): Either<DomainError, Int> {
-        if (albumIds.isEmpty()) {
-            logger.debug { "No album IDs in sync task" }
-            return 0.right()
-        }
+    private fun syncMissingAlbums(albumId: String): Either<DomainError, Int> {
         val userId = userRepository.findAll().firstOrNull()?.spotifyUserId
         if (userId == null) {
             logger.debug { "No users available, skipping syncMissingAlbums" }
             return 0.right()
         }
-        logger.info { "Syncing ${albumIds.size} missing albums from pool" }
+        logger.info { "Syncing missing album $albumId from pool" }
         val accessToken = spotifyAccessToken.getValidAccessToken(userId)
-        return processAlbumPool(userId, accessToken, albumIds)
-    }
-
-    private fun processAlbumPool(
-        userId: UserId,
-        accessToken: AccessToken,
-        albumIds: List<String>,
-    ): Either<DomainError, Int> {
-        var totalSynced = 0
-        for (albumId in albumIds) {
-            val result = spotifyCatalog.getAlbumTracks(userId, accessToken, albumId)
-            when (result) {
-                is Either.Left -> return result.value.left()
-                is Either.Right -> {
-                    val allAlbumResults = result.value
-                    if (allAlbumResults.isNotEmpty()) {
-                        appTrackRepository.upsertAll(allAlbumResults.map { it.track })
-                        appAlbumRepository.upsertAll(listOf(allAlbumResults.first().album))
-                        val artistIds = allAlbumResults
-                            .flatMap { r -> (listOf(r.track.artistId) + r.track.additionalArtistIds).map { it.value } }
-                            .filter { it.isNotBlank() }.distinct()
-                        if (artistIds.isNotEmpty()) syncPoolRepository.addArtists(artistIds)
-                    }
-                    syncPoolRepository.removeAlbums(listOf(albumId))
-                    totalSynced++
+        val result = spotifyCatalog.getAlbumTracks(userId, accessToken, albumId)
+        return when (result) {
+            is Either.Left -> result.value.left()
+            is Either.Right -> {
+                val allAlbumResults = result.value
+                if (allAlbumResults.isNotEmpty()) {
+                    appTrackRepository.upsertAll(allAlbumResults.map { it.track })
+                    appAlbumRepository.upsertAll(listOf(allAlbumResults.first().album))
+                    val artistIds = allAlbumResults
+                        .flatMap { r -> (listOf(r.track.artistId) + r.track.additionalArtistIds).map { it.value } }
+                        .filter { it.isNotBlank() }.distinct()
+                    if (artistIds.isNotEmpty()) syncPoolRepository.addArtists(artistIds)
                 }
+                syncPoolRepository.removeAlbums(listOf(albumId))
+                logger.info { "Synced album $albumId from sync pool" }
+                1.right()
             }
         }
-        logger.info { "Synced $totalSynced albums from sync pool" }
-        return totalSynced.right()
     }
 
     // --- Outbox Handlers ---
@@ -324,7 +308,7 @@ class CatalogAdapter(
         handleOutboxTask("SyncMissingTracks[${event.trackIds.size} tracks]") { syncMissingTracks(event.trackIds) }
 
     override fun handle(event: DomainOutboxEvent.SyncMissingAlbums): OutboxTaskResult =
-        handleOutboxTask("SyncMissingAlbums[${event.albumIds.size} albums]") { syncMissingAlbums(event.albumIds) }
+        handleOutboxTask("SyncMissingAlbums[album=${event.albumId}]") { syncMissingAlbums(event.albumId) }
 
     override fun handle(event: DomainOutboxEvent.ResyncCatalog): OutboxTaskResult =
         handleOutboxTask("ResyncCatalog") { resyncCatalog() }

@@ -3,6 +3,15 @@ package de.chrgroth.spotify.control.domain.outbox
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.outbox.OutboxEvent
 import de.chrgroth.outbox.OutboxTaskPriority
+import java.security.MessageDigest
+
+private fun hashIds(ids: List<String>): String {
+    val joined = ids.sorted().joinToString(",")
+    val bytes = MessageDigest.getInstance("SHA-256").digest(joined.toByteArray())
+    return bytes.take(HASH_BYTES).joinToString("") { "%02x".format(it) }
+}
+
+private const val HASH_BYTES = 8
 
 sealed interface DomainOutboxEvent : OutboxEvent {
     val partition: DomainOutboxPartition
@@ -152,7 +161,7 @@ sealed interface DomainOutboxEvent : OutboxEvent {
      */
     data class SyncMissingArtists(val artistIds: List<String>) : DomainOutboxEvent {
         override val key = KEY
-        override fun deduplicationKey() = "$KEY:${artistIds.sorted().joinToString(",")}"
+        override fun deduplicationKey() = "$KEY:${hashIds(artistIds)}"
         override val partition = DomainOutboxPartition.ToSpotify
         override fun toPayload() = artistIds.joinToString(",")
 
@@ -170,7 +179,7 @@ sealed interface DomainOutboxEvent : OutboxEvent {
      */
     data class SyncMissingTracks(val trackIds: List<String>) : DomainOutboxEvent {
         override val key = KEY
-        override fun deduplicationKey() = "$KEY:${trackIds.sorted().joinToString(",")}"
+        override fun deduplicationKey() = "$KEY:${hashIds(trackIds)}"
         override val partition = DomainOutboxPartition.ToSpotify
         override fun toPayload() = trackIds.joinToString(",")
 
@@ -182,21 +191,19 @@ sealed interface DomainOutboxEvent : OutboxEvent {
     }
 
     /**
-     * Syncs a specific batch of album IDs from app_sync_pool by fetching all their tracks via GET /v1/albums/{id}.
-     * All returned tracks (not only those originally requested) are upserted. Successfully synced album
-     * IDs are removed from the pool; unsynced IDs remain for the next retry.
-     * payload = albumIds joined by ","
+     * Syncs a single album from app_sync_pool by fetching all its tracks via GET /v1/albums/{id}.
+     * All returned tracks are upserted. The album ID is removed from the pool on success.
+     * payload = albumId
      */
-    data class SyncMissingAlbums(val albumIds: List<String>) : DomainOutboxEvent {
+    data class SyncMissingAlbums(val albumId: String) : DomainOutboxEvent {
         override val key = KEY
-        override fun deduplicationKey() = "$KEY:${albumIds.sorted().joinToString(",")}"
+        override fun deduplicationKey() = "$KEY:$albumId"
         override val partition = DomainOutboxPartition.ToSpotify
-        override fun toPayload() = albumIds.joinToString(",")
+        override fun toPayload() = albumId
 
         companion object {
             const val KEY = "SyncMissingAlbums"
-            fun fromPayload(payload: String): SyncMissingAlbums =
-                SyncMissingAlbums(if (payload.isBlank()) emptyList() else payload.split(","))
+            fun fromPayload(payload: String): SyncMissingAlbums = SyncMissingAlbums(payload)
         }
     }
 

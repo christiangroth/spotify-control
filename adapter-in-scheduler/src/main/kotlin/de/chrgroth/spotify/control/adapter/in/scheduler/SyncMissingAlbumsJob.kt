@@ -22,7 +22,9 @@ class SyncMissingAlbumsJob(
         while (true) {
             val batch = syncPoolRepository.peekAlbums(ALBUM_BULK_LIMIT)
             if (batch.isEmpty()) break
-            outboxPort.enqueue(DomainOutboxEvent.SyncMissingAlbums(batch))
+            batch.forEach { albumId ->
+                outboxPort.enqueue(DomainOutboxEvent.SyncMissingAlbums(albumId))
+            }
             syncPoolRepository.markAlbumsEnqueued(batch)
             totalEnqueued += batch.size
         }
@@ -34,6 +36,6 @@ class SyncMissingAlbumsJob(
     }
 
     companion object : KLogging() {
-        private const val ALBUM_BULK_LIMIT = 10
+        private const val ALBUM_BULK_LIMIT = 50
     }
 }
