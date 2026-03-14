@@ -41,6 +41,13 @@ class HealthResource {
     }
 
     @GET
+    @Path("/snippets/predicates")
+    @Authenticated
+    @Produces(MediaType.TEXT_HTML)
+    fun snippetPredicates(): TemplateInstance =
+        healthTemplate.getFragment("snippet_predicates").data("stats", health.getStats())
+
+    @GET
     @Path("/snippets/cronjobs")
     @Authenticated
     @Produces(MediaType.TEXT_HTML)

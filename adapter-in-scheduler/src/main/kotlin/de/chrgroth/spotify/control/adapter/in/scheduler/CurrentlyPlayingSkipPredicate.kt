@@ -2,6 +2,7 @@ package de.chrgroth.spotify.control.adapter.`in`.scheduler
 
 import de.chrgroth.quarkus.starters.StarterSkipPredicate
 import de.chrgroth.spotify.control.domain.model.PlaybackDetectedEvent
+import de.chrgroth.spotify.control.domain.port.out.PlaybackActivityPort
 import io.quarkus.scheduler.Scheduled
 import io.quarkus.scheduler.ScheduledExecution
 import jakarta.enterprise.context.ApplicationScoped
@@ -13,7 +14,7 @@ import java.util.concurrent.atomic.AtomicReference
 @ApplicationScoped
 class CurrentlyPlayingSkipPredicate @JvmOverloads constructor(
     private val starterSkipPredicate: StarterSkipPredicate = StarterSkipPredicate(),
-) : Scheduled.SkipPredicate {
+) : Scheduled.SkipPredicate, PlaybackActivityPort {
 
     private val lastExecutedAtRef = AtomicReference<Instant>(Instant.EPOCH)
     private val lastPlaybackDetectedAtRef = AtomicReference<Instant>(Instant.EPOCH)
@@ -32,7 +33,7 @@ class CurrentlyPlayingSkipPredicate @JvmOverloads constructor(
         return !lastExecutedAtRef.compareAndSet(lastExecutedAt, now)
     }
 
-    private fun isPlaybackActive(): Boolean =
+    override fun isPlaybackActive(): Boolean =
         Duration.between(lastPlaybackDetectedAtRef.get(), Instant.now()) < SLOW_INTERVAL
 
     companion object {
