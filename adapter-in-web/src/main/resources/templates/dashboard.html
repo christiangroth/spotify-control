@@ -81,20 +81,24 @@
                     {#fragment id="snippet_playback_data"}
                     <div class="row g-3">
                         <div class="col-12 col-sm-6">
+                            <a href="/settings/playback" class="text-decoration-none">
                             <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
                                 <div class="card-body">
                                     <p class="card-subtitle mb-1" style="color:#888;font-size:.8rem;">Total Playback Events</p>
                                     <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.totalPlaybackEvents}</p>
                                 </div>
                             </div>
+                            </a>
                         </div>
                         <div class="col-12 col-sm-6">
+                            <a href="/settings/playback" class="text-decoration-none">
                             <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
                                 <div class="card-body">
                                     <p class="card-subtitle mb-1" style="color:#888;font-size:.8rem;">Playback Events (Last 30 Days)</p>
                                     <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.playbackEventsLast30Days}</p>
                                 </div>
                             </div>
+                            </a>
                         </div>
                     </div>
                     {/fragment}
@@ -174,9 +178,20 @@
                                 {#else}
                                 <ul class="list-unstyled mb-0" data-testid="top-tracks-list">
                                     {#for entry in stats.listeningStats.topTracksLast30Days}
-                                    <li class="d-flex justify-content-between mb-1">
-                                        <span class="text-truncate me-2" style="color:#fff;font-size:.82rem;">{entry.name}</span>
-                                        <span style="color:#888;font-size:.78rem;white-space:nowrap;">{entry.totalMinutes} min</span>
+                                    <li class="d-flex align-items-center mb-2">
+                                        {#if entry.imageUrl}
+                                        <img src="{entry.imageUrl}" alt="{entry.name}" width="36" height="36" style="min-width:36px;border-radius:3px;margin-right:10px;object-fit:cover;">
+                                        {#else}
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" style="width:36px;height:36px;min-width:36px;border-radius:3px;margin-right:10px;" aria-label="Album cover placeholder">
+                                            <rect width="36" height="36" fill="#333"/>
+                                            <circle cx="18" cy="18" r="9" fill="#555"/>
+                                            <circle cx="18" cy="18" r="3" fill="#333"/>
+                                        </svg>
+                                        {/if}
+                                        <div style="overflow:hidden;flex:1;">
+                                            <div class="text-truncate" style="color:#fff;font-size:.82rem;">{entry.name}</div>
+                                            <div style="color:#888;font-size:.75rem;white-space:nowrap;">{entry.totalMinutes} min</div>
+                                        </div>
                                     </li>
                                     {/for}
                                 </ul>
@@ -189,9 +204,18 @@
                                 {#else}
                                 <ul class="list-unstyled mb-0" data-testid="top-artists-list">
                                     {#for entry in stats.listeningStats.topArtistsLast30Days}
-                                    <li class="d-flex justify-content-between mb-1">
-                                        <span class="text-truncate me-2" style="color:#fff;font-size:.82rem;">{entry.name}</span>
-                                        <span style="color:#888;font-size:.78rem;white-space:nowrap;">{entry.totalMinutes} min</span>
+                                    <li class="d-flex align-items-center mb-2">
+                                        {#if entry.imageUrl}
+                                        <img src="{entry.imageUrl}" alt="{entry.name}" width="36" height="36" style="min-width:36px;border-radius:50%;margin-right:10px;object-fit:cover;">
+                                        {#else}
+                                        <div style="width:36px;height:36px;min-width:36px;border-radius:50%;margin-right:10px;background:#333;display:flex;align-items:center;justify-content:center;">
+                                            <svg width="18" height="18" fill="#888"><use href="#icon-user-placeholder"/></svg>
+                                        </div>
+                                        {/if}
+                                        <div style="overflow:hidden;flex:1;">
+                                            <div class="text-truncate" style="color:#fff;font-size:.82rem;">{entry.name}</div>
+                                            <div style="color:#888;font-size:.75rem;white-space:nowrap;">{entry.totalMinutes} min</div>
+                                        </div>
                                     </li>
                                     {/for}
                                 </ul>

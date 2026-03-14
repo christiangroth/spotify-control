@@ -134,7 +134,11 @@ class DashboardAdapter(
             }
 
         val listenedMinutes = secondsByTrackId.values.sum() / SECONDS_PER_MINUTE
-        val topTracks = buildTopEntries(secondsByTrackId) { statsTrackMap[it]?.title ?: it }
+        val statsAlbumIds = statsTrackMap.values.mapNotNull { it.albumId }.toSet()
+        val statsAlbumMap = appAlbumRepository.findByAlbumIds(statsAlbumIds).associateBy { it.id.value }
+        val topTracks = buildTopEntries(secondsByTrackId, { statsTrackMap[it]?.title ?: it }) { id ->
+            statsTrackMap[id]?.albumId?.let { statsAlbumMap[it.value]?.imageLink }
+        }
 
         val statsArtistIds = statsTrackMap.values.flatMap { it.allArtistIds() }.toSet()
         val statsArtistMap = appArtistRepository.findByArtistIds(statsArtistIds).associateBy { it.artistId }
@@ -146,7 +150,9 @@ class DashboardAdapter(
                 secondsByArtistId.merge(artistId, seconds, Long::plus)
             }
         }
-        val topArtists = buildTopEntries(secondsByArtistId) { statsArtistMap[it]?.artistName ?: it }
+        val topArtists = buildTopEntries(secondsByArtistId, { statsArtistMap[it]?.artistName ?: it }) { id ->
+            statsArtistMap[id]?.imageLink
+        }
 
         val secondsByGenre = mutableMapOf<String, Long>()
         for ((artistId, seconds) in secondsByArtistId) {
@@ -156,7 +162,7 @@ class DashboardAdapter(
                 secondsByGenre.merge(genre, seconds, Long::plus)
             }
         }
-        val topGenres = buildTopEntries(secondsByGenre) { it }
+        val topGenres = buildTopEntries(secondsByGenre, { it })
 
         return ListeningStats(
             listenedMinutesLast30Days = listenedMinutes,
@@ -166,11 +172,15 @@ class DashboardAdapter(
         )
     }
 
-    private fun buildTopEntries(secondsById: Map<String, Long>, nameResolver: (String) -> String): List<TopEntry> =
+    private fun buildTopEntries(
+        secondsById: Map<String, Long>,
+        nameResolver: (String) -> String,
+        imageResolver: ((String) -> String?)? = null,
+    ): List<TopEntry> =
         secondsById.entries
             .sortedByDescending { it.value }
             .take(topEntriesLimit)
-            .map { (id, seconds) -> TopEntry(name = nameResolver(id), totalMinutes = seconds / SECONDS_PER_MINUTE) }
+            .map { (id, seconds) -> TopEntry(name = nameResolver(id), totalMinutes = seconds / SECONDS_PER_MINUTE, imageUrl = imageResolver?.invoke(id)) }
 
     companion object {
         private const val STATS_DAYS = 30
