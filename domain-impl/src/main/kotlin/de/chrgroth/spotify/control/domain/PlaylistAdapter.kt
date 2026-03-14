@@ -132,13 +132,8 @@ class PlaylistAdapter(
             logger.info { "Deleting checks for deactivated playlist $playlistId (user ${userId.value})" }
             playlistCheckRepository.deleteByPlaylistId(playlistId)
         } else if (syncStatus == PlaylistSyncStatus.ACTIVE) {
-            if (playlistRepository.findByUserIdAndPlaylistId(userId, playlist.spotifyPlaylistId) == null) {
-                logger.info { "Enqueueing SyncPlaylistData for newly active playlist $playlistId (user ${userId.value})" }
-                outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, playlistId))
-            } else {
-                logger.info { "Enqueueing RunPlaylistChecks for re-activated playlist $playlistId (user ${userId.value})" }
-                outboxPort.enqueue(DomainOutboxEvent.RunPlaylistChecks(userId, playlistId))
-            }
+            logger.info { "Enqueueing SyncPlaylistData for activated playlist $playlistId (user ${userId.value})" }
+            outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, playlistId))
         }
         return Unit.right()
     }
