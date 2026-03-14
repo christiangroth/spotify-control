@@ -1,5 +1,7 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
+import de.chrgroth.spotify.control.domain.model.AlbumBrowseItem
+import de.chrgroth.spotify.control.domain.model.TrackBrowseItem
 import de.chrgroth.spotify.control.domain.port.`in`.CatalogBrowserPort
 import io.quarkus.qute.Location
 import io.quarkus.qute.Template
@@ -34,6 +36,8 @@ class CatalogResource {
         return catalogTemplate
             .data("artists", artists)
             .data("filter", filter ?: "")
+            .data("albums", emptyList<AlbumBrowseItem>())
+            .data("tracks", emptyList<TrackBrowseItem>())
     }
 
     @GET
