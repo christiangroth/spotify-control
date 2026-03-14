@@ -74,7 +74,7 @@ class ReEnrichArtistNameBugfixStarterTests {
     @Test
     fun `artist with imageLink and blank name but no users - no events enqueued`() {
         every { appArtistRepository.findWithImageLinkAndBlankName() } returns listOf(
-            AppArtist(artistId = "a1", artistName = "", imageLink = "https://img.example.com/1.jpg"),
+            AppArtist(artistId = "a1", artistName = "", imageLink = "https://img.example.com/1.jpg", lastSync = Clock.System.now()),
         )
         every { userRepository.findAll() } returns emptyList()
 
@@ -86,8 +86,8 @@ class ReEnrichArtistNameBugfixStarterTests {
     @Test
     fun `multiple artists with imageLink and blank name - all enqueued`() {
         every { appArtistRepository.findWithImageLinkAndBlankName() } returns listOf(
-            AppArtist(artistId = "a1", artistName = "", imageLink = "https://img.example.com/1.jpg"),
-            AppArtist(artistId = "a3", artistName = "", imageLink = "https://img.example.com/3.jpg"),
+            AppArtist(artistId = "a1", artistName = "", imageLink = "https://img.example.com/1.jpg", lastSync = Clock.System.now()),
+            AppArtist(artistId = "a3", artistName = "", imageLink = "https://img.example.com/3.jpg", lastSync = Clock.System.now()),
         )
 
         starter.execute()

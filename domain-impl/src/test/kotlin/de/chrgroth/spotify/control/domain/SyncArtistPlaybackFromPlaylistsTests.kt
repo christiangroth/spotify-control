@@ -62,7 +62,7 @@ class SyncArtistPlaybackFromPlaylistsTests {
     private val userId = UserId("user-1")
 
     private fun artist(id: String, status: ArtistPlaybackProcessingStatus) =
-        AppArtist(artistId = id, artistName = "Artist $id", playbackProcessingStatus = status)
+        AppArtist(artistId = id, artistName = "Artist $id", playbackProcessingStatus = status, lastSync = kotlin.time.Instant.fromEpochSeconds(1))
 
     private fun setupActivePlaylistArtists(vararg artistIds: String) {
         every { playlistRepository.findArtistIdsInActivePlaylists() } returns artistIds.toSet()

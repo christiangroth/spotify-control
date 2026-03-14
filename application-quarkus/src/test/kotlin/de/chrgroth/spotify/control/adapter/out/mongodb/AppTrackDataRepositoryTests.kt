@@ -21,6 +21,7 @@ class AppTrackDataRepositoryTests {
         id = TrackId("track-$suffix-${UUID.randomUUID()}"),
         title = "Track $suffix",
         artistId = ArtistId("artist-$suffix"),
+        lastSync = kotlin.time.Instant.fromEpochSeconds(1),
     )
 
     @Test
@@ -76,39 +77,8 @@ class AppTrackDataRepositoryTests {
     }
 
     @Test
-    fun `upsertAll sets albumId and albumName when provided`() {
-        val item = trackData("album-set")
-        appTrackRepository.upsertAll(listOf(item))
-
-        val withAlbum = item.copy(albumId = AlbumId("album-x"), albumName = "Album X")
-        appTrackRepository.upsertAll(listOf(withAlbum))
-
-        val result = appTrackRepository.findByTrackIds(setOf(item.id))
-        assertThat(result).hasSize(1)
-        assertThat(result[0].albumId).isEqualTo(AlbumId("album-x"))
-        assertThat(result[0].albumName).isEqualTo("Album X")
-    }
-
-    @Test
-    fun `upsertAll does not overwrite existing albumId and albumName with null`() {
-        val withAlbum = trackData("album-keep").copy(albumId = AlbumId("album-y"), albumName = "Album Y")
-        appTrackRepository.upsertAll(listOf(withAlbum))
-
-        val stubUpdate = withAlbum.copy(albumId = null, albumName = null)
-        appTrackRepository.upsertAll(listOf(stubUpdate))
-
-        val result = appTrackRepository.findByTrackIds(setOf(withAlbum.id))
-        assertThat(result).hasSize(1)
-        assertThat(result[0].albumId).isEqualTo(AlbumId("album-y"))
-        assertThat(result[0].albumName).isEqualTo("Album Y")
-    }
-
-    @Test
-    fun `updateTrackSyncData updates all sync fields`() {
-        val item = trackData("sync")
-        appTrackRepository.upsertAll(listOf(item))
-
-        val synced = item.copy(
+    fun `upsertAll stores all sync fields`() {
+        val item = trackData("sync").copy(
             albumId = AlbumId("album-1"),
             albumName = "Album One",
             artistName = "Artist Name",
@@ -119,7 +89,7 @@ class AppTrackDataRepositoryTests {
             trackNumber = 5,
             type = "track",
         )
-        appTrackRepository.updateTrackSyncData(synced)
+        appTrackRepository.upsertAll(listOf(item))
 
         val result = appTrackRepository.findByTrackIds(setOf(item.id))
         assertThat(result).hasSize(1)
@@ -132,6 +102,20 @@ class AppTrackDataRepositoryTests {
         assertThat(result[0].durationMs).isEqualTo(210000)
         assertThat(result[0].trackNumber).isEqualTo(5)
         assertThat(result[0].type).isEqualTo("track")
-        assertThat(result[0].lastSync).isNotNull()
+        assertThat(result[0].lastSync).isNotEqualTo(kotlin.time.Instant.DISTANT_PAST)
+    }
+
+    @Test
+    fun `upsertAll overwrites albumId and albumName on re-upsert`() {
+        val withAlbum = trackData("album-set").copy(albumId = AlbumId("album-x"), albumName = "Album X")
+        appTrackRepository.upsertAll(listOf(withAlbum))
+
+        val updated = withAlbum.copy(albumId = AlbumId("album-y"), albumName = "Album Y")
+        appTrackRepository.upsertAll(listOf(updated))
+
+        val result = appTrackRepository.findByTrackIds(setOf(withAlbum.id))
+        assertThat(result).hasSize(1)
+        assertThat(result[0].albumId).isEqualTo(AlbumId("album-y"))
+        assertThat(result[0].albumName).isEqualTo("Album Y")
     }
 }

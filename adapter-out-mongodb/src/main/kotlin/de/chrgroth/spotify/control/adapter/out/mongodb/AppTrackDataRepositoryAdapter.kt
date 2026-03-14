@@ -26,18 +26,25 @@ class AppTrackRepositoryAdapter : AppTrackRepositoryPort {
         if (items.isEmpty()) return
         val collection = appTrackDocumentRepository.mongoCollection()
         val upsertOptions = UpdateOptions().upsert(true)
+        val now = java.time.Instant.now()
         mongoQueryMetrics.timed("app_track.upsertAll") {
             items.forEach { item ->
-                val updates = mutableListOf(
-                    Updates.set("title", item.title),
-                    Updates.set("artistId", item.artistId.value),
-                    Updates.set("additionalArtistIds", item.additionalArtistIds.map { it.value }),
-                )
-                item.albumId?.let { updates.add(Updates.set("albumId", it.value)) }
-                item.albumName?.let { updates.add(Updates.set("albumName", it)) }
                 collection.updateOne(
                     Filters.eq("_id", item.id.value),
-                    Updates.combine(updates),
+                    Updates.combine(
+                        Updates.set("title", item.title),
+                        Updates.set("albumId", item.albumId?.value),
+                        Updates.set("albumName", item.albumName),
+                        Updates.set("artistId", item.artistId.value),
+                        Updates.set("artistName", item.artistName),
+                        Updates.set("additionalArtistIds", item.additionalArtistIds.map { it.value }),
+                        Updates.set("additionalArtistNames", item.additionalArtistNames),
+                        Updates.set("discNumber", item.discNumber),
+                        Updates.set("durationMs", item.durationMs),
+                        Updates.set("trackNumber", item.trackNumber),
+                        Updates.set("type", item.type),
+                        Updates.set("lastSync", now),
+                    ),
                     upsertOptions,
                 )
             }
@@ -68,27 +75,6 @@ class AppTrackRepositoryAdapter : AppTrackRepositoryPort {
             appTrackDocumentRepository.list("albumId = ?1", albumId.value).map { it.toDomain() }
         }
 
-    override fun updateTrackSyncData(track: AppTrack) {
-        val now = java.time.Instant.now()
-        mongoQueryMetrics.timed("app_track.updateTrackSyncData") {
-            appTrackDocumentRepository.mongoCollection().updateOne(
-                Filters.eq("_id", track.id.value),
-                Updates.combine(
-                    Updates.set("albumId", track.albumId?.value),
-                    Updates.set("albumName", track.albumName),
-                    Updates.set("artistName", track.artistName),
-                    Updates.set("additionalArtistIds", track.additionalArtistIds.map { it.value }),
-                    Updates.set("additionalArtistNames", track.additionalArtistNames),
-                    Updates.set("discNumber", track.discNumber),
-                    Updates.set("durationMs", track.durationMs),
-                    Updates.set("trackNumber", track.trackNumber),
-                    Updates.set("type", track.type),
-                    Updates.set("lastSync", now),
-                ),
-            )
-        }
-    }
-
     private fun AppTrackDocument.toDomain() = AppTrack(
         id = TrackId(id),
         title = title,
@@ -102,7 +88,7 @@ class AppTrackRepositoryAdapter : AppTrackRepositoryPort {
         durationMs = durationMs,
         trackNumber = trackNumber,
         type = type,
-        lastSync = lastSync?.toKotlinInstant(),
+        lastSync = lastSync?.toKotlinInstant() ?: kotlin.time.Instant.DISTANT_PAST,
     )
 
     companion object : KLogging()

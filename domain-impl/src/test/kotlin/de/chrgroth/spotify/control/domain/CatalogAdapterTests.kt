@@ -56,17 +56,33 @@ class CatalogAdapterTests {
         useBulkFetchState,
     )
 
-    private val artist1 = AppArtist(artistId = "artist-1", artistName = "Artist One", playbackProcessingStatus = ArtistPlaybackProcessingStatus.UNDECIDED)
-    private val artist2 = AppArtist(artistId = "artist-2", artistName = "Artist Two", playbackProcessingStatus = ArtistPlaybackProcessingStatus.UNDECIDED)
-    private val track1 = AppTrack(id = TrackId("track-1"), title = "Track One", artistId = ArtistId("artist-1"))
-    private val track2 = AppTrack(id = TrackId("track-2"), title = "Track Two", artistId = ArtistId("artist-2"))
+    private val syncTimestamp = Instant.fromEpochSeconds(1)
+    private val artist1 = AppArtist(
+        artistId = "artist-1", artistName = "Artist One",
+        playbackProcessingStatus = ArtistPlaybackProcessingStatus.UNDECIDED, lastSync = syncTimestamp,
+    )
+    private val artist2 = AppArtist(
+        artistId = "artist-2", artistName = "Artist Two",
+        playbackProcessingStatus = ArtistPlaybackProcessingStatus.UNDECIDED, lastSync = syncTimestamp,
+    )
+    private val track1 = AppTrack(id = TrackId("track-1"), title = "Track One", artistId = ArtistId("artist-1"), lastSync = syncTimestamp)
+    private val track2 = AppTrack(id = TrackId("track-2"), title = "Track Two", artistId = ArtistId("artist-2"), lastSync = syncTimestamp)
 
     private val userId = UserId("user-1")
     private val accessToken = AccessToken("token")
-    private val album1 = AppAlbum(id = AlbumId("album-1"), title = "Album One", artistId = ArtistId("artist-1"), artistName = "Artist One")
-    private val trackWithAlbum1 = AppTrack(id = TrackId("track-1"), title = "Track One", albumId = AlbumId("album-1"), artistId = ArtistId("artist-1"))
-    private val trackWithAlbum2 = AppTrack(id = TrackId("track-2"), title = "Track Two", albumId = AlbumId("album-1"), artistId = ArtistId("artist-1"))
-    private val trackWithAlbum3 = AppTrack(id = TrackId("track-3"), title = "Track Three", albumId = AlbumId("album-2"), artistId = ArtistId("artist-2"))
+    private val album1 = AppAlbum(id = AlbumId("album-1"), title = "Album One", artistId = ArtistId("artist-1"), artistName = "Artist One", lastSync = syncTimestamp)
+    private val trackWithAlbum1 = AppTrack(
+        id = TrackId("track-1"), title = "Track One",
+        albumId = AlbumId("album-1"), artistId = ArtistId("artist-1"), lastSync = syncTimestamp,
+    )
+    private val trackWithAlbum2 = AppTrack(
+        id = TrackId("track-2"), title = "Track Two",
+        albumId = AlbumId("album-1"), artistId = ArtistId("artist-1"), lastSync = syncTimestamp,
+    )
+    private val trackWithAlbum3 = AppTrack(
+        id = TrackId("track-3"), title = "Track Three",
+        albumId = AlbumId("album-2"), artistId = ArtistId("artist-2"), lastSync = syncTimestamp,
+    )
     private val syncResult1 = TrackSyncResult(track = trackWithAlbum1, album = album1)
     private val syncResult2 = TrackSyncResult(track = trackWithAlbum2, album = album1)
 
@@ -267,7 +283,10 @@ class CatalogAdapterTests {
 
     @Test
     fun `handle SyncMissingTracks stores all album tracks even when only some were requested`() {
-        val extraTrack = AppTrack(id = TrackId("track-99"), title = "Extra Track", albumId = AlbumId("album-1"), artistId = ArtistId("artist-1"))
+        val extraTrack = AppTrack(
+            id = TrackId("track-99"), title = "Extra Track",
+            albumId = AlbumId("album-1"), artistId = ArtistId("artist-1"), lastSync = syncTimestamp,
+        )
         val extraResult = TrackSyncResult(track = extraTrack, album = album1)
         every { userRepository.findAll() } returns listOf(buildUser())
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
@@ -289,7 +308,7 @@ class CatalogAdapterTests {
 
     @Test
     fun `handle SyncMissingTracks uses direct endpoint when tracks have no albumId`() {
-        val trackWithoutAlbum = AppTrack(id = TrackId("track-1"), title = "Track One", artistId = ArtistId("artist-1"))
+        val trackWithoutAlbum = AppTrack(id = TrackId("track-1"), title = "Track One", artistId = ArtistId("artist-1"), lastSync = syncTimestamp)
         val directResult = TrackSyncResult(track = trackWithAlbum1, album = album1)
         every { userRepository.findAll() } returns listOf(buildUser())
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
@@ -311,7 +330,10 @@ class CatalogAdapterTests {
 
     @Test
     fun `handle SyncMissingTracks falls back to direct endpoint for tracks not returned by album`() {
-        val missingTrack = AppTrack(id = TrackId("track-missing"), title = "Missing", albumId = AlbumId("album-1"), artistId = ArtistId("artist-1"))
+        val missingTrack = AppTrack(
+            id = TrackId("track-missing"), title = "Missing",
+            albumId = AlbumId("album-1"), artistId = ArtistId("artist-1"), lastSync = syncTimestamp,
+        )
         val missingDirectResult = TrackSyncResult(
             track = missingTrack.copy(albumId = AlbumId("album-1")),
             album = album1,
@@ -370,7 +392,7 @@ class CatalogAdapterTests {
 
     @Test
     fun `handle SyncMissingTracks resets enqueued for album tracks and no-album tracks when album endpoint fails`() {
-        val trackWithoutAlbum = AppTrack(id = TrackId("track-2"), title = "Track Two", artistId = ArtistId("artist-1"))
+        val trackWithoutAlbum = AppTrack(id = TrackId("track-2"), title = "Track Two", artistId = ArtistId("artist-1"), lastSync = syncTimestamp)
         every { userRepository.findAll() } returns listOf(buildUser())
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { appTrackRepository.findByTrackIds(setOf(TrackId("track-1"), TrackId("track-2"))) } returns
@@ -386,8 +408,8 @@ class CatalogAdapterTests {
 
     @Test
     fun `handle SyncMissingTracks resets enqueued for tracks not returned by direct endpoint`() {
-        val trackWithoutAlbum1 = AppTrack(id = TrackId("track-1"), title = "Track One", artistId = ArtistId("artist-1"))
-        val trackWithoutAlbum2 = AppTrack(id = TrackId("track-2"), title = "Track Two", artistId = ArtistId("artist-1"))
+        val trackWithoutAlbum1 = AppTrack(id = TrackId("track-1"), title = "Track One", artistId = ArtistId("artist-1"), lastSync = syncTimestamp)
+        val trackWithoutAlbum2 = AppTrack(id = TrackId("track-2"), title = "Track Two", artistId = ArtistId("artist-1"), lastSync = syncTimestamp)
         val directResult = TrackSyncResult(track = trackWithAlbum1, album = album1)
         every { userRepository.findAll() } returns listOf(buildUser())
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
@@ -540,7 +562,7 @@ class CatalogAdapterTests {
 
     @Test
     fun `handle SyncMissingTracks disables bulk fetch when bulk track endpoint is gone`() {
-        val trackWithoutAlbum = AppTrack(id = TrackId("track-1"), title = "Track One", artistId = ArtistId("artist-1"))
+        val trackWithoutAlbum = AppTrack(id = TrackId("track-1"), title = "Track One", artistId = ArtistId("artist-1"), lastSync = syncTimestamp)
         every { userRepository.findAll() } returns listOf(buildUser())
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { appTrackRepository.findByTrackIds(setOf(TrackId("track-1"))) } returns listOf(trackWithoutAlbum)
@@ -555,7 +577,7 @@ class CatalogAdapterTests {
 
     @Test
     fun `handle SyncMissingTracks does not disable bulk fetch on generic error`() {
-        val trackWithoutAlbum = AppTrack(id = TrackId("track-1"), title = "Track One", artistId = ArtistId("artist-1"))
+        val trackWithoutAlbum = AppTrack(id = TrackId("track-1"), title = "Track One", artistId = ArtistId("artist-1"), lastSync = syncTimestamp)
         every { userRepository.findAll() } returns listOf(buildUser())
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { appTrackRepository.findByTrackIds(setOf(TrackId("track-1"))) } returns listOf(trackWithoutAlbum)
@@ -570,7 +592,7 @@ class CatalogAdapterTests {
 
     @Test
     fun `handle SyncMissingTracks does not disable bulk fetch when bulk track endpoint is rate limited`() {
-        val trackWithoutAlbum = AppTrack(id = TrackId("track-1"), title = "Track One", artistId = ArtistId("artist-1"))
+        val trackWithoutAlbum = AppTrack(id = TrackId("track-1"), title = "Track One", artistId = ArtistId("artist-1"), lastSync = syncTimestamp)
         val rateLimitError = de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError(java.time.Duration.ofSeconds(30))
         every { userRepository.findAll() } returns listOf(buildUser())
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken

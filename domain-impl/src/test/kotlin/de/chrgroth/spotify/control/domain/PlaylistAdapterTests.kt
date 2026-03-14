@@ -13,8 +13,6 @@ import de.chrgroth.spotify.control.domain.model.SpotifyPlaylistItem
 import de.chrgroth.spotify.control.domain.model.User
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
-import de.chrgroth.spotify.control.domain.model.AppArtist
-import de.chrgroth.spotify.control.domain.model.AppTrack
 import de.chrgroth.spotify.control.domain.port.out.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
@@ -436,7 +434,7 @@ class PlaylistAdapterTests {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { spotifyPlaylist.getPlaylistTracks(userId, accessToken, "p1") } returns playlist.right()
         every { playlistRepository.save(userId, playlist) } just runs
-        every { appSyncService.upsertAndAddToSyncPool(any(), any(), any()) } just runs
+        every { appSyncService.addToSyncPool(any(), any(), any()) } just runs
         every { outboxPort.enqueue(any<DomainOutboxEvent.RunPlaylistChecks>()) } just runs
 
         val result = adapter.syncPlaylistData(userId, "p1")
@@ -453,23 +451,15 @@ class PlaylistAdapterTests {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { spotifyPlaylist.getPlaylistTracks(userId, accessToken, "p1") } returns playlist.right()
         every { playlistRepository.save(userId, playlist) } just runs
-        every { appSyncService.upsertAndAddToSyncPool(any(), any(), any()) } just runs
+        every { appSyncService.addToSyncPool(any(), any(), any()) } just runs
         every { outboxPort.enqueue(any<DomainOutboxEvent.RunPlaylistChecks>()) } just runs
 
         adapter.syncPlaylistData(userId, "p1")
 
         verify {
-            appSyncService.upsertAndAddToSyncPool(
-                match { artists: List<AppArtist> ->
-                    artists.size == 1 && artists[0].artistId == "artist-1" && artists[0].artistName == "Artist One"
-                },
-                match { tracks: List<AppTrack> ->
-                    tracks.size == 1 &&
-                        tracks[0].id.value == "track-1" &&
-                        tracks[0].title == "Track One" &&
-                        tracks[0].artistId.value == "artist-1" &&
-                        tracks[0].additionalArtistIds.isEmpty()
-                },
+            appSyncService.addToSyncPool(
+                match { artistIds: List<String> -> artistIds == listOf("artist-1") },
+                match { trackIds: List<String> -> trackIds == listOf("track-1") },
                 eq(true),
             )
         }

@@ -7,13 +7,9 @@ import de.chrgroth.outbox.OutboxTaskResult
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.PlaylistSyncError
 import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
-import de.chrgroth.spotify.control.domain.model.AppArtist
-import de.chrgroth.spotify.control.domain.model.AppTrack
-import de.chrgroth.spotify.control.domain.model.ArtistId
 import de.chrgroth.spotify.control.domain.model.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.PlaylistType
-import de.chrgroth.spotify.control.domain.model.TrackId
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.PlaylistPort
@@ -97,25 +93,9 @@ class PlaylistAdapter(
             logger.info { "Synced ${playlist.tracks.size} track(s) for playlist $playlistId (user ${userId.value})" }
             playlistRepository.save(userId, playlist)
 
-            val artistStubs = playlist.tracks
-                .flatMap { track -> track.artistIds.zip(track.artistNames) }
-                .distinctBy { (artistId, _) -> artistId }
-                .map { (artistId, artistName) -> AppArtist(artistId = artistId, artistName = artistName) }
-
-            val trackStubs = playlist.tracks.mapNotNull { track ->
-                val artistId = track.artistIds.firstOrNull() ?: run {
-                    logger.warn { "Skipping track ${track.trackId} in playlist $playlistId: no artist data available" }
-                    return@mapNotNull null
-                }
-                AppTrack(
-                    id = TrackId(track.trackId),
-                    title = track.trackName,
-                    artistId = ArtistId(artistId),
-                    additionalArtistIds = track.artistIds.drop(1).map { ArtistId(it) },
-                )
-            }
-
-            appSyncService.upsertAndAddToSyncPool(artistStubs, trackStubs, forceSync = true)
+            val artistIds = playlist.tracks.flatMap { it.artistIds }.distinct()
+            val trackIds = playlist.tracks.map { it.trackId }.distinct()
+            appSyncService.addToSyncPool(artistIds, trackIds, forceSync = true)
             outboxPort.enqueue(DomainOutboxEvent.RunPlaylistChecks(userId, playlistId))
         }
     }

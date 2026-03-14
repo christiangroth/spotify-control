@@ -90,7 +90,7 @@ class CatalogAdapter(
 
     override fun syncArtistDetails(artistId: String, userId: UserId): Either<DomainError, Unit> {
         val existing = appArtistRepository.findByArtistIds(setOf(artistId)).firstOrNull()
-        if (existing?.lastSync != null && existing.artistName.isNotBlank()) {
+        if (existing != null) {
             logger.debug { "Artist $artistId already synced, skipping" }
             return Unit.right()
         }
@@ -99,7 +99,7 @@ class CatalogAdapter(
         return spotifyCatalog.getArtist(userId, accessToken, artistId)
             .flatMap { detail ->
                 if (detail != null) {
-                    appArtistRepository.updateSyncData(detail.artistId, detail.artistName, detail.genre, detail.additionalGenres, detail.imageLink, detail.type)
+                    appArtistRepository.upsertAll(listOf(detail))
                     logger.info { "Updated sync data for artist $artistId: genre=${detail.genre}, additionalGenres=${detail.additionalGenres}" }
                 } else {
                     logger.warn { "No data returned from Spotify for artist $artistId" }
@@ -110,7 +110,7 @@ class CatalogAdapter(
 
     override fun syncTrackDetails(trackId: String, userId: UserId): Either<DomainError, Unit> {
         val existing = appTrackRepository.findByTrackIds(setOf(TrackId(trackId))).firstOrNull()
-        if (existing?.lastSync != null) {
+        if (existing != null) {
             logger.debug { "Track $trackId already synced, skipping" }
             return Unit.right()
         }
@@ -119,7 +119,7 @@ class CatalogAdapter(
         return spotifyCatalog.getTrack(userId, accessToken, trackId)
             .flatMap { result ->
                 if (result != null) {
-                    appTrackRepository.updateTrackSyncData(result.track)
+                    appTrackRepository.upsertAll(listOf(result.track))
                     appAlbumRepository.upsertAll(listOf(result.album))
                     val allArtistIds = (listOf(result.track.artistId) + result.track.additionalArtistIds)
                         .map { it.value }
