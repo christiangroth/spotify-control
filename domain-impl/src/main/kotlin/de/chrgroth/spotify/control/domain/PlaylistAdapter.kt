@@ -12,6 +12,7 @@ import de.chrgroth.spotify.control.domain.model.AppTrack
 import de.chrgroth.spotify.control.domain.model.ArtistId
 import de.chrgroth.spotify.control.domain.model.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.PlaylistSyncStatus
+import de.chrgroth.spotify.control.domain.model.PlaylistType
 import de.chrgroth.spotify.control.domain.model.TrackId
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
@@ -63,6 +64,7 @@ class PlaylistAdapter(
                     lastSnapshotIdSyncTime = if (existing == null || existing.snapshotId != item.snapshotId) now else existing.lastSnapshotIdSyncTime,
                     name = item.name,
                     syncStatus = existing?.syncStatus ?: PlaylistSyncStatus.PASSIVE,
+                    type = existing?.type,
                 )
             }
             logger.info { "Synced ${updatedPlaylists.size} playlist(s) for user ${userId.value}" }
@@ -129,7 +131,17 @@ class PlaylistAdapter(
             return PlaylistSyncError.PLAYLIST_NOT_FOUND.left()
         }
         val updatedPlaylists = playlists.map {
-            if (it.spotifyPlaylistId == playlistId) it.copy(syncStatus = syncStatus) else it
+            if (it.spotifyPlaylistId == playlistId) {
+                val newType = when {
+                    syncStatus == PlaylistSyncStatus.PASSIVE -> null
+                    it.type != null -> it.type
+                    it.name.matches(YEAR_NAME_REGEX) -> PlaylistType.YEAR
+                    else -> PlaylistType.UNKNOWN
+                }
+                it.copy(syncStatus = syncStatus, type = newType)
+            } else {
+                it
+            }
         }
         logger.info { "Updated sync status for playlist $playlistId (user ${userId.value}) to $syncStatus" }
         playlistRepository.saveAll(userId, updatedPlaylists)
@@ -141,6 +153,43 @@ class PlaylistAdapter(
             outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, playlistId))
         }
         return Unit.right()
+    }
+
+    override fun updatePlaylistType(userId: UserId, playlistId: String, type: PlaylistType): Either<DomainError, Unit> {
+        val validationError = validatePlaylistTypeUpdate(userId, playlistId, type)
+        if (validationError != null) return validationError.left()
+        val playlists = playlistRepository.findByUserId(userId)
+        val updatedPlaylists = playlists.map {
+            if (it.spotifyPlaylistId == playlistId) it.copy(type = type) else it
+        }
+        logger.info { "Updated type for playlist $playlistId (user ${userId.value}) to $type" }
+        playlistRepository.saveAll(userId, updatedPlaylists)
+        dashboardRefresh.notifyUserPlaylistMetadata(userId)
+        return Unit.right()
+    }
+
+    private fun validatePlaylistTypeUpdate(userId: UserId, playlistId: String, type: PlaylistType): PlaylistSyncError? {
+        userRepository.findById(userId) ?: run {
+            logger.warn { "User not found for playlist type update: ${userId.value}" }
+            return PlaylistSyncError.PLAYLIST_NOT_FOUND
+        }
+        val playlists = playlistRepository.findByUserId(userId)
+        val playlist = playlists.find { it.spotifyPlaylistId == playlistId }
+        return when {
+            playlist == null -> {
+                logger.warn { "Playlist $playlistId not found for user ${userId.value}" }
+                PlaylistSyncError.PLAYLIST_NOT_FOUND
+            }
+            playlist.syncStatus != PlaylistSyncStatus.ACTIVE -> {
+                logger.warn { "Playlist $playlistId is not active for user ${userId.value}, cannot set type" }
+                PlaylistSyncError.PLAYLIST_NOT_ACTIVE
+            }
+            type == PlaylistType.ALL && playlists.any { it.type == PlaylistType.ALL && it.spotifyPlaylistId != playlistId } -> {
+                logger.warn { "Playlist type ALL already assigned to another playlist for user ${userId.value}" }
+                PlaylistSyncError.PLAYLIST_TYPE_CONFLICT
+            }
+            else -> null
+        }
     }
 
     override fun enqueueSyncPlaylistData(userId: UserId, playlistId: String): Either<DomainError, Unit> {
@@ -201,5 +250,7 @@ class PlaylistAdapter(
         OutboxTaskResult.Failed("Unexpected error in sync: ${e.message}", e)
     }
 
-    companion object : KLogging()
+    companion object : KLogging() {
+        private val YEAR_NAME_REGEX = Regex("\\d{4}")
+    }
 }

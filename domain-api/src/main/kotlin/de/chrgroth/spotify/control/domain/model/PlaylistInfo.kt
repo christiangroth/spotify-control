@@ -8,4 +8,5 @@ data class PlaylistInfo(
     val lastSnapshotIdSyncTime: Instant,
     val name: String,
     val syncStatus: PlaylistSyncStatus,
+    val type: PlaylistType? = null,
 )

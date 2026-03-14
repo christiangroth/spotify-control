@@ -3,6 +3,7 @@ package de.chrgroth.spotify.control.adapter.`in`.web
 import de.chrgroth.spotify.control.domain.error.PlaylistSyncError
 import de.chrgroth.spotify.control.domain.model.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.PlaylistSyncStatus
+import de.chrgroth.spotify.control.domain.model.PlaylistType
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.PlaylistPort
 import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
@@ -74,6 +75,7 @@ class PlaylistSettingsResource {
       .toJavaInstant()
       .atZone(ZoneId.systemDefault())
       .format(GERMAN_DATE_TIME_FORMATTER)
+    val typeLabel: String? get() = playlist.type?.name
 
     companion object {
       private val GERMAN_DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm", Locale.GERMAN)
@@ -95,7 +97,10 @@ class PlaylistSettingsResource {
         .entity(mapOf("error" to "Invalid sync status: ${request.syncStatus}"))
         .build()
     return when (playlist.updateSyncStatus(userId, playlistId, syncStatus).isRight()) {
-      true -> Response.ok(mapOf("syncStatus" to syncStatus.name)).build()
+      true -> {
+        val updated = playlistRepository.findByUserId(userId).find { it.spotifyPlaylistId == playlistId }
+        Response.ok(mapOf("syncStatus" to syncStatus.name, "type" to updated?.type?.name)).build()
+      }
       false -> Response.status(Response.Status.NOT_FOUND)
         .entity(mapOf("error" to "Playlist not found"))
         .build()
@@ -103,6 +108,40 @@ class PlaylistSettingsResource {
   }
 
   data class SyncStatusRequest(val syncStatus: String = "")
+
+  @PUT
+  @Authenticated
+  @Path("/{playlistId}/type")
+  @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON)
+  fun updatePlaylistType(
+    @PathParam("playlistId") playlistId: String,
+    request: PlaylistTypeRequest,
+  ): Response {
+    val userId = UserId(securityIdentity.principal.name)
+    val type = PlaylistType.entries.find { it.name == request.type }
+      ?: return Response.status(Response.Status.BAD_REQUEST)
+        .entity(mapOf("error" to "Invalid playlist type: ${request.type}"))
+        .build()
+    return playlist.updatePlaylistType(userId, playlistId, type).fold(
+      ifLeft = { error ->
+        when (error) {
+          PlaylistSyncError.PLAYLIST_TYPE_CONFLICT -> Response.status(Response.Status.CONFLICT)
+            .entity(mapOf("error" to "Only one playlist of type ALL is allowed"))
+            .build()
+          PlaylistSyncError.PLAYLIST_NOT_ACTIVE -> Response.status(Response.Status.BAD_REQUEST)
+            .entity(mapOf("error" to "Playlist type can only be set for active playlists"))
+            .build()
+          else -> Response.status(Response.Status.NOT_FOUND)
+            .entity(mapOf("error" to "Playlist not found"))
+            .build()
+        }
+      },
+      ifRight = { Response.ok(mapOf("type" to type.name)).build() },
+    )
+  }
+
+  data class PlaylistTypeRequest(val type: String = "")
 
   @POST
   @Authenticated

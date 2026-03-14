@@ -15,4 +15,5 @@ class PlaylistMetadataDocument {
   lateinit var lastSnapshotIdSyncTime: Instant
   lateinit var name: String
   lateinit var syncStatus: String
+  var type: String? = null
 }
