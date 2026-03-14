@@ -4,6 +4,7 @@ import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
 import de.chrgroth.spotify.control.domain.port.`in`.CatalogPort
 import de.chrgroth.spotify.control.domain.port.`in`.PlaybackPort
+import de.chrgroth.spotify.control.domain.port.`in`.PlaylistCheckPort
 import de.chrgroth.spotify.control.domain.port.`in`.PlaylistPort
 import de.chrgroth.spotify.control.domain.port.`in`.UserProfilePort
 import de.chrgroth.spotify.control.domain.port.out.OutboxTaskCountObserver
@@ -21,6 +22,7 @@ class DomainOutboxTaskDispatcher(
     private val playback: PlaybackPort,
     private val catalog: CatalogPort,
     private val playlist: PlaylistPort,
+    private val playlistCheck: PlaylistCheckPort,
     private val userProfile: UserProfilePort,
     @param:Any private val outboxTaskCountObservers: Instance<OutboxTaskCountObserver>,
 ) : OutboxTaskDispatcher {
@@ -39,6 +41,7 @@ class DomainOutboxTaskDispatcher(
         }
     }
 
+  @Suppress("CyclomaticComplexMethod")
   private fun dispatchEvent(event: DomainOutboxEvent): OutboxTaskResult =
       when (event) {
       is DomainOutboxEvent.FetchCurrentlyPlaying -> playback.handle(event)
@@ -54,5 +57,6 @@ class DomainOutboxTaskDispatcher(
       is DomainOutboxEvent.SyncMissingTracks -> catalog.handle(event)
       is DomainOutboxEvent.SyncMissingAlbums -> catalog.handle(event)
       is DomainOutboxEvent.ResyncCatalog -> catalog.handle(event)
+      is DomainOutboxEvent.RunPlaylistChecks -> playlistCheck.handle(event)
     }
 }

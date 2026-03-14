@@ -223,6 +223,27 @@ sealed interface DomainOutboxEvent : OutboxEvent {
         }
     }
 
+    /**
+     * Runs all playlist checks for a given user's playlist.
+     * Triggered when playlist data changes (snapshotId changed).
+     * payload = "${userId.value}:$playlistId"
+     */
+    data class RunPlaylistChecks(val userId: UserId, val playlistId: String) : DomainOutboxEvent {
+        override val key = KEY
+        override fun deduplicationKey() = "$KEY:${userId.value}:$playlistId"
+        override val partition = DomainOutboxPartition.Domain
+        override fun toPayload() = "${userId.value}:$playlistId"
+
+        companion object {
+            const val KEY = "RunPlaylistChecks"
+            fun fromPayload(payload: String): RunPlaylistChecks {
+                val colonIndex = payload.indexOf(':')
+                require(colonIndex > 0 && colonIndex < payload.length - 1) { "Invalid RunPlaylistChecks payload: $payload" }
+                return RunPlaylistChecks(UserId(payload.substring(0, colonIndex)), payload.substring(colonIndex + 1))
+            }
+        }
+    }
+
     companion object {
         @Suppress("CyclomaticComplexMethod")
         fun fromKey(key: String, payload: String): DomainOutboxEvent = when (key) {
@@ -239,6 +260,7 @@ sealed interface DomainOutboxEvent : OutboxEvent {
             SyncMissingTracks.KEY -> SyncMissingTracks.fromPayload(payload)
             SyncMissingAlbums.KEY -> SyncMissingAlbums.fromPayload(payload)
             ResyncCatalog.KEY -> ResyncCatalog()
+            RunPlaylistChecks.KEY -> RunPlaylistChecks.fromPayload(payload)
             else -> throw IllegalArgumentException("Unknown outbox event type: $key")
         }
     }

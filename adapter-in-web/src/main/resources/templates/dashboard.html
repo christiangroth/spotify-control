@@ -49,7 +49,23 @@
             </div>
 
             <div class="row g-3 mb-4">
-                <div id="snippet-playlist-metadata" class="col-12 col-sm-6 col-lg-6">
+                <div id="snippet-playlist-checks" class="col-6 col-sm-3">
+                    {#fragment id="snippet_playlist_checks"}
+                    <a href="/playlist-checks" class="text-decoration-none" data-testid="playlist-checks-link" aria-label="View playlist checks">
+                    <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                        <div class="card-body">
+                            <p class="card-subtitle mb-1" style="color:#888;font-size:.8rem;">Playlist checks</p>
+                            {#if stats.playlistCheckStats.allSucceeded}
+                            <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);" data-testid="playlist-checks-count">{stats.playlistCheckStats.succeededChecks} / {stats.playlistCheckStats.totalChecks}</p>
+                            {#else}
+                            <p class="card-text fs-3 fw-bold mb-0" style="color:#dc3545;" data-testid="playlist-checks-count">{stats.playlistCheckStats.succeededChecks} / {stats.playlistCheckStats.totalChecks}</p>
+                            {/if}
+                        </div>
+                    </div>
+                    </a>
+                    {/fragment}
+                </div>
+                <div id="snippet-playlist-metadata" class="col-6 col-sm-3">
                     {#fragment id="snippet_playlist_metadata"}
                     <a href="/settings/playlist" class="text-decoration-none" data-testid="playlist-settings-link" aria-label="View playlist settings">
                     <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
@@ -211,6 +227,8 @@
                 fadeUpdate('snippet-listening-stats', '/dashboard/snippets/listening-stats');
             } else if (event.data === 'refresh-playlist-metadata') {
                 fadeUpdate('snippet-playlist-metadata', '/dashboard/snippets/playlist-metadata');
+            } else if (event.data === 'refresh-playlist-checks') {
+                fadeUpdate('snippet-playlist-checks', '/dashboard/snippets/playlist-checks');
             }
         });
     </script>

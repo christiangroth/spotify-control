@@ -114,6 +114,7 @@ class PlaylistAdapter(
             }
 
             appSyncService.upsertAndAddToSyncPool(artistStubs, trackStubs)
+            outboxPort.enqueue(DomainOutboxEvent.RunPlaylistChecks(userId, playlistId))
         }
     }
 

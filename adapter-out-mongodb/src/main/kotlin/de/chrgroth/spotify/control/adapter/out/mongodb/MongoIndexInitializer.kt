@@ -36,6 +36,9 @@ class MongoIndexInitializer {
     @Inject
     lateinit var playlistMetadataDocumentRepository: PlaylistMetadataDocumentRepository
 
+    @Inject
+    lateinit var appPlaylistCheckDocumentRepository: AppPlaylistCheckDocumentRepository
+
     fun onStartup(@Observes event: StartupEvent) {
         logger.info { "Ensuring MongoDB indexes..." }
 
@@ -82,6 +85,16 @@ class MongoIndexInitializer {
         playlistMetadataDocumentRepository.mongoCollection().createIndex(
             Document("spotifyUserId", 1),
             IndexOptions().name("spotify_playlist_metadata_spotifyUserId_1"),
+        )
+
+        appPlaylistCheckDocumentRepository.mongoCollection().createIndex(
+            Document("playlistId", 1),
+            IndexOptions().name("app_playlist_check_playlistId_1"),
+        )
+
+        appPlaylistCheckDocumentRepository.mongoCollection().createIndex(
+            Document("succeeded", 1),
+            IndexOptions().name("app_playlist_check_succeeded_1"),
         )
 
         logger.info { "MongoDB indexes ready." }

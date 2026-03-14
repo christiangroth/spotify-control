@@ -1,0 +1,52 @@
+{#include layout.html}
+    {#title}SpCtl – Playlist Checks{/title}
+    {#content}
+    <div class="container-fluid py-4 px-3 px-md-4">
+
+        <h1 class="mb-4 fs-4 fw-semibold">Playlist Checks</h1>
+
+        {#if rows.isEmpty()}
+        <p class="text-secondary">No playlist check results available yet. Checks run automatically after playlist data is synced.</p>
+        {#else}
+        <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle" style="border-color:#333;">
+                <thead>
+                    <tr style="color:#888;font-size:.8rem;border-color:#333;">
+                        <th style="border-color:#333;">Playlist</th>
+                        <th style="border-color:#333;">Check Date</th>
+                        <th style="width:6rem;border-color:#333;">Status</th>
+                        <th style="border-color:#333;">Violations</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {#for row in rows}
+                    <tr style="border-color:#333;">
+                        <td style="border-color:#333;color:#fff;font-size:.9rem;">{row.playlistName}</td>
+                        <td style="border-color:#333;color:#888;font-size:.82rem;">{row.checkDateFormatted}</td>
+                        <td style="border-color:#333;">
+                            {#if row.check.succeeded}
+                            <span style="color:var(--spotify-green);font-size:.82rem;font-weight:600;">Passed</span>
+                            {#else}
+                            <span style="color:#dc3545;font-size:.82rem;font-weight:600;">Failed</span>
+                            {/if}
+                        </td>
+                        <td style="border-color:#333;color:#888;font-size:.82rem;">
+                            {#if row.check.violations.isEmpty()}
+                            <span style="color:#888;">—</span>
+                            {#else}
+                            <ul class="list-unstyled mb-0">
+                                {#for violation in row.check.violations}
+                                <li>{violation}</li>
+                                {/for}
+                            </ul>
+                            {/if}
+                        </td>
+                    </tr>
+                    {/for}
+                </tbody>
+            </table>
+        </div>
+        {/if}
+    </div>
+    {/content}
+{/include}

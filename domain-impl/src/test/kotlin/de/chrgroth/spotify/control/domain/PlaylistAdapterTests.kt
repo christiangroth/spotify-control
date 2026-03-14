@@ -437,6 +437,7 @@ class PlaylistAdapterTests {
         every { spotifyPlaylist.getPlaylistTracks(userId, accessToken, "p1") } returns playlist.right()
         every { playlistRepository.save(userId, playlist) } just runs
         every { appSyncService.upsertAndAddToSyncPool(any(), any()) } just runs
+        every { outboxPort.enqueue(any<DomainOutboxEvent.RunPlaylistChecks>()) } just runs
 
         val result = adapter.syncPlaylistData(userId, "p1")
 
@@ -453,6 +454,7 @@ class PlaylistAdapterTests {
         every { spotifyPlaylist.getPlaylistTracks(userId, accessToken, "p1") } returns playlist.right()
         every { playlistRepository.save(userId, playlist) } just runs
         every { appSyncService.upsertAndAddToSyncPool(any(), any()) } just runs
+        every { outboxPort.enqueue(any<DomainOutboxEvent.RunPlaylistChecks>()) } just runs
 
         adapter.syncPlaylistData(userId, "p1")
 

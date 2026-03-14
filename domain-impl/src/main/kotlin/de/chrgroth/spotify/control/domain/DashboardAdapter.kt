@@ -4,6 +4,7 @@ import de.chrgroth.spotify.control.domain.model.DashboardStats
 import de.chrgroth.spotify.control.domain.model.DayCount
 import de.chrgroth.spotify.control.domain.model.AppTrack
 import de.chrgroth.spotify.control.domain.model.ListeningStats
+import de.chrgroth.spotify.control.domain.model.PlaylistCheckStats
 import de.chrgroth.spotify.control.domain.model.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.RecentlyPlayedItem
 import de.chrgroth.spotify.control.domain.model.TopEntry
@@ -13,6 +14,7 @@ import de.chrgroth.spotify.control.domain.port.`in`.CatalogBrowserPort
 import de.chrgroth.spotify.control.domain.port.`in`.DashboardPort
 import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppPlaybackRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.AppPlaylistCheckRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
@@ -33,6 +35,7 @@ class DashboardAdapter(
     private val appArtistRepository: AppArtistRepositoryPort,
     private val catalogBrowser: CatalogBrowserPort,
     private val playlistRepository: PlaylistRepositoryPort,
+    private val playlistCheckRepository: AppPlaylistCheckRepositoryPort,
     @param:ConfigProperty(name = "dashboard.recently-played.limit")
     private val recentlyPlayedLimit: Int,
     @param:ConfigProperty(name = "dashboard.listening-stats.top-entries-limit")
@@ -64,6 +67,14 @@ class DashboardAdapter(
         val totalPlaylists = playlists.size.toLong()
         val syncedPlaylists = playlists.count { it.syncStatus == PlaylistSyncStatus.ACTIVE }.toLong()
 
+        val totalChecks = playlistCheckRepository.countAll()
+        val succeededChecks = playlistCheckRepository.countSucceeded()
+        val playlistCheckStats = PlaylistCheckStats(
+            succeededChecks = succeededChecks,
+            totalChecks = totalChecks,
+            allSucceeded = totalChecks == 0L || succeededChecks == totalChecks,
+        )
+
         val recentPlaybackItems = appPlaybackRepository.findRecentlyPlayed(userId, recentlyPlayedLimit)
         val trackIds = recentPlaybackItems.map { it.trackId }.toSet()
         val trackMap = appTrackRepository.findByTrackIds(trackIds.map { TrackId(it) }.toSet()).associateBy { it.id.value }
@@ -90,6 +101,7 @@ class DashboardAdapter(
         return DashboardStats(
             syncedPlaylists = syncedPlaylists,
             totalPlaylists = totalPlaylists,
+            playlistCheckStats = playlistCheckStats,
             totalPlaybackEvents = total,
             playbackEventsLast30Days = last30Days,
             playbackEventsPerDay = perDay,
