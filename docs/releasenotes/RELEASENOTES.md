@@ -1,3 +1,12 @@
+# 0.59.4 (2026.03.14)
+
+## Bugfixes / Chore
+* fix-dashboard-recently-played-album: Dashboard recently played now shows album name and cover art.
+
+
+
+---
+
 # 0.59.3 (2026.03.14)
 
 ## Bugfixes / Chore
