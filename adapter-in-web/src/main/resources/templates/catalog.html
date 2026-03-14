@@ -26,7 +26,6 @@
                         <tr style="color:#888;font-size:.8rem;border-color:#333;">
                             <th style="width:50px;border-color:#333;"></th>
                             <th style="border-color:#333;">Artist</th>
-                            <th style="border-color:#333;">Genres</th>
                             <th class="text-end" style="border-color:#333;">Albums</th>
                             <th class="text-end" style="border-color:#333;">Tracks</th>
                             <th style="border-color:#333;"></th>
@@ -46,8 +45,16 @@
                                 </svg>
                                 {/if}
                             </td>
-                            <td style="border-color:#333;color:#fff;font-size:.9rem;">{artist.artistName}</td>
-                            <td style="border-color:#333;color:#888;font-size:.82rem;">{artist.genresDisplay}</td>
+                            <td style="border-color:#333;color:#fff;font-size:.9rem;">
+                                {artist.artistName}
+                                {#if artist.genres}
+                                <div style="margin-top:4px;">
+                                    {#for genre in artist.genres}
+                                    <span style="display:inline-block;background-color:#2a2a2a;color:#aaa;font-size:.7rem;padding:1px 7px;border-radius:10px;margin:1px 2px 1px 0;">{genre}</span>
+                                    {/for}
+                                </div>
+                                {/if}
+                            </td>
                             <td class="text-end" style="border-color:#333;color:#888;font-size:.85rem;">{artist.albumCount}</td>
                             <td class="text-end" style="border-color:#333;color:#888;font-size:.85rem;">{artist.trackCount}</td>
                             <td style="border-color:#333;padding:8px;">
@@ -55,7 +62,7 @@
                             </td>
                         </tr>
                         <tr id="albums-row-{artist.artistId}" style="display:none;border-color:#333;">
-                            <td colspan="6" style="border-color:#333;padding:0;">
+                            <td colspan="5" style="border-color:#333;padding:0;">
                                 <div id="albums-container-{artist.artistId}" style="background-color:#161616;padding:12px 16px;">
                                     <span style="color:#888;font-size:.82rem;">Loading albums…</span>
                                 </div>
