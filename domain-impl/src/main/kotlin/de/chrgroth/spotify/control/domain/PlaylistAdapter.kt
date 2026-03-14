@@ -13,6 +13,7 @@ import de.chrgroth.spotify.control.domain.model.PlaylistType
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.PlaylistPort
+import de.chrgroth.spotify.control.domain.port.out.AppPlaylistCheckRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
@@ -33,6 +34,7 @@ class PlaylistAdapter(
     private val outboxPort: OutboxPort,
     private val dashboardRefresh: DashboardRefreshPort,
     private val appSyncService: AppSyncService,
+    private val playlistCheckRepository: AppPlaylistCheckRepositoryPort,
 ) : PlaylistPort {
 
     override fun enqueueUpdates() {
@@ -126,11 +128,17 @@ class PlaylistAdapter(
         logger.info { "Updated sync status for playlist $playlistId (user ${userId.value}) to $syncStatus" }
         playlistRepository.saveAll(userId, updatedPlaylists)
         dashboardRefresh.notifyUserPlaylistMetadata(userId)
-        if (syncStatus == PlaylistSyncStatus.ACTIVE &&
-            playlistRepository.findByUserIdAndPlaylistId(userId, playlist.spotifyPlaylistId) == null
-        ) {
-            logger.info { "Enqueueing SyncPlaylistData for newly active playlist $playlistId (user ${userId.value})" }
-            outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, playlistId))
+        if (syncStatus == PlaylistSyncStatus.PASSIVE) {
+            logger.info { "Deleting checks for deactivated playlist $playlistId (user ${userId.value})" }
+            playlistCheckRepository.deleteByPlaylistId(playlistId)
+        } else if (syncStatus == PlaylistSyncStatus.ACTIVE) {
+            if (playlistRepository.findByUserIdAndPlaylistId(userId, playlist.spotifyPlaylistId) == null) {
+                logger.info { "Enqueueing SyncPlaylistData for newly active playlist $playlistId (user ${userId.value})" }
+                outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, playlistId))
+            } else {
+                logger.info { "Enqueueing RunPlaylistChecks for re-activated playlist $playlistId (user ${userId.value})" }
+                outboxPort.enqueue(DomainOutboxEvent.RunPlaylistChecks(userId, playlistId))
+            }
         }
         return Unit.right()
     }

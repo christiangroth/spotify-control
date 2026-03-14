@@ -13,6 +13,7 @@ import de.chrgroth.spotify.control.domain.model.SpotifyPlaylistItem
 import de.chrgroth.spotify.control.domain.model.User
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
+import de.chrgroth.spotify.control.domain.port.out.AppPlaylistCheckRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
@@ -40,11 +41,13 @@ class PlaylistAdapterTests {
     private val outboxPort: OutboxPort = mockk()
     private val dashboardRefresh: DashboardRefreshPort = mockk()
     private val appSyncService: AppSyncService = mockk()
+    private val playlistCheckRepository: AppPlaylistCheckRepositoryPort = mockk()
 
     private val adapter = PlaylistAdapter(
         userRepository, playlistRepository,
         spotifyAccessToken, spotifyPlaylist,
         outboxPort, dashboardRefresh, appSyncService,
+        playlistCheckRepository,
     )
 
     private val userId = UserId("user-1")
@@ -330,6 +333,7 @@ class PlaylistAdapterTests {
         every { playlistRepository.saveAll(any(), any()) } just runs
         every { playlistRepository.findByUserIdAndPlaylistId(userId, "p1") } returns mockk()
         every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
+        every { playlistCheckRepository.deleteByPlaylistId("p1") } just runs
 
         val result = adapter.updateSyncStatus(userId, "p1", PlaylistSyncStatus.PASSIVE)
 
@@ -497,18 +501,20 @@ class PlaylistAdapterTests {
     }
 
     @Test
-    fun `updateSyncStatus does not enqueue SyncPlaylistData when activating playlist with existing data`() {
+    fun `updateSyncStatus enqueues RunPlaylistChecks when activating playlist with existing data`() {
         val user = buildUser()
         every { userRepository.findById(userId) } returns user
         every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE))
         every { playlistRepository.saveAll(any(), any()) } just runs
         every { playlistRepository.findByUserIdAndPlaylistId(userId, "p1") } returns mockk()
+        every { outboxPort.enqueue(any()) } just runs
         every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
 
         val result = adapter.updateSyncStatus(userId, "p1", PlaylistSyncStatus.ACTIVE)
 
         assertThat(result.isRight()).isTrue()
-        verify(exactly = 0) { outboxPort.enqueue(any()) }
+        verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.RunPlaylistChecks(userId, "p1")) }
+        verify(exactly = 0) { outboxPort.enqueue(any<DomainOutboxEvent.SyncPlaylistData>()) }
     }
 
     @Test
@@ -519,6 +525,7 @@ class PlaylistAdapterTests {
         every { playlistRepository.saveAll(any(), any()) } just runs
         every { playlistRepository.findByUserIdAndPlaylistId(userId, "p1") } returns mockk()
         every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
+        every { playlistCheckRepository.deleteByPlaylistId("p1") } just runs
 
         val result = adapter.updateSyncStatus(userId, "p1", PlaylistSyncStatus.PASSIVE)
 
@@ -533,12 +540,45 @@ class PlaylistAdapterTests {
         every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE))
         every { playlistRepository.saveAll(any(), any()) } just runs
         every { playlistRepository.findByUserIdAndPlaylistId(userId, "p1") } returns mockk()
+        every { outboxPort.enqueue(any()) } just runs
         every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
 
         val result = adapter.updateSyncStatus(userId, "p1", PlaylistSyncStatus.ACTIVE)
 
         assertThat(result.isRight()).isTrue()
         verify(exactly = 1) { dashboardRefresh.notifyUserPlaylistMetadata(userId) }
+    }
+
+    @Test
+    fun `updateSyncStatus deletes check documents when deactivating playlist`() {
+        val user = buildUser()
+        every { userRepository.findById(userId) } returns user
+        every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.ACTIVE))
+        every { playlistRepository.saveAll(any(), any()) } just runs
+        every { playlistRepository.findByUserIdAndPlaylistId(userId, "p1") } returns mockk()
+        every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
+        every { playlistCheckRepository.deleteByPlaylistId("p1") } just runs
+
+        val result = adapter.updateSyncStatus(userId, "p1", PlaylistSyncStatus.PASSIVE)
+
+        assertThat(result.isRight()).isTrue()
+        verify(exactly = 1) { playlistCheckRepository.deleteByPlaylistId("p1") }
+    }
+
+    @Test
+    fun `updateSyncStatus does not delete check documents when activating playlist`() {
+        val user = buildUser()
+        every { userRepository.findById(userId) } returns user
+        every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE))
+        every { playlistRepository.saveAll(any(), any()) } just runs
+        every { playlistRepository.findByUserIdAndPlaylistId(userId, "p1") } returns mockk()
+        every { outboxPort.enqueue(any()) } just runs
+        every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
+
+        val result = adapter.updateSyncStatus(userId, "p1", PlaylistSyncStatus.ACTIVE)
+
+        assertThat(result.isRight()).isTrue()
+        verify(exactly = 0) { playlistCheckRepository.deleteByPlaylistId(any()) }
     }
 
     // --- enqueueSyncPlaylistData tests ---

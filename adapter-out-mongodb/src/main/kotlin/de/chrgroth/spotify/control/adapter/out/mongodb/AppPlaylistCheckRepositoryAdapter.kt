@@ -40,6 +40,20 @@ class AppPlaylistCheckRepositoryAdapter : AppPlaylistCheckRepositoryPort {
             appPlaylistCheckDocumentRepository.count("succeeded = ?1", true)
         }
 
+    override fun deleteByPlaylistId(playlistId: String) {
+        logger.info { "Deleting playlist check documents for playlist $playlistId" }
+        mongoQueryMetrics.timed("app_playlist_check.deleteByPlaylistId") {
+            appPlaylistCheckDocumentRepository.delete("playlistId = ?1", playlistId)
+        }
+    }
+
+    override fun deleteAll() {
+        logger.info { "Deleting all playlist check documents" }
+        mongoQueryMetrics.timed("app_playlist_check.deleteAll") {
+            appPlaylistCheckDocumentRepository.deleteAll()
+        }
+    }
+
     private fun AppPlaylistCheckDocument.toDomain() = AppPlaylistCheck(
         checkId = checkId,
         playlistId = playlistId,
