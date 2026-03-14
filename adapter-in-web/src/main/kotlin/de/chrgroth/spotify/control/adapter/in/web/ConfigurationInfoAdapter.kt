@@ -22,8 +22,11 @@ class ConfigurationInfoAdapter(
 
     private val configKeyMasks = maskedConfigKeys
     private val envKeyMasks = maskedEnvKeys
+    private val cachedStats: ConfigurationStats by lazy { buildConfigurationStats() }
 
-    override fun getConfigurationStats(): ConfigurationStats {
+    override fun getConfigurationStats(): ConfigurationStats = cachedStats
+
+    private fun buildConfigurationStats(): ConfigurationStats {
         val config = ConfigProvider.getConfig()
         val configEntries = config.propertyNames
             .sorted()
