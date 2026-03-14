@@ -146,51 +146,57 @@ sealed interface DomainOutboxEvent : OutboxEvent {
     }
 
     /**
-     * Peeks up to 50 artist IDs from app_sync_pool and syncs them via the Spotify bulk artists endpoint.
+     * Syncs a specific batch of artist IDs from app_sync_pool via the Spotify bulk artists endpoint.
      * Successfully synced IDs are removed from the pool; unsynced IDs remain for the next retry.
-     * Deduplication ensures only one instance is queued at a time.
+     * payload = artistIds joined by ","
      */
-    data class SyncMissingArtists(val placeholder: String = "") : DomainOutboxEvent {
+    data class SyncMissingArtists(val artistIds: List<String>) : DomainOutboxEvent {
         override val key = KEY
-        override fun deduplicationKey() = KEY
+        override fun deduplicationKey() = "$KEY:${artistIds.sorted().joinToString(",")}"
         override val partition = DomainOutboxPartition.ToSpotify
-        override fun toPayload() = ""
+        override fun toPayload() = artistIds.joinToString(",")
 
         companion object {
             const val KEY = "SyncMissingArtists"
+            fun fromPayload(payload: String): SyncMissingArtists =
+                SyncMissingArtists(if (payload.isBlank()) emptyList() else payload.split(","))
         }
     }
 
     /**
-     * Peeks up to 50 track IDs from app_sync_pool and syncs them via the Spotify bulk tracks endpoint.
+     * Syncs a specific batch of track IDs from app_sync_pool via the Spotify bulk tracks endpoint.
      * Successfully synced IDs are removed from the pool; unsynced IDs remain for the next retry.
-     * Deduplication ensures only one instance is queued at a time.
+     * payload = trackIds joined by ","
      */
-    data class SyncMissingTracks(val placeholder: String = "") : DomainOutboxEvent {
+    data class SyncMissingTracks(val trackIds: List<String>) : DomainOutboxEvent {
         override val key = KEY
-        override fun deduplicationKey() = KEY
+        override fun deduplicationKey() = "$KEY:${trackIds.sorted().joinToString(",")}"
         override val partition = DomainOutboxPartition.ToSpotify
-        override fun toPayload() = ""
+        override fun toPayload() = trackIds.joinToString(",")
 
         companion object {
             const val KEY = "SyncMissingTracks"
+            fun fromPayload(payload: String): SyncMissingTracks =
+                SyncMissingTracks(if (payload.isBlank()) emptyList() else payload.split(","))
         }
     }
 
     /**
-     * Peeks up to 10 album IDs from app_sync_pool and fetches all their tracks via GET /v1/albums/{id}.
+     * Syncs a specific batch of album IDs from app_sync_pool by fetching all their tracks via GET /v1/albums/{id}.
      * All returned tracks (not only those originally requested) are upserted. Successfully synced album
      * IDs are removed from the pool; unsynced IDs remain for the next retry.
-     * Deduplication ensures only one instance is queued at a time.
+     * payload = albumIds joined by ","
      */
-    data class SyncMissingAlbums(val placeholder: String = "") : DomainOutboxEvent {
+    data class SyncMissingAlbums(val albumIds: List<String>) : DomainOutboxEvent {
         override val key = KEY
-        override fun deduplicationKey() = KEY
+        override fun deduplicationKey() = "$KEY:${albumIds.sorted().joinToString(",")}"
         override val partition = DomainOutboxPartition.ToSpotify
-        override fun toPayload() = ""
+        override fun toPayload() = albumIds.joinToString(",")
 
         companion object {
             const val KEY = "SyncMissingAlbums"
+            fun fromPayload(payload: String): SyncMissingAlbums =
+                SyncMissingAlbums(if (payload.isBlank()) emptyList() else payload.split(","))
         }
     }
 
@@ -222,9 +228,9 @@ sealed interface DomainOutboxEvent : OutboxEvent {
             AppendPlaybackData.KEY -> AppendPlaybackData(UserId(payload))
             SyncArtistDetails.KEY, SyncArtistDetails.LEGACY_KEY -> SyncArtistDetails.fromPayload(payload)
             SyncTrackDetails.KEY, SyncTrackDetails.LEGACY_KEY -> SyncTrackDetails.fromPayload(payload)
-            SyncMissingArtists.KEY -> SyncMissingArtists()
-            SyncMissingTracks.KEY -> SyncMissingTracks()
-            SyncMissingAlbums.KEY -> SyncMissingAlbums()
+            SyncMissingArtists.KEY -> SyncMissingArtists.fromPayload(payload)
+            SyncMissingTracks.KEY -> SyncMissingTracks.fromPayload(payload)
+            SyncMissingAlbums.KEY -> SyncMissingAlbums.fromPayload(payload)
             ResyncCatalog.KEY -> ResyncCatalog()
             else -> throw IllegalArgumentException("Unknown outbox event type: $key")
         }

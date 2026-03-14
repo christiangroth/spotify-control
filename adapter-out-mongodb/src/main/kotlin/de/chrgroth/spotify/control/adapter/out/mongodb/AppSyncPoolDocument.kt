@@ -12,4 +12,5 @@ class AppSyncPoolDocument {
     lateinit var id: String  // Composite key: "$type:$spotifyId"; maps to MongoDB _id
     var type: SyncPoolType = SyncPoolType.ARTIST
     lateinit var spotifyId: String
+    var enqueued: Boolean = false
 }

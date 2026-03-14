@@ -7,6 +7,10 @@ interface AppSyncPoolRepositoryPort {
     fun peekArtists(max: Int): List<String>
     fun peekTracks(max: Int): List<String>
     fun peekAlbums(max: Int): List<String>
+    fun markArtistsEnqueued(artistIds: List<String>)
+    fun markTracksEnqueued(trackIds: List<String>)
+    fun markAlbumsEnqueued(albumIds: List<String>)
+    fun resetEnqueued()
     fun removeArtists(artistIds: List<String>)
     fun removeTracks(trackIds: List<String>)
     fun removeAlbums(albumIds: List<String>)
