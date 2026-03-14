@@ -175,13 +175,21 @@ class CatalogAdapter(
                     logger.warn { "Bulk artist endpoint is gone, disabling bulk fetch" }
                     useBulkFetchState.disableBulkFetch()
                 }
+                if (error !is SpotifyRateLimitError) {
+                    syncPoolRepository.addArtists(artistIds)
+                }
             }
             .flatMap { artists ->
                 if (artists.isNotEmpty()) {
                     appArtistRepository.upsertAll(artists)
                     val syncedIds = artists.map { it.artistId }
                     syncPoolRepository.removeArtists(syncedIds)
-                    logger.info { "Synced ${artists.size} artists; ${artistIds.size - artists.size} not returned by Spotify will be retried" }
+                    val syncedIdsSet = syncedIds.toSet()
+                    val unsyncedIds = artistIds.filter { it !in syncedIdsSet }
+                    if (unsyncedIds.isNotEmpty()) {
+                        syncPoolRepository.addArtists(unsyncedIds)
+                    }
+                    logger.info { "Synced ${artists.size} artists; ${unsyncedIds.size} not returned by Spotify will be retried" }
                 }
                 artists.size.right()
             }
@@ -206,6 +214,11 @@ class CatalogAdapter(
             .groupBy({ it.first }, { it.second })
         val tracksWithoutAlbum = trackIds.filter { existingTracks[it]?.albumId == null }.toMutableList()
         return processAlbumGroups(userId, accessToken, albumGroups, tracksWithoutAlbum)
+            .onLeft { error ->
+                if (error !is SpotifyRateLimitError && tracksWithoutAlbum.isNotEmpty()) {
+                    syncPoolRepository.addTracks(tracksWithoutAlbum)
+                }
+            }
             .flatMap { albumSynced -> syncDirectTracks(userId, accessToken, tracksWithoutAlbum, albumSynced) }
     }
 
@@ -216,10 +229,19 @@ class CatalogAdapter(
         tracksWithoutAlbum: MutableList<String>,
     ): Either<DomainError, Int> {
         var totalSynced = 0
-        for ((albumId, albumTrackIds) in albumGroups) {
+        val albumGroupEntries = albumGroups.entries.toList()
+        for (i in albumGroupEntries.indices) {
+            val (albumId, albumTrackIds) = albumGroupEntries[i]
             val result = spotifyCatalog.getAlbumTracks(userId, accessToken, albumId)
             when (result) {
-                is Either.Left -> return result.value.left()
+                is Either.Left -> {
+                    val error = result.value
+                    if (error !is SpotifyRateLimitError) {
+                        val remainingTracks = albumTrackIds + albumGroupEntries.drop(i + 1).flatMap { it.value }
+                        if (remainingTracks.isNotEmpty()) syncPoolRepository.addTracks(remainingTracks)
+                    }
+                    return error.left()
+                }
                 is Either.Right -> {
                     val allAlbumResults = result.value
                     if (allAlbumResults.isNotEmpty()) {
@@ -259,6 +281,9 @@ class CatalogAdapter(
                     logger.warn { "Bulk track endpoint is gone, disabling bulk fetch" }
                     useBulkFetchState.disableBulkFetch()
                 }
+                if (error !is SpotifyRateLimitError) {
+                    syncPoolRepository.addTracks(trackIds)
+                }
             }
             .flatMap { results ->
                 if (results.isNotEmpty()) {
@@ -271,7 +296,12 @@ class CatalogAdapter(
                     if (artistIds.isNotEmpty()) syncPoolRepository.addArtists(artistIds)
                     val albumIds = results.mapNotNull { it.track.albumId?.value }.distinct()
                     if (albumIds.isNotEmpty()) syncPoolRepository.addAlbums(albumIds)
-                    logger.info { "Synced ${results.size} direct tracks; ${trackIds.size - results.size} not returned will be retried" }
+                    val syncedTrackIds = results.map { it.track.id.value }.toSet()
+                    val notReturned = trackIds.filter { it !in syncedTrackIds }
+                    if (notReturned.isNotEmpty()) {
+                        syncPoolRepository.addTracks(notReturned)
+                    }
+                    logger.info { "Synced ${results.size} direct tracks; ${notReturned.size} not returned will be retried" }
                 }
                 (previouslySynced + results.size).right()
             }
@@ -287,7 +317,13 @@ class CatalogAdapter(
         val accessToken = spotifyAccessToken.getValidAccessToken(userId)
         val result = spotifyCatalog.getAlbumTracks(userId, accessToken, albumId)
         return when (result) {
-            is Either.Left -> result.value.left()
+            is Either.Left -> {
+                val error = result.value
+                if (error !is SpotifyRateLimitError) {
+                    syncPoolRepository.addAlbums(listOf(albumId))
+                }
+                error.left()
+            }
             is Either.Right -> {
                 val allAlbumResults = result.value
                 if (allAlbumResults.isNotEmpty()) {
