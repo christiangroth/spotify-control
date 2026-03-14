@@ -32,6 +32,7 @@ class DeleteCatalogDataStarter(
             "app_artist",
             "app_playlist_check",
             "app_sync_pool",
+            "outbox",
         )
     }
 }
