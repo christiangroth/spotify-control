@@ -1,3 +1,14 @@
+# 0.62.0 (2026.03.14)
+
+## New Features
+* layouts-checks-sync: Deletes playlist check documents when a playlist sync status is set to inactive.
+* layouts-checks-sync: Enqueues playlist checks when a playlist sync status is set to active (if playlist data already exists).
+* layouts-checks-sync: Adds a WipePlaylistChecksStarter to wipe all playlist check documents on demand.
+
+
+
+---
+
 # 0.61.3 (2026.03.14)
 
 ## Bugfixes / Chore
