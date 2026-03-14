@@ -61,6 +61,11 @@ class AppTrackRepositoryAdapter : AppTrackRepositoryPort {
             appTrackDocumentRepository.list("artistId = ?1", artistId.value).map { it.toDomain() }
         }
 
+    override fun findByAlbumId(albumId: AlbumId): List<AppTrack> =
+        mongoQueryMetrics.timed("app_track.findByAlbumId") {
+            appTrackDocumentRepository.list("albumId = ?1", albumId.value).map { it.toDomain() }
+        }
+
     override fun updateTrackSyncData(track: AppTrack) {
         val now = java.time.Instant.now()
         mongoQueryMetrics.timed("app_track.updateTrackSyncData") {

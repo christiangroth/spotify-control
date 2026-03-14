@@ -9,6 +9,7 @@ import de.chrgroth.spotify.control.domain.model.RecentlyPlayedItem
 import de.chrgroth.spotify.control.domain.model.TopEntry
 import de.chrgroth.spotify.control.domain.model.TrackId
 import de.chrgroth.spotify.control.domain.model.UserId
+import de.chrgroth.spotify.control.domain.port.`in`.CatalogBrowserPort
 import de.chrgroth.spotify.control.domain.port.`in`.DashboardPort
 import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppPlaybackRepositoryPort
@@ -30,6 +31,7 @@ class DashboardAdapter(
     private val appPlaybackRepository: AppPlaybackRepositoryPort,
     private val appTrackRepository: AppTrackRepositoryPort,
     private val appArtistRepository: AppArtistRepositoryPort,
+    private val catalogBrowser: CatalogBrowserPort,
     private val playlistRepository: PlaylistRepositoryPort,
     @param:ConfigProperty(name = "dashboard.recently-played.limit")
     private val recentlyPlayedLimit: Int,
@@ -83,6 +85,8 @@ class DashboardAdapter(
 
         val listeningStats = buildListeningStats(userId, since)
 
+        val catalogStats = catalogBrowser.getCatalogStats()
+
         return DashboardStats(
             syncedPlaylists = syncedPlaylists,
             totalPlaylists = totalPlaylists,
@@ -91,6 +95,7 @@ class DashboardAdapter(
             playbackEventsPerDay = perDay,
             recentlyPlayedTracks = recentlyPlayedTracks,
             listeningStats = listeningStats,
+            catalogStats = catalogStats,
         )
     }
 

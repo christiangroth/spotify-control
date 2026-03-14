@@ -49,6 +49,11 @@ class AppAlbumRepositoryAdapter : AppAlbumRepositoryPort {
         }
     }
 
+    override fun findAll(): List<AppAlbum> =
+        mongoQueryMetrics.timed("app_album.findAll") {
+            appAlbumDocumentRepository.listAll().map { it.toDomain() }
+        }
+
     override fun findByAlbumIds(albumIds: Set<AlbumId>): List<AppAlbum> {
         if (albumIds.isEmpty()) return emptyList()
         return mongoQueryMetrics.timed("app_album.findByAlbumIds") {
@@ -57,6 +62,11 @@ class AppAlbumRepositoryAdapter : AppAlbumRepositoryPort {
             }
         }
     }
+
+    override fun findByArtistId(artistId: ArtistId): List<AppAlbum> =
+        mongoQueryMetrics.timed("app_album.findByArtistId") {
+            appAlbumDocumentRepository.list("artistId = ?1", artistId.value).map { it.toDomain() }
+        }
 
     private fun AppAlbumDocument.toDomain() = AppAlbum(
         id = AlbumId(id),
