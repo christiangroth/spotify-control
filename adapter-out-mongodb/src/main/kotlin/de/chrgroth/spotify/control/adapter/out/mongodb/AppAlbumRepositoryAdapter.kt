@@ -81,7 +81,7 @@ class AppAlbumRepositoryAdapter : AppAlbumRepositoryPort {
         additionalArtistIds = additionalArtistIds?.map { ArtistId(it) },
         additionalArtistNames = additionalArtistNames,
         genreOverrides = genreOverrides,
-        lastSync = lastSync?.toKotlinInstant(),
+        lastSync = lastSync?.toKotlinInstant() ?: kotlin.time.Instant.DISTANT_PAST,
     )
 
     companion object : KLogging()

@@ -24,20 +24,18 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
         if (items.isEmpty()) return
         val collection = appArtistDocumentRepository.mongoCollection()
         val upsertOptions = UpdateOptions().upsert(true)
+        val now = java.time.Instant.now()
         mongoQueryMetrics.timed("app_artist.upsertAll") {
             items.forEach { item ->
-                val now = java.time.Instant.now()
-                val hasSyncData = item.genre != null || item.additionalGenres != null || item.imageLink != null || item.type != null
                 collection.updateOne(
                     Filters.eq("_id", item.artistId),
                     Updates.combine(
                         Updates.set("artistName", item.artistName),
-                        if (item.genre != null) Updates.set("genre", item.genre) else Updates.setOnInsert("genre", null),
-                        if (item.additionalGenres != null) Updates.set("additionalGenres", item.additionalGenres)
-                        else Updates.setOnInsert("additionalGenres", null),
-                        if (item.imageLink != null) Updates.set("imageLink", item.imageLink) else Updates.setOnInsert("imageLink", null),
-                        if (item.type != null) Updates.set("type", item.type) else Updates.setOnInsert("type", null),
-                        if (hasSyncData) Updates.set("lastSync", now) else Updates.setOnInsert("lastSync", null),
+                        Updates.set("genre", item.genre),
+                        Updates.set("additionalGenres", item.additionalGenres),
+                        Updates.set("imageLink", item.imageLink),
+                        Updates.set("type", item.type),
+                        Updates.set("lastSync", now),
                         Updates.setOnInsert("playbackProcessingStatus", item.playbackProcessingStatus.name),
                     ),
                     upsertOptions,
@@ -82,23 +80,6 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
                 .map { it.toDomain() }
         }
 
-    override fun updateSyncData(artistId: String, artistName: String, genre: String?, additionalGenres: List<String>?, imageLink: String?, type: String?) {
-        val now = java.time.Instant.now()
-        mongoQueryMetrics.timed("app_artist.updateSyncData") {
-            appArtistDocumentRepository.mongoCollection().updateOne(
-                Filters.eq("_id", artistId),
-                Updates.combine(
-                    Updates.set("artistName", artistName),
-                    Updates.set("genre", genre),
-                    Updates.set("additionalGenres", additionalGenres),
-                    Updates.set("imageLink", imageLink),
-                    Updates.set("type", type),
-                    Updates.set("lastSync", now),
-                ),
-            )
-        }
-    }
-
     override fun updatePlaybackProcessingStatus(artistId: String, status: ArtistPlaybackProcessingStatus) {
         mongoQueryMetrics.timed("app_artist.updatePlaybackProcessingStatus") {
             appArtistDocumentRepository.mongoCollection().updateOne(
@@ -115,7 +96,7 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
         additionalGenres = additionalGenres,
         imageLink = imageLink,
         type = type,
-        lastSync = lastSync?.toKotlinInstant(),
+        lastSync = lastSync?.toKotlinInstant() ?: kotlin.time.Instant.DISTANT_PAST,
         playbackProcessingStatus = playbackProcessingStatus,
     )
 

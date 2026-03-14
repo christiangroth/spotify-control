@@ -5,9 +5,7 @@ import kotlin.time.Instant
 /**
  * Processed track metadata, shared across all users to avoid duplication in app_playback.
  * References to app_artist and app_album by ID for further deduplication.
- * albumId and albumName are set by upsertAll when non-null (populated during bulk sync via SyncMissingTracks).
- * Remaining sync fields (artistName, additionalArtistNames, discNumber,
- * durationMs, trackNumber, type) are populated by SyncTrackDetails.
+ * All fields are populated by the Spotify API sync. Tracks are never stored partially.
  */
 data class AppTrack(
     val id: TrackId,
@@ -22,5 +20,5 @@ data class AppTrack(
     val durationMs: Long? = null,
     val trackNumber: Int? = null,
     val type: String? = null,
-    val lastSync: Instant? = null,
+    val lastSync: Instant,
 )

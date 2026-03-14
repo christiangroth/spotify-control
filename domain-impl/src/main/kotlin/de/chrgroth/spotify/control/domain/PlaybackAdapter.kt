@@ -6,15 +6,12 @@ import arrow.core.right
 import de.chrgroth.outbox.OutboxTaskResult
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
-import de.chrgroth.spotify.control.domain.model.AppArtist
 import de.chrgroth.spotify.control.domain.model.AppPlaybackItem
-import de.chrgroth.spotify.control.domain.model.AppTrack
 import de.chrgroth.spotify.control.domain.model.ArtistId
 import de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus
 import de.chrgroth.spotify.control.domain.model.CurrentlyPlayingItem
 import de.chrgroth.spotify.control.domain.model.RecentlyPartialPlayedItem
 import de.chrgroth.spotify.control.domain.model.RecentlyPlayedItem
-import de.chrgroth.spotify.control.domain.model.TrackId
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.CatalogPort
@@ -235,7 +232,7 @@ class PlaybackAdapter(
         logger.info { "Persisting ${newPlaybackItems.size} new app_playback items for user: ${userId.value}" }
         appPlaybackRepository.saveAll(newPlaybackItems)
 
-        appSyncService.upsertAndAddToSyncPool(artists, tracks)
+        appSyncService.addToSyncPool(artists, tracks)
     }
 
     private fun buildPlaybackItems(
@@ -260,28 +257,12 @@ class PlaybackAdapter(
     private fun buildArtists(
         recentlyPlayed: List<RecentlyPlayedItem>,
         partialPlayed: List<RecentlyPartialPlayedItem>,
-    ) = (recentlyPlayed.flatMap { item ->
-        item.artistIds.mapIndexedNotNull { index, artistId ->
-            val name = item.artistNames.getOrNull(index) ?: return@mapIndexedNotNull null
-            AppArtist(artistId = artistId, artistName = name)
-        }
-    } + partialPlayed.flatMap { item ->
-        item.artistIds.mapIndexedNotNull { index, artistId ->
-            val name = item.artistNames.getOrNull(index) ?: return@mapIndexedNotNull null
-            AppArtist(artistId = artistId, artistName = name)
-        }
-    }).distinctBy { it.artistId }
+    ) = (recentlyPlayed.flatMap { it.artistIds } + partialPlayed.flatMap { it.artistIds }).distinct()
 
     private fun buildTracks(
         recentlyPlayed: List<RecentlyPlayedItem>,
         partialPlayed: List<RecentlyPartialPlayedItem>,
-    ) = (recentlyPlayed.mapNotNull { item ->
-        val artistId = item.artistIds.firstOrNull() ?: return@mapNotNull null
-        AppTrack(id = TrackId(item.trackId), title = item.trackName, artistId = ArtistId(artistId), additionalArtistIds = item.artistIds.drop(1).map { ArtistId(it) })
-    } + partialPlayed.mapNotNull { item ->
-        val artistId = item.artistIds.firstOrNull() ?: return@mapNotNull null
-        AppTrack(id = TrackId(item.trackId), title = item.trackName, artistId = ArtistId(artistId), additionalArtistIds = item.artistIds.drop(1).map { ArtistId(it) })
-    }).distinctBy { it.id }
+    ) = (recentlyPlayed.map { it.trackId } + partialPlayed.map { it.trackId }).distinct()
 
     // --- Artist Playback Sync ---
 

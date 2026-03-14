@@ -26,6 +26,7 @@ class AppAlbumRepositoryTests {
         type = "album",
         artistId = ArtistId("artist-$suffix"),
         artistName = "Artist $suffix",
+        lastSync = kotlin.time.Instant.fromEpochSeconds(1),
     )
 
     @Test
@@ -49,9 +50,9 @@ class AppAlbumRepositoryTests {
     @Test
     fun `upsertAll overwrites existing fields on re-upsert`() {
         val albumId = "album-overwrite-${UUID.randomUUID()}"
-        appAlbumRepository.upsertAll(listOf(AppAlbum(id = AlbumId(albumId), title = "Original Title")))
+        appAlbumRepository.upsertAll(listOf(AppAlbum(id = AlbumId(albumId), title = "Original Title", lastSync = kotlin.time.Instant.fromEpochSeconds(1))))
 
-        appAlbumRepository.upsertAll(listOf(AppAlbum(id = AlbumId(albumId), title = "Updated Title")))
+        appAlbumRepository.upsertAll(listOf(AppAlbum(id = AlbumId(albumId), title = "Updated Title", lastSync = kotlin.time.Instant.fromEpochSeconds(1))))
 
         val result = appAlbumRepository.findByAlbumIds(setOf(AlbumId(albumId)))
         assertThat(result).hasSize(1)
@@ -68,6 +69,7 @@ class AppAlbumRepositoryTests {
             artistName = "Artist One",
             additionalArtistIds = listOf(ArtistId("artist-2")),
             additionalArtistNames = listOf("Artist Two"),
+            lastSync = kotlin.time.Instant.fromEpochSeconds(1),
         )
         appAlbumRepository.upsertAll(listOf(item))
 

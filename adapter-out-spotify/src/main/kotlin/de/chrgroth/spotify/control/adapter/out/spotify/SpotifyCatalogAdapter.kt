@@ -24,6 +24,7 @@ import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
 import de.chrgroth.spotify.control.domain.port.out.SpotifyCatalogPort
 import jakarta.enterprise.context.ApplicationScoped
+import kotlin.time.Clock
 import mu.KLogging
 import org.eclipse.microprofile.config.inject.ConfigProperty
 import java.net.URI
@@ -197,12 +198,14 @@ class SpotifyCatalogAdapter(
             additionalGenres = allGenres.drop(1).ifEmpty { null },
             imageLink = artist.images.firstOrNull()?.url,
             type = artist.type,
+            lastSync = Clock.System.now(),
         )
     }
 
     private fun parseTrackSyncResult(track: SpotifyTrackResponse): TrackSyncResult? {
         val primaryArtist = track.artists.firstOrNull() ?: return null
         val albumRef = track.album ?: return null
+        val now = Clock.System.now()
 
         val appTrack = AppTrack(
             id = TrackId(track.id),
@@ -217,6 +220,7 @@ class SpotifyCatalogAdapter(
             durationMs = track.durationMs,
             trackNumber = track.trackNumber,
             type = track.type,
+            lastSync = now,
         )
 
         val appAlbum = AppAlbum(
@@ -231,6 +235,7 @@ class SpotifyCatalogAdapter(
             artistName = albumRef.artists.firstOrNull()?.name,
             additionalArtistIds = albumRef.artists.additionalItems { ArtistId(id) },
             additionalArtistNames = albumRef.artists.additionalItems { name },
+            lastSync = now,
         )
 
         return TrackSyncResult(track = appTrack, album = appAlbum)
@@ -249,6 +254,7 @@ class SpotifyCatalogAdapter(
             artistName = album.artists.firstOrNull()?.name,
             additionalArtistIds = album.artists.additionalItems { ArtistId(id) },
             additionalArtistNames = album.artists.additionalItems { name },
+            lastSync = Clock.System.now(),
         )
 
     private fun parseAlbumTrackSyncResult(track: SpotifySimplifiedTrackResponse, album: AppAlbum): TrackSyncResult? {
@@ -267,6 +273,7 @@ class SpotifyCatalogAdapter(
             durationMs = track.durationMs,
             trackNumber = track.trackNumber,
             type = track.type,
+            lastSync = album.lastSync,
         )
         return TrackSyncResult(track = appTrack, album = album)
     }

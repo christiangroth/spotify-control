@@ -17,6 +17,7 @@ class AppArtistRepositoryTests {
     private fun artist(suffix: String) = AppArtist(
         artistId = "artist-$suffix-${UUID.randomUUID()}",
         artistName = "Artist $suffix",
+        lastSync = kotlin.time.Instant.fromEpochSeconds(1),
     )
 
     @Test
@@ -71,20 +72,23 @@ class AppArtistRepositoryTests {
     }
 
     @Test
-    fun `updateSyncData updates artistName genre additionalGenres imageLink and type`() {
-        val item = artist("sync").copy(artistName = "Old Name")
+    fun `upsertAll stores all sync fields`() {
+        val item = artist("sync").copy(
+            genre = "pop",
+            additionalGenres = listOf("indie", "rock"),
+            imageLink = "https://example.com/image.jpg",
+            type = "artist",
+        )
         appArtistRepository.upsertAll(listOf(item))
-
-        appArtistRepository.updateSyncData(item.artistId, "New Name", "pop", listOf("indie", "rock"), "https://example.com/image.jpg", "artist")
 
         val result = appArtistRepository.findByArtistIds(setOf(item.artistId))
         assertThat(result).hasSize(1)
-        assertThat(result[0].artistName).isEqualTo("New Name")
+        assertThat(result[0].artistName).isEqualTo(item.artistName)
         assertThat(result[0].genre).isEqualTo("pop")
         assertThat(result[0].additionalGenres).containsExactly("indie", "rock")
         assertThat(result[0].imageLink).isEqualTo("https://example.com/image.jpg")
         assertThat(result[0].type).isEqualTo("artist")
-        assertThat(result[0].lastSync).isNotNull()
+        assertThat(result[0].lastSync).isNotEqualTo(kotlin.time.Instant.DISTANT_PAST)
     }
 
     @Test
@@ -93,7 +97,6 @@ class AppArtistRepositoryTests {
         val withImageAndName = artist("has-name").copy(imageLink = "https://img.example.com/2.jpg")
         val withoutImage = artist("no-image").copy(artistName = "")
         appArtistRepository.upsertAll(listOf(withImageAndBlankName, withImageAndName, withoutImage))
-
         val result = appArtistRepository.findWithImageLinkAndBlankName()
 
         assertThat(result.map { it.artistId }).contains(withImageAndBlankName.artistId)

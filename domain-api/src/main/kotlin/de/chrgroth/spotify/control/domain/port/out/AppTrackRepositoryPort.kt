@@ -11,5 +11,4 @@ interface AppTrackRepositoryPort {
     fun findByTrackIds(trackIds: Set<TrackId>): List<AppTrack>
     fun findByArtistId(artistId: ArtistId): List<AppTrack>
     fun findByAlbumId(albumId: AlbumId): List<AppTrack>
-    fun updateTrackSyncData(track: AppTrack)
 }
