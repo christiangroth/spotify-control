@@ -28,14 +28,16 @@ class AppTrackRepositoryAdapter : AppTrackRepositoryPort {
         val upsertOptions = UpdateOptions().upsert(true)
         mongoQueryMetrics.timed("app_track.upsertAll") {
             items.forEach { item ->
+                val updates = mutableListOf(
+                    Updates.set("title", item.title),
+                    Updates.set("artistId", item.artistId.value),
+                    Updates.set("additionalArtistIds", item.additionalArtistIds.map { it.value }),
+                )
+                item.albumId?.let { updates.add(Updates.set("albumId", it.value)) }
+                item.albumName?.let { updates.add(Updates.set("albumName", it)) }
                 collection.updateOne(
                     Filters.eq("_id", item.id.value),
-                    Updates.combine(
-                        Updates.set("title", item.title),
-                        Updates.set("artistId", item.artistId.value),
-                        Updates.set("additionalArtistIds", item.additionalArtistIds.map { it.value }),
-                        Updates.setOnInsert("albumId", item.albumId?.value),
-                    ),
+                    Updates.combine(updates),
                     upsertOptions,
                 )
             }

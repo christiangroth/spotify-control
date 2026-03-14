@@ -76,6 +76,34 @@ class AppTrackDataRepositoryTests {
     }
 
     @Test
+    fun `upsertAll sets albumId and albumName when provided`() {
+        val item = trackData("album-set")
+        appTrackRepository.upsertAll(listOf(item))
+
+        val withAlbum = item.copy(albumId = AlbumId("album-x"), albumName = "Album X")
+        appTrackRepository.upsertAll(listOf(withAlbum))
+
+        val result = appTrackRepository.findByTrackIds(setOf(item.id))
+        assertThat(result).hasSize(1)
+        assertThat(result[0].albumId).isEqualTo(AlbumId("album-x"))
+        assertThat(result[0].albumName).isEqualTo("Album X")
+    }
+
+    @Test
+    fun `upsertAll does not overwrite existing albumId and albumName with null`() {
+        val withAlbum = trackData("album-keep").copy(albumId = AlbumId("album-y"), albumName = "Album Y")
+        appTrackRepository.upsertAll(listOf(withAlbum))
+
+        val stubUpdate = withAlbum.copy(albumId = null, albumName = null)
+        appTrackRepository.upsertAll(listOf(stubUpdate))
+
+        val result = appTrackRepository.findByTrackIds(setOf(withAlbum.id))
+        assertThat(result).hasSize(1)
+        assertThat(result[0].albumId).isEqualTo(AlbumId("album-y"))
+        assertThat(result[0].albumName).isEqualTo("Album Y")
+    }
+
+    @Test
     fun `updateTrackSyncData updates all sync fields`() {
         val item = trackData("sync")
         appTrackRepository.upsertAll(listOf(item))
