@@ -1,3 +1,12 @@
+# 0.59.1 (2026.03.14)
+
+## Bugfixes / Chore
+* fix-catalog-view: Fixed catalog page rendering error caused by missing album and track data in the template.
+
+
+
+---
+
 # 0.59.0 (2026.03.14)
 
 ## New Features
