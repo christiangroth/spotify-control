@@ -353,11 +353,35 @@ class CatalogAdapter(
             syncTrackDetails(event.trackId, event.userId)
         }
 
-    override fun handle(event: DomainOutboxEvent.SyncMissingArtists): OutboxTaskResult =
-        handleOutboxTask("SyncMissingArtists[${event.artistIds.size} artists]") { syncMissingArtists(event.artistIds) }
+    override fun handle(event: DomainOutboxEvent.SyncMissingArtists): OutboxTaskResult {
+        if (!useBulkFetchState.isUsingBulkFetch()) {
+            logger.info { "Bulk fetch disabled, converting SyncMissingArtists to per-item events for ${event.artistIds.size} artist(s)" }
+            val userId = userRepository.findAll().firstOrNull()?.spotifyUserId
+            if (userId != null) {
+                event.artistIds.forEach { artistId ->
+                    outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails(artistId, userId))
+                }
+            }
+            if (event.artistIds.isNotEmpty()) syncPoolRepository.addArtists(event.artistIds)
+            return OutboxTaskResult.Success
+        }
+        return handleOutboxTask("SyncMissingArtists[${event.artistIds.size} artists]") { syncMissingArtists(event.artistIds) }
+    }
 
-    override fun handle(event: DomainOutboxEvent.SyncMissingTracks): OutboxTaskResult =
-        handleOutboxTask("SyncMissingTracks[${event.trackIds.size} tracks]") { syncMissingTracks(event.trackIds) }
+    override fun handle(event: DomainOutboxEvent.SyncMissingTracks): OutboxTaskResult {
+        if (!useBulkFetchState.isUsingBulkFetch()) {
+            logger.info { "Bulk fetch disabled, converting SyncMissingTracks to per-item events for ${event.trackIds.size} track(s)" }
+            val userId = userRepository.findAll().firstOrNull()?.spotifyUserId
+            if (userId != null) {
+                event.trackIds.forEach { trackId ->
+                    outboxPort.enqueue(DomainOutboxEvent.SyncTrackDetails(trackId, userId))
+                }
+            }
+            if (event.trackIds.isNotEmpty()) syncPoolRepository.addTracks(event.trackIds)
+            return OutboxTaskResult.Success
+        }
+        return handleOutboxTask("SyncMissingTracks[${event.trackIds.size} tracks]") { syncMissingTracks(event.trackIds) }
+    }
 
     override fun handle(event: DomainOutboxEvent.SyncMissingAlbums): OutboxTaskResult =
         handleOutboxTask("SyncMissingAlbums[album=${event.albumId}]") { syncMissingAlbums(event.albumId) }

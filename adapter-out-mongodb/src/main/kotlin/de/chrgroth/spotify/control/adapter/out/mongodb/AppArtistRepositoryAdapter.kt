@@ -26,14 +26,18 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
         val upsertOptions = UpdateOptions().upsert(true)
         mongoQueryMetrics.timed("app_artist.upsertAll") {
             items.forEach { item ->
+                val now = java.time.Instant.now()
+                val hasSyncData = item.genre != null || item.additionalGenres != null || item.imageLink != null || item.type != null
                 collection.updateOne(
                     Filters.eq("_id", item.artistId),
                     Updates.combine(
                         Updates.set("artistName", item.artistName),
-                        Updates.setOnInsert("genre", item.genre),
-                        Updates.setOnInsert("additionalGenres", item.additionalGenres),
-                        Updates.setOnInsert("imageLink", item.imageLink),
-                        Updates.setOnInsert("type", item.type),
+                        if (item.genre != null) Updates.set("genre", item.genre) else Updates.setOnInsert("genre", null),
+                        if (item.additionalGenres != null) Updates.set("additionalGenres", item.additionalGenres)
+                        else Updates.setOnInsert("additionalGenres", null),
+                        if (item.imageLink != null) Updates.set("imageLink", item.imageLink) else Updates.setOnInsert("imageLink", null),
+                        if (item.type != null) Updates.set("type", item.type) else Updates.setOnInsert("type", null),
+                        if (hasSyncData) Updates.set("lastSync", now) else Updates.setOnInsert("lastSync", null),
                         Updates.setOnInsert("playbackProcessingStatus", item.playbackProcessingStatus.name),
                     ),
                     upsertOptions,
