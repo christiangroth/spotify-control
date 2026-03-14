@@ -5,6 +5,7 @@ data class ArtistBrowseItem(
     val artistName: String,
     val imageLink: String?,
     val genres: List<String>,
+    val genresDisplay: String,
     val albumCount: Int,
     val trackCount: Int,
 )

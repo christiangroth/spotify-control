@@ -3,15 +3,14 @@ package de.chrgroth.spotify.control.domain
 import de.chrgroth.spotify.control.domain.model.DashboardStats
 import de.chrgroth.spotify.control.domain.model.DayCount
 import de.chrgroth.spotify.control.domain.model.AppTrack
-import de.chrgroth.spotify.control.domain.model.CatalogStats
 import de.chrgroth.spotify.control.domain.model.ListeningStats
 import de.chrgroth.spotify.control.domain.model.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.RecentlyPlayedItem
 import de.chrgroth.spotify.control.domain.model.TopEntry
 import de.chrgroth.spotify.control.domain.model.TrackId
 import de.chrgroth.spotify.control.domain.model.UserId
+import de.chrgroth.spotify.control.domain.port.`in`.CatalogBrowserPort
 import de.chrgroth.spotify.control.domain.port.`in`.DashboardPort
-import de.chrgroth.spotify.control.domain.port.out.AppAlbumRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppPlaybackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
@@ -32,7 +31,7 @@ class DashboardAdapter(
     private val appPlaybackRepository: AppPlaybackRepositoryPort,
     private val appTrackRepository: AppTrackRepositoryPort,
     private val appArtistRepository: AppArtistRepositoryPort,
-    private val appAlbumRepository: AppAlbumRepositoryPort,
+    private val catalogBrowser: CatalogBrowserPort,
     private val playlistRepository: PlaylistRepositoryPort,
     @param:ConfigProperty(name = "dashboard.recently-played.limit")
     private val recentlyPlayedLimit: Int,
@@ -86,7 +85,7 @@ class DashboardAdapter(
 
         val listeningStats = buildListeningStats(userId, since)
 
-        val catalogStats = buildCatalogStats()
+        val catalogStats = catalogBrowser.getCatalogStats()
 
         return DashboardStats(
             syncedPlaylists = syncedPlaylists,
@@ -97,21 +96,6 @@ class DashboardAdapter(
             recentlyPlayedTracks = recentlyPlayedTracks,
             listeningStats = listeningStats,
             catalogStats = catalogStats,
-        )
-    }
-
-    private fun buildCatalogStats(): CatalogStats {
-        val allArtists = appArtistRepository.findAll()
-        val genreCount = allArtists
-            .flatMap { listOfNotNull(it.genre) + (it.additionalGenres ?: emptyList()) }
-            .toSet()
-            .size
-            .toLong()
-        return CatalogStats(
-            artistCount = allArtists.size.toLong(),
-            albumCount = appAlbumRepository.findAll().size.toLong(),
-            trackCount = appTrackRepository.findAll().size.toLong(),
-            genreCount = genreCount,
         )
     }
 

@@ -43,7 +43,7 @@
                                 {/if}
                             </td>
                             <td style="border-color:#333;color:#fff;font-size:.9rem;">{artist.artistName}</td>
-                            <td style="border-color:#333;color:#888;font-size:.82rem;">{artist.genres.join(", ")}</td>
+                            <td style="border-color:#333;color:#888;font-size:.82rem;">{artist.genresDisplay}</td>
                             <td class="text-end" style="border-color:#333;color:#888;font-size:.85rem;">{artist.albumCount}</td>
                             <td class="text-end" style="border-color:#333;color:#888;font-size:.85rem;">{artist.trackCount}</td>
                         </tr>
@@ -92,8 +92,8 @@
                             </svg>
                             {/if}
                         </td>
-                        <td style="border-color:#2a2a2a;color:#fff;">{album.title ?: "(untitled)"}</td>
-                        <td style="border-color:#2a2a2a;color:#888;">{album.releaseDate ?: ""}</td>
+                        <td style="border-color:#2a2a2a;color:#fff;">{#if album.title}{album.title}{#else}(untitled){/if}</td>
+                        <td style="border-color:#2a2a2a;color:#888;">{album.releaseDate}</td>
                         <td class="text-end" style="border-color:#2a2a2a;color:#888;">{album.trackCount}</td>
                         <td class="text-end" style="border-color:#2a2a2a;color:#888;">{album.durationFormatted}</td>
                     </tr>
@@ -126,7 +126,7 @@
             <tbody>
                 {#for track in tracks}
                 <tr style="border-color:#1a1a1a;">
-                    <td style="border-color:#1a1a1a;color:#666;">{track.trackNumber ?: ""}</td>
+                    <td style="border-color:#1a1a1a;color:#666;">{track.trackNumber}</td>
                     <td style="border-color:#1a1a1a;color:#ccc;">{track.title}</td>
                     <td class="text-end" style="border-color:#1a1a1a;color:#666;">{track.durationFormatted}</td>
                 </tr>

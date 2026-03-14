@@ -55,11 +55,13 @@ class CatalogBrowserAdapter(
             }
             .sortedBy { it.artistName.lowercase() }
             .map { artist ->
+                val genres = listOfNotNull(artist.genre) + (artist.additionalGenres ?: emptyList())
                 ArtistBrowseItem(
                     artistId = artist.artistId,
                     artistName = artist.artistName,
                     imageLink = artist.imageLink,
-                    genres = listOfNotNull(artist.genre) + (artist.additionalGenres ?: emptyList()),
+                    genres = genres,
+                    genresDisplay = genres.joinToString(", "),
                     albumCount = albumCountByArtistId[artist.artistId] ?: 0,
                     trackCount = trackCountByArtistId[artist.artistId] ?: 0,
                 )
