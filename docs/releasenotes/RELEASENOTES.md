@@ -1,3 +1,12 @@
+# 0.63.0 (2026.03.14)
+
+## New Features
+* prepare-catalog-sync: Added startup task to delete all catalog data (tracks, albums, artists, playlist checks) for a clean resync.
+
+
+
+---
+
 # 0.62.0 (2026.03.14)
 
 ## New Features
