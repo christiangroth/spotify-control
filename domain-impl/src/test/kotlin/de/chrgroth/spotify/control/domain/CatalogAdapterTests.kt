@@ -340,40 +340,16 @@ class CatalogAdapterTests {
     }
 
     @Test
-    fun `handle SyncMissingTracks falls back to direct endpoint when album fetch fails with non-rate-limit error`() {
-        val directResult = TrackSyncResult(track = trackWithAlbum1, album = album1)
+    fun `handle SyncMissingTracks returns failed when album endpoint returns error`() {
         every { userRepository.findAll() } returns listOf(buildUser())
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { appTrackRepository.findByTrackIds(setOf(TrackId("track-1"))) } returns listOf(trackWithAlbum1)
         every { spotifyCatalog.getAlbumTracks(userId, accessToken, "album-1") } returns SyncError.TRACK_DETAILS_FETCH_FAILED.left()
-        every { spotifyCatalog.getTracks(userId, accessToken, listOf("track-1")) } returns listOf(directResult).right()
-        every { appTrackRepository.upsertAll(any()) } just runs
-        every { appAlbumRepository.upsertAll(any()) } just runs
-        every { syncPoolRepository.removeTracks(any()) } just runs
-        every { syncPoolRepository.addArtists(any()) } just runs
-        every { syncPoolRepository.addAlbums(any()) } just runs
 
         val result = adapter.handle(DomainOutboxEvent.SyncMissingTracks(listOf("track-1")))
 
-        assertThat(result).isEqualTo(OutboxTaskResult.Success)
-        verify { spotifyCatalog.getAlbumTracks(userId, accessToken, "album-1") }
-        verify { spotifyCatalog.getTracks(userId, accessToken, listOf("track-1")) }
-        verify(exactly = 0) { syncPoolRepository.removeAlbums(any()) }
-    }
-
-    @Test
-    fun `handle SyncMissingTracks propagates rate limit from album endpoint`() {
-        val rateLimitError = de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError(java.time.Duration.ofSeconds(30))
-        every { userRepository.findAll() } returns listOf(buildUser())
-        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
-        every { appTrackRepository.findByTrackIds(setOf(TrackId("track-1"))) } returns listOf(trackWithAlbum1)
-        every { spotifyCatalog.getAlbumTracks(userId, accessToken, "album-1") } returns rateLimitError.left()
-
-        val result = adapter.handle(DomainOutboxEvent.SyncMissingTracks(listOf("track-1")))
-
-        assertThat(result).isInstanceOf(OutboxTaskResult.RateLimited::class.java)
+        assertThat(result).isInstanceOf(OutboxTaskResult.Failed::class.java)
         verify(exactly = 0) { appTrackRepository.upsertAll(any()) }
-        verify(exactly = 0) { syncPoolRepository.removeAlbums(any()) }
     }
 
     // --- syncMissingAlbums tests ---
