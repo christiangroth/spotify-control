@@ -46,6 +46,7 @@ class SyncMissingTracksJob(
     }
 
     private fun runPerItem() {
+        // Uses the first available user, consistent with the existing bulk sync fallback in CatalogAdapter
         val userId = userRepository.findAll().firstOrNull()?.spotifyUserId
         if (userId == null) {
             logger.debug { "No users available, skipping per-item SyncMissingTracks" }
