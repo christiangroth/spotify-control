@@ -8,6 +8,7 @@ import de.chrgroth.outbox.OutboxTaskResult
 import de.chrgroth.spotify.control.domain.error.ArtistSettingsError
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
+import de.chrgroth.spotify.control.domain.error.SyncError
 import de.chrgroth.spotify.control.domain.model.AppArtist
 import de.chrgroth.spotify.control.domain.model.AccessToken
 import de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus
@@ -24,6 +25,7 @@ import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyCatalogPort
+import de.chrgroth.spotify.control.domain.port.out.UseBulkFetchStatePort
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
@@ -40,6 +42,7 @@ class CatalogAdapter(
     private val userRepository: UserRepositoryPort,
     private val outboxPort: OutboxPort,
     private val syncPoolRepository: AppSyncPoolRepositoryPort,
+    private val useBulkFetchState: UseBulkFetchStatePort,
 ) : CatalogPort {
 
     // --- Artist Settings ---
@@ -167,6 +170,12 @@ class CatalogAdapter(
         logger.info { "Syncing ${artistIds.size} missing artists from pool" }
         val accessToken = spotifyAccessToken.getValidAccessToken(userId)
         return spotifyCatalog.getArtists(userId, accessToken, artistIds)
+            .onLeft { error ->
+                if (error == SyncError.BULK_ENDPOINT_GONE) {
+                    logger.warn { "Bulk artist endpoint is gone, disabling bulk fetch" }
+                    useBulkFetchState.disableBulkFetch()
+                }
+            }
             .flatMap { artists ->
                 if (artists.isNotEmpty()) {
                     appArtistRepository.upsertAll(artists)
@@ -244,21 +253,28 @@ class CatalogAdapter(
         previouslySynced: Int,
     ): Either<DomainError, Int> {
         if (trackIds.isEmpty()) return previouslySynced.right()
-        return spotifyCatalog.getTracks(userId, accessToken, trackIds).flatMap { results ->
-            if (results.isNotEmpty()) {
-                appTrackRepository.upsertAll(results.map { it.track })
-                appAlbumRepository.upsertAll(results.map { it.album })
-                syncPoolRepository.removeTracks(results.map { it.track.id.value })
-                val artistIds = results
-                    .flatMap { r -> (listOf(r.track.artistId) + r.track.additionalArtistIds).map { it.value } }
-                    .filter { it.isNotBlank() }.distinct()
-                if (artistIds.isNotEmpty()) syncPoolRepository.addArtists(artistIds)
-                val albumIds = results.mapNotNull { it.track.albumId?.value }.distinct()
-                if (albumIds.isNotEmpty()) syncPoolRepository.addAlbums(albumIds)
-                logger.info { "Synced ${results.size} direct tracks; ${trackIds.size - results.size} not returned will be retried" }
+        return spotifyCatalog.getTracks(userId, accessToken, trackIds)
+            .onLeft { error ->
+                if (error == SyncError.BULK_ENDPOINT_GONE) {
+                    logger.warn { "Bulk track endpoint is gone, disabling bulk fetch" }
+                    useBulkFetchState.disableBulkFetch()
+                }
             }
-            (previouslySynced + results.size).right()
-        }
+            .flatMap { results ->
+                if (results.isNotEmpty()) {
+                    appTrackRepository.upsertAll(results.map { it.track })
+                    appAlbumRepository.upsertAll(results.map { it.album })
+                    syncPoolRepository.removeTracks(results.map { it.track.id.value })
+                    val artistIds = results
+                        .flatMap { r -> (listOf(r.track.artistId) + r.track.additionalArtistIds).map { it.value } }
+                        .filter { it.isNotBlank() }.distinct()
+                    if (artistIds.isNotEmpty()) syncPoolRepository.addArtists(artistIds)
+                    val albumIds = results.mapNotNull { it.track.albumId?.value }.distinct()
+                    if (albumIds.isNotEmpty()) syncPoolRepository.addAlbums(albumIds)
+                    logger.info { "Synced ${results.size} direct tracks; ${trackIds.size - results.size} not returned will be retried" }
+                }
+                (previouslySynced + results.size).right()
+            }
     }
 
     private fun syncMissingAlbums(albumId: String): Either<DomainError, Int> {

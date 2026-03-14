@@ -25,6 +25,7 @@ import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyCatalogPort
+import de.chrgroth.spotify.control.domain.port.out.UseBulkFetchStatePort
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
 import io.mockk.every
 import io.mockk.just
@@ -32,6 +33,7 @@ import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.verify
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 class CatalogAdapterTests {
@@ -45,11 +47,13 @@ class CatalogAdapterTests {
     private val userRepository: UserRepositoryPort = mockk()
     private val outboxPort: OutboxPort = mockk()
     private val syncPoolRepository: AppSyncPoolRepositoryPort = mockk()
+    private val useBulkFetchState: UseBulkFetchStatePort = mockk()
 
     private val adapter = CatalogAdapter(
         spotifyAccessToken, spotifyCatalog,
         appArtistRepository, appTrackRepository, appAlbumRepository,
         appPlaybackRepository, userRepository, outboxPort, syncPoolRepository,
+        useBulkFetchState,
     )
 
     private val artist1 = AppArtist(artistId = "artist-1", artistName = "Artist One", playbackProcessingStatus = ArtistPlaybackProcessingStatus.UNDECIDED)
@@ -65,6 +69,12 @@ class CatalogAdapterTests {
     private val trackWithAlbum3 = AppTrack(id = TrackId("track-3"), title = "Track Three", albumId = AlbumId("album-2"), artistId = ArtistId("artist-2"))
     private val syncResult1 = TrackSyncResult(track = trackWithAlbum1, album = album1)
     private val syncResult2 = TrackSyncResult(track = trackWithAlbum2, album = album1)
+
+    @BeforeEach
+    fun setup() {
+        every { useBulkFetchState.isUsingBulkFetch() } returns true
+        every { useBulkFetchState.disableBulkFetch() } just runs
+    }
 
     private fun buildUser(id: String = "user-1") = User(
         spotifyUserId = UserId(id),
@@ -398,5 +408,83 @@ class CatalogAdapterTests {
 
         assertThat(result).isInstanceOf(OutboxTaskResult.Failed::class.java)
         verify(exactly = 0) { appTrackRepository.upsertAll(any()) }
+    }
+
+    // --- syncMissingArtists disables bulk fetch on explicit endpoint-gone error ---
+
+    @Test
+    fun `handle SyncMissingArtists disables bulk fetch when bulk endpoint is gone`() {
+        every { userRepository.findAll() } returns listOf(buildUser())
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { spotifyCatalog.getArtists(userId, accessToken, listOf("artist-1")) } returns SyncError.BULK_ENDPOINT_GONE.left()
+
+        adapter.handle(DomainOutboxEvent.SyncMissingArtists(listOf("artist-1")))
+
+        verify { useBulkFetchState.disableBulkFetch() }
+    }
+
+    @Test
+    fun `handle SyncMissingArtists does not disable bulk fetch on generic error`() {
+        every { userRepository.findAll() } returns listOf(buildUser())
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { spotifyCatalog.getArtists(userId, accessToken, listOf("artist-1")) } returns SyncError.ARTIST_DETAILS_FETCH_FAILED.left()
+
+        adapter.handle(DomainOutboxEvent.SyncMissingArtists(listOf("artist-1")))
+
+        verify(exactly = 0) { useBulkFetchState.disableBulkFetch() }
+    }
+
+    @Test
+    fun `handle SyncMissingArtists does not disable bulk fetch when rate limited`() {
+        val rateLimitError = de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError(java.time.Duration.ofSeconds(30))
+        every { userRepository.findAll() } returns listOf(buildUser())
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { spotifyCatalog.getArtists(userId, accessToken, listOf("artist-1")) } returns rateLimitError.left()
+
+        adapter.handle(DomainOutboxEvent.SyncMissingArtists(listOf("artist-1")))
+
+        verify(exactly = 0) { useBulkFetchState.disableBulkFetch() }
+    }
+
+    // --- syncDirectTracks disables bulk fetch on explicit endpoint-gone error ---
+
+    @Test
+    fun `handle SyncMissingTracks disables bulk fetch when bulk track endpoint is gone`() {
+        val trackWithoutAlbum = AppTrack(id = TrackId("track-1"), title = "Track One", artistId = ArtistId("artist-1"))
+        every { userRepository.findAll() } returns listOf(buildUser())
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { appTrackRepository.findByTrackIds(setOf(TrackId("track-1"))) } returns listOf(trackWithoutAlbum)
+        every { spotifyCatalog.getTracks(userId, accessToken, listOf("track-1")) } returns SyncError.BULK_ENDPOINT_GONE.left()
+
+        adapter.handle(DomainOutboxEvent.SyncMissingTracks(listOf("track-1")))
+
+        verify { useBulkFetchState.disableBulkFetch() }
+    }
+
+    @Test
+    fun `handle SyncMissingTracks does not disable bulk fetch on generic error`() {
+        val trackWithoutAlbum = AppTrack(id = TrackId("track-1"), title = "Track One", artistId = ArtistId("artist-1"))
+        every { userRepository.findAll() } returns listOf(buildUser())
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { appTrackRepository.findByTrackIds(setOf(TrackId("track-1"))) } returns listOf(trackWithoutAlbum)
+        every { spotifyCatalog.getTracks(userId, accessToken, listOf("track-1")) } returns SyncError.TRACK_DETAILS_FETCH_FAILED.left()
+
+        adapter.handle(DomainOutboxEvent.SyncMissingTracks(listOf("track-1")))
+
+        verify(exactly = 0) { useBulkFetchState.disableBulkFetch() }
+    }
+
+    @Test
+    fun `handle SyncMissingTracks does not disable bulk fetch when bulk track endpoint is rate limited`() {
+        val trackWithoutAlbum = AppTrack(id = TrackId("track-1"), title = "Track One", artistId = ArtistId("artist-1"))
+        val rateLimitError = de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError(java.time.Duration.ofSeconds(30))
+        every { userRepository.findAll() } returns listOf(buildUser())
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { appTrackRepository.findByTrackIds(setOf(TrackId("track-1"))) } returns listOf(trackWithoutAlbum)
+        every { spotifyCatalog.getTracks(userId, accessToken, listOf("track-1")) } returns rateLimitError.left()
+
+        adapter.handle(DomainOutboxEvent.SyncMissingTracks(listOf("track-1")))
+
+        verify(exactly = 0) { useBulkFetchState.disableBulkFetch() }
     }
 }

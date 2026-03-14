@@ -23,7 +23,7 @@ class HealthPageTests {
   }
 
   @Test
-  fun `health page displays health section with communication, cronjobs and mongodb sub-headings`() {
+  fun `health page displays health section with communication, state, cronjobs and mongodb sub-headings`() {
     given()
       .`when`()
       .get("/health")
@@ -31,6 +31,7 @@ class HealthPageTests {
       .statusCode(200)
       .body(containsString("""id="health-section""""))
       .body(containsString("Communication"))
+      .body(containsString("State"))
       .body(containsString("Cronjobs"))
       .body(containsString("MongoDB"))
       .body(containsString("Outgoing HTTP Requests"))
@@ -404,6 +405,30 @@ class HealthPageTests {
       .then()
       .statusCode(200)
       .body(containsString("""data-testid="config-link""""))
+  }
+
+  @Test
+  fun `health page displays state section with predicates table`() {
+    given()
+      .`when`()
+      .get("/health")
+      .then()
+      .statusCode(200)
+      .body(containsString("State"))
+      .body(containsString("""data-testid="predicates-table""""))
+      .body(containsString("usingBulkFetch"))
+      .body(containsString("playbackActive"))
+  }
+
+  @Test
+  fun `health snippet endpoint for predicates is available`() {
+    given()
+      .`when`()
+      .get("/health/snippets/predicates")
+      .then()
+      .statusCode(200)
+      .contentType(containsString("text/html"))
+      .body(containsString("""data-testid="predicates-table""""))
   }
 
   @Test
