@@ -27,7 +27,7 @@ internal fun HttpResponse<String>.checkRateLimitOrError(
         return SpotifyRateLimitError(Duration.ofSeconds(retryAfterSeconds)).left()
     }
     if (statusCode() != HTTP_OK) {
-        logger.error { "Spotify HTTP request failed with ${statusCode()} - ${body()}" }
+        logger.error { "Spotify HTTP request to ${request().uri().path} failed with ${statusCode()} - ${body()}" }
         return fallbackError.left()
     }
     return null
@@ -49,7 +49,7 @@ internal fun HttpResponse<String>.checkBulkEndpointOrError(
         return SpotifyRateLimitError(Duration.ofSeconds(retryAfterSeconds)).left()
     }
     if (statusCode() == HTTP_OK) return null
-    logger.error { "Spotify HTTP request failed with ${statusCode()} - ${body()}" }
+    logger.error { "Spotify HTTP request to ${request().uri().path} failed with ${statusCode()} - ${body()}" }
     val error: DomainError = if (statusCode() == HTTP_NOT_FOUND || statusCode() == HTTP_GONE) {
         SyncError.BULK_ENDPOINT_GONE
     } else {

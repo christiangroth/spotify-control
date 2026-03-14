@@ -1,6 +1,7 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
 import de.chrgroth.spotify.control.domain.error.ArtistSettingsError
+import mu.KLogging
 import de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.CatalogPort
@@ -85,6 +86,7 @@ class PlaybackSettingsResource {
   fun resyncCatalog(): Response {
     return catalog.resyncCatalog().fold(
       ifLeft = { error ->
+        logger.error { "Catalog re-sync failed: ${error.code}" }
         Response.status(Response.Status.INTERNAL_SERVER_ERROR)
           .entity(mapOf("error" to "Re-sync failed: ${error.code}"))
           .build()
@@ -101,12 +103,18 @@ class PlaybackSettingsResource {
     return catalog.resyncArtist(artistId).fold(
       ifLeft = { error ->
         when (error) {
-          ArtistSettingsError.ARTIST_NOT_FOUND -> Response.status(Response.Status.NOT_FOUND)
-            .entity(mapOf("error" to "Artist not found: $artistId"))
-            .build()
-          else -> Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-            .entity(mapOf("error" to "Re-sync failed: ${error.code}"))
-            .build()
+          ArtistSettingsError.ARTIST_NOT_FOUND -> {
+            logger.warn { "Artist $artistId not found for re-sync: ${error.code}" }
+            Response.status(Response.Status.NOT_FOUND)
+              .entity(mapOf("error" to "Artist not found: $artistId"))
+              .build()
+          }
+          else -> {
+            logger.error { "Artist re-sync failed for $artistId: ${error.code}" }
+            Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+              .entity(mapOf("error" to "Re-sync failed: ${error.code}"))
+              .build()
+          }
         }
       },
       ifRight = { Response.ok(mapOf("status" to "ok")).build() },
@@ -130,12 +138,18 @@ class PlaybackSettingsResource {
     return catalog.updateArtistPlaybackProcessingStatus(artistId, status, userId).fold(
       ifLeft = { error ->
         when (error) {
-          ArtistSettingsError.ARTIST_NOT_FOUND -> Response.status(Response.Status.NOT_FOUND)
-            .entity(mapOf("error" to "Artist not found: $artistId"))
-            .build()
-          else -> Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-            .entity(mapOf("error" to "Update failed: ${error.code}"))
-            .build()
+          ArtistSettingsError.ARTIST_NOT_FOUND -> {
+            logger.warn { "Artist $artistId not found for status update: ${error.code}" }
+            Response.status(Response.Status.NOT_FOUND)
+              .entity(mapOf("error" to "Artist not found: $artistId"))
+              .build()
+          }
+          else -> {
+            logger.error { "Artist status update failed for $artistId: ${error.code}" }
+            Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+              .entity(mapOf("error" to "Update failed: ${error.code}"))
+              .build()
+          }
         }
       },
       ifRight = { Response.ok(mapOf("status" to status.name)).build() },
@@ -143,4 +157,6 @@ class PlaybackSettingsResource {
   }
 
   data class ArtistStatusRequest(val status: String = "")
+
+  companion object : KLogging()
 }
