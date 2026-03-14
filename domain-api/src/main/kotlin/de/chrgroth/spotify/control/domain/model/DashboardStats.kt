@@ -8,4 +8,5 @@ data class DashboardStats(
     val playbackEventsPerDay: List<DayCount>,
     val recentlyPlayedTracks: List<RecentlyPlayedItem>,
     val listeningStats: ListeningStats,
+    val catalogStats: CatalogStats,
 )

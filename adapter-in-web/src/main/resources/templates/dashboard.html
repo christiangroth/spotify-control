@@ -6,6 +6,49 @@
 
         <div id="stats-section">
             <div class="row g-3 mb-4">
+                <div class="col-6 col-sm-3">
+                    <a href="/catalog" class="text-decoration-none">
+                        <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                            <div class="card-body">
+                                <p class="card-subtitle mb-1" style="color:#888;font-size:.8rem;">Artists</p>
+                                <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.catalogStats.artistCount}</p>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-6 col-sm-3">
+                    <a href="/catalog" class="text-decoration-none">
+                        <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                            <div class="card-body">
+                                <p class="card-subtitle mb-1" style="color:#888;font-size:.8rem;">Albums</p>
+                                <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.catalogStats.albumCount}</p>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-6 col-sm-3">
+                    <a href="/catalog" class="text-decoration-none">
+                        <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                            <div class="card-body">
+                                <p class="card-subtitle mb-1" style="color:#888;font-size:.8rem;">Tracks</p>
+                                <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.catalogStats.trackCount}</p>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-6 col-sm-3">
+                    <a href="/catalog" class="text-decoration-none">
+                        <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                            <div class="card-body">
+                                <p class="card-subtitle mb-1" style="color:#888;font-size:.8rem;">Genres</p>
+                                <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.catalogStats.genreCount}</p>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-4">
                 <div id="snippet-playlist-metadata" class="col-12 col-sm-6 col-lg-6">
                     {#fragment id="snippet_playlist_metadata"}
                     <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
