@@ -9,7 +9,7 @@ import de.chrgroth.spotify.control.domain.port.out.MongoStatsPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxManagementPort
 import de.chrgroth.spotify.control.domain.port.out.OutgoingRequestStatsPort
 import de.chrgroth.spotify.control.domain.port.out.PlaybackActivityPort
-import de.chrgroth.spotify.control.domain.port.out.SyncPoolStatePort
+import de.chrgroth.spotify.control.domain.port.out.UseBulkFetchStatePort
 import jakarta.enterprise.context.ApplicationScoped
 
 @ApplicationScoped
@@ -20,7 +20,7 @@ class HealthAdapter(
     private val mongoStats: MongoStatsPort,
     private val cronjobInfo: CronjobInfoPort,
     private val configurationInfo: ConfigurationInfoPort,
-    private val syncPoolState: SyncPoolStatePort,
+    private val useBulkFetchState: UseBulkFetchStatePort,
     private val playbackActivity: PlaybackActivityPort,
 ) : HealthPort {
 
@@ -31,7 +31,7 @@ class HealthAdapter(
         mongoQueryStats = mongoStats.getQueryStats(),
         cronjobStats = cronjobInfo.getCronjobStats(),
         predicateStats = listOf(
-            PredicateStats(name = "usingSyncPool", active = syncPoolState.isUsingSyncPool()),
+            PredicateStats(name = "usingBulkFetch", active = useBulkFetchState.isUsingBulkFetch()),
             PredicateStats(name = "playbackActive", active = playbackActivity.isPlaybackActive()),
         ),
         configurationStats = configurationInfo.getConfigurationStats(),

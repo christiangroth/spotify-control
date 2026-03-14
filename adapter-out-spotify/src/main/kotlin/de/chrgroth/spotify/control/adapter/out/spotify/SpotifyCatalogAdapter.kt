@@ -83,7 +83,7 @@ class SpotifyCatalogAdapter(
             val response = httpMetrics.timed("/v1/artists") {
                 httpClient.send(request, HttpResponse.BodyHandlers.ofString())
             }
-            val errorResult = response.checkRateLimitOrError(logger, SyncError.ARTIST_DETAILS_FETCH_FAILED)
+            val errorResult = response.checkBulkEndpointOrError(logger, SyncError.ARTIST_DETAILS_FETCH_FAILED)
             if (errorResult != null) return errorResult
             val result = spotifyJson.decodeFromString<SpotifyArtistsResponse>(response.body())
             result.artists.filterNotNull().map { parseArtist(it) }.right()
@@ -134,7 +134,7 @@ class SpotifyCatalogAdapter(
             val response = httpMetrics.timed("/v1/tracks") {
                 httpClient.send(request, HttpResponse.BodyHandlers.ofString())
             }
-            val errorResult = response.checkRateLimitOrError(logger, SyncError.TRACK_DETAILS_FETCH_FAILED)
+            val errorResult = response.checkBulkEndpointOrError(logger, SyncError.TRACK_DETAILS_FETCH_FAILED)
             if (errorResult != null) return errorResult
             val result = spotifyJson.decodeFromString<SpotifyTracksResponse>(response.body())
             result.tracks.filterNotNull().mapNotNull { parseTrackSyncResult(it) }.right()

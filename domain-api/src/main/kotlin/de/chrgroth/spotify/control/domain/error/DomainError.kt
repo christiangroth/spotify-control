@@ -36,6 +36,7 @@ enum class PlaybackError(override val code: String) : DomainError {
 enum class SyncError(override val code: String) : DomainError {
     ARTIST_DETAILS_FETCH_FAILED("SYNC-001"),
     TRACK_DETAILS_FETCH_FAILED("SYNC-002"),
+    BULK_ENDPOINT_GONE("SYNC-003"),
     ;
 }
 

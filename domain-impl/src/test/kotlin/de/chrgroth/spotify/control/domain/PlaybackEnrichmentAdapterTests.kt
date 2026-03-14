@@ -19,7 +19,7 @@ import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyCatalogPort
-import de.chrgroth.spotify.control.domain.port.out.SyncPoolStatePort
+import de.chrgroth.spotify.control.domain.port.out.UseBulkFetchStatePort
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
 import io.mockk.every
 import io.mockk.just
@@ -39,7 +39,7 @@ class PlaybackEnrichmentAdapterTests {
     private val userRepository: UserRepositoryPort = mockk(relaxed = true)
     private val outboxPort: OutboxPort = mockk()
     private val syncPoolRepository: AppSyncPoolRepositoryPort = mockk(relaxed = true)
-    private val syncPoolState: SyncPoolStatePort = mockk(relaxed = true)
+    private val useBulkFetchState: UseBulkFetchStatePort = mockk(relaxed = true)
 
     private val adapter = CatalogAdapter(
         spotifyAccessToken,
@@ -51,7 +51,7 @@ class PlaybackEnrichmentAdapterTests {
         userRepository,
         outboxPort,
         syncPoolRepository,
-        syncPoolState,
+        useBulkFetchState,
     )
 
     private val userId = UserId("user-1")

@@ -416,7 +416,7 @@ class HealthPageTests {
       .statusCode(200)
       .body(containsString("State"))
       .body(containsString("""data-testid="predicates-table""""))
-      .body(containsString("usingSyncPool"))
+      .body(containsString("usingBulkFetch"))
       .body(containsString("playbackActive"))
   }
 

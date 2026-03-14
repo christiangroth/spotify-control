@@ -3,7 +3,7 @@ package de.chrgroth.spotify.control.adapter.`in`.scheduler
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.out.AppSyncPoolRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
-import de.chrgroth.spotify.control.domain.port.out.SyncPoolStatePort
+import de.chrgroth.spotify.control.domain.port.out.UseBulkFetchStatePort
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
 import de.chrgroth.quarkus.starters.StarterSkipPredicate
 import io.quarkus.scheduler.Scheduled
@@ -15,14 +15,14 @@ import mu.KLogging
 class SyncMissingArtistsJob(
     private val outboxPort: OutboxPort,
     private val syncPoolRepository: AppSyncPoolRepositoryPort,
-    private val syncPoolState: SyncPoolStatePort,
+    private val useBulkFetchState: UseBulkFetchStatePort,
     private val userRepository: UserRepositoryPort,
 ) {
 
     // Runs at :00 of every 3 hours (staggered with SyncMissingTracksJob and SyncMissingAlbumsJob)
     @Scheduled(cron = "0 0 0/3 * * ?", skipExecutionIf = StarterSkipPredicate::class)
     fun run() {
-        if (syncPoolState.isUsingSyncPool()) {
+        if (useBulkFetchState.isUsingBulkFetch()) {
             runBulk()
         } else {
             runPerItem()

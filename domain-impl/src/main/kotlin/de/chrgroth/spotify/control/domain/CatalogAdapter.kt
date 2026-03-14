@@ -8,6 +8,7 @@ import de.chrgroth.outbox.OutboxTaskResult
 import de.chrgroth.spotify.control.domain.error.ArtistSettingsError
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
+import de.chrgroth.spotify.control.domain.error.SyncError
 import de.chrgroth.spotify.control.domain.model.AppArtist
 import de.chrgroth.spotify.control.domain.model.AccessToken
 import de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus
@@ -24,7 +25,7 @@ import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyCatalogPort
-import de.chrgroth.spotify.control.domain.port.out.SyncPoolStatePort
+import de.chrgroth.spotify.control.domain.port.out.UseBulkFetchStatePort
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
@@ -41,7 +42,7 @@ class CatalogAdapter(
     private val userRepository: UserRepositoryPort,
     private val outboxPort: OutboxPort,
     private val syncPoolRepository: AppSyncPoolRepositoryPort,
-    private val syncPoolState: SyncPoolStatePort,
+    private val useBulkFetchState: UseBulkFetchStatePort,
 ) : CatalogPort {
 
     // --- Artist Settings ---
@@ -170,9 +171,9 @@ class CatalogAdapter(
         val accessToken = spotifyAccessToken.getValidAccessToken(userId)
         return spotifyCatalog.getArtists(userId, accessToken, artistIds)
             .onLeft { error ->
-                if (error !is SpotifyRateLimitError) {
-                    logger.warn { "Bulk artist endpoint failed (${error.code}), disabling sync pool" }
-                    syncPoolState.disableSyncPool()
+                if (error == SyncError.BULK_ENDPOINT_GONE) {
+                    logger.warn { "Bulk artist endpoint is gone, disabling bulk fetch" }
+                    useBulkFetchState.disableBulkFetch()
                 }
             }
             .flatMap { artists ->
@@ -254,9 +255,9 @@ class CatalogAdapter(
         if (trackIds.isEmpty()) return previouslySynced.right()
         return spotifyCatalog.getTracks(userId, accessToken, trackIds)
             .onLeft { error ->
-                if (error !is SpotifyRateLimitError) {
-                    logger.warn { "Bulk track endpoint failed (${error.code}), disabling sync pool" }
-                    syncPoolState.disableSyncPool()
+                if (error == SyncError.BULK_ENDPOINT_GONE) {
+                    logger.warn { "Bulk track endpoint is gone, disabling bulk fetch" }
+                    useBulkFetchState.disableBulkFetch()
                 }
             }
             .flatMap { results ->
