@@ -7,4 +7,6 @@ interface AppPlaylistCheckRepositoryPort {
     fun findAll(): List<AppPlaylistCheck>
     fun countAll(): Long
     fun countSucceeded(): Long
+    fun deleteByPlaylistId(playlistId: String)
+    fun deleteAll()
 }
