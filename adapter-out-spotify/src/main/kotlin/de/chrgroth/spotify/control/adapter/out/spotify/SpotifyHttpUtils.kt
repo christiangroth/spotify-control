@@ -49,11 +49,10 @@ internal fun HttpResponse<String>.checkBulkEndpointOrError(
         return SpotifyRateLimitError(Duration.ofSeconds(retryAfterSeconds)).left()
     }
     if (statusCode() == HTTP_OK) return null
+    logger.error { "Spotify HTTP request failed with ${statusCode()} - ${body()}" }
     val error: DomainError = if (statusCode() == HTTP_NOT_FOUND || statusCode() == HTTP_GONE) {
-        logger.warn { "Bulk Spotify endpoint is gone (${statusCode()}) at ${request().uri().path}" }
         SyncError.BULK_ENDPOINT_GONE
     } else {
-        logger.error { "Spotify HTTP request failed with ${statusCode()} - ${body()}" }
         fallbackError
     }
     return error.left()
