@@ -7,8 +7,11 @@ import de.chrgroth.spotify.control.domain.port.`in`.PlaylistCheckPort
 import de.chrgroth.spotify.control.domain.port.out.AppPlaylistCheckRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
+import io.micrometer.core.instrument.MeterRegistry
+import io.micrometer.core.instrument.Timer
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
+import java.util.concurrent.TimeUnit
 import kotlin.time.Clock
 
 @ApplicationScoped
@@ -17,6 +20,7 @@ class PlaylistCheckAdapter(
     private val playlistRepository: PlaylistRepositoryPort,
     private val playlistCheckRepository: AppPlaylistCheckRepositoryPort,
     private val dashboardRefresh: DashboardRefreshPort,
+    private val meterRegistry: MeterRegistry,
 ) : PlaylistCheckPort {
 
     override fun handle(event: DomainOutboxEvent.RunPlaylistChecks): OutboxTaskResult = try {
@@ -26,7 +30,9 @@ class PlaylistCheckAdapter(
             return OutboxTaskResult.Success
         }
 
-        val duplicateTrackCheck = runDuplicateTrackCheck(event.playlistId, playlist.tracks)
+        val duplicateTrackCheck = timedCheck(CHECK_DUPLICATE_TRACKS, event.playlistId) {
+            runDuplicateTrackCheck(event.playlistId, playlist.tracks)
+        }
         playlistCheckRepository.save(duplicateTrackCheck)
 
         val status = if (duplicateTrackCheck.succeeded) "all passed" else "${duplicateTrackCheck.violations.size} violation(s)"
@@ -36,6 +42,18 @@ class PlaylistCheckAdapter(
     } catch (e: Exception) {
         logger.error(e) { "Unexpected error in handle(RunPlaylistChecks) for playlist ${event.playlistId} (user ${event.userId.value})" }
         OutboxTaskResult.Failed("Unexpected error in playlist checks: ${e.message}", e)
+    }
+
+    private fun <T> timedCheck(checkId: String, playlistId: String, block: () -> T): T {
+        val startNs = System.nanoTime()
+        val result = block()
+        val durationNs = System.nanoTime() - startNs
+        Timer.builder("playlist.check")
+            .tag("checkId", checkId)
+            .tag("playlistId", playlistId)
+            .register(meterRegistry)
+            .record(durationNs, TimeUnit.NANOSECONDS)
+        return result
     }
 
     private fun runDuplicateTrackCheck(
@@ -51,7 +69,7 @@ class PlaylistCheckAdapter(
                 "$artistName – ${track.trackName}"
             }
         return AppPlaylistCheck(
-            checkId = "$playlistId:duplicate-tracks",
+            checkId = "$playlistId:$CHECK_DUPLICATE_TRACKS",
             playlistId = playlistId,
             lastCheck = Clock.System.now(),
             succeeded = violations.isEmpty(),
@@ -59,5 +77,7 @@ class PlaylistCheckAdapter(
         )
     }
 
-    companion object : KLogging()
+    companion object : KLogging() {
+        private const val CHECK_DUPLICATE_TRACKS = "duplicate-tracks"
+    }
 }
