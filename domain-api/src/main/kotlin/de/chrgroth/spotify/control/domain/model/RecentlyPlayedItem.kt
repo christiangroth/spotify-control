@@ -9,4 +9,6 @@ data class RecentlyPlayedItem(
     val artistIds: List<String>,
     val artistNames: List<String>,
     val playedAt: Instant,
+    val albumName: String? = null,
+    val imageUrl: String? = null,
 )

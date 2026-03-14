@@ -12,6 +12,7 @@ import de.chrgroth.spotify.control.domain.model.TrackId
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.CatalogBrowserPort
 import de.chrgroth.spotify.control.domain.port.`in`.DashboardPort
+import de.chrgroth.spotify.control.domain.port.out.AppAlbumRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppPlaybackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppPlaylistCheckRepositoryPort
@@ -33,6 +34,7 @@ class DashboardAdapter(
     private val appPlaybackRepository: AppPlaybackRepositoryPort,
     private val appTrackRepository: AppTrackRepositoryPort,
     private val appArtistRepository: AppArtistRepositoryPort,
+    private val appAlbumRepository: AppAlbumRepositoryPort,
     private val catalogBrowser: CatalogBrowserPort,
     private val playlistRepository: PlaylistRepositoryPort,
     private val playlistCheckRepository: AppPlaylistCheckRepositoryPort,
@@ -75,29 +77,6 @@ class DashboardAdapter(
             allSucceeded = totalChecks == 0L || succeededChecks == totalChecks,
         )
 
-        val recentPlaybackItems = appPlaybackRepository.findRecentlyPlayed(userId, recentlyPlayedLimit)
-        val trackIds = recentPlaybackItems.map { it.trackId }.toSet()
-        val trackMap = appTrackRepository.findByTrackIds(trackIds.map { TrackId(it) }.toSet()).associateBy { it.id.value }
-        val allArtistIds = trackMap.values.flatMap { it.allArtistIds() }.toSet()
-        val artistMap = appArtistRepository.findByArtistIds(allArtistIds).associateBy { it.artistId }
-        val recentlyPlayedTracks = recentPlaybackItems.map { playback ->
-            val track = trackMap[playback.trackId]
-            val trackArtistIds = track?.allArtistIds() ?: emptyList()
-            val artistNames = trackArtistIds.mapNotNull { artistMap[it]?.artistName }
-            RecentlyPlayedItem(
-                spotifyUserId = playback.userId,
-                trackId = playback.trackId,
-                trackName = track?.title ?: playback.trackId,
-                artistIds = trackArtistIds,
-                artistNames = artistNames,
-                playedAt = playback.playedAt,
-            )
-        }
-
-        val listeningStats = buildListeningStats(userId, since)
-
-        val catalogStats = catalogBrowser.getCatalogStats()
-
         return DashboardStats(
             syncedPlaylists = syncedPlaylists,
             totalPlaylists = totalPlaylists,
@@ -105,33 +84,57 @@ class DashboardAdapter(
             totalPlaybackEvents = total,
             playbackEventsLast30Days = last30Days,
             playbackEventsPerDay = perDay,
-            recentlyPlayedTracks = recentlyPlayedTracks,
-            listeningStats = listeningStats,
-            catalogStats = catalogStats,
+            recentlyPlayedTracks = buildRecentlyPlayedTracks(userId),
+            listeningStats = buildListeningStats(userId, since),
+            catalogStats = catalogBrowser.getCatalogStats(),
         )
+    }
+
+    private fun buildRecentlyPlayedTracks(userId: UserId): List<RecentlyPlayedItem> {
+        val recentPlaybackItems = appPlaybackRepository.findRecentlyPlayed(userId, recentlyPlayedLimit)
+        val trackIds = recentPlaybackItems.map { it.trackId }.toSet()
+        val trackMap = appTrackRepository.findByTrackIds(trackIds.map { TrackId(it) }.toSet()).associateBy { it.id.value }
+        val albumIds = trackMap.values.mapNotNull { it.albumId }.toSet()
+        val albumMap = appAlbumRepository.findByAlbumIds(albumIds).associateBy { it.id.value }
+        val allArtistIds = trackMap.values.flatMap { it.allArtistIds() }.toSet()
+        val artistMap = appArtistRepository.findByArtistIds(allArtistIds).associateBy { it.artistId }
+        return recentPlaybackItems.map { playback ->
+            val track = trackMap[playback.trackId]
+            val trackArtistIds = track?.allArtistIds() ?: emptyList()
+            val album = track?.albumId?.let { albumMap[it.value] }
+            RecentlyPlayedItem(
+                spotifyUserId = playback.userId,
+                trackId = playback.trackId,
+                trackName = track?.title ?: playback.trackId,
+                artistIds = trackArtistIds,
+                artistNames = trackArtistIds.mapNotNull { artistMap[it]?.artistName },
+                playedAt = playback.playedAt,
+                albumName = album?.title ?: track?.albumName,
+                imageUrl = album?.imageLink,
+            )
+        }
     }
 
     private fun buildListeningStats(userId: UserId, since: Instant): ListeningStats {
         val playbackItems = appPlaybackRepository.findAllSince(userId, since)
 
-        val listenedMinutes = playbackItems.sumOf { it.secondsPlayed } / SECONDS_PER_MINUTE
+        val allTrackIds = playbackItems.map { it.trackId }.toSet()
+        val statsTrackMap = appTrackRepository.findByTrackIds(allTrackIds.map { TrackId(it) }.toSet()).associateBy { it.id.value }
 
         val secondsByTrackId = playbackItems
             .groupBy { it.trackId }
-            .mapValues { (_, items) -> items.sumOf { it.secondsPlayed } }
-
-        val statsTrackIds = secondsByTrackId.keys
-        val statsTrackMap = appTrackRepository.findByTrackIds(statsTrackIds.map { TrackId(it) }.toSet()).associateBy { it.id.value }
-
-        val topTracks = secondsByTrackId.entries
-            .sortedByDescending { it.value }
-            .take(topEntriesLimit)
-            .map { (trackId, seconds) ->
-                TopEntry(
-                    name = statsTrackMap[trackId]?.title ?: trackId,
-                    totalMinutes = seconds / SECONDS_PER_MINUTE,
-                )
+            .mapValues { (trackId, items) ->
+                items.sumOf { item ->
+                    if (item.secondsPlayed > 0) {
+                        item.secondsPlayed
+                    } else {
+                        statsTrackMap[trackId]?.durationMs?.div(MS_PER_SECOND) ?: 0L
+                    }
+                }
             }
+
+        val listenedMinutes = secondsByTrackId.values.sum() / SECONDS_PER_MINUTE
+        val topTracks = buildTopEntries(secondsByTrackId) { statsTrackMap[it]?.title ?: it }
 
         val statsArtistIds = statsTrackMap.values.flatMap { it.allArtistIds() }.toSet()
         val statsArtistMap = appArtistRepository.findByArtistIds(statsArtistIds).associateBy { it.artistId }
@@ -143,16 +146,7 @@ class DashboardAdapter(
                 secondsByArtistId.merge(artistId, seconds, Long::plus)
             }
         }
-
-        val topArtists = secondsByArtistId.entries
-            .sortedByDescending { it.value }
-            .take(topEntriesLimit)
-            .map { (artistId, seconds) ->
-                TopEntry(
-                    name = statsArtistMap[artistId]?.artistName ?: artistId,
-                    totalMinutes = seconds / SECONDS_PER_MINUTE,
-                )
-            }
+        val topArtists = buildTopEntries(secondsByArtistId) { statsArtistMap[it]?.artistName ?: it }
 
         val secondsByGenre = mutableMapOf<String, Long>()
         for ((artistId, seconds) in secondsByArtistId) {
@@ -162,16 +156,7 @@ class DashboardAdapter(
                 secondsByGenre.merge(genre, seconds, Long::plus)
             }
         }
-
-        val topGenres = secondsByGenre.entries
-            .sortedByDescending { it.value }
-            .take(topEntriesLimit)
-            .map { (genre, seconds) ->
-                TopEntry(
-                    name = genre,
-                    totalMinutes = seconds / SECONDS_PER_MINUTE,
-                )
-            }
+        val topGenres = buildTopEntries(secondsByGenre) { it }
 
         return ListeningStats(
             listenedMinutesLast30Days = listenedMinutes,
@@ -181,9 +166,16 @@ class DashboardAdapter(
         )
     }
 
+    private fun buildTopEntries(secondsById: Map<String, Long>, nameResolver: (String) -> String): List<TopEntry> =
+        secondsById.entries
+            .sortedByDescending { it.value }
+            .take(topEntriesLimit)
+            .map { (id, seconds) -> TopEntry(name = nameResolver(id), totalMinutes = seconds / SECONDS_PER_MINUTE) }
+
     companion object {
         private const val STATS_DAYS = 30
         private const val SECONDS_PER_MINUTE = 60L
+        private const val MS_PER_SECOND = 1_000L
     }
 }
 
