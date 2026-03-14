@@ -61,7 +61,6 @@ class CatalogBrowserAdapter(
                     artistName = artist.artistName,
                     imageLink = artist.imageLink,
                     genres = genres,
-                    genresDisplay = genres.joinToString(", "),
                     albumCount = albumCountByArtistId[artist.artistId] ?: 0,
                     trackCount = trackCountByArtistId[artist.artistId] ?: 0,
                 )
