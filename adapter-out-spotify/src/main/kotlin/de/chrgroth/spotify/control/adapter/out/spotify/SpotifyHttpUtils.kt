@@ -10,6 +10,7 @@ import java.net.http.HttpResponse
 import java.time.Duration
 
 internal const val HTTP_OK = 200
+internal const val HTTP_FORBIDDEN = 403
 internal const val HTTP_NOT_FOUND = 404
 internal const val HTTP_GONE = 410
 internal const val HTTP_RATE_LIMITED = 429
@@ -35,7 +36,7 @@ internal fun HttpResponse<String>.checkRateLimitOrError(
 
 /**
  * Like [checkRateLimitOrError] but additionally returns [SyncError.BULK_ENDPOINT_GONE]
- * for 404 and 410 responses so callers can detect that the bulk endpoint was removed.
+ * for 403, 404 and 410 responses so callers can detect that the bulk endpoint was removed or forbidden.
  */
 internal fun HttpResponse<String>.checkBulkEndpointOrError(
     logger: KLogger,
@@ -50,7 +51,7 @@ internal fun HttpResponse<String>.checkBulkEndpointOrError(
     }
     if (statusCode() == HTTP_OK) return null
     logger.error { "Spotify HTTP request to ${request().uri().path} failed with ${statusCode()} - ${body()}" }
-    val error: DomainError = if (statusCode() == HTTP_NOT_FOUND || statusCode() == HTTP_GONE) {
+    val error: DomainError = if (statusCode() == HTTP_FORBIDDEN || statusCode() == HTTP_NOT_FOUND || statusCode() == HTTP_GONE) {
         SyncError.BULK_ENDPOINT_GONE
     } else {
         fallbackError
