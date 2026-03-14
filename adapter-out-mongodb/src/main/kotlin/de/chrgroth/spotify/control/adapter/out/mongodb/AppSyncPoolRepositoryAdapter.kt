@@ -27,9 +27,16 @@ class AppSyncPoolRepositoryAdapter : AppSyncPoolRepositoryPort {
         addToPool(SyncPoolType.TRACK, trackIds)
     }
 
+    override fun addAlbums(albumIds: List<String>) {
+        if (albumIds.isEmpty()) return
+        addToPool(SyncPoolType.ALBUM, albumIds)
+    }
+
     override fun peekArtists(max: Int): List<String> = peekFromPool(SyncPoolType.ARTIST, max)
 
     override fun peekTracks(max: Int): List<String> = peekFromPool(SyncPoolType.TRACK, max)
+
+    override fun peekAlbums(max: Int): List<String> = peekFromPool(SyncPoolType.ALBUM, max)
 
     override fun removeArtists(artistIds: List<String>) {
         if (artistIds.isEmpty()) return
@@ -39,6 +46,11 @@ class AppSyncPoolRepositoryAdapter : AppSyncPoolRepositoryPort {
     override fun removeTracks(trackIds: List<String>) {
         if (trackIds.isEmpty()) return
         removeFromPool(SyncPoolType.TRACK, trackIds)
+    }
+
+    override fun removeAlbums(albumIds: List<String>) {
+        if (albumIds.isEmpty()) return
+        removeFromPool(SyncPoolType.ALBUM, albumIds)
     }
 
     private fun addToPool(type: SyncPoolType, ids: List<String>) {

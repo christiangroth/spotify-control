@@ -23,5 +23,6 @@ interface CatalogPort {
     fun handle(event: DomainOutboxEvent.SyncTrackDetails): OutboxTaskResult
     fun handle(event: DomainOutboxEvent.SyncMissingArtists): OutboxTaskResult
     fun handle(event: DomainOutboxEvent.SyncMissingTracks): OutboxTaskResult
+    fun handle(event: DomainOutboxEvent.SyncMissingAlbums): OutboxTaskResult
     fun handle(event: DomainOutboxEvent.ResyncCatalog): OutboxTaskResult
 }

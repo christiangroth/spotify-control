@@ -3,7 +3,7 @@ package de.chrgroth.spotify.control.adapter.out.mongodb
 import io.quarkus.mongodb.panache.common.MongoEntity
 import org.bson.codecs.pojo.annotations.BsonId
 
-enum class SyncPoolType { ARTIST, TRACK }
+enum class SyncPoolType { ARTIST, TRACK, ALBUM }
 
 @MongoEntity(collection = "app_sync_pool")
 class AppSyncPoolDocument {

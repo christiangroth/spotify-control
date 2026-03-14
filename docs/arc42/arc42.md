@@ -116,7 +116,7 @@ Implements all repository interfaces defined in `domain-api`. Manages the MongoD
 | `app_album`                       | Deduplicated album metadata: title, cover image, genres, main artist reference, lastSync.                             |
 | `app_artist`                      | Deduplicated artist metadata: name, genres, imageLink, lastSync, playbackProcessingStatus (UNDECIDED/ACTIVE/INACTIVE). |
 | `app_playback`                    | Processed playback events combining recently played and partial played data.                                                    |
-| `app_sync_pool`                   | Pending sync entries: Spotify IDs of artists and tracks awaiting bulk sync from the Spotify API.                        |
+| `app_sync_pool`                   | Pending sync entries: Spotify IDs of artists, tracks, and albums awaiting bulk sync from the Spotify API.               |
 | `app_track`                       | Deduplicated track metadata: title, main artist reference, additional artist references, album reference, lastSync.   |
 | `app_user`                        | Spotify user profile with encrypted access and refresh tokens.                                                                  |
 | `outbox`                          | Persistent outbox task queue (managed by `de.chrgroth.quarkus.outbox`).                                                        |
@@ -138,7 +138,7 @@ Implements `CronjobInfoPort`. Provides scheduled job metadata (name, next execut
 
 ### `adapter-out-spotify`
 
-Encapsulates all communication with the Spotify Web API. Handles token refresh, rate limiting (10s throttle on the `to-spotify` partition), and backoff for hidden 24h bulk limits. Implements bulk fetch endpoints (GET /v1/artists and GET /v1/tracks) with per-item fallback.
+Encapsulates all communication with the Spotify Web API. Handles token refresh, rate limiting (10s throttle on the `to-spotify` partition), and backoff for hidden 24h bulk limits. Implements bulk fetch endpoints (`GET /v1/artists?ids=`, `GET /v1/tracks?ids=`, `GET /v1/albums/{id}`) with per-item fallback for the direct track endpoint.
 
 ### `application-quarkus`
 
@@ -178,7 +178,7 @@ Provided via [christiangroth/quarkus-one-time-starters](https://github.com/chris
 
 ## Playback Polling Flow
 
-![Playback polling sequence](https://kroki.io/plantuml/svg/jVRNj9MwEL3nV4x6SqStuuGIVLSBdhEHxEJ7XKlynenGamIbe9yl_HpsxynJUmBvtufNe28-kjtLzJDr2swehdTMsA46JRVvjOoQyDgcRWzDavUs5BMcWGvHkRoPzLV0ryRtxE-Eshyn4XeHkmNljHreNoIfJVoLZZb5OAkuNJMEs6-OmaOzj3LDG6xdi2YGzIINtynyoWXnPePHqmaaEkyzKeaLo7368Sjzz0o-qdX7IqJUfJ0iN1qROJyhevjUC_b3rGbE9swizBJFjHbhnGXLJaxPaM7w5tbXx5WsLSyXWTQL83feDrwFlL5wh_dIvPngjEFJ7TmY9y3MC-8iIHtLHn0VBrlGA86iKUai5S10QjrC_4h-Q34hw_ovklPQS0FS89SQuU5th9g-EkoG9UQ2yDdM1i3mV4sZ9BOhR39cb2FxKhcdLgI7moSIXfZxp70RGhJ2fCDc6Z4x-5f8tLBXiC9Myoilxq0bm2Fao6wvZgbw7irYr8QpWI-98l_LSHqU2QenDJfppElCFXWHpV_5tYyTqVXHhHzNMP4kKK732Ve4C3SWbuKZjMdf70IIDwvx0vhaGsGbKhKtkJho7U163AbG9Ab57-UqsjvP6n9EvwA)
+![Playback polling sequence](https://kroki.io/plantuml/svg/jVTLbtswELzzKxY-2UgNRz0GcBEnToociqR17gJNriPCEsny4UT9-q4oyZBStc1N1MzOzC5XuvaBuxCrkvmj0pY7XkFltBGFMxVCcBEHiC-4NK9Kv8CBl36ISDzwWIZ7o8NO_ULIsmEZ_oyoBW6cM6_PhRJHjd5DxhjhQQlluQ4w-x65O0bPdqJAGUt0M-AefHMaE59KXu-5OG4kt6GjWT7mPMawN29s_s3oF7O9WSSSaV-OiDtrgjrUsHl6aP3aM5M88D33CLNOIqFV88zYeg13J3Q1fL6k7oTR0sN6zVJWWH6hNHAFqKntiPcYRHEbnUMdyrrJTgOcLyhFw2wjEXuSBnOLDqJHtxiYZpdQKR0D_sf0B4qzGMq_WI5J7w2DWXYDWdpu6pDGF5TRjXsn1tsXXMsS55PN9P6dILG_3j3D6pStKlw16ug6Rpoy4dFSkNAX5KIXzG2ryP5lP27sA-Yr11WkVtPSDcNwa1HLc5ienE-SaSVOTfQ0K_pWBtaDyhYcK5xvp7tJ2CTffue3tJbpZqSpuNIfuYw_BRbTc6YO80bOh0_pOTjiT0-hgfuFeM-QBCcVuIAkAQ9bT5uUinytRW6NKdk16dCP5zc)
 
 ```
 CurrentlyPlayingFetchJob (every 20s)
@@ -210,12 +210,18 @@ Raw playback data from `spotify_recently_played` and `spotify_recently_partial_p
 1. Upserts artist metadata into `app_artist` (artistId, artistName) — enriched genres and imageLink are preserved on re-encounter.
 2. Upserts track metadata into `app_track` (trackId, trackTitle, artistId, additionalArtistIds) — albumId is preserved if already enriched.
 3. Appends new entries to `app_playback` (userId, playedAt, trackId, secondsPlayed). The document `_id` is a composite of `${userId}:${playedAt.toEpochMilli()}:${trackId}` for natural deduplication.
-4. Enqueues one `EnrichArtistDetails(artistId, userId)` per artist and one `EnrichTrackDetails(trackId, userId)` per track on the `to-spotify` partition. Deduplication by entity ID ensures no duplicate pending events.
+4. Adds artist IDs to `app_sync_pool` and track IDs to `app_sync_pool` for later bulk sync.
 
-**Enrich (auto-enqueued after each append, one event per entity on `to-spotify`):**
-- `EnrichArtistDetails(artistId, userId)`: skipped if already enriched; otherwise calls `GET /v1/artists/{id}` and updates `app_artist` with genres and imageLink.
-- `EnrichTrackDetails(trackId, userId)`: skipped if already enriched; otherwise calls `GET /v1/tracks/{id}`, updates `app_track.albumId`, creates a stub `app_album` entry, and enqueues `EnrichAlbumDetails(albumId, userId)`.
-- `EnrichAlbumDetails(albumId, userId)`: skipped if already enriched; otherwise calls `GET /v1/albums/{id}` and updates `app_album` with albumTitle, imageLink, genres, and artistId (main artist).
+**Catalog Sync (bulk-scheduled, `to-spotify` partition):**
+- `SyncMissingArtists`: bulk-syncs up to 50 pending artist IDs from `app_sync_pool` via `GET /v1/artists?ids=`. Updates `app_artist` with genres and imageLink. Runs every 10 minutes (at :00, :10, …).
+- `SyncMissingTracks`: bulk-syncs up to 50 pending track IDs from `app_sync_pool`. For tracks with a known `albumId`, fetches all tracks for that album via `GET /v1/albums/{id}` (all album tracks are stored, not only the requested subset). Tracks without a known `albumId` or not found in the album response fall back to `GET /v1/tracks?ids=`. After syncing, discovered album and track artist IDs are added to `app_sync_pool` for further sync. Runs every 10 minutes (at :05, :15, …).
+
+**Per-item sync (on-demand, `to-spotify` partition):**
+- `SyncArtistDetails(artistId, userId)`: skipped if already synced; otherwise calls `GET /v1/artists/{id}` and updates `app_artist` with genres and imageLink.
+- `SyncTrackDetails(trackId, userId)`: skipped if already synced; otherwise calls `GET /v1/tracks/{id}`, updates `app_track` sync fields and album reference, upserts `app_album`, and enqueues `SyncArtistDetails` for all track artists.
+
+**Album sync (bulk-scheduled, `to-spotify` partition):**
+- `SyncMissingAlbums`: bulk-syncs up to 10 pending album IDs from `app_sync_pool` via `GET /v1/albums/{id}`. Upserts ALL returned tracks and album metadata. Track artist IDs are added to `app_sync_pool` for artist sync. Albums are added to the pool when discovered during direct track sync (`SyncMissingTracks`) or via `resyncCatalog`. Runs every 10 minutes (at :08, :18, …).
 
 **Rebuild (user-triggered from Settings):** Deletes all `app_playback` entries for the user and re-runs the Append logic from scratch over all source data.
 
@@ -233,7 +239,7 @@ When an artist is set from `INACTIVE` back to `ACTIVE` or `UNDECIDED`, a `Rebuil
 
 ## Playlist Sync Flow
 
-![Playlist sync sequence](https://kroki.io/plantuml/svg/hVPJbtswEL3zKwY-yUACwdcALuLCSepD0RR2bwGMCTW2CFNDlktTtei_l6SlwHa63Mh5b95CQbc-oAux08IfFFt02EFn2MjWmY4guEgniG-xMS-K97BD7U-RhnYYdbg3HNbqB8FsdrpGXyOxpIVz5mXTKnlg8h5mQiQ8KKkscoDJ54juEP0Tr2VLTdTkJoAefL6dMx819lr5sGjQhoFm8ZzzKYZn8_2Jq4-G92b5flpYpkzPmWtrgtr1sHhcHQ2Pd9FgwGf0BJNBoqBdPgsxn8MHE53uYT4XJSJcv0sh4AaIU91IX2wSIF9Nk1vGjtYJX_csxwYr3hmoLDmInty06AZzPUSAkjMow9llEBhtWuRGU3WpNtqNEjfwcLeB-tus7qi2A9EPpFImUaTpkhWBZ7S-NQFWSy_-lXuZ3gYqmTLsU_NXWTCs-9Ti_1GzwN-jvgrWP1Xzqw4O5eEyc7TpxcK4vB1Xrt5Mth0FzB_zzwJo7TY_c17N52J22f2OnZLtotCWSU5pfzUMN5k_zMQtcZP-pt8)
+![Playlist sync sequence](https://kroki.io/plantuml/svg/hVNLj9MwEL77V4x6SgWrqNeViraoPHpALOpyrqbxtLHqeIw9ZgmI_47zWrUFdm-xv2--x1i5i4JBUmNVPBnnMWADDTuu6sANgYREZ0isUfOjcUc4oI3niKYDJivv2cnW_CRYLM7H6FsiV9EqBH58qE11chQjLJTKuJjKeHQCsy8JwylFta1q0slSmAFGiN3pknhvsbUmykqjl5Hm8ZLzOcmef6jiE7sjr9_OexIPlxfErWcxhxZW95vBbzgrjYJ7jASzUaJHm-5bqeUSPnIKtoXlUvUJ4eZNzgC3QC6XTfTVZwGKxTy7ddhgnfFt66qpwMYdGApPAVKkMO91hW_GCNDnFMOucxkFJpsanbZUXKtNdpPELXx49wDl90XZUOlHYhxJfZlMqbjJVgTRoY81C2zWUT2Xe513A0WVMxxz8ydZYGfb3OLlqJ3A_6M-CZa_jP5dSsDqdJ05-bwxmYZ308jrv252DQl2j_lvAfR-1625G-2-ezOIkvbXjqg1DEx4BQMt7ym_Vz8Xc7udZ7bqjpzOP9Qf)
 
 ```
 PlaylistSyncJob (hourly at :30)
@@ -245,7 +251,40 @@ SyncPlaylistData (to-spotify partition)
     → Spotify GET /v1/playlists/{id}/tracks
     → upsert spotify_playlist, spotify_playlist_metadata
     → upsert app_artist, app_track stubs
-    → enqueue EnrichArtistDetails, EnrichTrackDetails (to-spotify)
+    → add artist and track IDs to app_sync_pool for bulk catalog sync
+```
+
+## Catalog Sync Flow
+
+![Catalog sync sequence](https://kroki.io/plantuml/svg/vVVNb9swDL37VxA5OdiKxIcCQwBvzdZuyKHYhuReKBadCJZFTR_JsmH_fbJlo0mWrB8oepPIx8fHRxm-so4Z52uZ2EoozQyroSZFxdpQjeCMx72MXTNOW6FWUDJp9zMcS-al-0zKzcUvhCzbL8MfHlWBU2Nou1iLolJoLWRJEvJOFEIz5WDw3TNTeZvMizVyL9EMgFmwze0Q-Ik5Jmk15Uy7DlWwQ8hX75b0M0lvSa3o-uOwBVEMHgDnmpwodzD9Novt4j3hoceSWYRBR9Fm6-acJHkONxs0O8jGUAvlHVpIJ-PxEPI8aQXDxfugCSZgvEqHSTiGQOwfgvOdKm6FtcHJadBinT3LefkMzoVhRXWe8t1zZMqlryOlo4vOJGiddIJUQ9iV9YxrprjE9N9R-zatlwGoEasulV4GC8vw8oBpfWdD6Z0mkl1B33UCX24WMNpkIxbLPghu8yNWry0a1_JEFKQrVAbtWxA1W-GxCoM1bRCansGW2bU9pePhGaP1p0aMmf9P2OMlUeU1sMb0Gd-T4hqS83a0Sxr9FvwPpBoNVIq2qqcZnnFIyntqeBMdayqO4Ixz6Jxs3HH0yB21vHFFkCrq1cAIFDkoyauzyh6rqok3mAfVvfCy40dx8j23mTR74nO-399r7OpJblyh4uE38Rc)
+
+```
+SyncMissingArtistsJob (every 10 minutes at :00)
+    → enqueue SyncMissingArtists (to-spotify partition)
+    → peekArtists(50) from app_sync_pool
+    → Spotify GET /v1/artists?ids=
+    → upsert app_artist (genres, imageLink)
+    → remove synced IDs from app_sync_pool
+
+SyncMissingTracksJob (every 10 minutes at :05)
+    → enqueue SyncMissingTracks (to-spotify partition)
+    → peekTracks(50) from app_sync_pool
+    → lookup albumIds from app_track for grouped tracks:
+        ├─ known albumId → GET /v1/albums/{id} (all album tracks upserted)
+        │    → add artist IDs to app_sync_pool
+        │    → remove album ID from app_sync_pool (if present)
+        └─ no albumId / not found in album → GET /v1/tracks?ids=
+             → upsert app_track + app_album
+             → add discovered album + artist IDs to app_sync_pool
+    → remove synced track IDs from app_sync_pool
+
+SyncMissingAlbumsJob (every 10 minutes at :08)
+    → enqueue SyncMissingAlbums (to-spotify partition)
+    → peekAlbums(10) from app_sync_pool
+    → GET /v1/albums/{id} per album
+    → upsert all app_track + app_album
+    → add artist IDs to app_sync_pool
+    → remove synced album IDs from app_sync_pool
 ```
 
 # Deployment View
@@ -343,7 +382,7 @@ All Spotify API operations and domain-level async tasks are routed through a per
 
 | Partition             | Throttle | Rate limit pause | Event Types                                                                                            |
 |-----------------------|----------|------------------|--------------------------------------------------------------------------------------------------------|
-| `to-spotify`          | 10s      | yes              | `UpdateUserProfile`, `SyncPlaylistInfo`, `SyncPlaylistData`, `EnrichArtistDetails`, `EnrichTrackDetails`, `EnrichAlbumDetails` |
+| `to-spotify`          | 10s      | yes              | `UpdateUserProfile`, `SyncPlaylistInfo`, `SyncPlaylistData`, `SyncArtistDetails`, `SyncTrackDetails`, `SyncMissingArtists`, `SyncMissingTracks`, `SyncMissingAlbums`, `ResyncCatalog` |
 | `to-spotify-playback` | none     | no               | `FetchCurrentlyPlaying`, `FetchRecentlyPlayed`                                                         |
 | `domain`              | none     | no               | `RebuildPlaybackData`, `AppendPlaybackData`                                                             |
 
@@ -355,12 +394,15 @@ Backend services notify SSE streams via CDI events. The SSE endpoint delivers th
 
 ## Scheduler Jobs
 
-| Job                          | Interval         | Outbox Event(s)                                                       |
-|------------------------------|------------------|-----------------------------------------------------------------------|
-| `CurrentlyPlayingFetchJob`   | every 20 seconds | `FetchCurrentlyPlaying` (per user)                                    |
-| `RecentlyPlayedFetchJob`     | every 10 minutes | `FetchRecentlyPlayed` (per user) → auto-enqueues `AppendPlaybackData` |
-| `PlaylistSyncJob`            | hourly (at :30)  | `SyncPlaylistInfo` (per user)                                         |
-| `UserProfileUpdateJob`       | daily at 04:00   | `UpdateUserProfile` (per user)                                        |
+| Job                          | Interval                      | Outbox Event(s)                                                       |
+|------------------------------|-------------------------------|-----------------------------------------------------------------------|
+| `CurrentlyPlayingFetchJob`   | every 20 seconds              | `FetchCurrentlyPlaying` (per user)                                    |
+| `RecentlyPlayedFetchJob`     | every 10 minutes              | `FetchRecentlyPlayed` (per user) → auto-enqueues `AppendPlaybackData` |
+| `PlaylistSyncJob`            | hourly (at :30)               | `SyncPlaylistInfo` (per user)                                         |
+| `SyncMissingArtistsJob`      | every 10 minutes (at :00)     | `SyncMissingArtists`                                                  |
+| `SyncMissingTracksJob`       | every 10 minutes (at :05)     | `SyncMissingTracks`                                                   |
+| `SyncMissingAlbumsJob`       | every 10 minutes (at :08)     | `SyncMissingAlbums`                                                   |
+| `UserProfileUpdateJob`       | daily at 04:00                | `UpdateUserProfile` (per user)                                        |
 
 All scheduler jobs skip execution via `skipExecutionIf = StarterSkipPredicate::class` until all starters have completed successfully.
 

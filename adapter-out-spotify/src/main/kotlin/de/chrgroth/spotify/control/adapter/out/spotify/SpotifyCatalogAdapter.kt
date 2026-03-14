@@ -3,8 +3,11 @@ package de.chrgroth.spotify.control.adapter.out.spotify
 import arrow.core.Either
 import arrow.core.left
 import arrow.core.right
+import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyAlbumResponse
+import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyAlbumTracksPage
 import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyArtistResponse
 import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyArtistsResponse
+import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifySimplifiedTrackResponse
 import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyTrackResponse
 import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyTracksResponse
 import de.chrgroth.spotify.control.domain.error.DomainError
@@ -141,6 +144,50 @@ class SpotifyCatalogAdapter(
         }
     }
 
+    override fun getAlbumTracks(
+        userId: UserId,
+        accessToken: AccessToken,
+        albumId: String,
+    ): Either<DomainError, List<TrackSyncResult>> {
+        return try {
+            throttler.throttle(DomainOutboxPartition.ToSpotify.key)
+            val request = HttpRequest.newBuilder()
+                .uri(URI.create("$apiBaseUrl/v1/albums/$albumId"))
+                .header("Authorization", "Bearer ${accessToken.value}")
+                .GET()
+                .build()
+            val response = httpMetrics.timed("/v1/albums/{id}") {
+                httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+            }
+            val errorResult = response.checkRateLimitOrError(logger, SyncError.TRACK_DETAILS_FETCH_FAILED)
+            if (errorResult != null) return errorResult
+            val albumResponse = spotifyJson.decodeFromString<SpotifyAlbumResponse>(response.body())
+            val appAlbum = parseAlbum(albumResponse)
+            val allTracks = albumResponse.tracks.items.filterNotNull().toMutableList()
+            var nextUrl = albumResponse.tracks.next
+            while (nextUrl != null) {
+                throttler.throttle(DomainOutboxPartition.ToSpotify.key)
+                val nextRequest = HttpRequest.newBuilder()
+                    .uri(URI.create(nextUrl))
+                    .header("Authorization", "Bearer ${accessToken.value}")
+                    .GET()
+                    .build()
+                val nextResponse = httpMetrics.timed("/v1/albums/{id}/tracks") {
+                    httpClient.send(nextRequest, HttpResponse.BodyHandlers.ofString())
+                }
+                val nextError = nextResponse.checkRateLimitOrError(logger, SyncError.TRACK_DETAILS_FETCH_FAILED)
+                if (nextError != null) return nextError
+                val nextPage = spotifyJson.decodeFromString<SpotifyAlbumTracksPage>(nextResponse.body())
+                allTracks.addAll(nextPage.items.filterNotNull())
+                nextUrl = nextPage.next
+            }
+            allTracks.mapNotNull { parseAlbumTrackSyncResult(it, appAlbum) }.right()
+        } catch (e: Exception) {
+            logger.error(e) { "Unexpected error fetching album tracks for album $albumId (user ${userId.value})" }
+            SyncError.TRACK_DETAILS_FETCH_FAILED.left()
+        }
+    }
+
     private fun parseArtist(artist: SpotifyArtistResponse): AppArtist {
         val allGenres = artist.genres
         return AppArtist(
@@ -187,6 +234,41 @@ class SpotifyCatalogAdapter(
         )
 
         return TrackSyncResult(track = appTrack, album = appAlbum)
+    }
+
+    private fun parseAlbum(album: SpotifyAlbumResponse): AppAlbum =
+        AppAlbum(
+            id = AlbumId(album.id),
+            totalTracks = album.totalTracks,
+            title = album.name,
+            imageLink = album.images.firstOrNull()?.url,
+            releaseDate = album.releaseDate,
+            releaseDatePrecision = album.releaseDatePrecision,
+            type = album.albumType,
+            artistId = album.artists.firstOrNull()?.let { ArtistId(it.id) },
+            artistName = album.artists.firstOrNull()?.name,
+            additionalArtistIds = album.artists.additionalItems { ArtistId(id) },
+            additionalArtistNames = album.artists.additionalItems { name },
+        )
+
+    private fun parseAlbumTrackSyncResult(track: SpotifySimplifiedTrackResponse, album: AppAlbum): TrackSyncResult? {
+        val trackId = track.id ?: return null
+        val primaryArtist = track.artists.firstOrNull() ?: return null
+        val appTrack = AppTrack(
+            id = TrackId(trackId),
+            title = track.name,
+            albumId = album.id,
+            albumName = album.title,
+            artistId = ArtistId(primaryArtist.id),
+            artistName = primaryArtist.name,
+            additionalArtistIds = track.artists.additionalItems { ArtistId(id) } ?: emptyList(),
+            additionalArtistNames = track.artists.additionalItems { name },
+            discNumber = track.discNumber,
+            durationMs = track.durationMs,
+            trackNumber = track.trackNumber,
+            type = track.type,
+        )
+        return TrackSyncResult(track = appTrack, album = album)
     }
 
     private fun <T, R> List<T>.additionalItems(extractor: T.() -> R): List<R>? =

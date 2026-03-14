@@ -12,4 +12,5 @@ interface SpotifyCatalogPort {
     fun getArtists(userId: UserId, accessToken: AccessToken, artistIds: List<String>): Either<DomainError, List<AppArtist>>
     fun getTrack(userId: UserId, accessToken: AccessToken, trackId: String): Either<DomainError, TrackSyncResult?>
     fun getTracks(userId: UserId, accessToken: AccessToken, trackIds: List<String>): Either<DomainError, List<TrackSyncResult>>
+    fun getAlbumTracks(userId: UserId, accessToken: AccessToken, albumId: String): Either<DomainError, List<TrackSyncResult>>
 }
