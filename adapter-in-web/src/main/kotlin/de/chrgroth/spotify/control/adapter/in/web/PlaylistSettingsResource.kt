@@ -1,6 +1,7 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
 import de.chrgroth.spotify.control.domain.error.PlaylistSyncError
+import mu.KLogging
 import de.chrgroth.spotify.control.domain.model.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.PlaylistType
@@ -101,9 +102,12 @@ class PlaylistSettingsResource {
         val updated = playlistRepository.findByUserId(userId).find { it.spotifyPlaylistId == playlistId }
         Response.ok(mapOf("syncStatus" to syncStatus.name, "type" to updated?.type?.name)).build()
       }
-      false -> Response.status(Response.Status.NOT_FOUND)
-        .entity(mapOf("error" to "Playlist not found"))
-        .build()
+      false -> {
+        logger.warn { "Playlist $playlistId not found for user ${userId.value} during sync status update" }
+        Response.status(Response.Status.NOT_FOUND)
+          .entity(mapOf("error" to "Playlist not found"))
+          .build()
+      }
     }
   }
 
@@ -126,15 +130,24 @@ class PlaylistSettingsResource {
     return playlist.updatePlaylistType(userId, playlistId, type).fold(
       ifLeft = { error ->
         when (error) {
-          PlaylistSyncError.PLAYLIST_TYPE_CONFLICT -> Response.status(Response.Status.CONFLICT)
-            .entity(mapOf("error" to "Only one playlist of type ALL is allowed"))
-            .build()
-          PlaylistSyncError.PLAYLIST_NOT_ACTIVE -> Response.status(Response.Status.BAD_REQUEST)
-            .entity(mapOf("error" to "Playlist type can only be set for active playlists"))
-            .build()
-          else -> Response.status(Response.Status.NOT_FOUND)
-            .entity(mapOf("error" to "Playlist not found"))
-            .build()
+          PlaylistSyncError.PLAYLIST_TYPE_CONFLICT -> {
+            logger.warn { "Playlist type update conflict for $playlistId (user ${userId.value}): ${error.code}" }
+            Response.status(Response.Status.CONFLICT)
+              .entity(mapOf("error" to "Only one playlist of type ALL is allowed"))
+              .build()
+          }
+          PlaylistSyncError.PLAYLIST_NOT_ACTIVE -> {
+            logger.warn { "Playlist type update rejected for inactive playlist $playlistId (user ${userId.value}): ${error.code}" }
+            Response.status(Response.Status.BAD_REQUEST)
+              .entity(mapOf("error" to "Playlist type can only be set for active playlists"))
+              .build()
+          }
+          else -> {
+            logger.warn { "Playlist $playlistId not found for user ${userId.value} during type update: ${error.code}" }
+            Response.status(Response.Status.NOT_FOUND)
+              .entity(mapOf("error" to "Playlist not found"))
+              .build()
+          }
         }
       },
       ifRight = { Response.ok(mapOf("type" to type.name)).build() },
@@ -151,6 +164,7 @@ class PlaylistSettingsResource {
     val userId = UserId(securityIdentity.principal.name)
     return playlist.syncPlaylists(userId).fold(
       ifLeft = { error ->
+        logger.error { "Playlist sync failed for user ${userId.value}: ${error.code}" }
         Response.status(Response.Status.INTERNAL_SERVER_ERROR)
           .entity(mapOf("error" to "Sync failed: ${error.code}"))
           .build()
@@ -168,15 +182,23 @@ class PlaylistSettingsResource {
     return playlist.enqueueSyncPlaylistData(userId, playlistId).fold(
       ifLeft = { error ->
         when (error) {
-          PlaylistSyncError.PLAYLIST_SYNC_INACTIVE -> Response.status(Response.Status.BAD_REQUEST)
-            .entity(mapOf("error" to "Sync enqueue failed: ${error.code}"))
-            .build()
-          else -> Response.status(Response.Status.NOT_FOUND)
-            .entity(mapOf("error" to "Sync enqueue failed: ${error.code}"))
-            .build()
+          PlaylistSyncError.PLAYLIST_SYNC_INACTIVE -> {
+            logger.warn { "Sync enqueue rejected for inactive playlist $playlistId (user ${userId.value}): ${error.code}" }
+            Response.status(Response.Status.BAD_REQUEST)
+              .entity(mapOf("error" to "Sync enqueue failed: ${error.code}"))
+              .build()
+          }
+          else -> {
+            logger.warn { "Sync enqueue failed for playlist $playlistId (user ${userId.value}): ${error.code}" }
+            Response.status(Response.Status.NOT_FOUND)
+              .entity(mapOf("error" to "Sync enqueue failed: ${error.code}"))
+              .build()
+          }
         }
       },
       ifRight = { Response.ok(mapOf("status" to "ok")).build() },
     )
   }
+
+  companion object : KLogging()
 }
