@@ -43,7 +43,7 @@ class AppPlaylistCheckRepositoryAdapter : AppPlaylistCheckRepositoryPort {
     private fun AppPlaylistCheckDocument.toDomain() = AppPlaylistCheck(
         checkId = checkId,
         playlistId = playlistId,
-        checkDate = lastCheck.toKotlinInstant(),
+        lastCheck = lastCheck.toKotlinInstant(),
         succeeded = succeeded,
         violations = violations,
     )
@@ -51,7 +51,7 @@ class AppPlaylistCheckRepositoryAdapter : AppPlaylistCheckRepositoryPort {
     private fun AppPlaylistCheck.toDocument() = AppPlaylistCheckDocument().apply {
         checkId = this@toDocument.checkId
         playlistId = this@toDocument.playlistId
-        lastCheck = this@toDocument.checkDate.toJavaInstant()
+        lastCheck = this@toDocument.lastCheck.toJavaInstant()
         succeeded = this@toDocument.succeeded
         violations = this@toDocument.violations
     }

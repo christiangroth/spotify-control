@@ -64,7 +64,7 @@ class PlaylistChecksResource {
     }
 
     data class PlaylistCheckRow(val check: AppPlaylistCheck, val playlistName: String) {
-        val checkDateFormatted: String get() = check.checkDate
+        val checkDateFormatted: String get() = check.lastCheck
             .toJavaInstant()
             .atZone(ZoneId.systemDefault())
             .format(DATE_TIME_FORMATTER)

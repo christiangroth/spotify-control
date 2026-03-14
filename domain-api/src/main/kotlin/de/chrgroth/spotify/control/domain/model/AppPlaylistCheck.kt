@@ -5,7 +5,7 @@ import kotlin.time.Instant
 data class AppPlaylistCheck(
     val checkId: String,
     val playlistId: String,
-    val checkDate: Instant,
+    val lastCheck: Instant,
     val succeeded: Boolean,
     val violations: List<String>,
 )

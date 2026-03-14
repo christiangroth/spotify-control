@@ -53,7 +53,7 @@ class PlaylistCheckAdapter(
         return AppPlaylistCheck(
             checkId = "$playlistId:duplicate-tracks",
             playlistId = playlistId,
-            checkDate = Clock.System.now(),
+            lastCheck = Clock.System.now(),
             succeeded = violations.isEmpty(),
             violations = violations,
         )
