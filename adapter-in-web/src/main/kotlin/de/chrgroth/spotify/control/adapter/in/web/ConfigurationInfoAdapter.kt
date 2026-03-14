@@ -10,13 +10,15 @@ import org.eclipse.microprofile.config.inject.ConfigProperty
 
 private const val MASKED_VALUE = "***"
 private const val ERROR_VALUE = "ERROR"
+private const val MASKED_CONFIG_KEYS_PROPERTY = "app.health.masked-config-keys"
+private const val MASKED_ENV_KEYS_PROPERTY = "app.health.masked-env-keys"
 
 @ApplicationScoped
 @Suppress("Unused")
 class ConfigurationInfoAdapter(
-    @ConfigProperty(name = "app.health.masked-config-keys")
+    @ConfigProperty(name = MASKED_CONFIG_KEYS_PROPERTY)
     maskedConfigKeys: List<String>,
-    @ConfigProperty(name = "app.health.masked-env-keys")
+    @ConfigProperty(name = MASKED_ENV_KEYS_PROPERTY)
     maskedEnvKeys: List<String>,
 ) : ConfigurationInfoPort {
 
@@ -31,6 +33,7 @@ class ConfigurationInfoAdapter(
         val configEntries = config.propertyNames
             .filter { key -> !key.startsWith("%dev.") && !key.startsWith("%test.") }
             .filter { key -> !ENV_KEY_PATTERN.matches(key) }
+            .filter { key -> key != MASKED_CONFIG_KEYS_PROPERTY && key != MASKED_ENV_KEYS_PROPERTY }
             .sorted()
             .map { key ->
                 val value = if (shouldMaskConfigKey(key)) {

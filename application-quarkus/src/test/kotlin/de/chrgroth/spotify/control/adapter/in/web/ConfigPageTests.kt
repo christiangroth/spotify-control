@@ -67,14 +67,14 @@ class ConfigPageTests {
   }
 
   @Test
-  fun `config page config table contains known config keys`() {
+  fun `config page config table does not contain masking config keys`() {
     given()
       .`when`()
       .get("/config")
       .then()
       .statusCode(200)
-      .body(containsString("app.health.masked-config-keys"))
-      .body(containsString("app.health.masked-env-keys"))
+      .body(not(containsString("app.health.masked-config-keys")))
+      .body(not(containsString("app.health.masked-env-keys")))
   }
 
   @Test
