@@ -1,3 +1,12 @@
+# 0.63.1 (2026.03.14)
+
+## Bugfixes / Chore
+* sync-when-playlist-activated: Activating a playlist now always triggers a data sync, not just playlist checks.
+
+
+
+---
+
 # 0.63.0 (2026.03.14)
 
 ## New Features
