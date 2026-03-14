@@ -46,7 +46,18 @@
                             {/if}
                         </button>
                     </td>
-                    <td>{row.playlist.name}</td>
+                    <td>
+                        {row.playlist.name}
+                        {#if row.active}
+                        <span
+                            class="badge ms-1 playlist-type-badge"
+                            data-playlist-id="{row.playlist.spotifyPlaylistId}"
+                            data-playlist-type="{row.typeLabel}"
+                            style="cursor:pointer; font-size:0.65em; vertical-align:middle"
+                            title="Click to change playlist type"
+                        >{row.typeLabel}</span>
+                        {/if}
+                    </td>
                     <td class="text-secondary small">{row.lastSnapshotIdSyncTimeFormatted}</td>
                     <td>
                         {#if row.active}
@@ -74,6 +85,58 @@
             postWithButton(this, '/settings/playlist/sync', 'Sync started successfully.', 'Sync failed');
         });
 
+        function typeBadgeClass(type) {
+            if (type === 'ALL') return 'bg-warning text-dark';
+            if (type === 'YEAR') return 'bg-info text-dark';
+            return 'bg-secondary';
+        }
+
+        function applyTypeBadge(badge, type) {
+            badge.textContent = type || '';
+            badge.className = 'badge ms-1 playlist-type-badge ' + typeBadgeClass(type);
+            badge.setAttribute('data-playlist-type', type || '');
+        }
+
+        document.querySelectorAll('.playlist-type-badge').forEach(function(badge) {
+            applyTypeBadge(badge, badge.getAttribute('data-playlist-type'));
+        });
+
+        document.querySelectorAll('.playlist-type-badge').forEach(function(badge) {
+            badge.addEventListener('click', handleTypeBadgeClick);
+        });
+
+        function handleTypeBadgeClick() {
+            const playlistId = this.getAttribute('data-playlist-id');
+            const currentType = this.getAttribute('data-playlist-type');
+            const types = ['ALL', 'YEAR', 'UNKNOWN'];
+            const selected = prompt('Set playlist type (ALL, YEAR, UNKNOWN):', currentType || 'UNKNOWN');
+            if (!selected || !types.includes(selected.toUpperCase())) return;
+            const newType = selected.toUpperCase();
+            const btn = this;
+
+            fetch('/settings/playlist/' + encodeURIComponent(playlistId) + '/type', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type: newType })
+            })
+            .then(function(response) {
+                return response.json().then(function(data) {
+                    return { ok: response.ok, data: data };
+                });
+            })
+            .then(function(result) {
+                if (result.ok) {
+                    applyTypeBadge(btn, result.data.type);
+                    showBanner('Playlist type updated successfully.', 'success');
+                } else {
+                    showBanner('Failed to update playlist type: ' + (result.data.error || 'Unknown error'), 'danger');
+                }
+            })
+            .catch(function(err) {
+                showBanner('Request failed: ' + err.message, 'danger');
+            });
+        }
+
         document.querySelectorAll('.sync-toggle').forEach(function(btn) {
             btn.addEventListener('click', function() {
                 const playlistId = this.getAttribute('data-playlist-id');
@@ -98,6 +161,25 @@
                         button.innerHTML = isActive
                             ? '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#1db954" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0m-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/></svg>'
                             : '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#dc3545" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.646a.5.5 0 0 0-.708-.708L8 7.293z"/></svg>';
+                        if (isActive) {
+                            const nameTd = button.closest('tr').querySelector('td:nth-child(3)');
+                            if (nameTd && !nameTd.querySelector('.playlist-type-badge')) {
+                                const badge = document.createElement('span');
+                                badge.setAttribute('data-playlist-id', playlistId);
+                                badge.setAttribute('data-playlist-type', result.data.type || 'UNKNOWN');
+                                badge.style.cursor = 'pointer';
+                                badge.style.fontSize = '0.65em';
+                                badge.style.verticalAlign = 'middle';
+                                badge.className = 'badge ms-1 playlist-type-badge ' + typeBadgeClass(result.data.type || 'UNKNOWN');
+                                badge.textContent = result.data.type || 'UNKNOWN';
+                                badge.title = 'Click to change playlist type';
+                                nameTd.appendChild(badge);
+                                badge.addEventListener('click', handleTypeBadgeClick);
+                            }
+                        } else {
+                            const badge = button.closest('tr').querySelector('.playlist-type-badge');
+                            if (badge) badge.remove();
+                        }
                         showBanner('Sync status updated successfully.', 'success');
                     } else {
                         showBanner('Failed to update sync status: ' + (result.data.error || 'Unknown error'), 'danger');

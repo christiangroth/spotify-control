@@ -4,6 +4,7 @@ import de.chrgroth.spotify.control.domain.model.Playlist
 import de.chrgroth.spotify.control.domain.model.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.PlaylistTrack
+import de.chrgroth.spotify.control.domain.model.PlaylistType
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
@@ -75,6 +76,7 @@ class PlaylistRepositoryAdapter : PlaylistRepositoryPort {
         lastSnapshotIdSyncTime = lastSnapshotIdSyncTime.toKotlinInstant(),
         name = name,
         syncStatus = PlaylistSyncStatus.valueOf(syncStatus),
+        type = type?.let { PlaylistType.valueOf(it) },
     )
 
     private fun PlaylistInfo.toDocument(userId: UserId) = PlaylistMetadataDocument().apply {
@@ -85,6 +87,7 @@ class PlaylistRepositoryAdapter : PlaylistRepositoryPort {
         lastSnapshotIdSyncTime = this@toDocument.lastSnapshotIdSyncTime.toJavaInstant()
         name = this@toDocument.name
         syncStatus = this@toDocument.syncStatus.name
+        type = this@toDocument.type?.name
     }
 
     private fun PlaylistDocument.toDomain() = Playlist(
