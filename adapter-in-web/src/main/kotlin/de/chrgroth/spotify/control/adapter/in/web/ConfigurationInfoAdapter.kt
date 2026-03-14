@@ -29,6 +29,8 @@ class ConfigurationInfoAdapter(
     private fun buildConfigurationStats(): ConfigurationStats {
         val config = ConfigProvider.getConfig()
         val configEntries = config.propertyNames
+            .filter { key -> !key.startsWith("%dev.") && !key.startsWith("%test.") }
+            .filter { key -> !ENV_KEY_PATTERN.matches(key) }
             .sorted()
             .map { key ->
                 val value = if (shouldMaskConfigKey(key)) {
@@ -57,5 +59,7 @@ class ConfigurationInfoAdapter(
         return configKeyMasks.contains(keyWithoutProfile)
     }
 
-    companion object : KLogging()
+    companion object : KLogging() {
+        private val ENV_KEY_PATTERN = Regex("^[A-Z][A-Z0-9_]*$")
+    }
 }
