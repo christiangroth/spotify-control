@@ -126,6 +126,8 @@ class DashboardPageTests {
       .statusCode(200)
       .contentType(containsString("text/html"))
       .body(containsString("Playlists synced"))
+      .body(containsString("""data-testid="playlist-settings-link""""))
+      .body(containsString("/settings/playlist"))
   }
 
   @Test

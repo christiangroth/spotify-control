@@ -8,12 +8,14 @@
             <div class="row g-3 mb-4">
                 <div id="snippet-playlist-metadata" class="col-12 col-sm-6 col-lg-6">
                     {#fragment id="snippet_playlist_metadata"}
+                    <a href="/settings/playlist" class="text-decoration-none" data-testid="playlist-settings-link" aria-label="View playlist settings">
                     <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
                         <div class="card-body">
                             <p class="card-subtitle mb-1" style="color:#888;font-size:.8rem;">Playlists synced</p>
                             <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.syncedPlaylists} / {stats.totalPlaylists}</p>
                         </div>
                     </div>
+                    </a>
                     {/fragment}
                 </div>
                 <div id="snippet-playback-data" class="col-12 col-sm-6 col-lg-6">
