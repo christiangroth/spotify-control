@@ -1,3 +1,22 @@
+# 0.60.0 (2026.03.14)
+
+## New Features
+* cleanup-simulator-payback-data-ui: Moved catalog re-sync action to the top of the Playback Settings page.
+* cleanup-simulator-payback-data-ui: Removed per-artist re-sync search from Playback Settings page.
+* cleanup-simulator-payback-data-ui: Added Re-sync button per artist in the Catalog page.
+* execute-checks-for-synced-playlists: Playlist checks are now automatically enqueued on startup for all active synced playlists.
+* execute-checks-for-synced-playlists: Added timer metrics for playlist checks tagged with check id and playlist id.
+
+## Bugfixes / Chore
+* fix-catalog-sync-issues: Fixed genre information not appearing in catalog view (genres now properly saved on bulk artist sync).
+* fix-catalog-sync-issues: Fixed bulk sync fallback: when bulk Spotify endpoint is disabled, existing bulk outbox events are now converted to per-item sync events automatically.
+* fix-catalog-sync-issues: Artists and tracks from playback are now only added to the sync pool if they have not been fully synced yet, reducing redundant API calls.
+* fix-catalog-sync-issues: Playlist sync now forces re-sync of all artists and tracks regardless of their current sync state.
+
+
+
+---
+
 # 0.59.4 (2026.03.14)
 
 ## Bugfixes / Chore
