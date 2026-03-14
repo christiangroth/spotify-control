@@ -40,25 +40,18 @@ class AppPlaylistCheckRepositoryAdapter : AppPlaylistCheckRepositoryPort {
             appPlaylistCheckDocumentRepository.count("succeeded = ?1", true)
         }
 
-    override fun deleteByPlaylistId(playlistId: String) {
-        logger.info { "Deleting playlist checks for playlist $playlistId" }
-        mongoQueryMetrics.timed("app_playlist_check.deleteByPlaylistId") {
-            appPlaylistCheckDocumentRepository.delete("playlistId = ?1", playlistId)
-        }
-    }
-
     private fun AppPlaylistCheckDocument.toDomain() = AppPlaylistCheck(
-        checkId = id,
+        checkId = checkId,
         playlistId = playlistId,
-        checkDate = checkDate.toKotlinInstant(),
+        checkDate = lastCheck.toKotlinInstant(),
         succeeded = succeeded,
         violations = violations,
     )
 
     private fun AppPlaylistCheck.toDocument() = AppPlaylistCheckDocument().apply {
-        id = this@toDocument.checkId
+        checkId = this@toDocument.checkId
         playlistId = this@toDocument.playlistId
-        checkDate = this@toDocument.checkDate.toJavaInstant()
+        lastCheck = this@toDocument.checkDate.toJavaInstant()
         succeeded = this@toDocument.succeeded
         violations = this@toDocument.violations
     }

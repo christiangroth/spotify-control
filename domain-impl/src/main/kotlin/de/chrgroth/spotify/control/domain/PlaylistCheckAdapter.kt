@@ -9,7 +9,6 @@ import de.chrgroth.spotify.control.domain.port.out.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
-import java.util.UUID
 import kotlin.time.Clock
 
 @ApplicationScoped
@@ -27,8 +26,6 @@ class PlaylistCheckAdapter(
             return OutboxTaskResult.Success
         }
 
-        playlistCheckRepository.deleteByPlaylistId(event.playlistId)
-
         val duplicateTrackCheck = runDuplicateTrackCheck(event.playlistId, playlist.tracks)
         playlistCheckRepository.save(duplicateTrackCheck)
 
@@ -45,16 +42,16 @@ class PlaylistCheckAdapter(
         playlistId: String,
         tracks: List<de.chrgroth.spotify.control.domain.model.PlaylistTrack>,
     ): AppPlaylistCheck {
-        val violations = mutableListOf<String>()
-        val seenTrackIds = mutableSetOf<String>()
-        for (track in tracks) {
-            if (!seenTrackIds.add(track.trackId)) {
+        val countByTrackId = tracks.groupingBy { it.trackId }.eachCount()
+        val violations = tracks
+            .distinctBy { it.trackId }
+            .filter { (countByTrackId[it.trackId] ?: 0) > 1 }
+            .map { track ->
                 val artistName = track.artistNames.firstOrNull() ?: track.artistIds.firstOrNull() ?: "Unknown Artist"
-                violations.add("${artistName} – ${track.trackName}")
+                "$artistName – ${track.trackName}"
             }
-        }
         return AppPlaylistCheck(
-            checkId = UUID.randomUUID().toString(),
+            checkId = "$playlistId:duplicate-tracks",
             playlistId = playlistId,
             checkDate = Clock.System.now(),
             succeeded = violations.isEmpty(),

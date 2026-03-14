@@ -8,9 +8,9 @@ import java.time.Instant
 class AppPlaylistCheckDocument {
 
     @BsonId
-    lateinit var id: String
+    lateinit var checkId: String
     lateinit var playlistId: String
-    lateinit var checkDate: Instant
+    lateinit var lastCheck: Instant
     var succeeded: Boolean = false
     lateinit var violations: List<String>
 }
