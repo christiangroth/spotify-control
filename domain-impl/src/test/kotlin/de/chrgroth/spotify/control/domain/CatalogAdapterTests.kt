@@ -582,4 +582,78 @@ class CatalogAdapterTests {
         verify(exactly = 0) { useBulkFetchState.disableBulkFetch() }
         verify(exactly = 0) { syncPoolRepository.addTracks(any()) }
     }
+
+    // --- bulk mode fallback: SyncMissingArtists when bulk is disabled ---
+
+    @Test
+    fun `handle SyncMissingArtists when bulk disabled creates per-item events and resets pool`() {
+        every { useBulkFetchState.isUsingBulkFetch() } returns false
+        every { userRepository.findAll() } returns listOf(buildUser())
+        every { outboxPort.enqueue(any()) } just runs
+        every { syncPoolRepository.addArtists(any()) } just runs
+
+        val result = adapter.handle(DomainOutboxEvent.SyncMissingArtists(listOf("artist-1", "artist-2")))
+
+        assertThat(result).isEqualTo(OutboxTaskResult.Success)
+        verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails("artist-1", userId)) }
+        verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails("artist-2", userId)) }
+        verify { syncPoolRepository.addArtists(listOf("artist-1", "artist-2")) }
+        verify(exactly = 0) { spotifyCatalog.getArtists(any(), any(), any()) }
+    }
+
+    @Test
+    fun `handle SyncMissingArtists when bulk disabled and no users still returns success`() {
+        every { useBulkFetchState.isUsingBulkFetch() } returns false
+        every { userRepository.findAll() } returns emptyList()
+        every { syncPoolRepository.addArtists(any()) } just runs
+
+        val result = adapter.handle(DomainOutboxEvent.SyncMissingArtists(listOf("artist-1")))
+
+        assertThat(result).isEqualTo(OutboxTaskResult.Success)
+        verify(exactly = 0) { outboxPort.enqueue(any()) }
+        verify { syncPoolRepository.addArtists(listOf("artist-1")) }
+    }
+
+    @Test
+    fun `handle SyncMissingArtists when bulk disabled with empty list still returns success`() {
+        every { useBulkFetchState.isUsingBulkFetch() } returns false
+        every { userRepository.findAll() } returns listOf(buildUser())
+
+        val result = adapter.handle(DomainOutboxEvent.SyncMissingArtists(emptyList()))
+
+        assertThat(result).isEqualTo(OutboxTaskResult.Success)
+        verify(exactly = 0) { outboxPort.enqueue(any()) }
+        verify(exactly = 0) { syncPoolRepository.addArtists(any()) }
+    }
+
+    // --- bulk mode fallback: SyncMissingTracks when bulk is disabled ---
+
+    @Test
+    fun `handle SyncMissingTracks when bulk disabled creates per-item events and resets pool`() {
+        every { useBulkFetchState.isUsingBulkFetch() } returns false
+        every { userRepository.findAll() } returns listOf(buildUser())
+        every { outboxPort.enqueue(any()) } just runs
+        every { syncPoolRepository.addTracks(any()) } just runs
+
+        val result = adapter.handle(DomainOutboxEvent.SyncMissingTracks(listOf("track-1", "track-2")))
+
+        assertThat(result).isEqualTo(OutboxTaskResult.Success)
+        verify { outboxPort.enqueue(DomainOutboxEvent.SyncTrackDetails("track-1", userId)) }
+        verify { outboxPort.enqueue(DomainOutboxEvent.SyncTrackDetails("track-2", userId)) }
+        verify { syncPoolRepository.addTracks(listOf("track-1", "track-2")) }
+        verify(exactly = 0) { spotifyCatalog.getTracks(any(), any(), any()) }
+    }
+
+    @Test
+    fun `handle SyncMissingTracks when bulk disabled and no users still returns success`() {
+        every { useBulkFetchState.isUsingBulkFetch() } returns false
+        every { userRepository.findAll() } returns emptyList()
+        every { syncPoolRepository.addTracks(any()) } just runs
+
+        val result = adapter.handle(DomainOutboxEvent.SyncMissingTracks(listOf("track-1")))
+
+        assertThat(result).isEqualTo(OutboxTaskResult.Success)
+        verify(exactly = 0) { outboxPort.enqueue(any()) }
+        verify { syncPoolRepository.addTracks(listOf("track-1")) }
+    }
 }
