@@ -50,7 +50,7 @@ class PlaylistChecksResource {
         val user = userRepository.findById(userId)
         val playlistNameById = playlistRepository.findByUserId(userId).associateBy({ it.spotifyPlaylistId }, { it.name })
         val checks = playlistCheckRepository.findAll()
-        val rows = checks
+        val groups = checks
             .sortedWith(compareBy({ it.succeeded }, { it.playlistId }))
             .map { check ->
                 PlaylistCheckRow(
@@ -58,10 +58,14 @@ class PlaylistChecksResource {
                     playlistName = playlistNameById[check.playlistId] ?: check.playlistId,
                 )
             }
+            .groupBy { it.check.checkId.substringAfterLast(":") }
+            .map { (checkType, rows) -> PlaylistCheckGroup(PlaylistCheckRow.formatCheckName(checkType), rows) }
         return playlistChecksTemplate
             .data("displayName", user?.displayName ?: userId.value)
-            .data("rows", rows)
+            .data("groups", groups)
     }
+
+    data class PlaylistCheckGroup(val checkName: String, val rows: List<PlaylistCheckRow>)
 
     data class PlaylistCheckRow(val check: AppPlaylistCheck, val playlistName: String) {
         val checkDateFormatted: String get() = check.lastCheck
@@ -71,6 +75,10 @@ class PlaylistChecksResource {
 
         companion object {
             private val DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm", Locale.GERMAN)
+
+            fun formatCheckName(checkType: String): String = checkType
+                .split("-")
+                .joinToString(" ") { it.replaceFirstChar(Char::uppercaseChar) }
         }
     }
 }
