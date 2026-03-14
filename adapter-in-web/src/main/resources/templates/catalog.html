@@ -7,6 +7,12 @@
 
         <div id="status-banner" class="alert d-none mb-3" role="alert"></div>
 
+        <h2 class="fs-5 fw-semibold mb-2">Catalog Re-sync</h2>
+        <p class="text-secondary small mb-3">Re-queue all artists and tracks for re-sync from Spotify. Use this to refresh catalog metadata (genres, images, track details) that may have changed since the last sync.</p>
+        <button id="resync-catalog-btn" class="btn btn-spotify btn-sm mb-4">Re-sync Catalog</button>
+
+        <hr class="my-4" style="border-color:#333;">
+
         <div class="mb-3">
             <input type="text" id="catalog-filter" class="form-control"
                    style="background-color:#1e1e1e;border-color:#444;color:#e0e0e0;max-width:400px;"
@@ -153,6 +159,10 @@
     </div>
 
     <script>
+        document.getElementById('resync-catalog-btn').addEventListener('click', function() {
+            postWithButton(this, '/settings/playback/resync-catalog', 'Catalog re-sync enqueued successfully.', 'Re-sync failed');
+        });
+
         let filterTimeout = null;
 
         function filterArtists(value) {
