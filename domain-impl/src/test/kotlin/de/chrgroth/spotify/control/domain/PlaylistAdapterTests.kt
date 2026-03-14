@@ -490,7 +490,6 @@ class PlaylistAdapterTests {
         every { userRepository.findById(userId) } returns user
         every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE))
         every { playlistRepository.saveAll(any(), any()) } just runs
-        every { playlistRepository.findByUserIdAndPlaylistId(userId, "p1") } returns null
         every { outboxPort.enqueue(any()) } just runs
         every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
 
@@ -501,20 +500,19 @@ class PlaylistAdapterTests {
     }
 
     @Test
-    fun `updateSyncStatus enqueues RunPlaylistChecks when activating playlist with existing data`() {
+    fun `updateSyncStatus enqueues SyncPlaylistData when activating playlist with existing data`() {
         val user = buildUser()
         every { userRepository.findById(userId) } returns user
         every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE))
         every { playlistRepository.saveAll(any(), any()) } just runs
-        every { playlistRepository.findByUserIdAndPlaylistId(userId, "p1") } returns mockk()
         every { outboxPort.enqueue(any()) } just runs
         every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
 
         val result = adapter.updateSyncStatus(userId, "p1", PlaylistSyncStatus.ACTIVE)
 
         assertThat(result.isRight()).isTrue()
-        verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.RunPlaylistChecks(userId, "p1")) }
-        verify(exactly = 0) { outboxPort.enqueue(any<DomainOutboxEvent.SyncPlaylistData>()) }
+        verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, "p1")) }
+        verify(exactly = 0) { outboxPort.enqueue(any<DomainOutboxEvent.RunPlaylistChecks>()) }
     }
 
     @Test
