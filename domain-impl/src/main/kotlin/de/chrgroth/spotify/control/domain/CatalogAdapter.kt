@@ -219,7 +219,12 @@ class CatalogAdapter(
         for ((albumId, albumTrackIds) in albumGroups) {
             val result = spotifyCatalog.getAlbumTracks(userId, accessToken, albumId)
             when (result) {
-                is Either.Left -> return result.value.left()
+                is Either.Left -> {
+                    val error = result.value
+                    if (error is SpotifyRateLimitError) return error.left()
+                    logger.warn { "Failed to fetch album $albumId tracks (${error.code}), falling back to direct track fetch for ${albumTrackIds.size} tracks" }
+                    tracksWithoutAlbum.addAll(albumTrackIds)
+                }
                 is Either.Right -> {
                     val allAlbumResults = result.value
                     if (allAlbumResults.isNotEmpty()) {
