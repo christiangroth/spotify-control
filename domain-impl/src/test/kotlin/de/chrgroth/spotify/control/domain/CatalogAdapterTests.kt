@@ -330,19 +330,20 @@ class CatalogAdapterTests {
     // --- SyncArtistDetails tests ---
 
     @Test
-    fun `handle SyncArtistDetails skips when artist already synced`() {
-        every { appArtistRepository.findByArtistIds(setOf("artist-1")) } returns listOf(artist1)
+    fun `handle SyncArtistDetails always fetches artist data even when already synced`() {
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { spotifyCatalog.getArtist(userId, accessToken, "artist-1") } returns artist1.right()
+        every { appArtistRepository.upsertAll(any()) } just runs
 
         val result = adapter.handle(DomainOutboxEvent.SyncArtistDetails("artist-1", userId))
 
         assertThat(result).isEqualTo(OutboxTaskResult.Success)
-        verify(exactly = 0) { spotifyCatalog.getArtist(any(), any(), any()) }
-        verify(exactly = 0) { dashboardRefresh.notifyCatalogStats() }
+        verify { spotifyCatalog.getArtist(userId, accessToken, "artist-1") }
+        verify { dashboardRefresh.notifyCatalogStats() }
     }
 
     @Test
     fun `handle SyncArtistDetails notifies catalog stats when artist data is returned`() {
-        every { appArtistRepository.findByArtistIds(setOf("artist-1")) } returns emptyList()
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { spotifyCatalog.getArtist(userId, accessToken, "artist-1") } returns artist1.right()
         every { appArtistRepository.upsertAll(any()) } just runs
@@ -354,7 +355,6 @@ class CatalogAdapterTests {
 
     @Test
     fun `handle SyncArtistDetails does not notify catalog stats when no artist data is returned`() {
-        every { appArtistRepository.findByArtistIds(setOf("artist-1")) } returns emptyList()
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { spotifyCatalog.getArtist(userId, accessToken, "artist-1") } returns null.right()
 

@@ -59,7 +59,6 @@ class PlaybackEnrichmentAdapterTests {
             type = "artist",
             lastSync = kotlin.time.Instant.fromEpochSeconds(1),
         )
-        every { appArtistRepository.findByArtistIds(setOf(artistId)) } returns emptyList()
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { spotifyCatalog.getArtist(userId, accessToken, artistId) } returns spotifyArtist.right()
         every { appArtistRepository.upsertAll(listOf(spotifyArtist)) } just runs
@@ -70,18 +69,21 @@ class PlaybackEnrichmentAdapterTests {
     }
 
     @Test
-    fun `syncArtistDetails skips update when artist already in catalog`() {
+    fun `syncArtistDetails always fetches and updates artist even when already in catalog`() {
         val artistId = "artist-already-synced"
-        val syncedArtist = AppArtist(
+        val updatedArtist = AppArtist(
             artistId = artistId,
             artistName = "Known Artist",
+            genre = "rock",
             lastSync = kotlin.time.Clock.System.now(),
         )
-        every { appArtistRepository.findByArtistIds(setOf(artistId)) } returns listOf(syncedArtist)
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { spotifyCatalog.getArtist(userId, accessToken, artistId) } returns updatedArtist.right()
+        every { appArtistRepository.upsertAll(listOf(updatedArtist)) } just runs
 
         adapter.syncArtistDetails(artistId, userId)
 
-        verify(exactly = 0) { spotifyCatalog.getArtist(any(), any(), any()) }
-        verify(exactly = 0) { appArtistRepository.upsertAll(any()) }
+        verify { spotifyCatalog.getArtist(userId, accessToken, artistId) }
+        verify { appArtistRepository.upsertAll(listOf(updatedArtist)) }
     }
 }

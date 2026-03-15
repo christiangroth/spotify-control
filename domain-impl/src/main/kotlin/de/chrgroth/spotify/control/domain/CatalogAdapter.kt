@@ -85,11 +85,6 @@ class CatalogAdapter(
     // --- Catalog Sync ---
 
     override fun syncArtistDetails(artistId: String, userId: UserId): Either<DomainError, Unit> {
-        val existing = appArtistRepository.findByArtistIds(setOf(artistId)).firstOrNull()
-        if (existing != null) {
-            logger.debug { "Artist $artistId already synced, skipping" }
-            return Unit.right()
-        }
         logger.info { "Fetching genre details for artist $artistId (user ${userId.value})" }
         val accessToken = spotifyAccessToken.getValidAccessToken(userId)
         return spotifyCatalog.getArtist(userId, accessToken, artistId)
