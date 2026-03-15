@@ -2,7 +2,6 @@ package de.chrgroth.spotify.control.adapter.`in`.web
 
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.out.TokenEncryptionPort
-import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
 import io.quarkus.security.identity.IdentityProviderManager
 import io.quarkus.security.identity.SecurityIdentity
 import io.quarkus.security.runtime.QuarkusSecurityIdentity
@@ -19,7 +18,6 @@ import java.util.Optional
 @Suppress("Unused")
 class SpotifyCookieAuthMechanism(
     private val tokenEncryption: TokenEncryptionPort,
-    private val userRepository: UserRepositoryPort,
 ) : HttpAuthenticationMechanism {
 
     override fun authenticate(context: RoutingContext, identityProviderManager: IdentityProviderManager): Uni<SecurityIdentity> {
@@ -28,20 +26,11 @@ class SpotifyCookieAuthMechanism(
         val decrypted = tokenEncryption.decrypt(cookieValue).getOrNull()
             ?: return Uni.createFrom().optional(Optional.empty())
         val userId = UserId(decrypted)
-        val user = userRepository.findById(userId)
-        return when {
-            user == null -> {
-                logger.error { "Authentication failed: user not found: ${userId.value}" }
-                Uni.createFrom().optional(Optional.empty())
-            }
-            else -> {
-                val identity = QuarkusSecurityIdentity.builder()
-                    .setPrincipal(Principal { userId.value })
-                    .setAnonymous(false)
-                    .build()
-                Uni.createFrom().item(identity)
-            }
-        }
+        val identity = QuarkusSecurityIdentity.builder()
+            .setPrincipal(Principal { userId.value })
+            .setAnonymous(false)
+            .build()
+        return Uni.createFrom().item(identity)
     }
 
     override fun getChallenge(context: RoutingContext): Uni<ChallengeData> =

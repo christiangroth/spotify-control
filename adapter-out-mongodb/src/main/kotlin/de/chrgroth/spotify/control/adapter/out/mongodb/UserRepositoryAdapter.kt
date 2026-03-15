@@ -1,5 +1,8 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
+import com.mongodb.client.model.Filters
+import com.mongodb.client.model.UpdateOptions
+import com.mongodb.client.model.Updates
 import de.chrgroth.spotify.control.domain.model.User
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
@@ -7,7 +10,6 @@ import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import kotlin.time.toJavaInstant
 import kotlin.time.toKotlinInstant
-import mu.KLogging
 
 @ApplicationScoped
 class UserRepositoryAdapter : UserRepositoryPort {
@@ -29,25 +31,20 @@ class UserRepositoryAdapter : UserRepositoryPort {
         }
 
     override fun upsert(user: User) {
-        val existing = mongoQueryMetrics.timed("app_user.upsert.findById") {
-            userDocumentRepository.findById(user.spotifyUserId.value)
-        }
-        if (existing == null) {
-            logger.info { "Creating new user: ${user.spotifyUserId.value}" }
-        } else {
-            logger.info { "Updating existing user: ${user.spotifyUserId.value}" }
-        }
-        val document = existing ?: UserDocument().apply {
-            spotifyUserId = user.spotifyUserId.value
-            createdAt = java.time.Instant.now()
-        }
-        document.displayName = user.displayName
-        document.encryptedAccessToken = user.encryptedAccessToken
-        document.encryptedRefreshToken = user.encryptedRefreshToken
-        document.tokenExpiresAt = user.tokenExpiresAt.toJavaInstant()
-        document.lastLoginAt = user.lastLoginAt.toJavaInstant()
-        mongoQueryMetrics.timed("app_user.upsert.persistOrUpdate") {
-            userDocumentRepository.persistOrUpdate(document)
+        val now = java.time.Instant.now()
+        mongoQueryMetrics.timed("app_user.upsert") {
+            userDocumentRepository.mongoCollection().updateOne(
+                Filters.eq("_id", user.spotifyUserId.value),
+                Updates.combine(
+                    Updates.set("displayName", user.displayName),
+                    Updates.set("encryptedAccessToken", user.encryptedAccessToken),
+                    Updates.set("encryptedRefreshToken", user.encryptedRefreshToken),
+                    Updates.set("tokenExpiresAt", user.tokenExpiresAt.toJavaInstant()),
+                    Updates.set("lastLoginAt", user.lastLoginAt.toJavaInstant()),
+                    Updates.setOnInsert("createdAt", now),
+                ),
+                UpdateOptions().upsert(true),
+            )
         }
     }
 
@@ -59,7 +56,4 @@ class UserRepositoryAdapter : UserRepositoryPort {
         tokenExpiresAt = tokenExpiresAt.toKotlinInstant(),
         lastLoginAt = lastLoginAt.toKotlinInstant(),
     )
-
-    companion object : KLogging()
 }
-
