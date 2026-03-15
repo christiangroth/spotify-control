@@ -117,21 +117,14 @@ class DashboardAdapter(
 
     private fun buildListeningStats(userId: UserId, since: Instant): ListeningStats {
         val playbackItems = appPlaybackRepository.findAllSince(userId, since)
+            .filter { it.secondsPlayed > 0 }
 
         val allTrackIds = playbackItems.map { it.trackId }.toSet()
         val statsTrackMap = appTrackRepository.findByTrackIds(allTrackIds.map { TrackId(it) }.toSet()).associateBy { it.id.value }
 
         val secondsByTrackId = playbackItems
             .groupBy { it.trackId }
-            .mapValues { (trackId, items) ->
-                items.sumOf { item ->
-                    if (item.secondsPlayed > 0) {
-                        item.secondsPlayed
-                    } else {
-                        statsTrackMap[trackId]?.durationMs?.div(MS_PER_SECOND) ?: 0L
-                    }
-                }
-            }
+            .mapValues { (_, items) -> items.sumOf { it.secondsPlayed } }
 
         val listenedMinutes = secondsByTrackId.values.sum() / SECONDS_PER_MINUTE
         val statsAlbumIds = statsTrackMap.values.mapNotNull { it.albumId }.toSet()
@@ -185,7 +178,6 @@ class DashboardAdapter(
     companion object {
         private const val STATS_DAYS = 30
         private const val SECONDS_PER_MINUTE = 60L
-        private const val MS_PER_SECOND = 1_000L
     }
 }
 
