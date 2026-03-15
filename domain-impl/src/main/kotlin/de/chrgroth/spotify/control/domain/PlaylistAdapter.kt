@@ -7,12 +7,15 @@ import de.chrgroth.outbox.OutboxTaskResult
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.PlaylistSyncError
 import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
+import de.chrgroth.spotify.control.domain.model.AlbumId
 import de.chrgroth.spotify.control.domain.model.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.PlaylistType
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.PlaylistPort
+import de.chrgroth.spotify.control.domain.port.out.AppAlbumRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppPlaylistCheckRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
@@ -34,6 +37,8 @@ class PlaylistAdapter(
     private val outboxPort: OutboxPort,
     private val dashboardRefresh: DashboardRefreshPort,
     private val playlistCheckRepository: AppPlaylistCheckRepositoryPort,
+    private val appArtistRepository: AppArtistRepositoryPort,
+    private val appAlbumRepository: AppAlbumRepositoryPort,
 ) : PlaylistPort {
 
     override fun enqueueUpdates() {
@@ -97,8 +102,12 @@ class PlaylistAdapter(
 
             val artistIds = playlist.tracks.flatMap { it.artistIds }.distinct()
             val albumIds = playlist.tracks.map { it.albumId }.distinct()
-            artistIds.forEach { artistId -> outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails(artistId, userId)) }
-            albumIds.forEach { albumId -> outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails(albumId)) }
+            val existingArtistIds = appArtistRepository.findByArtistIds(artistIds.toSet()).map { it.artistId }.toSet()
+            val existingAlbumIds = appAlbumRepository.findByAlbumIds(albumIds.map { AlbumId(it) }.toSet()).map { it.id.value }.toSet()
+            artistIds.filter { it !in existingArtistIds }
+                .forEach { artistId -> outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails(artistId, userId)) }
+            albumIds.filter { it !in existingAlbumIds }
+                .forEach { albumId -> outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails(albumId)) }
             outboxPort.enqueue(DomainOutboxEvent.RunPlaylistChecks(userId, playlistId))
         }
     }
