@@ -10,4 +10,5 @@ interface AppArtistRepositoryPort {
     fun findByPlaybackProcessingStatus(status: ArtistPlaybackProcessingStatus): List<AppArtist>
     fun findWithImageLinkAndBlankName(): List<AppArtist>
     fun updatePlaybackProcessingStatus(artistId: String, status: ArtistPlaybackProcessingStatus)
+    fun deleteAll()
 }

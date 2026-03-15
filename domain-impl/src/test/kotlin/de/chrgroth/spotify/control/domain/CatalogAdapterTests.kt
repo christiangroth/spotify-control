@@ -20,8 +20,11 @@ import kotlin.time.Instant
 import de.chrgroth.spotify.control.domain.port.out.AppAlbumRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppPlaybackRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.AppPlaylistCheckRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.OutboxManagementPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
+import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyCatalogPort
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
@@ -43,11 +46,15 @@ class CatalogAdapterTests {
     private val appPlaybackRepository: AppPlaybackRepositoryPort = mockk()
     private val userRepository: UserRepositoryPort = mockk()
     private val outboxPort: OutboxPort = mockk()
+    private val outboxManagement: OutboxManagementPort = mockk()
+    private val playlistRepository: PlaylistRepositoryPort = mockk()
+    private val playlistCheckRepository: AppPlaylistCheckRepositoryPort = mockk()
 
     private val adapter = CatalogAdapter(
         spotifyAccessToken, spotifyCatalog,
         appArtistRepository, appTrackRepository, appAlbumRepository,
         appPlaybackRepository, userRepository, outboxPort,
+        outboxManagement, playlistRepository, playlistCheckRepository,
     )
 
     private val syncTimestamp = Instant.fromEpochSeconds(1)
@@ -251,6 +258,7 @@ class CatalogAdapterTests {
         every { spotifyCatalog.getAlbum(userId, accessToken, "album-1") } returns albumSyncResult.right()
         every { appTrackRepository.upsertAll(any()) } just runs
         every { appAlbumRepository.upsertAll(any()) } just runs
+        every { appArtistRepository.findByArtistIds(any()) } returns emptyList()
         every { outboxPort.enqueue(any()) } just runs
 
         val result = adapter.handle(DomainOutboxEvent.SyncAlbumDetails("album-1"))
@@ -268,11 +276,26 @@ class CatalogAdapterTests {
         every { spotifyCatalog.getAlbum(userId, accessToken, "album-1") } returns albumSyncResult.right()
         every { appTrackRepository.upsertAll(any()) } just runs
         every { appAlbumRepository.upsertAll(any()) } just runs
+        every { appArtistRepository.findByArtistIds(any()) } returns emptyList()
         every { outboxPort.enqueue(any()) } just runs
 
         adapter.handle(DomainOutboxEvent.SyncAlbumDetails("album-1"))
 
         verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails("artist-1", userId)) }
+    }
+
+    @Test
+    fun `handle SyncAlbumDetails does not enqueue SyncArtistDetails when artist already exists`() {
+        every { userRepository.findAll() } returns listOf(buildUser())
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { spotifyCatalog.getAlbum(userId, accessToken, "album-1") } returns albumSyncResult.right()
+        every { appTrackRepository.upsertAll(any()) } just runs
+        every { appAlbumRepository.upsertAll(any()) } just runs
+        every { appArtistRepository.findByArtistIds(any()) } returns listOf(artist1)
+
+        adapter.handle(DomainOutboxEvent.SyncAlbumDetails("album-1"))
+
+        verify(exactly = 0) { outboxPort.enqueue(match { it is DomainOutboxEvent.SyncArtistDetails }) }
     }
 
     @Test
@@ -297,5 +320,40 @@ class CatalogAdapterTests {
         val result = adapter.handle(DomainOutboxEvent.SyncAlbumDetails("album-1"))
 
         assertThat(result).isInstanceOf(OutboxTaskResult.RateLimited::class.java)
+    }
+
+    // --- wipeCatalog tests ---
+
+    @Test
+    fun `wipeCatalog deletes all catalog data, outbox events, deactivates playlists and deletes checks`() {
+        every { appArtistRepository.deleteAll() } just runs
+        every { appAlbumRepository.deleteAll() } just runs
+        every { appTrackRepository.deleteAll() } just runs
+        every { outboxManagement.deleteByEventTypes(any()) } just runs
+        every { playlistRepository.setAllSyncInactive() } just runs
+        every { playlistCheckRepository.deleteAll() } just runs
+
+        val result = adapter.wipeCatalog()
+
+        assertThat(result.isRight()).isTrue()
+        verify { appArtistRepository.deleteAll() }
+        verify { appAlbumRepository.deleteAll() }
+        verify { appTrackRepository.deleteAll() }
+        verify {
+            outboxManagement.deleteByEventTypes(
+                match { keys ->
+                    keys.containsAll(
+                        listOf(
+                            DomainOutboxEvent.SyncArtistDetails.KEY,
+                            DomainOutboxEvent.SyncArtistDetails.LEGACY_KEY,
+                            DomainOutboxEvent.SyncAlbumDetails.KEY,
+                            DomainOutboxEvent.ResyncCatalog.KEY,
+                        ),
+                    )
+                },
+            )
+        }
+        verify { playlistRepository.setAllSyncInactive() }
+        verify { playlistCheckRepository.deleteAll() }
     }
 }

@@ -1,6 +1,8 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
+import com.mongodb.client.model.BulkWriteOptions
 import com.mongodb.client.model.Filters
+import com.mongodb.client.model.UpdateOneModel
 import com.mongodb.client.model.UpdateOptions
 import com.mongodb.client.model.Updates
 import de.chrgroth.spotify.control.domain.model.AlbumId
@@ -27,8 +29,8 @@ class AppAlbumRepositoryAdapter : AppAlbumRepositoryPort {
         val upsertOptions = UpdateOptions().upsert(true)
         val now = java.time.Instant.now()
         mongoQueryMetrics.timed("app_album.upsertAll") {
-            items.forEach { item ->
-                collection.updateOne(
+            val requests = items.map { item ->
+                UpdateOneModel<AppAlbumDocument>(
                     Filters.eq("_id", item.id.value),
                     Updates.combine(
                         Updates.set("totalTracks", item.totalTracks),
@@ -46,6 +48,7 @@ class AppAlbumRepositoryAdapter : AppAlbumRepositoryPort {
                     upsertOptions,
                 )
             }
+            collection.bulkWrite(requests, BulkWriteOptions().ordered(false))
         }
     }
 
@@ -67,6 +70,13 @@ class AppAlbumRepositoryAdapter : AppAlbumRepositoryPort {
         mongoQueryMetrics.timed("app_album.findByArtistId") {
             appAlbumDocumentRepository.list("artistId = ?1", artistId.value).map { it.toDomain() }
         }
+
+    override fun deleteAll() {
+        logger.info { "Deleting all app_album documents" }
+        mongoQueryMetrics.timed("app_album.deleteAll") {
+            appAlbumDocumentRepository.deleteAll()
+        }
+    }
 
     private fun AppAlbumDocument.toDomain() = AppAlbum(
         id = AlbumId(id),

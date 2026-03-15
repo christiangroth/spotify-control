@@ -1,6 +1,8 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
+import com.mongodb.client.model.BulkWriteOptions
 import com.mongodb.client.model.Filters
+import com.mongodb.client.model.UpdateOneModel
 import com.mongodb.client.model.UpdateOptions
 import com.mongodb.client.model.Updates
 import de.chrgroth.spotify.control.domain.model.AlbumId
@@ -28,8 +30,8 @@ class AppTrackRepositoryAdapter : AppTrackRepositoryPort {
         val upsertOptions = UpdateOptions().upsert(true)
         val now = java.time.Instant.now()
         mongoQueryMetrics.timed("app_track.upsertAll") {
-            items.forEach { item ->
-                collection.updateOne(
+            val requests = items.map { item ->
+                UpdateOneModel<AppTrackDocument>(
                     Filters.eq("_id", item.id.value),
                     Updates.combine(
                         Updates.set("title", item.title),
@@ -48,6 +50,7 @@ class AppTrackRepositoryAdapter : AppTrackRepositoryPort {
                     upsertOptions,
                 )
             }
+            collection.bulkWrite(requests, BulkWriteOptions().ordered(false))
         }
     }
 
@@ -74,6 +77,13 @@ class AppTrackRepositoryAdapter : AppTrackRepositoryPort {
         mongoQueryMetrics.timed("app_track.findByAlbumId") {
             appTrackDocumentRepository.list("albumId = ?1", albumId.value).map { it.toDomain() }
         }
+
+    override fun deleteAll() {
+        logger.info { "Deleting all app_track documents" }
+        mongoQueryMetrics.timed("app_track.deleteAll") {
+            appTrackDocumentRepository.deleteAll()
+        }
+    }
 
     private fun AppTrackDocument.toDomain() = AppTrack(
         id = TrackId(id),
