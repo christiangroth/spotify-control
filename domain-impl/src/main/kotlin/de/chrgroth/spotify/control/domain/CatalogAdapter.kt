@@ -166,8 +166,7 @@ class CatalogAdapter(
                     val artistIds = albumResult.tracks
                         .flatMap { t -> (listOf(t.artistId) + t.additionalArtistIds).map { it.value } }
                         .filter { it.isNotBlank() }.distinct()
-                    artistIds.filter { it !in existingArtistIds }
-                        .forEach { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails(it, userId)) }
+                    artistIds.forEach { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails(it, userId)) }
                     dashboardRefresh.notifyCatalogStats()
                 }
                 logger.info { "Synced album $albumId" }

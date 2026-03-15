@@ -56,7 +56,6 @@ class CatalogAdapterTests {
         spotifyAccessToken, spotifyCatalog,
         appArtistRepository, appTrackRepository, appAlbumRepository,
         appPlaybackRepository, userRepository, outboxPort, dashboardRefresh,
-        appPlaybackRepository, userRepository, outboxPort,
         outboxManagement, playlistRepository, playlistCheckRepository,
     )
 
@@ -261,7 +260,6 @@ class CatalogAdapterTests {
         every { spotifyCatalog.getAlbum(userId, accessToken, "album-1") } returns albumSyncResult.right()
         every { appTrackRepository.upsertAll(any()) } just runs
         every { appAlbumRepository.upsertAll(any()) } just runs
-        every { appArtistRepository.findByArtistIds(any()) } returns emptyList()
         every { outboxPort.enqueue(any()) } just runs
 
         val result = adapter.handle(DomainOutboxEvent.SyncAlbumDetails("album-1"))
@@ -279,7 +277,6 @@ class CatalogAdapterTests {
         every { spotifyCatalog.getAlbum(userId, accessToken, "album-1") } returns albumSyncResult.right()
         every { appTrackRepository.upsertAll(any()) } just runs
         every { appAlbumRepository.upsertAll(any()) } just runs
-        every { appArtistRepository.findByArtistIds(any()) } returns emptyList()
         every { outboxPort.enqueue(any()) } just runs
 
         adapter.handle(DomainOutboxEvent.SyncAlbumDetails("album-1"))
@@ -288,17 +285,17 @@ class CatalogAdapterTests {
     }
 
     @Test
-    fun `handle SyncAlbumDetails does not enqueue SyncArtistDetails when artist already exists`() {
+    fun `handle SyncAlbumDetails always enqueues SyncArtistDetails even when artist already exists`() {
         every { userRepository.findAll() } returns listOf(buildUser())
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { spotifyCatalog.getAlbum(userId, accessToken, "album-1") } returns albumSyncResult.right()
         every { appTrackRepository.upsertAll(any()) } just runs
         every { appAlbumRepository.upsertAll(any()) } just runs
-        every { appArtistRepository.findByArtistIds(any()) } returns listOf(artist1)
+        every { outboxPort.enqueue(any()) } just runs
 
         adapter.handle(DomainOutboxEvent.SyncAlbumDetails("album-1"))
 
-        verify(exactly = 0) { outboxPort.enqueue(match { it is DomainOutboxEvent.SyncArtistDetails }) }
+        verify { outboxPort.enqueue(match { it is DomainOutboxEvent.SyncArtistDetails }) }
     }
 
     @Test
@@ -385,6 +382,8 @@ class CatalogAdapterTests {
         adapter.handle(DomainOutboxEvent.SyncArtistDetails("artist-1", userId))
 
         verify(exactly = 0) { dashboardRefresh.notifyCatalogStats() }
+    }
+
     // --- wipeCatalog tests ---
 
     @Test
