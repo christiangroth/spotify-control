@@ -2,6 +2,7 @@ package de.chrgroth.spotify.control.adapter.out.slack
 
 import de.chrgroth.outbox.OutboxPartition
 import de.chrgroth.outbox.OutboxPartitionObserver
+import de.chrgroth.outbox.OutboxRepository
 import io.quarkus.runtime.ShutdownEvent
 import io.quarkus.runtime.StartupEvent
 import jakarta.enterprise.context.ApplicationScoped
@@ -25,17 +26,22 @@ import java.net.http.HttpResponse
 @ApplicationScoped
 @Suppress("Unused", "TooGenericExceptionCaught")
 class SlackNotificationAdapter(
+    private val repository: OutboxRepository,
     @param:ConfigProperty(name = "quarkus.application.version")
     private val version: String,
-    @param:ConfigProperty(name = "app.slack.webhook-url", defaultValue = "")
+    @param:ConfigProperty(name = "app.slack.webhook-url")
     private val webhookUrl: String,
-    @param:ConfigProperty(name = "app.slack.system-notifications.startup", defaultValue = "false")
+    @param:ConfigProperty(name = "app.slack.username")
+    private val username: String,
+    @param:ConfigProperty(name = "app.slack.icon-emoji")
+    private val iconEmoji: String,
+    @param:ConfigProperty(name = "app.slack.system-notifications.startup")
     private val startupEnabled: Boolean,
-    @param:ConfigProperty(name = "app.slack.system-notifications.stopping", defaultValue = "false")
+    @param:ConfigProperty(name = "app.slack.system-notifications.stopping")
     private val stoppingEnabled: Boolean,
-    @param:ConfigProperty(name = "app.slack.system-notifications.outbox-partition-paused", defaultValue = "false")
+    @param:ConfigProperty(name = "app.slack.system-notifications.outbox-partition-paused")
     private val partitionPausedEnabled: Boolean,
-    @param:ConfigProperty(name = "app.slack.system-notifications.outbox-partition-resumed", defaultValue = "false")
+    @param:ConfigProperty(name = "app.slack.system-notifications.outbox-partition-resumed")
     private val partitionResumedEnabled: Boolean,
 ) : OutboxPartitionObserver {
 
@@ -50,7 +56,10 @@ class SlackNotificationAdapter(
     }
 
     override fun onPartitionPaused(partition: OutboxPartition) {
-        if (partitionPausedEnabled) send("Outbox partition ${partition.key} paused/rate Limited")
+        if (!partitionPausedEnabled) return
+        val statusReason = repository.findPartition(partition)?.statusReason
+        val reason = if (statusReason.isNullOrBlank()) "unknown" else statusReason
+        send("Outbox partition ${partition.key} paused (reason: $reason)")
     }
 
     override fun onPartitionActivated(partition: OutboxPartition) {
@@ -59,11 +68,16 @@ class SlackNotificationAdapter(
 
     private fun send(text: String) {
         if (webhookUrl.isBlank()) {
-            logger.debug { "Slack webhook URL not configured, skipping notification: $text" }
+            logger.error { "Slack webhook URL not configured, skipping notification: $text" }
             return
         }
         try {
-            val body = """{"text": ${toJsonString(text)}}"""
+            val body = buildString {
+                append("""{"text": ${toJsonString(text)}""")
+                if (username.isNotBlank()) append(""", "username": ${toJsonString(username)}""")
+                if (iconEmoji.isNotBlank()) append(""", "icon_emoji": ${toJsonString(iconEmoji)}""")
+                append("}")
+            }
             val request = HttpRequest.newBuilder()
                 .uri(URI.create(webhookUrl))
                 .header("Content-Type", "application/json")
