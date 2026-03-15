@@ -1,3 +1,12 @@
+# 0.66.2 (2026.03.15)
+
+## Bugfixes / Chore
+* move-runtime-config-to-top: Runtime config settings (Spotify request throttling) are now shown as the first section on the Config page instead of a separate page.
+
+
+
+---
+
 # 0.66.1 (2026.03.15)
 
 ## Bugfixes / Chore
