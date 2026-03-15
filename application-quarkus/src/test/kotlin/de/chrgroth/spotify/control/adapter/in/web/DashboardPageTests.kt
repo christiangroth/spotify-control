@@ -153,7 +153,6 @@ class DashboardPageTests {
       .body(containsString("""data-testid="listened-minutes""""))
       .body(containsString("Top Tracks"))
       .body(containsString("Top Artists"))
-      .body(containsString("Top Genres"))
   }
 
   @Test

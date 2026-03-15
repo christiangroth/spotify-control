@@ -24,16 +24,10 @@ class CatalogBrowserAdapter(
         val artists = appArtistRepository.findAll()
         val albumCount = appAlbumRepository.findAll().size.toLong()
         val trackCount = appTrackRepository.findAll().size.toLong()
-        val genreCount = artists
-            .flatMap { listOfNotNull(it.genre) + (it.additionalGenres ?: emptyList()) }
-            .toSet()
-            .size
-            .toLong()
         return CatalogStats(
             artistCount = artists.size.toLong(),
             albumCount = albumCount,
             trackCount = trackCount,
-            genreCount = genreCount,
         )
     }
 
@@ -49,18 +43,14 @@ class CatalogBrowserAdapter(
         return artists
             .filter { artist ->
                 filterLower.isNullOrBlank() ||
-                    artist.artistName.lowercase().contains(filterLower) ||
-                    listOfNotNull(artist.genre).any { it.lowercase().contains(filterLower) } ||
-                    (artist.additionalGenres ?: emptyList()).any { it.lowercase().contains(filterLower) }
+                    artist.artistName.lowercase().contains(filterLower)
             }
             .sortedBy { it.artistName.lowercase() }
             .map { artist ->
-                val genres = listOfNotNull(artist.genre) + (artist.additionalGenres ?: emptyList())
                 ArtistBrowseItem(
                     artistId = artist.artistId,
                     artistName = artist.artistName,
                     imageLink = artist.imageLink,
-                    genres = genres,
                     albumCount = albumCountByArtistId[artist.artistId] ?: 0,
                     trackCount = trackCountByArtistId[artist.artistId] ?: 0,
                 )

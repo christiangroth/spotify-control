@@ -36,16 +36,6 @@
                         </div>
                     </a>
                 </div>
-                <div class="col-6 col-sm-3">
-                    <a href="/catalog" class="text-decoration-none">
-                        <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
-                            <div class="card-body">
-                                <p class="card-subtitle mb-1" style="color:#888;font-size:.8rem;">Genres</p>
-                                <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.catalogStats.genreCount}</p>
-                            </div>
-                        </div>
-                    </a>
-                </div>
             </div>
 
             <div class="row g-3 mb-4">
@@ -216,21 +206,6 @@
                                             <div class="text-truncate" style="color:#fff;font-size:.82rem;">{entry.name}</div>
                                             <div style="color:#888;font-size:.75rem;white-space:nowrap;">{entry.totalMinutes} min</div>
                                         </div>
-                                    </li>
-                                    {/for}
-                                </ul>
-                                {/if}
-                            </div>
-                            <div>
-                                <p class="mb-1" style="color:#888;font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;">Top Genres</p>
-                                {#if stats.listeningStats.topGenresLast30Days.empty}
-                                <p style="color:#888;font-size:.8rem;">No data yet.</p>
-                                {#else}
-                                <ul class="list-unstyled mb-0" data-testid="top-genres-list">
-                                    {#for entry in stats.listeningStats.topGenresLast30Days}
-                                    <li class="d-flex justify-content-between mb-1">
-                                        <span class="text-truncate me-2" style="color:#fff;font-size:.82rem;">{entry.name}</span>
-                                        <span style="color:#888;font-size:.78rem;white-space:nowrap;">{entry.totalMinutes} min</span>
                                     </li>
                                     {/for}
                                 </ul>

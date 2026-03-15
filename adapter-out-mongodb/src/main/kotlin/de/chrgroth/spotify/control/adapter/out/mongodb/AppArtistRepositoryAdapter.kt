@@ -33,8 +33,6 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
                     Filters.eq("_id", item.artistId),
                     Updates.combine(
                         Updates.set("artistName", item.artistName),
-                        Updates.set("genre", item.genre),
-                        Updates.set("additionalGenres", item.additionalGenres),
                         Updates.set("imageLink", item.imageLink),
                         Updates.set("type", item.type),
                         Updates.set("lastSync", now),
@@ -102,8 +100,6 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
     private fun AppArtistDocument.toDomain() = AppArtist(
         artistId = id,
         artistName = artistName,
-        genre = genre,
-        additionalGenres = additionalGenres,
         imageLink = imageLink,
         type = type,
         lastSync = lastSync?.toKotlinInstant() ?: kotlin.time.Instant.DISTANT_PAST,

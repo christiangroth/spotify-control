@@ -8,7 +8,6 @@ It provides smarter playlist management than Spotify itself, personal listening 
 - **Playback Tracking** – polls `recently_played` and `currently_playing` regularly to build a personal listening history
 - **Playlist Mirror** – syncs selected Spotify playlists locally, detecting changes via snapshot IDs
 - **Automatic Playlist Maintenance** – enforces invariants (no duplicates, album upgrades, yearly union playlists)
-- **Genre Management** – derives genres from artists; user overrides per album/release
 - **Listening Statistics** – Spotify Wrapped-style reports available at any time, in more detail
 
 ## Tech Stack

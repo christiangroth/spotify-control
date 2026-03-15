@@ -12,38 +12,38 @@ import org.bson.conversions.Bson
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
-class MigrateEntityFieldsStarterTests {
+class RemoveGenreFieldsStarterTests {
 
     private val mongoDatabase: MongoDatabase = mockk()
     private val mongoClient: MongoClient = mockk()
 
-    private val trackCollection: MongoCollection<Document> = mockk(relaxed = true)
+    private val artistCollection: MongoCollection<Document> = mockk(relaxed = true)
     private val albumCollection: MongoCollection<Document> = mockk(relaxed = true)
 
     private val databaseName = "test-db"
-    private val starter = MigrateEntityFieldsStarter(mongoClient, databaseName)
+    private val starter = RemoveGenreFieldsStarter(mongoClient, databaseName)
 
     @BeforeEach
     fun setUp() {
         every { mongoClient.getDatabase(databaseName) } returns mongoDatabase
-        every { mongoDatabase.getCollection("app_track") } returns trackCollection
+        every { mongoDatabase.getCollection("app_artist") } returns artistCollection
         every { mongoDatabase.getCollection("app_album") } returns albumCollection
     }
 
     @Test
     fun `id is stable`() {
-        assertThat(starter.id).isEqualTo("MigrateEntityFieldsStarter-v1")
+        assertThat(starter.id).isEqualTo("RemoveGenreFieldsStarter-v1")
     }
 
     @Test
-    fun `execute migrates track title field`() {
+    fun `execute removes genre fields from artist documents`() {
         starter.execute()
 
-        verify(exactly = 1) { trackCollection.updateMany(any<Bson>(), any<Bson>()) }
+        verify(exactly = 1) { artistCollection.updateMany(any<Bson>(), any<Bson>()) }
     }
 
     @Test
-    fun `execute migrates album title field`() {
+    fun `execute removes genreOverrides field from album documents`() {
         starter.execute()
 
         verify(exactly = 1) { albumCollection.updateMany(any<Bson>(), any<Bson>()) }
@@ -53,7 +53,7 @@ class MigrateEntityFieldsStarterTests {
     fun `execute handles zero modified documents without throwing`() {
         starter.execute()
 
-        verify(exactly = 1) { trackCollection.updateMany(any<Bson>(), any<Bson>()) }
+        verify(exactly = 1) { artistCollection.updateMany(any<Bson>(), any<Bson>()) }
         verify(exactly = 1) { albumCollection.updateMany(any<Bson>(), any<Bson>()) }
     }
 }

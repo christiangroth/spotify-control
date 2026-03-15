@@ -18,6 +18,5 @@ data class AppAlbum(
     val artistName: String? = null,
     val additionalArtistIds: List<ArtistId>? = null,
     val additionalArtistNames: List<String>? = null,
-    val genreOverrides: List<String>? = null,
     val lastSync: Instant,
 )

@@ -45,7 +45,7 @@ class DashboardAdapterTests {
 
     private val artist1 = AppArtist(
         artistId = "artist-1", artistName = "Artist One",
-        genre = "pop", lastSync = syncTimestamp,
+        lastSync = syncTimestamp,
     )
 
     private val track1 = AppTrack(
@@ -62,7 +62,7 @@ class DashboardAdapterTests {
         every { playlistRepository.findByUserId(userId) } returns emptyList()
         every { playlistCheckRepository.countAll() } returns 0L
         every { playlistCheckRepository.countSucceeded() } returns 0L
-        every { catalogBrowser.getCatalogStats() } returns CatalogStats(0, 0, 0, 0)
+        every { catalogBrowser.getCatalogStats() } returns CatalogStats(0, 0, 0)
         every { appTrackRepository.findByTrackIds(any()) } returns emptyList()
         every { appAlbumRepository.findByAlbumIds(any()) } returns emptyList()
         every { appArtistRepository.findByArtistIds(any()) } returns emptyList()
@@ -117,7 +117,6 @@ class DashboardAdapterTests {
         assertThat(stats.listeningStats.listenedMinutesLast30Days).isEqualTo(0L)
         assertThat(stats.listeningStats.topTracksLast30Days).isEmpty()
         assertThat(stats.listeningStats.topArtistsLast30Days).isEmpty()
-        assertThat(stats.listeningStats.topGenresLast30Days).isEmpty()
     }
 
     @Test
