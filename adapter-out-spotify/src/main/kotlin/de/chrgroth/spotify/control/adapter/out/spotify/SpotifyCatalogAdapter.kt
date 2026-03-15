@@ -101,9 +101,17 @@ class SpotifyCatalogAdapter(
                 allTracks.addAll(nextPage.items.filterNotNull())
                 nextUrl = nextPage.next
             }
+            val parsedTracks = allTracks.mapNotNull { parseAlbumTrack(it, appAlbum) }
+            val droppedCount = allTracks.size - parsedTracks.size
+            if (droppedCount > 0) {
+                logger.warn {
+                    "Album $albumId: dropped $droppedCount track(s) without id or primary artist" +
+                        " (fetched ${allTracks.size}, album reports ${appAlbum.totalTracks} total)"
+                }
+            }
             AlbumSyncResult(
                 album = appAlbum,
-                tracks = allTracks.mapNotNull { parseAlbumTrack(it, appAlbum) },
+                tracks = parsedTracks,
             ).right()
         } catch (e: Exception) {
             logger.error(e) { "Unexpected error fetching album tracks for album $albumId (user ${userId.value})" }

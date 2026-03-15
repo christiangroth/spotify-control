@@ -171,8 +171,12 @@ class CatalogAdapter(
                     val existingArtistIds = appArtistRepository.findByArtistIds(artistIds.toSet()).map { it.artistId }.toSet()
                     artistIds.filter { it !in existingArtistIds }
                         .forEach { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails(it, userId)) }
+                    val expectedTracks = albumResult.album.totalTracks
+                    if (expectedTracks != null && albumResult.tracks.size < expectedTracks) {
+                        logger.warn { "Album $albumId: synced ${albumResult.tracks.size} track(s) but album reports $expectedTracks total" }
+                    }
                 }
-                logger.info { "Synced album $albumId" }
+                logger.info { "Synced album $albumId: ${albumResult.tracks.size} track(s)" }
                 1.right()
             }
         }

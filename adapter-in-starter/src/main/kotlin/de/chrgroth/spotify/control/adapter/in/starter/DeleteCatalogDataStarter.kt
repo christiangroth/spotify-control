@@ -31,6 +31,7 @@ class DeleteCatalogDataStarter(
             "app_album",
             "app_artist",
             "app_playlist_check",
+            "spotify_playlist",
             "outbox",
         )
     }
