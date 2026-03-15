@@ -40,17 +40,17 @@ class RuntimeConfigResource {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     fun updateThrottleInterval(request: ThrottleIntervalRequest): Response {
-        if (request.intervalMs < 0) {
+        if (request.intervalSeconds < 0) {
             return Response.status(Response.Status.BAD_REQUEST)
                 .entity(mapOf("error" to "Throttle interval must be non-negative"))
                 .build()
         }
-        runtimeConfig.setThrottleIntervalMs(request.intervalMs)
-        logger.info { "Runtime throttle interval updated to ${request.intervalMs}ms" }
-        return Response.ok(mapOf("status" to "ok", "intervalMs" to request.intervalMs)).build()
+        runtimeConfig.setThrottleIntervalSeconds(request.intervalSeconds)
+        logger.info { "Runtime throttle interval updated to ${request.intervalSeconds}s" }
+        return Response.ok(mapOf("status" to "ok", "intervalSeconds" to request.intervalSeconds)).build()
     }
 
-    data class ThrottleIntervalRequest(val intervalMs: Long = 0)
+    data class ThrottleIntervalRequest(val intervalSeconds: Long = 0)
 
     companion object : KLogging()
 }

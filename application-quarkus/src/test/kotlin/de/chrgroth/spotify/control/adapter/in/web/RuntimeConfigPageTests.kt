@@ -50,7 +50,7 @@ class RuntimeConfigPageTests {
             .then()
             .statusCode(200)
             .body(containsString("""data-testid="default-throttle-interval""""))
-            .body(containsString("10000"))
+            .body(containsString("10"))
     }
 
     @Test
@@ -67,7 +67,7 @@ class RuntimeConfigPageTests {
     fun `update throttle interval endpoint accepts valid value`() {
         given()
             .contentType("application/json")
-            .body("""{"intervalMs":5000}""")
+            .body("""{"intervalSeconds":5}""")
             .`when`()
             .post("/settings/runtime-config/throttle-interval")
             .then()
@@ -78,7 +78,7 @@ class RuntimeConfigPageTests {
     fun `update throttle interval endpoint rejects negative value`() {
         given()
             .contentType("application/json")
-            .body("""{"intervalMs":-1}""")
+            .body("""{"intervalSeconds":-1}""")
             .`when`()
             .post("/settings/runtime-config/throttle-interval")
             .then()
@@ -89,7 +89,7 @@ class RuntimeConfigPageTests {
     fun `update throttle interval to zero is allowed`() {
         given()
             .contentType("application/json")
-            .body("""{"intervalMs":0}""")
+            .body("""{"intervalSeconds":0}""")
             .`when`()
             .post("/settings/runtime-config/throttle-interval")
             .then()

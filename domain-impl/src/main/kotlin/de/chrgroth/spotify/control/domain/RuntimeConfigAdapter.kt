@@ -12,11 +12,15 @@ class RuntimeConfigAdapter(
 ) : RuntimeConfigPort {
 
     override fun getRuntimeConfig(): RuntimeConfig = RuntimeConfig(
-        throttleIntervalMs = spotifyThrottling.getThrottleIntervalMs(),
-        defaultThrottleIntervalMs = spotifyThrottling.getDefaultThrottleIntervalMs(),
+        throttleIntervalSeconds = spotifyThrottling.getThrottleIntervalMs() / MILLIS_PER_SECOND,
+        defaultThrottleIntervalSeconds = spotifyThrottling.getDefaultThrottleIntervalMs() / MILLIS_PER_SECOND,
     )
 
-    override fun setThrottleIntervalMs(ms: Long) {
-        spotifyThrottling.setThrottleIntervalMs(ms)
+    override fun setThrottleIntervalSeconds(seconds: Long) {
+        spotifyThrottling.setThrottleIntervalMs(seconds * MILLIS_PER_SECOND)
+    }
+
+    companion object {
+        private const val MILLIS_PER_SECOND = 1000L
     }
 }

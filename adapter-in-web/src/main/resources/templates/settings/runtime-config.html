@@ -16,18 +16,18 @@
                 <p class="text-secondary small mb-3">
                     Minimum interval between outgoing Spotify API requests.
                     Increasing this value slows down catalog sync but reduces the risk of hitting Spotify rate limits.
-                    Default: <span data-testid="default-throttle-interval">{config.defaultThrottleIntervalMs}</span> ms.
+                    Default: <span data-testid="default-throttle-interval">{config.defaultThrottleIntervalSeconds}</span> s.
                 </p>
                 <div class="row g-2 align-items-end">
                     <div class="col-auto">
-                        <label for="throttle-interval-input" class="form-label text-secondary small mb-1">Interval (ms)</label>
+                        <label for="throttle-interval-input" class="form-label text-secondary small mb-1">Interval (s)</label>
                         <input
                             type="number"
                             id="throttle-interval-input"
                             class="form-control form-control-sm bg-dark text-white border-secondary"
                             style="width:140px"
                             min="0"
-                            value="{config.throttleIntervalMs}"
+                            value="{config.throttleIntervalSeconds}"
                             data-testid="throttle-interval-input"
                         >
                     </div>
@@ -40,12 +40,12 @@
         </div>
     </div>
     <script>
-        const defaultThrottleInterval = {config.defaultThrottleIntervalMs};
+        const defaultThrottleInterval = {config.defaultThrottleIntervalSeconds};
 
         document.getElementById('throttle-save-btn').addEventListener('click', function() {
             const input = document.getElementById('throttle-interval-input');
-            const intervalMs = parseInt(input.value, 10);
-            if (isNaN(intervalMs) || intervalMs < 0) {
+            const intervalSeconds = parseInt(input.value, 10);
+            if (isNaN(intervalSeconds) || intervalSeconds < 0) {
                 showBanner('Please enter a valid non-negative number.', 'danger');
                 return;
             }
@@ -54,15 +54,15 @@
             fetch('/settings/runtime-config/throttle-interval', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ intervalMs: intervalMs })
+                body: JSON.stringify({ intervalSeconds: intervalSeconds })
             })
             .then(function(response) {
                 return response.json().then(function(data) { return { ok: response.ok, data: data }; });
             })
             .then(function(result) {
                 if (result.ok) {
-                    input.value = result.data.intervalMs;
-                    showBanner('Throttle interval updated to ' + result.data.intervalMs + ' ms.', 'success');
+                    input.value = result.data.intervalSeconds;
+                    showBanner('Throttle interval updated to ' + result.data.intervalSeconds + ' s.', 'success');
                 } else {
                     showBanner('Failed to update throttle interval: ' + (result.data.error || 'Unknown error'), 'danger');
                 }
@@ -81,14 +81,14 @@
             fetch('/settings/runtime-config/throttle-interval', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ intervalMs: defaultThrottleInterval })
+                body: JSON.stringify({ intervalSeconds: defaultThrottleInterval })
             })
             .then(function(response) {
                 return response.json().then(function(data) { return { ok: response.ok, data: data }; });
             })
             .then(function(result) {
                 if (result.ok) {
-                    showBanner('Throttle interval reset to default (' + defaultThrottleInterval + ' ms).', 'success');
+                    showBanner('Throttle interval reset to default (' + defaultThrottleInterval + ' s).', 'success');
                 } else {
                     showBanner('Failed to reset throttle interval: ' + (result.data.error || 'Unknown error'), 'danger');
                 }
