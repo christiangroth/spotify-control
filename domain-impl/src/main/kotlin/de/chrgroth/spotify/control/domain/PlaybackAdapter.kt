@@ -229,7 +229,9 @@ class PlaybackAdapter(
         appPlaybackRepository.saveAll(newPlaybackItems)
 
         val artists = buildArtists(filteredRecentlyPlayed, filteredPartialPlayed)
-        artists.forEach { artistId -> outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails(artistId, userId)) }
+        val existingArtistIds = appArtistRepository.findByArtistIds(artists.toSet()).map { it.artistId }.toSet()
+        artists.filter { it !in existingArtistIds }
+            .forEach { artistId -> outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails(artistId, userId)) }
     }
 
     private fun buildPlaybackItems(

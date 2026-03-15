@@ -1,5 +1,6 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
+import com.mongodb.client.model.Updates
 import de.chrgroth.spotify.control.domain.model.Playlist
 import de.chrgroth.spotify.control.domain.model.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.PlaylistSyncStatus
@@ -12,6 +13,7 @@ import jakarta.inject.Inject
 import kotlin.time.toJavaInstant
 import kotlin.time.toKotlinInstant
 import mu.KLogging
+import org.bson.Document
 
 @ApplicationScoped
 class PlaylistRepositoryAdapter : PlaylistRepositoryPort {
@@ -130,6 +132,16 @@ class PlaylistRepositoryAdapter : PlaylistRepositoryPort {
         artistIds = this@toSubdocument.artistIds
         artistNames = this@toSubdocument.artistNames
         albumId = this@toSubdocument.albumId
+    }
+
+    override fun setAllSyncInactive() {
+        logger.info { "Setting all playlist sync statuses to inactive" }
+        mongoQueryMetrics.timed("spotify_playlist_metadata.setAllSyncInactive") {
+            playlistMetadataDocumentRepository.mongoCollection().updateMany(
+                Document(),
+                Updates.set("syncStatus", PlaylistSyncStatus.PASSIVE.name),
+            )
+        }
     }
 
     companion object : KLogging()

@@ -7,8 +7,11 @@ import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.out.AppAlbumRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppPlaybackRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.AppPlaylistCheckRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.OutboxManagementPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
+import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyCatalogPort
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
@@ -31,6 +34,9 @@ class PlaybackEnrichmentAdapterTests {
     private val userRepository: UserRepositoryPort = mockk(relaxed = true)
     private val outboxPort: OutboxPort = mockk()
     private val dashboardRefresh: DashboardRefreshPort = mockk(relaxed = true)
+    private val outboxManagement: OutboxManagementPort = mockk()
+    private val playlistRepository: PlaylistRepositoryPort = mockk()
+    private val playlistCheckRepository: AppPlaylistCheckRepositoryPort = mockk()
 
     private val adapter = CatalogAdapter(
         spotifyAccessToken,
@@ -42,6 +48,9 @@ class PlaybackEnrichmentAdapterTests {
         userRepository,
         outboxPort,
         dashboardRefresh,
+        outboxManagement,
+        playlistRepository,
+        playlistCheckRepository,
     )
 
     private val userId = UserId("user-1")

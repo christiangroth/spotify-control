@@ -1,6 +1,8 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
+import com.mongodb.client.model.BulkWriteOptions
 import com.mongodb.client.model.Filters
+import com.mongodb.client.model.UpdateOneModel
 import com.mongodb.client.model.UpdateOptions
 import com.mongodb.client.model.Updates
 import de.chrgroth.spotify.control.domain.model.AppArtist
@@ -26,8 +28,8 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
         val upsertOptions = UpdateOptions().upsert(true)
         val now = java.time.Instant.now()
         mongoQueryMetrics.timed("app_artist.upsertAll") {
-            items.forEach { item ->
-                collection.updateOne(
+            val requests = items.map { item ->
+                UpdateOneModel<AppArtistDocument>(
                     Filters.eq("_id", item.artistId),
                     Updates.combine(
                         Updates.set("artistName", item.artistName),
@@ -41,6 +43,7 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
                     upsertOptions,
                 )
             }
+            collection.bulkWrite(requests, BulkWriteOptions().ordered(false))
         }
     }
 
@@ -86,6 +89,13 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
                 Filters.eq("_id", artistId),
                 Updates.set("playbackProcessingStatus", status.name),
             )
+        }
+    }
+
+    override fun deleteAll() {
+        logger.info { "Deleting all app_artist documents" }
+        mongoQueryMetrics.timed("app_artist.deleteAll") {
+            appArtistDocumentRepository.deleteAll()
         }
     }
 
