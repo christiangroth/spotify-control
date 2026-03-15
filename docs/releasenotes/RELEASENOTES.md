@@ -1,3 +1,13 @@
+# 0.65.0 (2026.03.15)
+
+## New Features
+* add-runtime-config-ui-page: New Runtime Config settings page under `/settings/runtime-config`.
+* add-runtime-config-ui-page: Spotify HTTP request throttle interval is now editable at runtime (transient, resets on restart).
+
+
+
+---
+
 # 0.64.2 (2026.03.15)
 
 ## Bugfixes / Chore
