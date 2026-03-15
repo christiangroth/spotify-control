@@ -46,7 +46,6 @@ class PlaybackAdapter(
     private val outboxPort: OutboxPort,
     private val dashboardRefresh: DashboardRefreshPort,
     private val playbackState: PlaybackStatePort,
-    private val appSyncService: AppSyncService,
     private val catalog: CatalogPort,
     private val playlistRepository: PlaylistRepositoryPort,
     @ConfigProperty(name = "app.playback.minimum-progress-seconds", defaultValue = "25")
@@ -226,13 +225,11 @@ class PlaybackAdapter(
             return
         }
 
-        val artists = buildArtists(filteredRecentlyPlayed, filteredPartialPlayed)
-        val tracks = buildTracks(filteredRecentlyPlayed, filteredPartialPlayed)
-
         logger.info { "Persisting ${newPlaybackItems.size} new app_playback items for user: ${userId.value}" }
         appPlaybackRepository.saveAll(newPlaybackItems)
 
-        appSyncService.addToSyncPool(artists, tracks)
+        val artists = buildArtists(filteredRecentlyPlayed, filteredPartialPlayed)
+        artists.forEach { artistId -> outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails(artistId, userId)) }
     }
 
     private fun buildPlaybackItems(
@@ -258,11 +255,6 @@ class PlaybackAdapter(
         recentlyPlayed: List<RecentlyPlayedItem>,
         partialPlayed: List<RecentlyPartialPlayedItem>,
     ) = (recentlyPlayed.flatMap { it.artistIds } + partialPlayed.flatMap { it.artistIds }).distinct()
-
-    private fun buildTracks(
-        recentlyPlayed: List<RecentlyPlayedItem>,
-        partialPlayed: List<RecentlyPartialPlayedItem>,
-    ) = (recentlyPlayed.map { it.trackId } + partialPlayed.map { it.trackId }).distinct()
 
     // --- Artist Playback Sync ---
 

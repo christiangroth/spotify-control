@@ -40,13 +40,12 @@ class PlaylistAdapterTests {
     private val spotifyPlaylist: SpotifyPlaylistPort = mockk()
     private val outboxPort: OutboxPort = mockk()
     private val dashboardRefresh: DashboardRefreshPort = mockk()
-    private val appSyncService: AppSyncService = mockk()
     private val playlistCheckRepository: AppPlaylistCheckRepositoryPort = mockk()
 
     private val adapter = PlaylistAdapter(
         userRepository, playlistRepository,
         spotifyAccessToken, spotifyPlaylist,
-        outboxPort, dashboardRefresh, appSyncService,
+        outboxPort, dashboardRefresh,
         playlistCheckRepository,
     )
 
@@ -416,6 +415,7 @@ class PlaylistAdapterTests {
                 trackName = "Track One",
                 artistIds = listOf("artist-1"),
                 artistNames = listOf("Artist One"),
+                albumId = "album-1",
             ),
         ),
     )
@@ -438,14 +438,30 @@ class PlaylistAdapterTests {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { spotifyPlaylist.getPlaylistTracks(userId, accessToken, "p1") } returns playlist.right()
         every { playlistRepository.save(userId, playlist) } just runs
+        every { outboxPort.enqueue(any()) } just runs
         every { playlistRepository.updateLastSyncTime(userId, "p1", any()) } just runs
-        every { appSyncService.addToSyncPool(any(), any(), any()) } just runs
-        every { outboxPort.enqueue(any<DomainOutboxEvent.RunPlaylistChecks>()) } just runs
 
         val result = adapter.syncPlaylistData(userId, "p1")
 
         assertThat(result.isRight()).isTrue()
         verify { playlistRepository.save(userId, playlist) }
+    }
+
+    @Test
+    fun `syncPlaylistData enqueues SyncArtistDetails and SyncAlbumDetails for playlist tracks`() {
+        val user = buildUser()
+        val playlist = buildPlaylist("p1")
+        every { userRepository.findById(userId) } returns user
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { spotifyPlaylist.getPlaylistTracks(userId, accessToken, "p1") } returns playlist.right()
+        every { playlistRepository.save(userId, playlist) } just runs
+        every { outboxPort.enqueue(any()) } just runs
+        every { playlistRepository.updateLastSyncTime(userId, "p1", any()) } just runs
+
+        adapter.syncPlaylistData(userId, "p1")
+
+        verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails("artist-1", userId)) }
+        verify { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails("album-1")) }
     }
 
     @Test
@@ -456,36 +472,12 @@ class PlaylistAdapterTests {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { spotifyPlaylist.getPlaylistTracks(userId, accessToken, "p1") } returns playlist.right()
         every { playlistRepository.save(userId, playlist) } just runs
+        every { outboxPort.enqueue(any()) } just runs
         every { playlistRepository.updateLastSyncTime(userId, "p1", any()) } just runs
-        every { appSyncService.addToSyncPool(any(), any(), any()) } just runs
-        every { outboxPort.enqueue(any<DomainOutboxEvent.RunPlaylistChecks>()) } just runs
 
         adapter.syncPlaylistData(userId, "p1")
 
         verify(exactly = 1) { playlistRepository.updateLastSyncTime(eq(userId), eq("p1"), any()) }
-    }
-
-    @Test
-    fun `syncPlaylistData adds playlist tracks and artists to sync pool`() {
-        val user = buildUser()
-        val playlist = buildPlaylist("p1")
-        every { userRepository.findById(userId) } returns user
-        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
-        every { spotifyPlaylist.getPlaylistTracks(userId, accessToken, "p1") } returns playlist.right()
-        every { playlistRepository.save(userId, playlist) } just runs
-        every { playlistRepository.updateLastSyncTime(userId, "p1", any()) } just runs
-        every { appSyncService.addToSyncPool(any(), any(), any()) } just runs
-        every { outboxPort.enqueue(any<DomainOutboxEvent.RunPlaylistChecks>()) } just runs
-
-        adapter.syncPlaylistData(userId, "p1")
-
-        verify {
-            appSyncService.addToSyncPool(
-                match { artistIds: List<String> -> artistIds == listOf("artist-1") },
-                match { trackIds: List<String> -> trackIds == listOf("track-1") },
-                eq(true),
-            )
-        }
     }
 
     @Test

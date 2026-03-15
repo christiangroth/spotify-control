@@ -3,15 +3,6 @@ package de.chrgroth.spotify.control.domain.outbox
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.outbox.OutboxEvent
 import de.chrgroth.outbox.OutboxTaskPriority
-import java.security.MessageDigest
-
-private fun hashIds(ids: List<String>): String {
-    val joined = ids.sorted().joinToString(",")
-    val bytes = MessageDigest.getInstance("SHA-256").digest(joined.toByteArray())
-    return bytes.take(HASH_BYTES).joinToString("") { "%02x".format(it) }
-}
-
-private const val HASH_BYTES = 8
 
 sealed interface DomainOutboxEvent : OutboxEvent {
     val partition: DomainOutboxPartition
@@ -128,88 +119,25 @@ sealed interface DomainOutboxEvent : OutboxEvent {
     }
 
     /**
-     * Syncs track/album details for a single track from the Spotify API,
-     * updates app_track with all sync fields, upserts app_album with the album data,
-     * and enqueues SyncArtistDetails for all track artists not yet synced.
-     * Deduplication is by trackId only (track data is shared across users).
-     * payload = "$trackId:${userId.value}"
-     */
-    data class SyncTrackDetails(val trackId: String, val userId: UserId) : DomainOutboxEvent {
-        override val key = KEY
-        override fun deduplicationKey() = "$KEY:$trackId"
-        override val partition = DomainOutboxPartition.ToSpotify
-        override fun toPayload() = "$trackId:${userId.value}"
-
-        companion object {
-            const val KEY = "SyncTrackDetails"
-            const val LEGACY_KEY = "EnrichTrackDetails"
-            fun fromPayload(payload: String): SyncTrackDetails {
-                val colonIndex = payload.indexOf(':')
-                require(colonIndex > 0 && colonIndex < payload.length - 1) { "Invalid SyncTrackDetails payload: $payload" }
-                return SyncTrackDetails(
-                    trackId = payload.substring(0, colonIndex),
-                    userId = UserId(payload.substring(colonIndex + 1)),
-                )
-            }
-        }
-    }
-
-    /**
-     * Syncs a specific batch of artist IDs from app_sync_pool via the Spotify bulk artists endpoint.
-     * Successfully synced IDs are removed from the pool; unsynced IDs remain for the next retry.
-     * payload = artistIds joined by ","
-     */
-    data class SyncMissingArtists(val artistIds: List<String>) : DomainOutboxEvent {
-        override val key = KEY
-        override fun deduplicationKey() = "$KEY:${hashIds(artistIds)}"
-        override val partition = DomainOutboxPartition.ToSpotify
-        override fun toPayload() = artistIds.joinToString(",")
-
-        companion object {
-            const val KEY = "SyncMissingArtists"
-            fun fromPayload(payload: String): SyncMissingArtists =
-                SyncMissingArtists(if (payload.isBlank()) emptyList() else payload.split(","))
-        }
-    }
-
-    /**
-     * Syncs a specific batch of track IDs from app_sync_pool via the Spotify bulk tracks endpoint.
-     * Successfully synced IDs are removed from the pool; unsynced IDs remain for the next retry.
-     * payload = trackIds joined by ","
-     */
-    data class SyncMissingTracks(val trackIds: List<String>) : DomainOutboxEvent {
-        override val key = KEY
-        override fun deduplicationKey() = "$KEY:${hashIds(trackIds)}"
-        override val partition = DomainOutboxPartition.ToSpotify
-        override fun toPayload() = trackIds.joinToString(",")
-
-        companion object {
-            const val KEY = "SyncMissingTracks"
-            fun fromPayload(payload: String): SyncMissingTracks =
-                SyncMissingTracks(if (payload.isBlank()) emptyList() else payload.split(","))
-        }
-    }
-
-    /**
-     * Syncs a single album from app_sync_pool by fetching all its tracks via GET /v1/albums/{id}.
-     * All returned tracks are upserted. The album ID is removed from the pool on success.
+     * Syncs a single album by fetching all its tracks via GET /v1/albums/{id}.
+     * All returned tracks are upserted. Enqueues SyncArtistDetails for all artists found.
      * payload = albumId
      */
-    data class SyncMissingAlbums(val albumId: String) : DomainOutboxEvent {
+    data class SyncAlbumDetails(val albumId: String) : DomainOutboxEvent {
         override val key = KEY
         override fun deduplicationKey() = "$KEY:$albumId"
         override val partition = DomainOutboxPartition.ToSpotify
         override fun toPayload() = albumId
 
         companion object {
-            const val KEY = "SyncMissingAlbums"
-            fun fromPayload(payload: String): SyncMissingAlbums = SyncMissingAlbums(payload)
+            const val KEY = "SyncAlbumDetails"
+            fun fromPayload(payload: String): SyncAlbumDetails = SyncAlbumDetails(payload)
         }
     }
 
     /**
-     * Re-adds all known artist and track IDs to app_sync_pool so that they are picked up by the
-     * SyncMissingArtists / SyncMissingTracks bulk-sync jobs and refreshed from Spotify.
+     * Re-enqueues sync events for all known artists, tracks, and albums in the catalog
+     * so that they are refreshed from Spotify.
      * Deduplication ensures only one instance is queued at a time.
      */
     data class ResyncCatalog(val placeholder: String = "") : DomainOutboxEvent {
@@ -255,10 +183,7 @@ sealed interface DomainOutboxEvent : OutboxEvent {
             RebuildPlaybackData.KEY -> RebuildPlaybackData(UserId(payload))
             AppendPlaybackData.KEY -> AppendPlaybackData(UserId(payload))
             SyncArtistDetails.KEY, SyncArtistDetails.LEGACY_KEY -> SyncArtistDetails.fromPayload(payload)
-            SyncTrackDetails.KEY, SyncTrackDetails.LEGACY_KEY -> SyncTrackDetails.fromPayload(payload)
-            SyncMissingArtists.KEY -> SyncMissingArtists.fromPayload(payload)
-            SyncMissingTracks.KEY -> SyncMissingTracks.fromPayload(payload)
-            SyncMissingAlbums.KEY -> SyncMissingAlbums.fromPayload(payload)
+            SyncAlbumDetails.KEY -> SyncAlbumDetails.fromPayload(payload)
             ResyncCatalog.KEY -> ResyncCatalog()
             RunPlaylistChecks.KEY -> RunPlaylistChecks.fromPayload(payload)
             else -> throw IllegalArgumentException("Unknown outbox event type: $key")

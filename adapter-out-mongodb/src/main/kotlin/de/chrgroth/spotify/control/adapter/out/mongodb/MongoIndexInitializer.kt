@@ -31,9 +31,6 @@ class MongoIndexInitializer {
     lateinit var appTrackDocumentRepository: AppTrackDocumentRepository
 
     @Inject
-    lateinit var appSyncPoolDocumentRepository: AppSyncPoolDocumentRepository
-
-    @Inject
     lateinit var playlistMetadataDocumentRepository: PlaylistMetadataDocumentRepository
 
     @Inject
@@ -75,11 +72,6 @@ class MongoIndexInitializer {
         appTrackDocumentRepository.mongoCollection().createIndex(
             Document("artistId", 1),
             IndexOptions().name("app_track_artistId_1"),
-        )
-
-        appSyncPoolDocumentRepository.mongoCollection().createIndex(
-            Document("type", 1),
-            IndexOptions().name("app_sync_pool_type_1"),
         )
 
         playlistMetadataDocumentRepository.mongoCollection().createIndex(

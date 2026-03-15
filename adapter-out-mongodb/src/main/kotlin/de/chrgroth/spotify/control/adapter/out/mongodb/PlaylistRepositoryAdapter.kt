@@ -113,6 +113,7 @@ class PlaylistRepositoryAdapter : PlaylistRepositoryPort {
         trackName = trackName,
         artistIds = artistIds,
         artistNames = artistNames,
+        albumId = albumId,
     )
 
     private fun Playlist.toDocument(userId: UserId) = PlaylistDocument().apply {
@@ -128,6 +129,7 @@ class PlaylistRepositoryAdapter : PlaylistRepositoryPort {
         trackName = this@toSubdocument.trackName
         artistIds = this@toSubdocument.artistIds
         artistNames = this@toSubdocument.artistNames
+        albumId = this@toSubdocument.albumId
     }
 
     companion object : KLogging()
