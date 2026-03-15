@@ -101,7 +101,7 @@ class PlaylistRepositoryAdapter : PlaylistRepositoryPort {
         trackName = trackName,
         artistIds = artistIds,
         artistNames = artistNames,
-        albumId = albumId ?: "",
+        albumId = albumId,
     )
 
     private fun Playlist.toDocument(userId: UserId) = PlaylistDocument().apply {
