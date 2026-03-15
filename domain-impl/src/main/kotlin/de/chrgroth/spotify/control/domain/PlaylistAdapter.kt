@@ -95,9 +95,9 @@ class PlaylistAdapter(
             playlistRepository.save(userId, playlist)
 
             val artistIds = playlist.tracks.flatMap { it.artistIds }.distinct()
-            val trackIds = playlist.tracks.map { it.trackId }.distinct()
+            val albumIds = playlist.tracks.mapNotNull { it.albumId }.distinct()
             artistIds.forEach { artistId -> outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails(artistId, userId)) }
-            trackIds.forEach { trackId -> outboxPort.enqueue(DomainOutboxEvent.SyncTrackDetails(trackId, userId)) }
+            albumIds.forEach { albumId -> outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails(albumId)) }
             outboxPort.enqueue(DomainOutboxEvent.RunPlaylistChecks(userId, playlistId))
         }
     }

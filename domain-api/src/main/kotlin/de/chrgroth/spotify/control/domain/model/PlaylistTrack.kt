@@ -5,4 +5,5 @@ data class PlaylistTrack(
     val trackName: String,
     val artistIds: List<String>,
     val artistNames: List<String>,
+    val albumId: String? = null,
 )

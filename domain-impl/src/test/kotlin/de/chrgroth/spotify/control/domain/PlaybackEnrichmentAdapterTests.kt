@@ -2,15 +2,8 @@ package de.chrgroth.spotify.control.domain
 
 import arrow.core.right
 import de.chrgroth.spotify.control.domain.model.AccessToken
-import de.chrgroth.spotify.control.domain.model.AlbumId
-import de.chrgroth.spotify.control.domain.model.AppAlbum
 import de.chrgroth.spotify.control.domain.model.AppArtist
-import de.chrgroth.spotify.control.domain.model.AppTrack
-import de.chrgroth.spotify.control.domain.model.ArtistId
-import de.chrgroth.spotify.control.domain.model.TrackId
-import de.chrgroth.spotify.control.domain.model.TrackSyncResult
 import de.chrgroth.spotify.control.domain.model.UserId
-import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.out.AppAlbumRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppPlaybackRepositoryPort
@@ -87,94 +80,5 @@ class PlaybackEnrichmentAdapterTests {
 
         verify(exactly = 0) { spotifyCatalog.getArtist(any(), any(), any()) }
         verify(exactly = 0) { appArtistRepository.upsertAll(any()) }
-    }
-
-    @Test
-    fun `syncTrackDetails stores track and album from Spotify response`() {
-        val trackId = "track-1"
-        val track = AppTrack(
-            id = TrackId(trackId),
-            title = "Track One",
-            albumId = AlbumId("album-1"),
-            albumName = "Album One",
-            artistId = ArtistId("artist-1"),
-            artistName = "Artist One",
-            discNumber = 1,
-            durationMs = 200000,
-            trackNumber = 3,
-            type = "track",
-            lastSync = kotlin.time.Instant.fromEpochSeconds(1),
-        )
-        val album = AppAlbum(
-            id = AlbumId("album-1"),
-            title = "Album One",
-            artistId = ArtistId("artist-1"),
-            artistName = "Artist One",
-            lastSync = kotlin.time.Instant.fromEpochSeconds(1),
-        )
-        val syncResult = TrackSyncResult(track = track, album = album)
-
-        every { appTrackRepository.findByTrackIds(setOf(TrackId(trackId))) } returns emptyList()
-        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
-        every { spotifyCatalog.getTrack(userId, accessToken, trackId) } returns syncResult.right()
-        every { appTrackRepository.upsertAll(listOf(track)) } just runs
-        every { appAlbumRepository.upsertAll(listOf(album)) } just runs
-        every { outboxPort.enqueue(any()) } just runs
-
-        adapter.syncTrackDetails(trackId, userId)
-
-        verify { appTrackRepository.upsertAll(listOf(track)) }
-        verify { appAlbumRepository.upsertAll(listOf(album)) }
-        verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails("artist-1", userId)) }
-    }
-
-    @Test
-    fun `syncTrackDetails enqueues SyncArtistDetails for all track artists`() {
-        val trackId = "track-multi-artist"
-        val track = AppTrack(
-            id = TrackId(trackId),
-            title = "Collab Track",
-            albumId = AlbumId("album-1"),
-            artistId = ArtistId("artist-1"),
-            additionalArtistIds = listOf(ArtistId("artist-2"), ArtistId("artist-3")),
-            lastSync = kotlin.time.Instant.fromEpochSeconds(1),
-        )
-        val album = AppAlbum(
-            id = AlbumId("album-1"),
-            title = "Album One",
-            lastSync = kotlin.time.Instant.fromEpochSeconds(1),
-        )
-        val syncResult = TrackSyncResult(track = track, album = album)
-
-        every { appTrackRepository.findByTrackIds(setOf(TrackId(trackId))) } returns emptyList()
-        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
-        every { spotifyCatalog.getTrack(userId, accessToken, trackId) } returns syncResult.right()
-        every { appTrackRepository.upsertAll(listOf(track)) } just runs
-        every { appAlbumRepository.upsertAll(listOf(album)) } just runs
-        every { outboxPort.enqueue(any()) } just runs
-
-        adapter.syncTrackDetails(trackId, userId)
-
-        verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails("artist-1", userId)) }
-        verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails("artist-2", userId)) }
-        verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails("artist-3", userId)) }
-    }
-
-    @Test
-    fun `syncTrackDetails skips update when track already in catalog`() {
-        val trackId = "track-already-synced"
-        val syncedTrack = AppTrack(
-            id = TrackId(trackId),
-            title = "Known Track",
-            artistId = ArtistId("artist-1"),
-            lastSync = kotlin.time.Clock.System.now(),
-        )
-        every { appTrackRepository.findByTrackIds(setOf(TrackId(trackId))) } returns listOf(syncedTrack)
-
-        adapter.syncTrackDetails(trackId, userId)
-
-        verify(exactly = 0) { spotifyCatalog.getTrack(any(), any(), any()) }
-        verify(exactly = 0) { appTrackRepository.upsertAll(any()) }
-        verify(exactly = 0) { appAlbumRepository.upsertAll(any()) }
     }
 }

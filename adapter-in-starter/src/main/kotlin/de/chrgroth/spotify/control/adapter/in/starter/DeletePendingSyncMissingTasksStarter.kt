@@ -15,13 +15,13 @@ class DeletePendingSyncMissingTasksStarter(
     private val databaseName: String,
 ) : Starter {
 
-    override val id = "DeletePendingSyncMissingTasksStarter-v2"
+    override val id = "DeletePendingSyncMissingTasksStarter-v3"
 
     override fun execute() {
         val outboxResult = mongoClient.getDatabase(databaseName)
             .getCollection(OUTBOX_COLLECTION)
             .deleteMany(Filters.`in`("eventType", REMOVED_SYNC_KEYS))
-        logger.info { "Deleted ${outboxResult.deletedCount} legacy bulk-sync outbox tasks (${REMOVED_SYNC_KEYS.joinToString()})" }
+        logger.info { "Deleted ${outboxResult.deletedCount} legacy sync outbox tasks (${REMOVED_SYNC_KEYS.joinToString()})" }
     }
 
     companion object : KLogging() {
@@ -29,6 +29,9 @@ class DeletePendingSyncMissingTasksStarter(
         private val REMOVED_SYNC_KEYS = listOf(
             "SyncMissingArtists",
             "SyncMissingTracks",
+            "SyncMissingAlbums",
+            "SyncTrackDetails",
+            "EnrichTrackDetails",
         )
     }
 }

@@ -100,6 +100,7 @@ class SpotifyPlaylistAdapter(
               trackName = track.name,
               artistIds = track.artists.map { it.id },
               artistNames = track.artists.map { it.name },
+              albumId = track.album?.id,
             ),
           )
         }

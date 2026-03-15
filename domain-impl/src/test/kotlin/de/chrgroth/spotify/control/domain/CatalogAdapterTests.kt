@@ -102,7 +102,21 @@ class CatalogAdapterTests {
     }
 
     @Test
-    fun `resyncArtist enqueues SyncArtistDetails and SyncTrackDetails for artist and their tracks`() {
+    fun `resyncArtist enqueues SyncArtistDetails and SyncAlbumDetails for artist and their albums`() {
+        every { appArtistRepository.findByArtistIds(setOf("artist-1")) } returns listOf(artist1)
+        every { appTrackRepository.findByArtistId(ArtistId("artist-1")) } returns listOf(trackWithAlbum1)
+        every { userRepository.findAll() } returns listOf(buildUser())
+        every { outboxPort.enqueue(any()) } just runs
+
+        val result = adapter.resyncArtist("artist-1")
+
+        assertThat(result.isRight()).isTrue()
+        verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails("artist-1", userId)) }
+        verify { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails("album-1")) }
+    }
+
+    @Test
+    fun `resyncArtist enqueues only SyncArtistDetails when artist has no tracks with albums`() {
         every { appArtistRepository.findByArtistIds(setOf("artist-1")) } returns listOf(artist1)
         every { appTrackRepository.findByArtistId(ArtistId("artist-1")) } returns listOf(track1)
         every { userRepository.findAll() } returns listOf(buildUser())
@@ -112,21 +126,7 @@ class CatalogAdapterTests {
 
         assertThat(result.isRight()).isTrue()
         verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails("artist-1", userId)) }
-        verify { outboxPort.enqueue(DomainOutboxEvent.SyncTrackDetails("track-1", userId)) }
-    }
-
-    @Test
-    fun `resyncArtist enqueues only SyncArtistDetails when artist has no tracks`() {
-        every { appArtistRepository.findByArtistIds(setOf("artist-1")) } returns listOf(artist1)
-        every { appTrackRepository.findByArtistId(ArtistId("artist-1")) } returns emptyList()
-        every { userRepository.findAll() } returns listOf(buildUser())
-        every { outboxPort.enqueue(any()) } just runs
-
-        val result = adapter.resyncArtist("artist-1")
-
-        assertThat(result.isRight()).isTrue()
-        verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails("artist-1", userId)) }
-        verify(exactly = 0) { outboxPort.enqueue(match { it is DomainOutboxEvent.SyncTrackDetails }) }
+        verify(exactly = 0) { outboxPort.enqueue(match { it is DomainOutboxEvent.SyncAlbumDetails }) }
     }
 
     @Test
@@ -169,21 +169,7 @@ class CatalogAdapterTests {
     }
 
     @Test
-    fun `resyncCatalog enqueues SyncTrackDetails for all tracks`() {
-        every { appArtistRepository.findAll() } returns emptyList()
-        every { appTrackRepository.findAll() } returns listOf(track1, track2)
-        every { userRepository.findAll() } returns listOf(buildUser())
-        every { outboxPort.enqueue(any()) } just runs
-
-        val result = adapter.resyncCatalog()
-
-        assertThat(result.isRight()).isTrue()
-        verify { outboxPort.enqueue(DomainOutboxEvent.SyncTrackDetails("track-1", userId)) }
-        verify { outboxPort.enqueue(DomainOutboxEvent.SyncTrackDetails("track-2", userId)) }
-    }
-
-    @Test
-    fun `resyncCatalog enqueues SyncMissingAlbums for albums derived from tracks`() {
+    fun `resyncCatalog enqueues SyncAlbumDetails for albums derived from tracks`() {
         every { appArtistRepository.findAll() } returns emptyList()
         every { appTrackRepository.findAll() } returns listOf(trackWithAlbum1, trackWithAlbum2, trackWithAlbum3)
         every { userRepository.findAll() } returns listOf(buildUser())
@@ -192,21 +178,34 @@ class CatalogAdapterTests {
         val result = adapter.resyncCatalog()
 
         assertThat(result.isRight()).isTrue()
-        verify { outboxPort.enqueue(DomainOutboxEvent.SyncMissingAlbums("album-1")) }
-        verify { outboxPort.enqueue(DomainOutboxEvent.SyncMissingAlbums("album-2")) }
+        verify { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails("album-1")) }
+        verify { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails("album-2")) }
     }
 
     @Test
-    fun `resyncCatalog does not enqueue artist and track events when no users available`() {
+    fun `resyncCatalog skips tracks without albumId`() {
+        every { appArtistRepository.findAll() } returns emptyList()
+        every { appTrackRepository.findAll() } returns listOf(track1, track2)
+        every { userRepository.findAll() } returns listOf(buildUser())
+
+        val result = adapter.resyncCatalog()
+
+        assertThat(result.isRight()).isTrue()
+        verify(exactly = 0) { outboxPort.enqueue(any()) }
+    }
+
+    @Test
+    fun `resyncCatalog does not enqueue artist events when no users available`() {
         every { appArtistRepository.findAll() } returns listOf(artist1)
-        every { appTrackRepository.findAll() } returns listOf(track1)
+        every { appTrackRepository.findAll() } returns listOf(trackWithAlbum1)
         every { userRepository.findAll() } returns emptyList()
+        every { outboxPort.enqueue(any()) } just runs
 
         val result = adapter.resyncCatalog()
 
         assertThat(result.isRight()).isTrue()
         verify(exactly = 0) { outboxPort.enqueue(match { it is DomainOutboxEvent.SyncArtistDetails }) }
-        verify(exactly = 0) { outboxPort.enqueue(match { it is DomainOutboxEvent.SyncTrackDetails }) }
+        verify { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails("album-1")) }
     }
 
     // --- handle(ResyncCatalog) tests ---
@@ -214,7 +213,7 @@ class CatalogAdapterTests {
     @Test
     fun `handle ResyncCatalog returns success`() {
         every { appArtistRepository.findAll() } returns listOf(artist1)
-        every { appTrackRepository.findAll() } returns listOf(track1)
+        every { appTrackRepository.findAll() } returns listOf(trackWithAlbum1)
         every { userRepository.findAll() } returns listOf(buildUser())
         every { outboxPort.enqueue(any()) } just runs
 
@@ -234,69 +233,69 @@ class CatalogAdapterTests {
         assertThat(result).isEqualTo(OutboxTaskResult.Success)
     }
 
-    // --- syncMissingAlbums tests ---
+    // --- SyncAlbumDetails tests ---
 
     @Test
-    fun `handle SyncMissingAlbums returns success when no users available`() {
+    fun `handle SyncAlbumDetails returns success when no users available`() {
         every { userRepository.findAll() } returns emptyList()
 
-        val result = adapter.handle(DomainOutboxEvent.SyncMissingAlbums("album-1"))
+        val result = adapter.handle(DomainOutboxEvent.SyncAlbumDetails("album-1"))
 
         assertThat(result).isEqualTo(OutboxTaskResult.Success)
-        verify(exactly = 0) { spotifyCatalog.getAlbumTracks(any(), any(), any()) }
+        verify(exactly = 0) { spotifyCatalog.getAlbum(any(), any(), any()) }
     }
 
     @Test
-    fun `handle SyncMissingAlbums syncs album and upserts all tracks`() {
+    fun `handle SyncAlbumDetails syncs album and upserts all tracks`() {
         every { userRepository.findAll() } returns listOf(buildUser())
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
-        every { spotifyCatalog.getAlbumTracks(userId, accessToken, "album-1") } returns listOf(syncResult1, syncResult2).right()
+        every { spotifyCatalog.getAlbum(userId, accessToken, "album-1") } returns listOf(syncResult1, syncResult2).right()
         every { appTrackRepository.upsertAll(any()) } just runs
         every { appAlbumRepository.upsertAll(any()) } just runs
         every { outboxPort.enqueue(any()) } just runs
 
-        val result = adapter.handle(DomainOutboxEvent.SyncMissingAlbums("album-1"))
+        val result = adapter.handle(DomainOutboxEvent.SyncAlbumDetails("album-1"))
 
         assertThat(result).isEqualTo(OutboxTaskResult.Success)
-        verify { spotifyCatalog.getAlbumTracks(userId, accessToken, "album-1") }
+        verify { spotifyCatalog.getAlbum(userId, accessToken, "album-1") }
         verify { appTrackRepository.upsertAll(listOf(syncResult1.track, syncResult2.track)) }
         verify { appAlbumRepository.upsertAll(listOf(album1)) }
     }
 
     @Test
-    fun `handle SyncMissingAlbums enqueues SyncArtistDetails for artists found in album`() {
+    fun `handle SyncAlbumDetails enqueues SyncArtistDetails for artists found in album`() {
         every { userRepository.findAll() } returns listOf(buildUser())
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
-        every { spotifyCatalog.getAlbumTracks(userId, accessToken, "album-1") } returns listOf(syncResult1, syncResult2).right()
+        every { spotifyCatalog.getAlbum(userId, accessToken, "album-1") } returns listOf(syncResult1, syncResult2).right()
         every { appTrackRepository.upsertAll(any()) } just runs
         every { appAlbumRepository.upsertAll(any()) } just runs
         every { outboxPort.enqueue(any()) } just runs
 
-        adapter.handle(DomainOutboxEvent.SyncMissingAlbums("album-1"))
+        adapter.handle(DomainOutboxEvent.SyncAlbumDetails("album-1"))
 
         verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails("artist-1", userId)) }
     }
 
     @Test
-    fun `handle SyncMissingAlbums returns failed when album endpoint returns error`() {
+    fun `handle SyncAlbumDetails returns failed when album endpoint returns error`() {
         every { userRepository.findAll() } returns listOf(buildUser())
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
-        every { spotifyCatalog.getAlbumTracks(userId, accessToken, "album-1") } returns SyncError.TRACK_DETAILS_FETCH_FAILED.left()
+        every { spotifyCatalog.getAlbum(userId, accessToken, "album-1") } returns SyncError.TRACK_DETAILS_FETCH_FAILED.left()
 
-        val result = adapter.handle(DomainOutboxEvent.SyncMissingAlbums("album-1"))
+        val result = adapter.handle(DomainOutboxEvent.SyncAlbumDetails("album-1"))
 
         assertThat(result).isInstanceOf(OutboxTaskResult.Failed::class.java)
         verify(exactly = 0) { appTrackRepository.upsertAll(any()) }
     }
 
     @Test
-    fun `handle SyncMissingAlbums album endpoint rate limit returns rate limited result`() {
+    fun `handle SyncAlbumDetails returns rate limited when endpoint returns rate limit error`() {
         val rateLimitError = de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError(java.time.Duration.ofSeconds(30))
         every { userRepository.findAll() } returns listOf(buildUser())
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
-        every { spotifyCatalog.getAlbumTracks(userId, accessToken, "album-1") } returns rateLimitError.left()
+        every { spotifyCatalog.getAlbum(userId, accessToken, "album-1") } returns rateLimitError.left()
 
-        val result = adapter.handle(DomainOutboxEvent.SyncMissingAlbums("album-1"))
+        val result = adapter.handle(DomainOutboxEvent.SyncAlbumDetails("album-1"))
 
         assertThat(result).isInstanceOf(OutboxTaskResult.RateLimited::class.java)
     }

@@ -229,9 +229,7 @@ class PlaybackAdapter(
         appPlaybackRepository.saveAll(newPlaybackItems)
 
         val artists = buildArtists(filteredRecentlyPlayed, filteredPartialPlayed)
-        val tracks = buildTracks(filteredRecentlyPlayed, filteredPartialPlayed)
         artists.forEach { artistId -> outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails(artistId, userId)) }
-        tracks.forEach { trackId -> outboxPort.enqueue(DomainOutboxEvent.SyncTrackDetails(trackId, userId)) }
     }
 
     private fun buildPlaybackItems(
@@ -257,11 +255,6 @@ class PlaybackAdapter(
         recentlyPlayed: List<RecentlyPlayedItem>,
         partialPlayed: List<RecentlyPartialPlayedItem>,
     ) = (recentlyPlayed.flatMap { it.artistIds } + partialPlayed.flatMap { it.artistIds }).distinct()
-
-    private fun buildTracks(
-        recentlyPlayed: List<RecentlyPlayedItem>,
-        partialPlayed: List<RecentlyPartialPlayedItem>,
-    ) = (recentlyPlayed.map { it.trackId } + partialPlayed.map { it.trackId }).distinct()
 
     // --- Artist Playback Sync ---
 

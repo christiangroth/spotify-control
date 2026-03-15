@@ -119,46 +119,19 @@ sealed interface DomainOutboxEvent : OutboxEvent {
     }
 
     /**
-     * Syncs track/album details for a single track from the Spotify API,
-     * updates app_track with all sync fields, upserts app_album with the album data,
-     * and enqueues SyncArtistDetails for all track artists not yet synced.
-     * Deduplication is by trackId only (track data is shared across users).
-     * payload = "$trackId:${userId.value}"
-     */
-    data class SyncTrackDetails(val trackId: String, val userId: UserId) : DomainOutboxEvent {
-        override val key = KEY
-        override fun deduplicationKey() = "$KEY:$trackId"
-        override val partition = DomainOutboxPartition.ToSpotify
-        override fun toPayload() = "$trackId:${userId.value}"
-
-        companion object {
-            const val KEY = "SyncTrackDetails"
-            const val LEGACY_KEY = "EnrichTrackDetails"
-            fun fromPayload(payload: String): SyncTrackDetails {
-                val colonIndex = payload.indexOf(':')
-                require(colonIndex > 0 && colonIndex < payload.length - 1) { "Invalid SyncTrackDetails payload: $payload" }
-                return SyncTrackDetails(
-                    trackId = payload.substring(0, colonIndex),
-                    userId = UserId(payload.substring(colonIndex + 1)),
-                )
-            }
-        }
-    }
-
-    /**
-     * Syncs a single album from app_sync_pool by fetching all its tracks via GET /v1/albums/{id}.
-     * All returned tracks are upserted. The album ID is removed from the pool on success.
+     * Syncs a single album by fetching all its tracks via GET /v1/albums/{id}.
+     * All returned tracks are upserted. Enqueues SyncArtistDetails for all artists found.
      * payload = albumId
      */
-    data class SyncMissingAlbums(val albumId: String) : DomainOutboxEvent {
+    data class SyncAlbumDetails(val albumId: String) : DomainOutboxEvent {
         override val key = KEY
         override fun deduplicationKey() = "$KEY:$albumId"
         override val partition = DomainOutboxPartition.ToSpotify
         override fun toPayload() = albumId
 
         companion object {
-            const val KEY = "SyncMissingAlbums"
-            fun fromPayload(payload: String): SyncMissingAlbums = SyncMissingAlbums(payload)
+            const val KEY = "SyncAlbumDetails"
+            fun fromPayload(payload: String): SyncAlbumDetails = SyncAlbumDetails(payload)
         }
     }
 
@@ -210,8 +183,7 @@ sealed interface DomainOutboxEvent : OutboxEvent {
             RebuildPlaybackData.KEY -> RebuildPlaybackData(UserId(payload))
             AppendPlaybackData.KEY -> AppendPlaybackData(UserId(payload))
             SyncArtistDetails.KEY, SyncArtistDetails.LEGACY_KEY -> SyncArtistDetails.fromPayload(payload)
-            SyncTrackDetails.KEY, SyncTrackDetails.LEGACY_KEY -> SyncTrackDetails.fromPayload(payload)
-            SyncMissingAlbums.KEY -> SyncMissingAlbums.fromPayload(payload)
+            SyncAlbumDetails.KEY -> SyncAlbumDetails.fromPayload(payload)
             ResyncCatalog.KEY -> ResyncCatalog()
             RunPlaylistChecks.KEY -> RunPlaylistChecks.fromPayload(payload)
             else -> throw IllegalArgumentException("Unknown outbox event type: $key")

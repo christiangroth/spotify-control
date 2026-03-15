@@ -415,6 +415,7 @@ class PlaylistAdapterTests {
                 trackName = "Track One",
                 artistIds = listOf("artist-1"),
                 artistNames = listOf("Artist One"),
+                albumId = "album-1",
             ),
         ),
     )
@@ -446,7 +447,7 @@ class PlaylistAdapterTests {
     }
 
     @Test
-    fun `syncPlaylistData enqueues SyncArtistDetails and SyncTrackDetails for playlist tracks`() {
+    fun `syncPlaylistData enqueues SyncArtistDetails and SyncAlbumDetails for playlist tracks`() {
         val user = buildUser()
         val playlist = buildPlaylist("p1")
         every { userRepository.findById(userId) } returns user
@@ -458,7 +459,7 @@ class PlaylistAdapterTests {
         adapter.syncPlaylistData(userId, "p1")
 
         verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails("artist-1", userId)) }
-        verify { outboxPort.enqueue(DomainOutboxEvent.SyncTrackDetails("track-1", userId)) }
+        verify { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails("album-1")) }
     }
 
     @Test
