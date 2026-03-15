@@ -1,3 +1,12 @@
+# 0.66.1 (2026.03.15)
+
+## Bugfixes / Chore
+* fix-slow-query-app-user-findbyid: Optimized user login to use a single database operation instead of two, reducing load on the database.
+
+
+
+---
+
 # 0.66.0 (2026.03.15)
 
 ## New Features
