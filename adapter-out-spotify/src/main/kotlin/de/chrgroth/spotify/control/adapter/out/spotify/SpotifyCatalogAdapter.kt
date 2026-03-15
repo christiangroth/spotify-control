@@ -6,10 +6,8 @@ import arrow.core.right
 import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyAlbumResponse
 import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyAlbumTracksPage
 import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyArtistResponse
-import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyArtistsResponse
 import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifySimplifiedTrackResponse
 import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyTrackResponse
-import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyTracksResponse
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.SyncError
 import de.chrgroth.spotify.control.domain.model.AccessToken
@@ -67,33 +65,6 @@ class SpotifyCatalogAdapter(
         }
     }
 
-    override fun getArtists(
-        userId: UserId,
-        accessToken: AccessToken,
-        artistIds: List<String>,
-    ): Either<DomainError, List<AppArtist>> {
-        if (artistIds.isEmpty()) return emptyList<AppArtist>().right()
-        return try {
-            throttler.throttle(DomainOutboxPartition.ToSpotify.key)
-            val ids = artistIds.joinToString(",")
-            val request = HttpRequest.newBuilder()
-                .uri(URI.create("$apiBaseUrl/v1/artists?ids=$ids"))
-                .header("Authorization", "Bearer ${accessToken.value}")
-                .GET()
-                .build()
-            val response = httpMetrics.timed("/v1/artists") {
-                httpClient.send(request, HttpResponse.BodyHandlers.ofString())
-            }
-            val errorResult = response.checkBulkEndpointOrError(logger, SyncError.ARTIST_DETAILS_FETCH_FAILED)
-            if (errorResult != null) return errorResult
-            val result = spotifyJson.decodeFromString<SpotifyArtistsResponse>(response.body())
-            result.artists.filterNotNull().map { parseArtist(it) }.right()
-        } catch (e: Exception) {
-            logger.error(e) { "Unexpected error bulk-fetching artist details for ${artistIds.size} artists (user ${userId.value})" }
-            SyncError.ARTIST_DETAILS_FETCH_FAILED.left()
-        }
-    }
-
     override fun getTrack(
         userId: UserId,
         accessToken: AccessToken,
@@ -114,33 +85,6 @@ class SpotifyCatalogAdapter(
             parseTrackSyncResult(spotifyJson.decodeFromString<SpotifyTrackResponse>(response.body())).right()
         } catch (e: Exception) {
             logger.error(e) { "Unexpected error fetching track details for track $trackId (user ${userId.value})" }
-            SyncError.TRACK_DETAILS_FETCH_FAILED.left()
-        }
-    }
-
-    override fun getTracks(
-        userId: UserId,
-        accessToken: AccessToken,
-        trackIds: List<String>,
-    ): Either<DomainError, List<TrackSyncResult>> {
-        if (trackIds.isEmpty()) return emptyList<TrackSyncResult>().right()
-        return try {
-            throttler.throttle(DomainOutboxPartition.ToSpotify.key)
-            val ids = trackIds.joinToString(",")
-            val request = HttpRequest.newBuilder()
-                .uri(URI.create("$apiBaseUrl/v1/tracks?ids=$ids"))
-                .header("Authorization", "Bearer ${accessToken.value}")
-                .GET()
-                .build()
-            val response = httpMetrics.timed("/v1/tracks") {
-                httpClient.send(request, HttpResponse.BodyHandlers.ofString())
-            }
-            val errorResult = response.checkBulkEndpointOrError(logger, SyncError.TRACK_DETAILS_FETCH_FAILED)
-            if (errorResult != null) return errorResult
-            val result = spotifyJson.decodeFromString<SpotifyTracksResponse>(response.body())
-            result.tracks.filterNotNull().mapNotNull { parseTrackSyncResult(it) }.right()
-        } catch (e: Exception) {
-            logger.error(e) { "Unexpected error bulk-fetching track details for ${trackIds.size} tracks (user ${userId.value})" }
             SyncError.TRACK_DETAILS_FETCH_FAILED.left()
         }
     }

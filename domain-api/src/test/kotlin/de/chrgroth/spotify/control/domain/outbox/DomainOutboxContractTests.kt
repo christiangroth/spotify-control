@@ -20,8 +20,6 @@ class DomainOutboxContractTests {
         DomainOutboxEvent.AppendPlaybackData(UserId("user-1")),
         DomainOutboxEvent.SyncArtistDetails("artist-1", UserId("user-1")),
         DomainOutboxEvent.SyncTrackDetails("track-1", UserId("user-1")),
-        DomainOutboxEvent.SyncMissingArtists(listOf("artist-1", "artist-2")),
-        DomainOutboxEvent.SyncMissingTracks(listOf("track-1", "track-2")),
         DomainOutboxEvent.SyncMissingAlbums("album-1"),
     )
 

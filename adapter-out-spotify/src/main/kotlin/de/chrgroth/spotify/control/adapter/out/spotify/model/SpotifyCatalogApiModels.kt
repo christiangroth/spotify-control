@@ -44,16 +44,6 @@ internal data class SpotifyTrackResponse(
 )
 
 @Serializable
-internal data class SpotifyArtistsResponse(
-    val artists: List<SpotifyArtistResponse?> = emptyList(),
-)
-
-@Serializable
-internal data class SpotifyTracksResponse(
-    val tracks: List<SpotifyTrackResponse?> = emptyList(),
-)
-
-@Serializable
 internal data class SpotifySimplifiedTrackResponse(
     val id: String? = null,
     val name: String,

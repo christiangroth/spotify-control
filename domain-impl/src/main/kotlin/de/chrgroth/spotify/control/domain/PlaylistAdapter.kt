@@ -33,7 +33,6 @@ class PlaylistAdapter(
     private val spotifyPlaylist: SpotifyPlaylistPort,
     private val outboxPort: OutboxPort,
     private val dashboardRefresh: DashboardRefreshPort,
-    private val appSyncService: AppSyncService,
     private val playlistCheckRepository: AppPlaylistCheckRepositoryPort,
 ) : PlaylistPort {
 
@@ -97,7 +96,8 @@ class PlaylistAdapter(
 
             val artistIds = playlist.tracks.flatMap { it.artistIds }.distinct()
             val trackIds = playlist.tracks.map { it.trackId }.distinct()
-            appSyncService.addToSyncPool(artistIds, trackIds, forceSync = true)
+            artistIds.forEach { artistId -> outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails(artistId, userId)) }
+            trackIds.forEach { trackId -> outboxPort.enqueue(DomainOutboxEvent.SyncTrackDetails(trackId, userId)) }
             outboxPort.enqueue(DomainOutboxEvent.RunPlaylistChecks(userId, playlistId))
         }
     }

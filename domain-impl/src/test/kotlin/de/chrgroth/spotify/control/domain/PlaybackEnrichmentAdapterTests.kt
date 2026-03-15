@@ -14,12 +14,10 @@ import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.out.AppAlbumRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppPlaybackRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.AppSyncPoolRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyCatalogPort
-import de.chrgroth.spotify.control.domain.port.out.UseBulkFetchStatePort
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
 import io.mockk.every
 import io.mockk.just
@@ -38,8 +36,6 @@ class PlaybackEnrichmentAdapterTests {
     private val appPlaybackRepository: AppPlaybackRepositoryPort = mockk(relaxed = true)
     private val userRepository: UserRepositoryPort = mockk(relaxed = true)
     private val outboxPort: OutboxPort = mockk()
-    private val syncPoolRepository: AppSyncPoolRepositoryPort = mockk(relaxed = true)
-    private val useBulkFetchState: UseBulkFetchStatePort = mockk(relaxed = true)
 
     private val adapter = CatalogAdapter(
         spotifyAccessToken,
@@ -50,8 +46,6 @@ class PlaybackEnrichmentAdapterTests {
         appPlaybackRepository,
         userRepository,
         outboxPort,
-        syncPoolRepository,
-        useBulkFetchState,
     )
 
     private val userId = UserId("user-1")

@@ -3,15 +3,6 @@ package de.chrgroth.spotify.control.domain.outbox
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.outbox.OutboxEvent
 import de.chrgroth.outbox.OutboxTaskPriority
-import java.security.MessageDigest
-
-private fun hashIds(ids: List<String>): String {
-    val joined = ids.sorted().joinToString(",")
-    val bytes = MessageDigest.getInstance("SHA-256").digest(joined.toByteArray())
-    return bytes.take(HASH_BYTES).joinToString("") { "%02x".format(it) }
-}
-
-private const val HASH_BYTES = 8
 
 sealed interface DomainOutboxEvent : OutboxEvent {
     val partition: DomainOutboxPartition
@@ -155,42 +146,6 @@ sealed interface DomainOutboxEvent : OutboxEvent {
     }
 
     /**
-     * Syncs a specific batch of artist IDs from app_sync_pool via the Spotify bulk artists endpoint.
-     * Successfully synced IDs are removed from the pool; unsynced IDs remain for the next retry.
-     * payload = artistIds joined by ","
-     */
-    data class SyncMissingArtists(val artistIds: List<String>) : DomainOutboxEvent {
-        override val key = KEY
-        override fun deduplicationKey() = "$KEY:${hashIds(artistIds)}"
-        override val partition = DomainOutboxPartition.ToSpotify
-        override fun toPayload() = artistIds.joinToString(",")
-
-        companion object {
-            const val KEY = "SyncMissingArtists"
-            fun fromPayload(payload: String): SyncMissingArtists =
-                SyncMissingArtists(if (payload.isBlank()) emptyList() else payload.split(","))
-        }
-    }
-
-    /**
-     * Syncs a specific batch of track IDs from app_sync_pool via the Spotify bulk tracks endpoint.
-     * Successfully synced IDs are removed from the pool; unsynced IDs remain for the next retry.
-     * payload = trackIds joined by ","
-     */
-    data class SyncMissingTracks(val trackIds: List<String>) : DomainOutboxEvent {
-        override val key = KEY
-        override fun deduplicationKey() = "$KEY:${hashIds(trackIds)}"
-        override val partition = DomainOutboxPartition.ToSpotify
-        override fun toPayload() = trackIds.joinToString(",")
-
-        companion object {
-            const val KEY = "SyncMissingTracks"
-            fun fromPayload(payload: String): SyncMissingTracks =
-                SyncMissingTracks(if (payload.isBlank()) emptyList() else payload.split(","))
-        }
-    }
-
-    /**
      * Syncs a single album from app_sync_pool by fetching all its tracks via GET /v1/albums/{id}.
      * All returned tracks are upserted. The album ID is removed from the pool on success.
      * payload = albumId
@@ -208,8 +163,8 @@ sealed interface DomainOutboxEvent : OutboxEvent {
     }
 
     /**
-     * Re-adds all known artist and track IDs to app_sync_pool so that they are picked up by the
-     * SyncMissingArtists / SyncMissingTracks bulk-sync jobs and refreshed from Spotify.
+     * Re-enqueues sync events for all known artists, tracks, and albums in the catalog
+     * so that they are refreshed from Spotify.
      * Deduplication ensures only one instance is queued at a time.
      */
     data class ResyncCatalog(val placeholder: String = "") : DomainOutboxEvent {
@@ -256,8 +211,6 @@ sealed interface DomainOutboxEvent : OutboxEvent {
             AppendPlaybackData.KEY -> AppendPlaybackData(UserId(payload))
             SyncArtistDetails.KEY, SyncArtistDetails.LEGACY_KEY -> SyncArtistDetails.fromPayload(payload)
             SyncTrackDetails.KEY, SyncTrackDetails.LEGACY_KEY -> SyncTrackDetails.fromPayload(payload)
-            SyncMissingArtists.KEY -> SyncMissingArtists.fromPayload(payload)
-            SyncMissingTracks.KEY -> SyncMissingTracks.fromPayload(payload)
             SyncMissingAlbums.KEY -> SyncMissingAlbums.fromPayload(payload)
             ResyncCatalog.KEY -> ResyncCatalog()
             RunPlaylistChecks.KEY -> RunPlaylistChecks.fromPayload(payload)

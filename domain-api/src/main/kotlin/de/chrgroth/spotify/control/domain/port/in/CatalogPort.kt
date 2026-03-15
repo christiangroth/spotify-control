@@ -21,8 +21,6 @@ interface CatalogPort {
     fun resyncArtist(artistId: String): Either<DomainError, Unit>
     fun handle(event: DomainOutboxEvent.SyncArtistDetails): OutboxTaskResult
     fun handle(event: DomainOutboxEvent.SyncTrackDetails): OutboxTaskResult
-    fun handle(event: DomainOutboxEvent.SyncMissingArtists): OutboxTaskResult
-    fun handle(event: DomainOutboxEvent.SyncMissingTracks): OutboxTaskResult
     fun handle(event: DomainOutboxEvent.SyncMissingAlbums): OutboxTaskResult
     fun handle(event: DomainOutboxEvent.ResyncCatalog): OutboxTaskResult
 }

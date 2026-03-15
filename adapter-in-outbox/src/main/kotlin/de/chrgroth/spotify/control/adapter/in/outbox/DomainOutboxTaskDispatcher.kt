@@ -53,8 +53,6 @@ class DomainOutboxTaskDispatcher(
       is DomainOutboxEvent.AppendPlaybackData -> playback.handle(event)
       is DomainOutboxEvent.SyncArtistDetails -> catalog.handle(event)
       is DomainOutboxEvent.SyncTrackDetails -> catalog.handle(event)
-      is DomainOutboxEvent.SyncMissingArtists -> catalog.handle(event)
-      is DomainOutboxEvent.SyncMissingTracks -> catalog.handle(event)
       is DomainOutboxEvent.SyncMissingAlbums -> catalog.handle(event)
       is DomainOutboxEvent.ResyncCatalog -> catalog.handle(event)
       is DomainOutboxEvent.RunPlaylistChecks -> playlistCheck.handle(event)
