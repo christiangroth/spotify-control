@@ -1,3 +1,17 @@
+# 0.64.0 (2026.03.15)
+
+## New Features
+* create-wipe-button-catalog-ui: Added Wipe Catalog button to catalog UI.
+* create-wipe-button-catalog-ui: Wipe operation deletes all catalog data (artists, albums, tracks), removes catalog sync outbox events, sets all playlists to sync inactive and deletes all playlist checks.
+* create-wipe-button-catalog-ui: Wipe requires typing "yes" in a confirmation popup to prevent accidental data loss.
+
+## Bugfixes / Chore
+* base-listening-stats-app-collections: Dashboard listening stats now only reflect app-tracked playback durations, excluding tracks where no listening time was recorded by the app.
+
+
+
+---
+
 # 0.63.4 (2026.03.15)
 
 ## Bugfixes / Chore
