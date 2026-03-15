@@ -48,6 +48,7 @@ spotify-control interacts with the following external systems:
 | Spotify API         | bidirectional  | Read recently played tracks, playlists, artists; OAuth 2.0 login        |
 | MongoDB Atlas       | bidirectional  | Persistent storage for all domain data (tracks, playlists, events, etc.) |
 | User (browser)      | bidirectional  | Web UI for dashboard, settings, and documentation                        |
+| Slack               | outbound       | System notifications via incoming webhook (startup, shutdown, outbox partition events) |
 
 ## Technical Context
 
@@ -59,6 +60,7 @@ spotify-control interacts with the following external systems:
 | Scheduled jobs        | Quarkus scheduler                                       |
 | Internal event bus    | CDI Events (in-process)                                 |
 | Async task queue      | Persistent Outbox (`de.chrgroth.quarkus.outbox`)        |
+| Slack                 | REST POST via `adapter-out-slack`; incoming webhook     |
 
 # Solution Strategy
 
@@ -82,6 +84,7 @@ The system is composed of the following Gradle modules:
 | `adapter-out-mongodb`   | Repository implementations for MongoDB                                            |
 | `adapter-out-outbox`    | Outbox adapter for writing new tasks into the outbox                              |
 | `adapter-out-scheduler` | Scheduler info provider for the health page                                       |
+| `adapter-out-slack`     | Slack notification adapter for system notifications via incoming webhook          |
 | `adapter-out-spotify`   | Spotify API client, token refresh, token bucket rate limiting, backoff            |
 | `application-quarkus`   | Quarkus application bundling and configuration                                    |
 | `domain-api`            | Ports (interfaces) – defines the contracts between domain and adapters            |
@@ -135,6 +138,15 @@ Implements `OutboxPort` and `OutboxManagementPort`. Bridges the domain to the `d
 ### `adapter-out-scheduler`
 
 Implements `CronjobInfoPort`. Provides scheduled job metadata (name, next execution, running state) to the health page via the Quarkus `Scheduler` API.
+
+### `adapter-out-slack`
+
+Sends system notifications to a configured Slack incoming webhook. Observes Quarkus `StartupEvent` and `ShutdownEvent` lifecycle events and implements `OutboxPartitionObserver` to react to partition pause/resume events. Each notification type is individually enabled via configuration properties. The webhook URL is sensitive and must be set via the `SLACK_WEBHOOK_URL` environment variable in production.
+
+Two categories of notifications are supported:
+
+- **System notifications** – lifecycle and infrastructure events. Notification toggles are configured via application properties; the webhook URL is set via the `SLACK_WEBHOOK_URL` environment variable in production.
+- **User notifications** – user-facing alerts configured through the UI (not yet implemented).
 
 ### `adapter-out-spotify`
 
@@ -326,7 +338,7 @@ Build the application as a Quarkus native Docker image, push to the GitHub Conta
 
 - **Release plugin** – `net.researchgate.release` manages version bumping and Git tagging
 - **Release-Notes plugin** – custom Gradle plugin (`de.chrgroth.gradle.plugins.release-notes`) maintained in https://github.com/christiangroth/gradle-release-notes-plugin
-- **CI/CD** – the GitHub Actions workflow (`gradle.yml`) runs `./gradlew build` on every push; runs `./gradlew release` only on pushes to `main`; after release, the Docker stack file is copied to the VPS via SCP and the stack is deployed via SSH
+- **CI/CD** – the GitHub Actions workflow (`gradle.yml`) runs `./gradlew build` on every push; runs `./gradlew release` only on pushes to `main`; after release, the Docker stack file is copied to the VPS via SCP and the stack is deployed via SSH. All secrets (including `SLACK_WEBHOOK_URL`) must be configured as GitHub Actions repository secrets.
 - **Snippet requirement** – every branch that is not `main` or `dependabot/*` **must** contain at least one release note snippet in `docs/releasenotes/snippets/`; the build fails without it. Create snippets with the corresponding Gradle tasks (`releasenotesCreateFeature`, `releasenotesCreateBugfix`, …); filenames follow the pattern `{branch-last-segment}-{type}.md`
 
 ### Spotify OAuth Redirect URIs
@@ -436,6 +448,7 @@ SPOTIFY_CLIENT_ID
 SPOTIFY_CLIENT_SECRET
 MONGODB_CONNECTION_STRING
 APP_TOKEN_ENCRYPTION_KEY
+SLACK_WEBHOOK_URL
 ```
 
 # Architecture Decisions
