@@ -72,7 +72,7 @@ class PlaylistSettingsResource {
 
   data class PlaylistRow(val lineNumber: String, val playlist: PlaylistInfo) {
     val active: Boolean get() = playlist.syncStatus == PlaylistSyncStatus.ACTIVE
-    val lastSnapshotIdSyncTimeFormatted: String get() = playlist.lastSnapshotIdSyncTime
+    val lastSyncTimeFormatted: String get() = (playlist.lastSyncTime ?: playlist.lastSnapshotIdSyncTime)
       .toJavaInstant()
       .atZone(ZoneId.systemDefault())
       .format(GERMAN_DATE_TIME_FORMATTER)

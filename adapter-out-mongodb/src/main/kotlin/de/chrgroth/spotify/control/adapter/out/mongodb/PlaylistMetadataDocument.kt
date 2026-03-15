@@ -16,4 +16,5 @@ class PlaylistMetadataDocument {
   lateinit var name: String
   lateinit var syncStatus: String
   var type: String? = null
+  var lastSyncTime: java.time.Instant? = null
 }
