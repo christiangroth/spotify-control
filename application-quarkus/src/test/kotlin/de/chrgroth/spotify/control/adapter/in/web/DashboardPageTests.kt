@@ -165,4 +165,42 @@ class DashboardPageTests {
       .body(containsString("snippet-listening-stats"))
       .body(containsString("/dashboard/snippets/listening-stats"))
   }
+
+  @Test
+  fun `dashboard page displays catalog stats section with fragment`() {
+    given()
+      .`when`()
+      .get("/dashboard")
+      .then()
+      .statusCode(200)
+      .body(containsString("""id="snippet-catalog-stats""""))
+      .body(containsString("Artists"))
+      .body(containsString("Albums"))
+      .body(containsString("Tracks"))
+  }
+
+  @Test
+  fun `dashboard snippet endpoint for catalog stats is available`() {
+    given()
+      .`when`()
+      .get("/dashboard/snippets/catalog-stats")
+      .then()
+      .statusCode(200)
+      .contentType(containsString("text/html"))
+      .body(containsString("Artists"))
+      .body(containsString("Albums"))
+      .body(containsString("Tracks"))
+  }
+
+  @Test
+  fun `dashboard sse handler refreshes catalog stats on catalog data update`() {
+    given()
+      .`when`()
+      .get("/dashboard")
+      .then()
+      .statusCode(200)
+      .body(containsString("refresh-catalog-data"))
+      .body(containsString("snippet-catalog-stats"))
+      .body(containsString("/dashboard/snippets/catalog-stats"))
+  }
 }

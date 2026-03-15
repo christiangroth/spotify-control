@@ -62,4 +62,24 @@ class DashboardSseTests {
 
         cancellable.cancel()
     }
+
+    @Test
+    fun `sse endpoint delivers refresh-catalog-data event when catalog data is notified`() {
+        val userId = UserId("test-user-sse-catalog")
+        val received = CopyOnWriteArrayList<String>()
+        val latch = CountDownLatch(1)
+
+        val cancellable: Cancellable = dashboardSseService.stream(userId)
+            .subscribe().with(
+                { event: String -> received.add(event); latch.countDown() },
+                { _: Throwable -> /* ignore errors */ },
+            )
+
+        dashboardRefreshPort.notifyCatalogData()
+
+        assertTrue(latch.await(5, TimeUnit.SECONDS), "SSE refresh event should be received within 5 seconds")
+        assertEquals(listOf("refresh-catalog-data"), received.toList())
+
+        cancellable.cancel()
+    }
 }

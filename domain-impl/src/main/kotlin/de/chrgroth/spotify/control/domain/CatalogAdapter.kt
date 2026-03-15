@@ -20,6 +20,7 @@ import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppPlaybackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppPlaylistCheckRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxManagementPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
@@ -43,6 +44,7 @@ class CatalogAdapter(
     private val outboxManagement: OutboxManagementPort,
     private val playlistRepository: PlaylistRepositoryPort,
     private val playlistCheckRepository: AppPlaylistCheckRepositoryPort,
+    private val dashboardRefresh: DashboardRefreshPort,
 ) : CatalogPort {
 
     // --- Artist Settings ---
@@ -101,6 +103,7 @@ class CatalogAdapter(
                 if (detail != null) {
                     appArtistRepository.upsertAll(listOf(detail))
                     logger.info { "Updated sync data for artist $artistId" }
+                    dashboardRefresh.notifyCatalogData()
                 } else {
                     logger.warn { "No data returned from Spotify for artist $artistId" }
                 }
@@ -175,6 +178,7 @@ class CatalogAdapter(
                     if (expectedTracks != null && albumResult.tracks.size < expectedTracks) {
                         logger.warn { "Album $albumId: synced ${albumResult.tracks.size} track(s) but album reports $expectedTracks total" }
                     }
+                    dashboardRefresh.notifyCatalogData()
                 }
                 logger.info { "Synced album $albumId: ${albumResult.tracks.size} track(s)" }
                 1.right()
