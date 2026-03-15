@@ -1,3 +1,13 @@
+# 0.63.4 (2026.03.15)
+
+## Bugfixes / Chore
+* fix-slow-mongodb-queries: Improved query performance to reduce slow database operations.
+* fix-sync-tasks-enqueue-issue: Artist and album sync tasks are no longer enqueued when the artist or album is already present in the catalog.
+
+
+
+---
+
 # 0.63.3 (2026.03.15)
 
 ## Bugfixes / Chore
