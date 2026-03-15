@@ -25,6 +25,7 @@ import de.chrgroth.spotify.control.domain.port.out.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyCatalogPort
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.DashboardRefreshPort
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -43,11 +44,12 @@ class CatalogAdapterTests {
     private val appPlaybackRepository: AppPlaybackRepositoryPort = mockk()
     private val userRepository: UserRepositoryPort = mockk()
     private val outboxPort: OutboxPort = mockk()
+    private val dashboardRefresh: DashboardRefreshPort = mockk(relaxed = true)
 
     private val adapter = CatalogAdapter(
         spotifyAccessToken, spotifyCatalog,
         appArtistRepository, appTrackRepository, appAlbumRepository,
-        appPlaybackRepository, userRepository, outboxPort,
+        appPlaybackRepository, userRepository, outboxPort, dashboardRefresh,
     )
 
     private val syncTimestamp = Instant.fromEpochSeconds(1)
@@ -297,5 +299,67 @@ class CatalogAdapterTests {
         val result = adapter.handle(DomainOutboxEvent.SyncAlbumDetails("album-1"))
 
         assertThat(result).isInstanceOf(OutboxTaskResult.RateLimited::class.java)
+    }
+
+    @Test
+    fun `handle SyncAlbumDetails notifies catalog stats after successful sync`() {
+        every { userRepository.findAll() } returns listOf(buildUser())
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { spotifyCatalog.getAlbum(userId, accessToken, "album-1") } returns albumSyncResult.right()
+        every { appTrackRepository.upsertAll(any()) } just runs
+        every { appAlbumRepository.upsertAll(any()) } just runs
+        every { outboxPort.enqueue(any()) } just runs
+
+        adapter.handle(DomainOutboxEvent.SyncAlbumDetails("album-1"))
+
+        verify { dashboardRefresh.notifyCatalogStats() }
+    }
+
+    @Test
+    fun `handle SyncAlbumDetails does not notify catalog stats when album has no tracks`() {
+        val emptyAlbumResult = AlbumSyncResult(album = album1, tracks = emptyList())
+        every { userRepository.findAll() } returns listOf(buildUser())
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { spotifyCatalog.getAlbum(userId, accessToken, "album-1") } returns emptyAlbumResult.right()
+
+        adapter.handle(DomainOutboxEvent.SyncAlbumDetails("album-1"))
+
+        verify(exactly = 0) { dashboardRefresh.notifyCatalogStats() }
+    }
+
+    // --- SyncArtistDetails tests ---
+
+    @Test
+    fun `handle SyncArtistDetails skips when artist already synced`() {
+        every { appArtistRepository.findByArtistIds(setOf("artist-1")) } returns listOf(artist1)
+
+        val result = adapter.handle(DomainOutboxEvent.SyncArtistDetails("artist-1", userId))
+
+        assertThat(result).isEqualTo(OutboxTaskResult.Success)
+        verify(exactly = 0) { spotifyCatalog.getArtist(any(), any(), any()) }
+        verify(exactly = 0) { dashboardRefresh.notifyCatalogStats() }
+    }
+
+    @Test
+    fun `handle SyncArtistDetails notifies catalog stats when artist data is returned`() {
+        every { appArtistRepository.findByArtistIds(setOf("artist-1")) } returns emptyList()
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { spotifyCatalog.getArtist(userId, accessToken, "artist-1") } returns artist1.right()
+        every { appArtistRepository.upsertAll(any()) } just runs
+
+        adapter.handle(DomainOutboxEvent.SyncArtistDetails("artist-1", userId))
+
+        verify { dashboardRefresh.notifyCatalogStats() }
+    }
+
+    @Test
+    fun `handle SyncArtistDetails does not notify catalog stats when no artist data is returned`() {
+        every { appArtistRepository.findByArtistIds(setOf("artist-1")) } returns emptyList()
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { spotifyCatalog.getArtist(userId, accessToken, "artist-1") } returns null.right()
+
+        adapter.handle(DomainOutboxEvent.SyncArtistDetails("artist-1", userId))
+
+        verify(exactly = 0) { dashboardRefresh.notifyCatalogStats() }
     }
 }

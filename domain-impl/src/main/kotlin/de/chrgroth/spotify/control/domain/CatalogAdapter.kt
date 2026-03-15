@@ -23,6 +23,7 @@ import de.chrgroth.spotify.control.domain.port.out.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyCatalogPort
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.DashboardRefreshPort
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
 
@@ -37,6 +38,7 @@ class CatalogAdapter(
     private val appPlaybackRepository: AppPlaybackRepositoryPort,
     private val userRepository: UserRepositoryPort,
     private val outboxPort: OutboxPort,
+    private val dashboardRefresh: DashboardRefreshPort,
 ) : CatalogPort {
 
     // --- Artist Settings ---
@@ -95,6 +97,7 @@ class CatalogAdapter(
                 if (detail != null) {
                     appArtistRepository.upsertAll(listOf(detail))
                     logger.info { "Updated sync data for artist $artistId: genre=${detail.genre}, additionalGenres=${detail.additionalGenres}" }
+                    dashboardRefresh.notifyCatalogStats()
                 } else {
                     logger.warn { "No data returned from Spotify for artist $artistId" }
                 }
@@ -151,6 +154,7 @@ class CatalogAdapter(
                         .flatMap { t -> (listOf(t.artistId) + t.additionalArtistIds).map { it.value } }
                         .filter { it.isNotBlank() }.distinct()
                     artistIds.forEach { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails(it, userId)) }
+                    dashboardRefresh.notifyCatalogStats()
                 }
                 logger.info { "Synced album $albumId" }
                 1.right()

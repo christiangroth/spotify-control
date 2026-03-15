@@ -104,4 +104,14 @@ class DashboardResource {
     val stats = dashboard.getStats(userId)
     return dashboardTemplate.getFragment("snippet_playlist_checks").data("stats", stats)
   }
+
+  @GET
+  @Path("/snippets/catalog-stats")
+  @Authenticated
+  @Produces(MediaType.TEXT_HTML)
+  fun snippetCatalogStats(): TemplateInstance {
+    val userId = UserId(securityIdentity.principal.name)
+    val stats = dashboard.getStats(userId)
+    return dashboardTemplate.getFragment("snippet_catalog_stats").data("stats", stats)
+  }
 }

@@ -1,0 +1,1 @@
+* add-sse-events-ui-refresh: Dashboard catalog stats (Artists, Albums, Tracks, Genres) now refresh automatically via SSE when catalog data changes.
