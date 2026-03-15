@@ -118,4 +118,48 @@ class AppTrackDataRepositoryTests {
         assertThat(result[0].albumId).isEqualTo(AlbumId("album-y"))
         assertThat(result[0].albumName).isEqualTo("Album Y")
     }
+
+    @Test
+    fun `findByArtistId returns tracks for the given artist`() {
+        val artistId = ArtistId("artist-find-${UUID.randomUUID()}")
+        val track1 = trackData("t1").copy(artistId = artistId)
+        val track2 = trackData("t2").copy(artistId = artistId)
+        val other = trackData("other").copy(artistId = ArtistId("other-artist-${UUID.randomUUID()}"))
+        appTrackRepository.upsertAll(listOf(track1, track2, other))
+
+        val result = appTrackRepository.findByArtistId(artistId)
+
+        assertThat(result.map { it.id }).containsExactlyInAnyOrder(track1.id, track2.id)
+    }
+
+    @Test
+    fun `findByArtistId returns empty list when no tracks match`() {
+        val artistId = ArtistId("artist-none-${UUID.randomUUID()}")
+
+        val result = appTrackRepository.findByArtistId(artistId)
+
+        assertThat(result).isEmpty()
+    }
+
+    @Test
+    fun `findByAlbumId returns tracks for the given album`() {
+        val albumId = AlbumId("album-find-${UUID.randomUUID()}")
+        val track1 = trackData("ta1").copy(albumId = albumId)
+        val track2 = trackData("ta2").copy(albumId = albumId)
+        val other = trackData("other-album").copy(albumId = AlbumId("other-album-${UUID.randomUUID()}"))
+        appTrackRepository.upsertAll(listOf(track1, track2, other))
+
+        val result = appTrackRepository.findByAlbumId(albumId)
+
+        assertThat(result.map { it.id }).containsExactlyInAnyOrder(track1.id, track2.id)
+    }
+
+    @Test
+    fun `findByAlbumId returns empty list when no tracks match`() {
+        val albumId = AlbumId("album-none-${UUID.randomUUID()}")
+
+        val result = appTrackRepository.findByAlbumId(albumId)
+
+        assertThat(result).isEmpty()
+    }
 }
