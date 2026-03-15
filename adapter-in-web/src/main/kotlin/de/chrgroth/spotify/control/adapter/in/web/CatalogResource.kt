@@ -3,6 +3,7 @@ package de.chrgroth.spotify.control.adapter.`in`.web
 import de.chrgroth.spotify.control.domain.model.AlbumBrowseItem
 import de.chrgroth.spotify.control.domain.model.TrackBrowseItem
 import de.chrgroth.spotify.control.domain.port.`in`.CatalogBrowserPort
+import de.chrgroth.spotify.control.domain.port.`in`.CatalogPort
 import io.quarkus.qute.Location
 import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
@@ -10,11 +11,14 @@ import io.quarkus.security.Authenticated
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import jakarta.ws.rs.GET
+import jakarta.ws.rs.POST
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.PathParam
 import jakarta.ws.rs.Produces
 import jakarta.ws.rs.QueryParam
 import jakarta.ws.rs.core.MediaType
+import jakarta.ws.rs.core.Response
+import mu.KLogging
 
 @Path("/catalog")
 @ApplicationScoped
@@ -27,6 +31,9 @@ class CatalogResource {
 
     @Inject
     private lateinit var catalogBrowser: CatalogBrowserPort
+
+    @Inject
+    private lateinit var catalog: CatalogPort
 
     @GET
     @Authenticated
@@ -71,4 +78,22 @@ class CatalogResource {
         return catalogTemplate.getFragment("fragment_track_list")
             .data("tracks", tracks)
     }
+
+    @POST
+    @Authenticated
+    @Path("/wipe")
+    @Produces(MediaType.APPLICATION_JSON)
+    fun wipeCatalog(): Response {
+        return catalog.wipeCatalog().fold(
+            ifLeft = { error ->
+                logger.error { "Catalog wipe failed: ${error.code}" }
+                Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(mapOf("error" to "Wipe failed: ${error.code}"))
+                    .build()
+            },
+            ifRight = { Response.ok(mapOf("status" to "ok")).build() },
+        )
+    }
+
+    companion object : KLogging()
 }

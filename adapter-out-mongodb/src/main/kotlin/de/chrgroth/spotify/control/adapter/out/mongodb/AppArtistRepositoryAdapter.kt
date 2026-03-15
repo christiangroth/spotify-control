@@ -89,6 +89,13 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
         }
     }
 
+    override fun deleteAll() {
+        logger.info { "Deleting all app_artist documents" }
+        mongoQueryMetrics.timed("app_artist.deleteAll") {
+            appArtistDocumentRepository.deleteAll()
+        }
+    }
+
     private fun AppArtistDocument.toDomain() = AppArtist(
         artistId = id,
         artistName = artistName,

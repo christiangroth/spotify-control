@@ -11,4 +11,5 @@ interface PlaylistRepositoryPort {
     fun save(userId: UserId, playlist: Playlist)
     fun findArtistIdsInActivePlaylists(): Set<String>
     fun updateLastSyncTime(userId: UserId, playlistId: String, time: kotlin.time.Instant)
+    fun setAllSyncInactive()
 }

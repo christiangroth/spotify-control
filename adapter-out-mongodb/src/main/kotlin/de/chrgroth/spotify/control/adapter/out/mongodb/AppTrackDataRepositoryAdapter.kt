@@ -75,6 +75,13 @@ class AppTrackRepositoryAdapter : AppTrackRepositoryPort {
             appTrackDocumentRepository.list("albumId = ?1", albumId.value).map { it.toDomain() }
         }
 
+    override fun deleteAll() {
+        logger.info { "Deleting all app_track documents" }
+        mongoQueryMetrics.timed("app_track.deleteAll") {
+            appTrackDocumentRepository.deleteAll()
+        }
+    }
+
     private fun AppTrackDocument.toDomain() = AppTrack(
         id = TrackId(id),
         title = title,

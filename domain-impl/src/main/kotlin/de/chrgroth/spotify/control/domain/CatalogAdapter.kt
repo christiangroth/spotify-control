@@ -18,8 +18,11 @@ import de.chrgroth.spotify.control.domain.port.`in`.CatalogPort
 import de.chrgroth.spotify.control.domain.port.out.AppAlbumRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppPlaybackRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.AppPlaylistCheckRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.OutboxManagementPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
+import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyCatalogPort
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
@@ -37,6 +40,9 @@ class CatalogAdapter(
     private val appPlaybackRepository: AppPlaybackRepositoryPort,
     private val userRepository: UserRepositoryPort,
     private val outboxPort: OutboxPort,
+    private val outboxManagement: OutboxManagementPort,
+    private val playlistRepository: PlaylistRepositoryPort,
+    private val playlistCheckRepository: AppPlaylistCheckRepositoryPort,
 ) : CatalogPort {
 
     // --- Artist Settings ---
@@ -131,6 +137,18 @@ class CatalogAdapter(
         return Unit.right()
     }
 
+    override fun wipeCatalog(): Either<DomainError, Unit> {
+        logger.info { "Wiping all catalog data" }
+        appArtistRepository.deleteAll()
+        appAlbumRepository.deleteAll()
+        appTrackRepository.deleteAll()
+        outboxManagement.deleteByEventTypes(CATALOG_OUTBOX_EVENT_KEYS)
+        playlistRepository.setAllSyncInactive()
+        playlistCheckRepository.deleteAll()
+        logger.info { "Catalog wipe complete" }
+        return Unit.right()
+    }
+
     private fun syncAlbumDetails(albumId: String): Either<DomainError, Int> {
         val userId = userRepository.findAll().firstOrNull()?.spotifyUserId
         if (userId == null) {
@@ -190,5 +208,12 @@ class CatalogAdapter(
         OutboxTaskResult.Failed("Unexpected error in $taskDescription: ${e.message}", e)
     }
 
-    companion object : KLogging()
+    companion object : KLogging() {
+        private val CATALOG_OUTBOX_EVENT_KEYS = listOf(
+            DomainOutboxEvent.SyncArtistDetails.KEY,
+            DomainOutboxEvent.SyncArtistDetails.LEGACY_KEY,
+            DomainOutboxEvent.SyncAlbumDetails.KEY,
+            DomainOutboxEvent.ResyncCatalog.KEY,
+        )
+    }
 }
