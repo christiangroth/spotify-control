@@ -39,6 +39,16 @@ class SlackNotificationAdapterTests {
     )
 
     @Test
+    fun `adapter logs on construction when webhook url is blank`() {
+        adapter(webhookUrl = "")
+    }
+
+    @Test
+    fun `adapter logs on construction when webhook url is set`() {
+        adapter(webhookUrl = "https://hooks.slack.com/test")
+    }
+
+    @Test
     fun `startup notification does not throw when disabled`() {
         adapter().onStartup(StartupEvent())
     }

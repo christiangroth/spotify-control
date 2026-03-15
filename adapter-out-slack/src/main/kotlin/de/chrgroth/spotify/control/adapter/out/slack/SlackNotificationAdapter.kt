@@ -45,6 +45,16 @@ class SlackNotificationAdapter(
     private val partitionResumedEnabled: Boolean,
 ) : OutboxPartitionObserver {
 
+    private val enabled: Boolean = webhookUrl.isNotBlank()
+
+    init {
+        if (enabled) {
+            logger.info { "Slack notifications enabled (webhook URL configured)" }
+        } else {
+            logger.warn { "Slack notifications disabled (no webhook URL configured)" }
+        }
+    }
+
     @Suppress("UnusedParameter")
     fun onStartup(@Observes event: StartupEvent) {
         if (startupEnabled) send("SpCtl $version started")
@@ -67,10 +77,7 @@ class SlackNotificationAdapter(
     }
 
     private fun send(text: String) {
-        if (webhookUrl.isBlank()) {
-            logger.error { "Slack webhook URL not configured, skipping notification: $text" }
-            return
-        }
+        if (!enabled) return
         try {
             val body = buildString {
                 append("""{"text": ${toJsonString(text)}""")
