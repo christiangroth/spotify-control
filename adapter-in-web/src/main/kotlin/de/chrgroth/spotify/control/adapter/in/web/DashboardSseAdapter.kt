@@ -29,6 +29,10 @@ class DashboardSseAdapter : DashboardRefreshPort {
 
     override fun notifyUserPlaylistChecks(userId: UserId) = emitToUser(userId.value, "refresh-playlist-checks")
 
+    override fun notifyCatalogData() = notifyAllUsers("refresh-catalog-data")
+
+    private fun notifyAllUsers(event: String) = emittersByUser.keys.toList().forEach { emitToUser(it, event) }
+
     private fun emitToUser(userId: String, event: String) {
         emittersByUser[userId]?.forEach { runCatching { it.emit(event) } }
     }

@@ -5,7 +5,8 @@
         <h1 class="mb-4 fs-4 fw-semibold" data-testid="welcome-message">Hej {displayName}!</h1>
 
         <div id="stats-section">
-            <div class="row g-3 mb-4">
+            <div id="snippet-catalog-stats" class="row g-3 mb-4">
+                {#fragment id="snippet_catalog_stats"}
                 <div class="col-6 col-sm-3">
                     <a href="/catalog" class="text-decoration-none">
                         <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
@@ -36,6 +37,7 @@
                         </div>
                     </a>
                 </div>
+                {/fragment}
             </div>
 
             <div class="row g-3 mb-4">
@@ -230,6 +232,8 @@
                 fadeUpdate('snippet-playlist-metadata', '/dashboard/snippets/playlist-metadata');
             } else if (event.data === 'refresh-playlist-checks') {
                 fadeUpdate('snippet-playlist-checks', '/dashboard/snippets/playlist-checks');
+            } else if (event.data === 'refresh-catalog-data') {
+                fadeUpdate('snippet-catalog-stats', '/dashboard/snippets/catalog-stats');
             }
         });
     </script>

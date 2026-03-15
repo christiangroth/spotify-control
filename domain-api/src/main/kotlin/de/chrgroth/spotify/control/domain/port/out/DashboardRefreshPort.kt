@@ -6,4 +6,5 @@ interface DashboardRefreshPort {
     fun notifyUserPlaybackData(userId: UserId)
     fun notifyUserPlaylistMetadata(userId: UserId)
     fun notifyUserPlaylistChecks(userId: UserId)
+    fun notifyCatalogData()
 }
