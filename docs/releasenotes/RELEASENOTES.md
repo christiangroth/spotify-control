@@ -1,3 +1,12 @@
+# 0.64.2 (2026.03.15)
+
+## Bugfixes / Chore
+* remove-genres-code: Removed genre information from artist catalog, dashboard stats, and listening stats since Spotify no longer provides genre data.
+
+
+
+---
+
 # 0.64.1 (2026.03.15)
 
 ## Bugfixes / Chore
