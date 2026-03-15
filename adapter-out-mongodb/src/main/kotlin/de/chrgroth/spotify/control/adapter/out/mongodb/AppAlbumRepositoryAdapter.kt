@@ -71,6 +71,13 @@ class AppAlbumRepositoryAdapter : AppAlbumRepositoryPort {
             appAlbumDocumentRepository.list("artistId = ?1", artistId.value).map { it.toDomain() }
         }
 
+    override fun deleteAll() {
+        logger.info { "Deleting all app_album documents" }
+        mongoQueryMetrics.timed("app_album.deleteAll") {
+            appAlbumDocumentRepository.deleteAll()
+        }
+    }
+
     private fun AppAlbumDocument.toDomain() = AppAlbum(
         id = AlbumId(id),
         totalTracks = totalTracks,

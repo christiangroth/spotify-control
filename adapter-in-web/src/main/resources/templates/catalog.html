@@ -13,6 +13,27 @@
 
         <hr class="my-4" style="border-color:#333;">
 
+        <h2 class="fs-5 fw-semibold mb-2">Wipe Catalog</h2>
+        <p class="text-secondary small mb-3">Delete all catalog data (artists, albums, tracks), remove catalog sync outbox events, set all playlists to sync inactive and delete all playlist checks. This operation cannot be undone.</p>
+        <button id="wipe-catalog-btn" class="btn btn-danger btn-sm mb-4">Wipe Catalog</button>
+
+        <!-- Wipe Catalog Confirmation Modal -->
+        <div id="wipe-catalog-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1050;align-items:center;justify-content:center;">
+            <div style="background:#1e1e1e;border:1px solid #444;border-radius:8px;padding:24px;max-width:420px;width:90%;margin:auto;">
+                <h5 style="color:#e0e0e0;margin-bottom:12px;">Confirm Catalog Wipe</h5>
+                <p style="color:#aaa;font-size:.9rem;margin-bottom:16px;">This will permanently delete all catalog data, outbox events, playlist checks and deactivate all playlist syncs. Type <strong style="color:#fff;">yes</strong> to confirm.</p>
+                <input type="text" id="wipe-confirm-input" class="form-control mb-3"
+                       style="background-color:#111;border-color:#555;color:#e0e0e0;"
+                       placeholder="Type yes to confirm" autocomplete="off">
+                <div style="display:flex;gap:8px;justify-content:flex-end;">
+                    <button id="wipe-cancel-btn" class="btn btn-outline-secondary btn-sm">Cancel</button>
+                    <button id="wipe-confirm-btn" class="btn btn-danger btn-sm">Wipe Catalog</button>
+                </div>
+            </div>
+        </div>
+
+        <hr class="my-4" style="border-color:#333;">
+
         <div class="mb-3">
             <input type="text" id="catalog-filter" class="form-control"
                    style="background-color:#1e1e1e;border-color:#444;color:#e0e0e0;max-width:400px;"
@@ -161,6 +182,39 @@
     <script>
         document.getElementById('resync-catalog-btn').addEventListener('click', function() {
             postWithButton(this, '/settings/playback/resync-catalog', 'Catalog re-sync enqueued successfully.', 'Re-sync failed');
+        });
+
+        const wipeModal = document.getElementById('wipe-catalog-modal');
+
+        document.getElementById('wipe-catalog-btn').addEventListener('click', function() {
+            document.getElementById('wipe-confirm-input').value = '';
+            wipeModal.style.display = 'flex';
+            document.getElementById('wipe-confirm-input').focus();
+        });
+
+        document.getElementById('wipe-cancel-btn').addEventListener('click', function() {
+            wipeModal.style.display = 'none';
+        });
+
+        wipeModal.addEventListener('click', function(e) {
+            if (e.target === wipeModal) {
+                wipeModal.style.display = 'none';
+            }
+        });
+
+        document.getElementById('wipe-confirm-btn').addEventListener('click', function() {
+            const input = document.getElementById('wipe-confirm-input').value.trim().toLowerCase();
+            if (input !== 'yes') {
+                document.getElementById('wipe-confirm-input').style.borderColor = '#dc3545';
+                return;
+            }
+            wipeModal.style.display = 'none';
+            const btn = document.getElementById('wipe-catalog-btn');
+            postWithButton(btn, '/catalog/wipe', 'Catalog wiped successfully.', 'Wipe failed');
+        });
+
+        document.getElementById('wipe-confirm-input').addEventListener('input', function() {
+            this.style.borderColor = '#555';
         });
 
         let filterTimeout = null;

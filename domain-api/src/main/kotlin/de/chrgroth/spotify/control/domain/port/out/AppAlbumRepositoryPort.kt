@@ -9,4 +9,5 @@ interface AppAlbumRepositoryPort {
     fun findAll(): List<AppAlbum>
     fun findByAlbumIds(albumIds: Set<AlbumId>): List<AppAlbum>
     fun findByArtistId(artistId: ArtistId): List<AppAlbum>
+    fun deleteAll()
 }
