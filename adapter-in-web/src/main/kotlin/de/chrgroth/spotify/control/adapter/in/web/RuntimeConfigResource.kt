@@ -1,14 +1,10 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
 import de.chrgroth.spotify.control.domain.port.`in`.RuntimeConfigPort
-import io.quarkus.qute.Location
-import io.quarkus.qute.Template
-import io.quarkus.qute.TemplateInstance
 import io.quarkus.security.Authenticated
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import jakarta.ws.rs.Consumes
-import jakarta.ws.rs.GET
 import jakarta.ws.rs.POST
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.Produces
@@ -22,17 +18,7 @@ import mu.KLogging
 class RuntimeConfigResource {
 
     @Inject
-    @Location("settings/runtime-config.html")
-    private lateinit var runtimeConfigTemplate: Template
-
-    @Inject
     private lateinit var runtimeConfig: RuntimeConfigPort
-
-    @GET
-    @Authenticated
-    @Produces(MediaType.TEXT_HTML)
-    fun runtimeConfig(): TemplateInstance =
-        runtimeConfigTemplate.data("config", runtimeConfig.getRuntimeConfig())
 
     @POST
     @Authenticated

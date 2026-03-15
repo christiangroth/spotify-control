@@ -1,5 +1,6 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
+import de.chrgroth.spotify.control.domain.port.`in`.RuntimeConfigPort
 import de.chrgroth.spotify.control.domain.port.out.ConfigurationInfoPort
 import io.quarkus.qute.Location
 import io.quarkus.qute.Template
@@ -24,8 +25,13 @@ class ConfigResource {
     @Inject
     private lateinit var configurationInfo: ConfigurationInfoPort
 
+    @Inject
+    private lateinit var runtimeConfig: RuntimeConfigPort
+
     @GET
     @Authenticated
     @Produces(MediaType.TEXT_HTML)
-    fun config(): TemplateInstance = configTemplate.data("stats", configurationInfo.getConfigurationStats())
+    fun config(): TemplateInstance = configTemplate
+        .data("stats", configurationInfo.getConfigurationStats())
+        .data("runtimeConfig", runtimeConfig.getRuntimeConfig())
 }
