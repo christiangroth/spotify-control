@@ -1,3 +1,12 @@
+# 0.64.1 (2026.03.15)
+
+## Bugfixes / Chore
+* fix-incomplete-albums-synced: Albums are now fully re-synced after clearing catalog data, fixing incomplete track lists.
+
+
+
+---
+
 # 0.64.0 (2026.03.15)
 
 ## New Features
