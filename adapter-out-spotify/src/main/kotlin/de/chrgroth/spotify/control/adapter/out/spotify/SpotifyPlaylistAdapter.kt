@@ -96,7 +96,7 @@ class SpotifyPlaylistAdapter(
           }
           val albumId = track.album?.id
           if (albumId == null) {
-            logger.info { "Ignoring track ${track.id} without albumId in playlist" }
+            logger.error { "Ignoring track ${track.id} without albumId in playlist" }
             return@forEach
           }
           tracks.add(
