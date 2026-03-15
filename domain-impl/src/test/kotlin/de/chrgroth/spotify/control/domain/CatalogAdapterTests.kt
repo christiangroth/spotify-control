@@ -103,6 +103,7 @@ class CatalogAdapterTests {
     @Test
     fun `resyncArtist enqueues SyncArtistDetails and SyncAlbumDetails for artist and their albums`() {
         every { appArtistRepository.findByArtistIds(setOf("artist-1")) } returns listOf(artist1)
+        every { appArtistRepository.resetLastSync(setOf("artist-1")) } just runs
         every { appTrackRepository.findByArtistId(ArtistId("artist-1")) } returns listOf(trackWithAlbum1)
         every { userRepository.findAll() } returns listOf(buildUser())
         every { outboxPort.enqueue(any()) } just runs
@@ -110,6 +111,7 @@ class CatalogAdapterTests {
         val result = adapter.resyncArtist("artist-1")
 
         assertThat(result.isRight()).isTrue()
+        verify { appArtistRepository.resetLastSync(setOf("artist-1")) }
         verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails("artist-1", userId)) }
         verify { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails("album-1")) }
     }
@@ -117,6 +119,7 @@ class CatalogAdapterTests {
     @Test
     fun `resyncArtist enqueues only SyncArtistDetails when artist has no tracks with albums`() {
         every { appArtistRepository.findByArtistIds(setOf("artist-1")) } returns listOf(artist1)
+        every { appArtistRepository.resetLastSync(setOf("artist-1")) } just runs
         every { appTrackRepository.findByArtistId(ArtistId("artist-1")) } returns listOf(track1)
         every { userRepository.findAll() } returns listOf(buildUser())
         every { outboxPort.enqueue(any()) } just runs
@@ -124,6 +127,7 @@ class CatalogAdapterTests {
         val result = adapter.resyncArtist("artist-1")
 
         assertThat(result.isRight()).isTrue()
+        verify { appArtistRepository.resetLastSync(setOf("artist-1")) }
         verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails("artist-1", userId)) }
         verify(exactly = 0) { outboxPort.enqueue(match { it is DomainOutboxEvent.SyncAlbumDetails }) }
     }
@@ -156,6 +160,7 @@ class CatalogAdapterTests {
     @Test
     fun `resyncCatalog enqueues SyncArtistDetails for all artists`() {
         every { appArtistRepository.findAll() } returns listOf(artist1, artist2)
+        every { appArtistRepository.resetLastSync(setOf("artist-1", "artist-2")) } just runs
         every { appTrackRepository.findAll() } returns emptyList()
         every { userRepository.findAll() } returns listOf(buildUser())
         every { outboxPort.enqueue(any()) } just runs
@@ -163,6 +168,7 @@ class CatalogAdapterTests {
         val result = adapter.resyncCatalog()
 
         assertThat(result.isRight()).isTrue()
+        verify { appArtistRepository.resetLastSync(setOf("artist-1", "artist-2")) }
         verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails("artist-1", userId)) }
         verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails("artist-2", userId)) }
     }
@@ -212,6 +218,7 @@ class CatalogAdapterTests {
     @Test
     fun `handle ResyncCatalog returns success`() {
         every { appArtistRepository.findAll() } returns listOf(artist1)
+        every { appArtistRepository.resetLastSync(setOf("artist-1")) } just runs
         every { appTrackRepository.findAll() } returns listOf(trackWithAlbum1)
         every { userRepository.findAll() } returns listOf(buildUser())
         every { outboxPort.enqueue(any()) } just runs

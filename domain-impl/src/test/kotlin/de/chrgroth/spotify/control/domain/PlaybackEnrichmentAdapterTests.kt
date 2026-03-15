@@ -17,6 +17,7 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.verify
+import kotlin.time.Instant
 import org.junit.jupiter.api.Test
 
 class PlaybackEnrichmentAdapterTests {
@@ -54,7 +55,7 @@ class PlaybackEnrichmentAdapterTests {
             additionalGenres = null,
             imageLink = "https://example.com/image.jpg",
             type = "artist",
-            lastSync = kotlin.time.Instant.fromEpochSeconds(1),
+            lastSync = Instant.fromEpochSeconds(1),
         )
         every { appArtistRepository.findByArtistIds(setOf(artistId)) } returns emptyList()
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
@@ -67,7 +68,7 @@ class PlaybackEnrichmentAdapterTests {
     }
 
     @Test
-    fun `syncArtistDetails skips update when artist already in catalog`() {
+    fun `syncArtistDetails skips update when artist already recently synced`() {
         val artistId = "artist-already-synced"
         val syncedArtist = AppArtist(
             artistId = artistId,
@@ -80,5 +81,29 @@ class PlaybackEnrichmentAdapterTests {
 
         verify(exactly = 0) { spotifyCatalog.getArtist(any(), any(), any()) }
         verify(exactly = 0) { appArtistRepository.upsertAll(any()) }
+    }
+
+    @Test
+    fun `syncArtistDetails re-syncs artist with DISTANT_PAST lastSync`() {
+        val artistId = "artist-never-synced"
+        val legacyArtist = AppArtist(
+            artistId = artistId,
+            artistName = "Legacy Artist",
+            lastSync = Instant.DISTANT_PAST,
+        )
+        val spotifyArtist = AppArtist(
+            artistId = artistId,
+            artistName = "Legacy Artist",
+            genre = "rock",
+            lastSync = Instant.fromEpochSeconds(1),
+        )
+        every { appArtistRepository.findByArtistIds(setOf(artistId)) } returns listOf(legacyArtist)
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { spotifyCatalog.getArtist(userId, accessToken, artistId) } returns spotifyArtist.right()
+        every { appArtistRepository.upsertAll(listOf(spotifyArtist)) } just runs
+
+        adapter.syncArtistDetails(artistId, userId)
+
+        verify { appArtistRepository.upsertAll(listOf(spotifyArtist)) }
     }
 }

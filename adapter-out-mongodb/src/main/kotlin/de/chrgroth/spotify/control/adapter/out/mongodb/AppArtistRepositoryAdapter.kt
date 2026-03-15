@@ -89,6 +89,16 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
         }
     }
 
+    override fun resetLastSync(artistIds: Set<String>) {
+        if (artistIds.isEmpty()) return
+        mongoQueryMetrics.timed("app_artist.resetLastSync") {
+            appArtistDocumentRepository.mongoCollection().updateMany(
+                Filters.`in`("_id", artistIds),
+                Updates.unset("lastSync"),
+            )
+        }
+    }
+
     private fun AppArtistDocument.toDomain() = AppArtist(
         artistId = id,
         artistName = artistName,

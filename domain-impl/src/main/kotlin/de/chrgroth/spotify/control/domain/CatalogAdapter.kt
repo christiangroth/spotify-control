@@ -18,6 +18,7 @@ import de.chrgroth.spotify.control.domain.port.`in`.CatalogPort
 import de.chrgroth.spotify.control.domain.port.out.AppAlbumRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppPlaybackRepositoryPort
+import kotlin.time.Instant
 import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
@@ -84,7 +85,7 @@ class CatalogAdapter(
 
     override fun syncArtistDetails(artistId: String, userId: UserId): Either<DomainError, Unit> {
         val existing = appArtistRepository.findByArtistIds(setOf(artistId)).firstOrNull()
-        if (existing != null) {
+        if (existing != null && existing.lastSync != Instant.DISTANT_PAST) {
             logger.debug { "Artist $artistId already synced, skipping" }
             return Unit.right()
         }
@@ -109,6 +110,9 @@ class CatalogAdapter(
         val userId = userRepository.findAll().firstOrNull()?.spotifyUserId
         logger.info { "Re-syncing catalog: ${allArtistIds.size} artist(s) and ${allAlbumIds.size} album(s)" }
         if (userId != null) {
+            if (allArtistIds.isNotEmpty()) {
+                appArtistRepository.resetLastSync(allArtistIds.toSet())
+            }
             allArtistIds.forEach { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails(it, userId)) }
         }
         allAlbumIds.forEach { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails(it)) }
@@ -123,6 +127,7 @@ class CatalogAdapter(
             return Unit.right()
         }
         logger.info { "Re-syncing artist $artistId and all their albums" }
+        appArtistRepository.resetLastSync(setOf(artistId))
         outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails(artistId, userId))
         val albumIds = appTrackRepository.findByArtistId(ArtistId(artistId))
             .mapNotNull { it.albumId?.value }
