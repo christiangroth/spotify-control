@@ -49,11 +49,13 @@ class CatalogAdapterTests {
     private val syncPoolRepository: AppSyncPoolRepositoryPort = mockk()
     private val useBulkFetchState: UseBulkFetchStatePort = mockk()
 
+    private val appSyncService: AppSyncService = mockk(relaxed = true)
+
     private val adapter = CatalogAdapter(
         spotifyAccessToken, spotifyCatalog,
         appArtistRepository, appTrackRepository, appAlbumRepository,
         appPlaybackRepository, userRepository, outboxPort, syncPoolRepository,
-        useBulkFetchState,
+        useBulkFetchState, appSyncService,
     )
 
     private val syncTimestamp = Instant.fromEpochSeconds(1)
@@ -118,27 +120,22 @@ class CatalogAdapterTests {
     fun `resyncArtist adds artist and their tracks to sync pool`() {
         every { appArtistRepository.findByArtistIds(setOf("artist-1")) } returns listOf(artist1)
         every { appTrackRepository.findByArtistId(ArtistId("artist-1")) } returns listOf(track1)
-        every { syncPoolRepository.addArtists(any()) } just runs
-        every { syncPoolRepository.addTracks(any()) } just runs
 
         val result = adapter.resyncArtist("artist-1")
 
         assertThat(result.isRight()).isTrue()
-        verify { syncPoolRepository.addArtists(listOf("artist-1")) }
-        verify { syncPoolRepository.addTracks(listOf("track-1")) }
+        verify { appSyncService.addToSyncPool(listOf("artist-1"), listOf("track-1"), forceSync = true) }
     }
 
     @Test
     fun `resyncArtist adds artist to sync pool when they have no tracks`() {
         every { appArtistRepository.findByArtistIds(setOf("artist-1")) } returns listOf(artist1)
         every { appTrackRepository.findByArtistId(ArtistId("artist-1")) } returns emptyList()
-        every { syncPoolRepository.addArtists(any()) } just runs
 
         val result = adapter.resyncArtist("artist-1")
 
         assertThat(result.isRight()).isTrue()
-        verify { syncPoolRepository.addArtists(listOf("artist-1")) }
-        verify(exactly = 0) { syncPoolRepository.addTracks(any()) }
+        verify { appSyncService.addToSyncPool(listOf("artist-1"), emptyList(), forceSync = true) }
     }
 
     // --- resyncCatalog tests ---
@@ -160,56 +157,44 @@ class CatalogAdapterTests {
     fun `resyncCatalog adds all artists to sync pool`() {
         every { appArtistRepository.findAll() } returns listOf(artist1, artist2)
         every { appTrackRepository.findAll() } returns emptyList()
-        every { syncPoolRepository.addArtists(any()) } just runs
 
         val result = adapter.resyncCatalog()
 
         assertThat(result.isRight()).isTrue()
-        verify { syncPoolRepository.addArtists(listOf("artist-1", "artist-2")) }
-        verify(exactly = 0) { syncPoolRepository.addTracks(any()) }
-        verify(exactly = 0) { syncPoolRepository.addAlbums(any()) }
+        verify { appSyncService.addToSyncPool(listOf("artist-1", "artist-2"), emptyList(), forceSync = true) }
     }
 
     @Test
     fun `resyncCatalog adds all tracks to sync pool`() {
         every { appArtistRepository.findAll() } returns emptyList()
         every { appTrackRepository.findAll() } returns listOf(track1, track2)
-        every { syncPoolRepository.addTracks(any()) } just runs
 
         val result = adapter.resyncCatalog()
 
         assertThat(result.isRight()).isTrue()
-        verify(exactly = 0) { syncPoolRepository.addArtists(any()) }
-        verify { syncPoolRepository.addTracks(listOf("track-1", "track-2")) }
-        verify(exactly = 0) { syncPoolRepository.addAlbums(any()) }
+        verify { appSyncService.addToSyncPool(emptyList(), listOf("track-1", "track-2"), forceSync = true) }
     }
 
     @Test
     fun `resyncCatalog adds album IDs from tracks with known album ID to sync pool`() {
         every { appArtistRepository.findAll() } returns emptyList()
         every { appTrackRepository.findAll() } returns listOf(trackWithAlbum1, trackWithAlbum2, trackWithAlbum3)
-        every { syncPoolRepository.addTracks(any()) } just runs
-        every { syncPoolRepository.addAlbums(any()) } just runs
 
         val result = adapter.resyncCatalog()
 
         assertThat(result.isRight()).isTrue()
-        verify { syncPoolRepository.addAlbums(match { it.containsAll(listOf("album-1", "album-2")) && it.size == 2 }) }
+        verify { appSyncService.addAlbumsToSyncPool(match { it.containsAll(listOf("album-1", "album-2")) && it.size == 2 }) }
     }
 
     @Test
     fun `resyncCatalog adds both artists and tracks to sync pool`() {
         every { appArtistRepository.findAll() } returns listOf(artist1, artist2)
         every { appTrackRepository.findAll() } returns listOf(track1, track2)
-        every { syncPoolRepository.addArtists(any()) } just runs
-        every { syncPoolRepository.addTracks(any()) } just runs
 
         val result = adapter.resyncCatalog()
 
         assertThat(result.isRight()).isTrue()
-        verify { syncPoolRepository.addArtists(listOf("artist-1", "artist-2")) }
-        verify { syncPoolRepository.addTracks(listOf("track-1", "track-2")) }
-        verify(exactly = 0) { syncPoolRepository.addAlbums(any()) }
+        verify { appSyncService.addToSyncPool(listOf("artist-1", "artist-2"), listOf("track-1", "track-2"), forceSync = true) }
     }
 
     // --- handle(ResyncCatalog) tests ---
@@ -218,8 +203,6 @@ class CatalogAdapterTests {
     fun `handle ResyncCatalog returns success`() {
         every { appArtistRepository.findAll() } returns listOf(artist1)
         every { appTrackRepository.findAll() } returns listOf(track1)
-        every { syncPoolRepository.addArtists(any()) } just runs
-        every { syncPoolRepository.addTracks(any()) } just runs
 
         val result = adapter.handle(DomainOutboxEvent.ResyncCatalog())
 
@@ -268,7 +251,6 @@ class CatalogAdapterTests {
         every { appAlbumRepository.upsertAll(any()) } just runs
         every { syncPoolRepository.removeTracks(any()) } just runs
         every { syncPoolRepository.removeAlbums(any()) } just runs
-        every { syncPoolRepository.addArtists(any()) } just runs
 
         val result = adapter.handle(DomainOutboxEvent.SyncMissingTracks(listOf("track-1", "track-2")))
 
@@ -297,7 +279,6 @@ class CatalogAdapterTests {
         every { appAlbumRepository.upsertAll(any()) } just runs
         every { syncPoolRepository.removeTracks(any()) } just runs
         every { syncPoolRepository.removeAlbums(any()) } just runs
-        every { syncPoolRepository.addArtists(any()) } just runs
 
         adapter.handle(DomainOutboxEvent.SyncMissingTracks(listOf("track-1")))
 
@@ -317,15 +298,13 @@ class CatalogAdapterTests {
         every { appTrackRepository.upsertAll(any()) } just runs
         every { appAlbumRepository.upsertAll(any()) } just runs
         every { syncPoolRepository.removeTracks(any()) } just runs
-        every { syncPoolRepository.addArtists(any()) } just runs
-        every { syncPoolRepository.addAlbums(any()) } just runs
 
         val result = adapter.handle(DomainOutboxEvent.SyncMissingTracks(listOf("track-1")))
 
         assertThat(result).isEqualTo(OutboxTaskResult.Success)
         verify(exactly = 0) { spotifyCatalog.getAlbumTracks(any(), any(), any()) }
         verify { spotifyCatalog.getTracks(userId, accessToken, listOf("track-1")) }
-        verify { syncPoolRepository.addAlbums(listOf("album-1")) }
+        verify { appSyncService.addAlbumsToSyncPool(listOf("album-1")) }
     }
 
     @Test
@@ -348,8 +327,6 @@ class CatalogAdapterTests {
         every { appAlbumRepository.upsertAll(any()) } just runs
         every { syncPoolRepository.removeTracks(any()) } just runs
         every { syncPoolRepository.removeAlbums(any()) } just runs
-        every { syncPoolRepository.addArtists(any()) } just runs
-        every { syncPoolRepository.addAlbums(any()) } just runs
 
         val result = adapter.handle(DomainOutboxEvent.SyncMissingTracks(listOf("track-1", "track-missing")))
 
@@ -419,8 +396,6 @@ class CatalogAdapterTests {
         every { appTrackRepository.upsertAll(any()) } just runs
         every { appAlbumRepository.upsertAll(any()) } just runs
         every { syncPoolRepository.removeTracks(any()) } just runs
-        every { syncPoolRepository.addArtists(any()) } just runs
-        every { syncPoolRepository.addAlbums(any()) } just runs
         every { syncPoolRepository.addTracks(any()) } just runs
 
         adapter.handle(DomainOutboxEvent.SyncMissingTracks(listOf("track-1", "track-2")))
@@ -448,7 +423,6 @@ class CatalogAdapterTests {
         every { spotifyCatalog.getAlbumTracks(userId, accessToken, "album-1") } returns listOf(syncResult1, syncResult2).right()
         every { appTrackRepository.upsertAll(any()) } just runs
         every { appAlbumRepository.upsertAll(any()) } just runs
-        every { syncPoolRepository.addArtists(any()) } just runs
         every { syncPoolRepository.removeAlbums(any()) } just runs
 
         val result = adapter.handle(DomainOutboxEvent.SyncMissingAlbums("album-1"))
@@ -467,12 +441,11 @@ class CatalogAdapterTests {
         every { spotifyCatalog.getAlbumTracks(userId, accessToken, "album-1") } returns listOf(syncResult1, syncResult2).right()
         every { appTrackRepository.upsertAll(any()) } just runs
         every { appAlbumRepository.upsertAll(any()) } just runs
-        every { syncPoolRepository.addArtists(any()) } just runs
         every { syncPoolRepository.removeAlbums(any()) } just runs
 
         adapter.handle(DomainOutboxEvent.SyncMissingAlbums("album-1"))
 
-        verify { syncPoolRepository.addArtists(listOf("artist-1")) }
+        verify { appSyncService.addToSyncPool(listOf("artist-1"), emptyList()) }
     }
 
     @Test

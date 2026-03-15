@@ -43,6 +43,7 @@ class CatalogAdapter(
     private val outboxPort: OutboxPort,
     private val syncPoolRepository: AppSyncPoolRepositoryPort,
     private val useBulkFetchState: UseBulkFetchStatePort,
+    private val appSyncService: AppSyncService,
 ) : CatalogPort {
 
     // --- Artist Settings ---
@@ -141,9 +142,8 @@ class CatalogAdapter(
         val allTrackIds = allTracks.map { it.id.value }
         val allAlbumIds = allTracks.mapNotNull { it.albumId?.value }.distinct()
         logger.info { "Re-syncing catalog: ${allArtistIds.size} artist(s), ${allTrackIds.size} track(s), and ${allAlbumIds.size} album(s) added to sync pool" }
-        if (allArtistIds.isNotEmpty()) syncPoolRepository.addArtists(allArtistIds)
-        if (allTrackIds.isNotEmpty()) syncPoolRepository.addTracks(allTrackIds)
-        if (allAlbumIds.isNotEmpty()) syncPoolRepository.addAlbums(allAlbumIds)
+        appSyncService.addToSyncPool(allArtistIds, allTrackIds, forceSync = true)
+        appSyncService.addAlbumsToSyncPool(allAlbumIds)
         return Unit.right()
     }
 
@@ -151,9 +151,8 @@ class CatalogAdapter(
         appArtistRepository.findByArtistIds(setOf(artistId)).firstOrNull()
             ?: return ArtistSettingsError.ARTIST_NOT_FOUND.left()
         logger.info { "Re-syncing artist $artistId and all their tracks" }
-        syncPoolRepository.addArtists(listOf(artistId))
         val trackIds = appTrackRepository.findByArtistId(ArtistId(artistId)).map { it.id.value }
-        if (trackIds.isNotEmpty()) syncPoolRepository.addTracks(trackIds)
+        appSyncService.addToSyncPool(listOf(artistId), trackIds, forceSync = true)
         return Unit.right()
     }
 
@@ -250,7 +249,7 @@ class CatalogAdapter(
                         val artistIds = allAlbumResults
                             .flatMap { r -> (listOf(r.track.artistId) + r.track.additionalArtistIds).map { it.value } }
                             .filter { it.isNotBlank() }.distinct()
-                        if (artistIds.isNotEmpty()) syncPoolRepository.addArtists(artistIds)
+                        appSyncService.addToSyncPool(artistIds, emptyList())
                     }
                     val returnedTrackIds = allAlbumResults.map { it.track.id.value }.toSet()
                     val synced = albumTrackIds.filter { it in returnedTrackIds }
@@ -293,9 +292,9 @@ class CatalogAdapter(
                     val artistIds = results
                         .flatMap { r -> (listOf(r.track.artistId) + r.track.additionalArtistIds).map { it.value } }
                         .filter { it.isNotBlank() }.distinct()
-                    if (artistIds.isNotEmpty()) syncPoolRepository.addArtists(artistIds)
+                    appSyncService.addToSyncPool(artistIds, emptyList())
                     val albumIds = results.mapNotNull { it.track.albumId?.value }.distinct()
-                    if (albumIds.isNotEmpty()) syncPoolRepository.addAlbums(albumIds)
+                    appSyncService.addAlbumsToSyncPool(albumIds)
                     val syncedTrackIds = results.map { it.track.id.value }.toSet()
                     val notReturned = trackIds.filter { it !in syncedTrackIds }
                     if (notReturned.isNotEmpty()) {
@@ -332,7 +331,7 @@ class CatalogAdapter(
                     val artistIds = allAlbumResults
                         .flatMap { r -> (listOf(r.track.artistId) + r.track.additionalArtistIds).map { it.value } }
                         .filter { it.isNotBlank() }.distinct()
-                    if (artistIds.isNotEmpty()) syncPoolRepository.addArtists(artistIds)
+                    appSyncService.addToSyncPool(artistIds, emptyList())
                 }
                 syncPoolRepository.removeAlbums(listOf(albumId))
                 logger.info { "Synced album $albumId from sync pool" }

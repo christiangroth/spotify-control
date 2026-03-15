@@ -40,6 +40,7 @@ class PlaybackEnrichmentAdapterTests {
     private val outboxPort: OutboxPort = mockk()
     private val syncPoolRepository: AppSyncPoolRepositoryPort = mockk(relaxed = true)
     private val useBulkFetchState: UseBulkFetchStatePort = mockk(relaxed = true)
+    private val appSyncService: AppSyncService = mockk(relaxed = true)
 
     private val adapter = CatalogAdapter(
         spotifyAccessToken,
@@ -52,6 +53,7 @@ class PlaybackEnrichmentAdapterTests {
         outboxPort,
         syncPoolRepository,
         useBulkFetchState,
+        appSyncService,
     )
 
     private val userId = UserId("user-1")
