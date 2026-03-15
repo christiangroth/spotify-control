@@ -150,7 +150,9 @@ class CatalogAdapter(
                     val artistIds = albumResult.tracks
                         .flatMap { t -> (listOf(t.artistId) + t.additionalArtistIds).map { it.value } }
                         .filter { it.isNotBlank() }.distinct()
-                    artistIds.forEach { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails(it, userId)) }
+                    val existingArtistIds = appArtistRepository.findByArtistIds(artistIds.toSet()).map { it.artistId }.toSet()
+                    artistIds.filter { it !in existingArtistIds }
+                        .forEach { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails(it, userId)) }
                 }
                 logger.info { "Synced album $albumId" }
                 1.right()
