@@ -28,6 +28,9 @@ class MongoIndexInitializer {
     lateinit var appArtistDocumentRepository: AppArtistDocumentRepository
 
     @Inject
+    lateinit var appAlbumDocumentRepository: AppAlbumDocumentRepository
+
+    @Inject
     lateinit var appTrackDocumentRepository: AppTrackDocumentRepository
 
     @Inject
@@ -69,14 +72,29 @@ class MongoIndexInitializer {
             IndexOptions().name("app_artist_playbackProcessingStatus_1"),
         )
 
+        appAlbumDocumentRepository.mongoCollection().createIndex(
+            Document("artistId", 1),
+            IndexOptions().name("app_album_artistId_1"),
+        )
+
         appTrackDocumentRepository.mongoCollection().createIndex(
             Document("artistId", 1),
             IndexOptions().name("app_track_artistId_1"),
         )
 
+        appTrackDocumentRepository.mongoCollection().createIndex(
+            Document("albumId", 1),
+            IndexOptions().name("app_track_albumId_1"),
+        )
+
         playlistMetadataDocumentRepository.mongoCollection().createIndex(
             Document("spotifyUserId", 1),
             IndexOptions().name("spotify_playlist_metadata_spotifyUserId_1"),
+        )
+
+        playlistMetadataDocumentRepository.mongoCollection().createIndex(
+            Document("syncStatus", 1),
+            IndexOptions().name("spotify_playlist_metadata_syncStatus_1"),
         )
 
         appPlaylistCheckDocumentRepository.mongoCollection().createIndex(

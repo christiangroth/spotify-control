@@ -90,4 +90,26 @@ class AppAlbumRepositoryTests {
         val result = appAlbumRepository.findByAlbumIds(emptySet())
         assertThat(result).isEmpty()
     }
+
+    @Test
+    fun `findByArtistId returns albums for the given artist`() {
+        val artistId = ArtistId("artist-find-${UUID.randomUUID()}")
+        val album1 = album("a1").copy(artistId = artistId)
+        val album2 = album("a2").copy(artistId = artistId)
+        val other = album("other").copy(artistId = ArtistId("other-artist-${UUID.randomUUID()}"))
+        appAlbumRepository.upsertAll(listOf(album1, album2, other))
+
+        val result = appAlbumRepository.findByArtistId(artistId)
+
+        assertThat(result.map { it.id }).containsExactlyInAnyOrder(album1.id, album2.id)
+    }
+
+    @Test
+    fun `findByArtistId returns empty list when no albums match`() {
+        val artistId = ArtistId("artist-none-${UUID.randomUUID()}")
+
+        val result = appAlbumRepository.findByArtistId(artistId)
+
+        assertThat(result).isEmpty()
+    }
 }
