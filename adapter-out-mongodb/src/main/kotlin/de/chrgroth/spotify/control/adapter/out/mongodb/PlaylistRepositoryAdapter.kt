@@ -58,6 +58,16 @@ class PlaylistRepositoryAdapter : PlaylistRepositoryPort {
         }
     }
 
+    override fun updateLastSyncTime(userId: UserId, playlistId: String, time: kotlin.time.Instant) {
+        val id = "${userId.value}:$playlistId"
+        mongoQueryMetrics.timed("spotify_playlist_metadata.updateLastSyncTime") {
+            playlistMetadataDocumentRepository.findById(id)?.let { doc ->
+                doc.lastSyncTime = time.toJavaInstant()
+                playlistMetadataDocumentRepository.persistOrUpdate(doc)
+            }
+        }
+    }
+
     override fun findArtistIdsInActivePlaylists(): Set<String> {
         val activeMetadata = mongoQueryMetrics.timed("spotify_playlist_metadata.findAllActive") {
             playlistMetadataDocumentRepository.list("syncStatus = ?1", PlaylistSyncStatus.ACTIVE.name)
@@ -77,6 +87,7 @@ class PlaylistRepositoryAdapter : PlaylistRepositoryPort {
         name = name,
         syncStatus = PlaylistSyncStatus.valueOf(syncStatus),
         type = type?.let { PlaylistType.valueOf(it) },
+        lastSyncTime = lastSyncTime?.toKotlinInstant(),
     )
 
     private fun PlaylistInfo.toDocument(userId: UserId) = PlaylistMetadataDocument().apply {
@@ -88,6 +99,7 @@ class PlaylistRepositoryAdapter : PlaylistRepositoryPort {
         name = this@toDocument.name
         syncStatus = this@toDocument.syncStatus.name
         type = this@toDocument.type?.name
+        lastSyncTime = this@toDocument.lastSyncTime?.toJavaInstant()
     }
 
     private fun PlaylistDocument.toDomain() = Playlist(

@@ -1,3 +1,12 @@
+# 0.63.2 (2026.03.15)
+
+## Bugfixes / Chore
+* fix-playlist-last-sync-update: Playlist last sync time is now updated in the UI after manually syncing a playlist.
+
+
+
+---
+
 # 0.63.1 (2026.03.14)
 
 ## Bugfixes / Chore

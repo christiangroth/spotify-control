@@ -88,4 +88,39 @@ class PlaylistRepositoryTests {
         assertThat(playlistRepository.findByUserId(userId1).map { it.spotifyPlaylistId }).containsExactly("p3")
         assertThat(playlistRepository.findByUserId(userId2).map { it.spotifyPlaylistId }).containsExactly("p2")
     }
+
+    @Test
+    fun `updateLastSyncTime sets lastSyncTime on existing playlist metadata`() {
+        val userId = UserId("test-${UUID.randomUUID()}")
+        playlistRepository.saveAll(userId, listOf(buildPlaylistInfo("p1")))
+        val syncTime = Clock.System.now().let { Instant.fromEpochMilliseconds(it.toEpochMilliseconds()) }
+
+        playlistRepository.updateLastSyncTime(userId, "p1", syncTime)
+
+        val found = playlistRepository.findByUserId(userId)
+        assertThat(found).hasSize(1)
+        assertThat(found[0].lastSyncTime).isEqualTo(syncTime)
+    }
+
+    @Test
+    fun `updateLastSyncTime is a no-op for unknown playlist`() {
+        val userId = UserId("test-${UUID.randomUUID()}")
+
+        playlistRepository.updateLastSyncTime(userId, "unknown", Clock.System.now())
+
+        assertThat(playlistRepository.findByUserId(userId)).isEmpty()
+    }
+
+    @Test
+    fun `saveAll and findByUserId round-trips lastSyncTime correctly`() {
+        val userId = UserId("test-${UUID.randomUUID()}")
+        val syncTime = Clock.System.now().let { Instant.fromEpochMilliseconds(it.toEpochMilliseconds()) }
+        val playlist = buildPlaylistInfo("p1").copy(lastSyncTime = syncTime)
+
+        playlistRepository.saveAll(userId, listOf(playlist))
+
+        val found = playlistRepository.findByUserId(userId)
+        assertThat(found).hasSize(1)
+        assertThat(found[0].lastSyncTime).isEqualTo(syncTime)
+    }
 }

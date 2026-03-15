@@ -93,6 +93,7 @@ class PlaylistAdapter(
         return spotifyPlaylist.getPlaylistTracks(userId, accessToken, playlistId).map { playlist ->
             logger.info { "Synced ${playlist.tracks.size} track(s) for playlist $playlistId (user ${userId.value})" }
             playlistRepository.save(userId, playlist)
+            playlistRepository.updateLastSyncTime(userId, playlistId, Clock.System.now())
 
             val artistIds = playlist.tracks.flatMap { it.artistIds }.distinct()
             val albumIds = playlist.tracks.map { it.albumId }.distinct()
