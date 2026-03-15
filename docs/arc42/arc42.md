@@ -12,7 +12,7 @@ spotify-control is a private Spotify playlist manager for a small, allow-listed 
 
 2. **Playlist Mirror** – Local copy of selected Spotify playlists. Sync is driven by snapshot IDs – a full track sync is only performed when Spotify reports a change.
 
-3. **Catalog Sync** – Artist genres and images, track album references, and album details (title, cover, genres) are fetched from the Spotify API and stored in deduplicated `app_artist`, `app_track`, and `app_album` collections.
+3. **Catalog Sync** – Artist images, track album references, and album details (title, cover) are fetched from the Spotify API and stored in deduplicated `app_artist`, `app_track`, and `app_album` collections.
 
 4. **Listening Statistics** – Playback data is aggregated into a per-user dashboard showing total play counts, daily play trends, top artists, top tracks, and recently played items.
 
@@ -113,8 +113,8 @@ Implements all repository interfaces defined in `domain-api`. Manages the MongoD
 
 | Collection                        | Description                                                                                                                     |
 |-----------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
-| `app_album`                       | Deduplicated album metadata: title, cover image, genres, main artist reference, lastSync.                             |
-| `app_artist`                      | Deduplicated artist metadata: name, genres, imageLink, lastSync, playbackProcessingStatus (UNDECIDED/ACTIVE/INACTIVE). |
+| `app_album`                       | Deduplicated album metadata: title, cover image, main artist reference, lastSync.                             |
+| `app_artist`                      | Deduplicated artist metadata: name, imageLink, lastSync, playbackProcessingStatus (UNDECIDED/ACTIVE/INACTIVE). |
 | `app_playback`                    | Processed playback events combining recently played and partial played data.                                                    |
 | `app_sync_pool`                   | Pending sync entries: Spotify IDs of artists, tracks, and albums awaiting bulk sync from the Spotify API.               |
 | `app_track`                       | Deduplicated track metadata: title, main artist reference, additional artist references, album reference, lastSync.   |
@@ -207,17 +207,17 @@ For each convertible session, a `RecentlyPartialPlayedItem` is created with the 
 Raw playback data from `spotify_recently_played` and `spotify_recently_partial_played` is processed into the normalised `app_*` collections by `PlaybackDataAdapter`. There are two modes:
 
 **Append (triggered automatically):** After new raw data arrives, `AppendPlaybackData` is enqueued on the `domain` partition. The adapter first loads all artists with `INACTIVE` playback processing status, then filters raw playback items to skip tracks whose primary artist is inactive. For remaining items it fetches all source items newer than the most recent `app_playback` entry for the user, deduplicates against existing `app_playback` timestamps, then:
-1. Upserts artist metadata into `app_artist` (artistId, artistName) — enriched genres and imageLink are preserved on re-encounter.
+1. Upserts artist metadata into `app_artist` (artistId, artistName) — enriched imageLink is preserved on re-encounter.
 2. Upserts track metadata into `app_track` (trackId, trackTitle, artistId, additionalArtistIds) — albumId is preserved if already enriched.
 3. Appends new entries to `app_playback` (userId, playedAt, trackId, secondsPlayed). The document `_id` is a composite of `${userId}:${playedAt.toEpochMilli()}:${trackId}` for natural deduplication.
 4. Adds artist IDs to `app_sync_pool` and track IDs to `app_sync_pool` for later bulk sync.
 
 **Catalog Sync (bulk-scheduled, `to-spotify` partition):**
-- `SyncMissingArtists`: bulk-syncs up to 50 pending artist IDs from `app_sync_pool` via `GET /v1/artists?ids=`. Updates `app_artist` with genres and imageLink. Runs every 10 minutes (at :00, :10, …).
+- `SyncMissingArtists`: bulk-syncs up to 50 pending artist IDs from `app_sync_pool` via `GET /v1/artists?ids=`. Updates `app_artist` with imageLink. Runs every 10 minutes (at :00, :10, …).
 - `SyncMissingTracks`: bulk-syncs up to 50 pending track IDs from `app_sync_pool`. For tracks with a known `albumId`, fetches all tracks for that album via `GET /v1/albums/{id}` (all album tracks are stored, not only the requested subset). Tracks without a known `albumId` or not found in the album response fall back to `GET /v1/tracks?ids=`. After syncing, discovered album and track artist IDs are added to `app_sync_pool` for further sync. Runs every 10 minutes (at :05, :15, …).
 
 **Per-item sync (on-demand, `to-spotify` partition):**
-- `SyncArtistDetails(artistId, userId)`: skipped if already synced; otherwise calls `GET /v1/artists/{id}` and updates `app_artist` with genres and imageLink.
+- `SyncArtistDetails(artistId, userId)`: skipped if already synced; otherwise calls `GET /v1/artists/{id}` and updates `app_artist` with imageLink.
 - `SyncTrackDetails(trackId, userId)`: skipped if already synced; otherwise calls `GET /v1/tracks/{id}`, updates `app_track` sync fields and album reference, upserts `app_album`, and enqueues `SyncArtistDetails` for all track artists.
 
 **Album sync (bulk-scheduled, `to-spotify` partition):**
@@ -263,7 +263,7 @@ SyncMissingArtistsJob (every 10 minutes at :00)
     → enqueue SyncMissingArtists (to-spotify partition)
     → peekArtists(50) from app_sync_pool
     → Spotify GET /v1/artists?ids=
-    → upsert app_artist (genres, imageLink)
+    → upsert app_artist (imageLink)
     → remove synced IDs from app_sync_pool
 
 SyncMissingTracksJob (every 10 minutes at :05)
@@ -476,7 +476,7 @@ APP_TOKEN_ENCRYPTION_KEY
 | Item | Description |
 |------|-------------|
 | `HelloWorldStarter` | Demo starter with no production purpose; can be removed. |
-| Enrichment completeness | `app_artist`, `app_track`, and `app_album` entries that existed before enrichment was introduced may lack genres, imageLink, or albumTitle until re-enriched. |
+| Enrichment completeness | `app_artist`, `app_track`, and `app_album` entries that existed before enrichment was introduced may lack imageLink or albumTitle until re-enriched. |
 | Partial-play detection accuracy | Partial play detection relies on polling frequency; very short plays near the end of a track may be missed or misclassified. |
 | Test coverage for domain adapters | Domain adapter integration (e.g. `PlaybackDataAdapter`, `PlaylistSyncAdapter`) is not yet covered by `@QuarkusTest` boundary tests. |
 
@@ -485,7 +485,7 @@ APP_TOKEN_ENCRYPTION_KEY
 | Term        | Definition                                                                                                            |
 |-------------|-----------------------------------------------------------------------------------------------------------------------|
 | CDI Event   | Contexts and Dependency Injection event – used for in-process communication between Quarkus beans                    |
-| Enrichment  | The process of fetching and storing additional metadata (genres, album details, images) from Spotify for artists, tracks, and albums |
+| Enrichment  | The process of fetching and storing additional metadata (album details, images) from Spotify for artists, tracks, and albums |
 | Outbox      | A persistent task queue used to reliably dispatch Spotify API calls and domain events asynchronously                  |
 | Snapshot ID | A Spotify-provided identifier that changes whenever a playlist is modified; used to detect changes efficiently        |
 | SSE         | Server-Sent Events – a mechanism for the server to push real-time updates to the browser                              |

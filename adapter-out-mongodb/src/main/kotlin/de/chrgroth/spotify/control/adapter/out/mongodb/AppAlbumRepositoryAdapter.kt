@@ -90,7 +90,6 @@ class AppAlbumRepositoryAdapter : AppAlbumRepositoryPort {
         artistName = artistName,
         additionalArtistIds = additionalArtistIds?.map { ArtistId(it) },
         additionalArtistNames = additionalArtistNames,
-        genreOverrides = genreOverrides,
         lastSync = lastSync?.toKotlinInstant() ?: kotlin.time.Instant.DISTANT_PAST,
     )
 

@@ -94,13 +94,13 @@ class CatalogAdapter(
             logger.debug { "Artist $artistId already synced, skipping" }
             return Unit.right()
         }
-        logger.info { "Fetching genre details for artist $artistId (user ${userId.value})" }
+        logger.info { "Fetching details for artist $artistId (user ${userId.value})" }
         val accessToken = spotifyAccessToken.getValidAccessToken(userId)
         return spotifyCatalog.getArtist(userId, accessToken, artistId)
             .flatMap { detail ->
                 if (detail != null) {
                     appArtistRepository.upsertAll(listOf(detail))
-                    logger.info { "Updated sync data for artist $artistId: genre=${detail.genre}, additionalGenres=${detail.additionalGenres}" }
+                    logger.info { "Updated sync data for artist $artistId" }
                 } else {
                     logger.warn { "No data returned from Spotify for artist $artistId" }
                 }

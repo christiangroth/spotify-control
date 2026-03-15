@@ -74,8 +74,6 @@ class AppArtistRepositoryTests {
     @Test
     fun `upsertAll stores all sync fields`() {
         val item = artist("sync").copy(
-            genre = "pop",
-            additionalGenres = listOf("indie", "rock"),
             imageLink = "https://example.com/image.jpg",
             type = "artist",
         )
@@ -84,8 +82,6 @@ class AppArtistRepositoryTests {
         val result = appArtistRepository.findByArtistIds(setOf(item.artistId))
         assertThat(result).hasSize(1)
         assertThat(result[0].artistName).isEqualTo(item.artistName)
-        assertThat(result[0].genre).isEqualTo("pop")
-        assertThat(result[0].additionalGenres).containsExactly("indie", "rock")
         assertThat(result[0].imageLink).isEqualTo("https://example.com/image.jpg")
         assertThat(result[0].type).isEqualTo("artist")
         assertThat(result[0].lastSync).isNotEqualTo(kotlin.time.Instant.DISTANT_PAST)

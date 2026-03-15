@@ -13,7 +13,6 @@ internal data class SpotifyArtistRef(val id: String, val name: String)
 internal data class SpotifyArtistResponse(
     val id: String,
     val name: String,
-    val genres: List<String> = emptyList(),
     val images: List<SpotifyImage> = emptyList(),
     val type: String? = null,
 )

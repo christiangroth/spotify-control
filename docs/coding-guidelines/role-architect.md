@@ -74,7 +74,6 @@ Layer 5 applies to adapter modules where the logic is pure (no Quarkus context n
 
 - Outbox entry point is a type-safe API – no free-form string event types (sealed class or enum)
 - `EnrichmentTrigger` as explicit enum – no boolean flag chaos
-- Genre logic encapsulated in a single `resolveEffectiveGenre(track)` function
 - Spotify IDs as value objects (`SpotifyTrackId`, `SpotifyArtistId`) to prevent mix-ups
 - Repository interfaces in the domain – implemented in `adapter-out-mongodb`
 

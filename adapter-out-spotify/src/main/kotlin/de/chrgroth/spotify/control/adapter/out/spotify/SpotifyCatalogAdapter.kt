@@ -119,18 +119,14 @@ class SpotifyCatalogAdapter(
         }
     }
 
-    private fun parseArtist(artist: SpotifyArtistResponse): AppArtist {
-        val allGenres = artist.genres
-        return AppArtist(
+    private fun parseArtist(artist: SpotifyArtistResponse): AppArtist =
+        AppArtist(
             artistId = artist.id,
             artistName = artist.name,
-            genre = allGenres.firstOrNull(),
-            additionalGenres = allGenres.drop(1).ifEmpty { null },
             imageLink = artist.images.firstOrNull()?.url,
             type = artist.type,
             lastSync = Clock.System.now(),
         )
-    }
 
     private fun parseAlbum(album: SpotifyAlbumResponse): AppAlbum =
         AppAlbum(

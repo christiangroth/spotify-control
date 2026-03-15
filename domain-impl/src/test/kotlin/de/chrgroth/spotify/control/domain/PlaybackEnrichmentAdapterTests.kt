@@ -59,8 +59,6 @@ class PlaybackEnrichmentAdapterTests {
         val spotifyArtist = AppArtist(
             artistId = artistId,
             artistName = "Real Artist Name",
-            genre = "pop",
-            additionalGenres = null,
             imageLink = "https://example.com/image.jpg",
             type = "artist",
             lastSync = kotlin.time.Instant.fromEpochSeconds(1),

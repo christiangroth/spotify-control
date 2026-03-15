@@ -14,16 +14,9 @@ Stand: 2026.03.03
 
 **Nach Phase 4 siehst du zum ersten Mal dein Hörverhalten als Report.**
 
-## Phase 5: Genre-Overrides
+## Phase 5: ~~Genre-Overrides~~ (removed)
 
-*Ziel: Daten nach eigenen Vorstellungen korrigieren.*
-
-- Genre-Override Admin-UI (pro Album/Release)
-- `ApplyGenreOverride` Outbox-Event
-- Re-Enrichment und Re-Aggregation bei Override-Änderung
-- `enrichment_version` Mechanismus
-
-**Nach Phase 5 sind deine Reports so korrekt wie du sie haben willst.**
+*Genre information is no longer provided by Spotify – this phase is cancelled.*
 
 ## Phase 6: Playlist-Logik
 
@@ -40,11 +33,10 @@ Stand: 2026.03.03
 
 ## Phase 8: Slack Bot (optional)
 
-*Ziel: Genre-Overrides und Playlist-Selection aus Slack.*
+*Ziel: Playlist-Selection aus Slack.*
 
 - Echte Slack App mit Block Kit
 - `adapter-in-slack` mit Signatur-Validierung
-- Genre-Override via Slack Input
 - Playlist-Selection via Slack Checkboxen
 
 **Nice-to-have. Nur angehen wenn Phase 1–7 stabil laufen.**
