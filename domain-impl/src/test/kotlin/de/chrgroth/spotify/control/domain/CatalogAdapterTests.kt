@@ -6,13 +6,13 @@ import arrow.core.right
 import de.chrgroth.spotify.control.domain.error.SyncError
 import de.chrgroth.spotify.control.domain.model.AccessToken
 import de.chrgroth.spotify.control.domain.model.AlbumId
+import de.chrgroth.spotify.control.domain.model.AlbumSyncResult
 import de.chrgroth.spotify.control.domain.model.AppAlbum
 import de.chrgroth.spotify.control.domain.model.AppArtist
 import de.chrgroth.spotify.control.domain.model.AppTrack
 import de.chrgroth.spotify.control.domain.model.ArtistId
 import de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus
 import de.chrgroth.spotify.control.domain.model.TrackId
-import de.chrgroth.spotify.control.domain.model.TrackSyncResult
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.model.User
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
@@ -77,8 +77,7 @@ class CatalogAdapterTests {
         id = TrackId("track-3"), title = "Track Three",
         albumId = AlbumId("album-2"), artistId = ArtistId("artist-2"), lastSync = syncTimestamp,
     )
-    private val syncResult1 = TrackSyncResult(track = trackWithAlbum1, album = album1)
-    private val syncResult2 = TrackSyncResult(track = trackWithAlbum2, album = album1)
+    private val albumSyncResult = AlbumSyncResult(album = album1, tracks = listOf(trackWithAlbum1, trackWithAlbum2))
 
     private fun buildUser(id: String = "user-1") = User(
         spotifyUserId = UserId(id),
@@ -249,7 +248,7 @@ class CatalogAdapterTests {
     fun `handle SyncAlbumDetails syncs album and upserts all tracks`() {
         every { userRepository.findAll() } returns listOf(buildUser())
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
-        every { spotifyCatalog.getAlbum(userId, accessToken, "album-1") } returns listOf(syncResult1, syncResult2).right()
+        every { spotifyCatalog.getAlbum(userId, accessToken, "album-1") } returns albumSyncResult.right()
         every { appTrackRepository.upsertAll(any()) } just runs
         every { appAlbumRepository.upsertAll(any()) } just runs
         every { outboxPort.enqueue(any()) } just runs
@@ -258,7 +257,7 @@ class CatalogAdapterTests {
 
         assertThat(result).isEqualTo(OutboxTaskResult.Success)
         verify { spotifyCatalog.getAlbum(userId, accessToken, "album-1") }
-        verify { appTrackRepository.upsertAll(listOf(syncResult1.track, syncResult2.track)) }
+        verify { appTrackRepository.upsertAll(listOf(trackWithAlbum1, trackWithAlbum2)) }
         verify { appAlbumRepository.upsertAll(listOf(album1)) }
     }
 
@@ -266,7 +265,7 @@ class CatalogAdapterTests {
     fun `handle SyncAlbumDetails enqueues SyncArtistDetails for artists found in album`() {
         every { userRepository.findAll() } returns listOf(buildUser())
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
-        every { spotifyCatalog.getAlbum(userId, accessToken, "album-1") } returns listOf(syncResult1, syncResult2).right()
+        every { spotifyCatalog.getAlbum(userId, accessToken, "album-1") } returns albumSyncResult.right()
         every { appTrackRepository.upsertAll(any()) } just runs
         every { appAlbumRepository.upsertAll(any()) } just runs
         every { outboxPort.enqueue(any()) } just runs

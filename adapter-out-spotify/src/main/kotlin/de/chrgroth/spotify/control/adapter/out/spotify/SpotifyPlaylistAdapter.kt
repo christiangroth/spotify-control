@@ -94,13 +94,18 @@ class SpotifyPlaylistAdapter(
             logger.info { "Ignoring non-track playlist item of type '${track.type}'" }
             return@forEach
           }
+          val albumId = track.album?.id
+          if (albumId == null) {
+            logger.info { "Ignoring track ${track.id} without albumId in playlist" }
+            return@forEach
+          }
           tracks.add(
             PlaylistTrack(
               trackId = track.id,
               trackName = track.name,
               artistIds = track.artists.map { it.id },
               artistNames = track.artists.map { it.name },
-              albumId = track.album?.id,
+              albumId = albumId,
             ),
           )
         }

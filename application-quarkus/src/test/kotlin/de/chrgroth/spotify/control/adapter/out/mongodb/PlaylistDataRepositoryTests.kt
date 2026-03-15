@@ -30,6 +30,7 @@ class PlaylistDataRepositoryTests {
                 trackName = "Track One",
                 artistIds = listOf("artist-1"),
                 artistNames = listOf("Artist One"),
+                albumId = "album-1",
             ),
         ),
     )
@@ -113,6 +114,7 @@ class PlaylistDataRepositoryTests {
                         trackName = "Track X",
                         artistIds = listOf(artistId),
                         artistNames = listOf("Artist X"),
+                        albumId = "album-x",
                     ),
                 ),
             ),
@@ -141,6 +143,7 @@ class PlaylistDataRepositoryTests {
                         trackName = "Track Y",
                         artistIds = listOf(artistId),
                         artistNames = listOf("Artist Y"),
+                        albumId = "album-y",
                     ),
                 ),
             ),
@@ -166,7 +169,7 @@ class PlaylistDataRepositoryTests {
             Playlist(
                 spotifyPlaylistId = playlistId1,
                 snapshotId = "snap-1",
-                tracks = listOf(PlaylistTrack("t1", "T1", listOf(artistId1), listOf("A1"))),
+                tracks = listOf(PlaylistTrack("t1", "T1", listOf(artistId1), listOf("A1"), "album-t1")),
             ),
         )
         playlistRepository.saveAll(userId2, listOf(buildPlaylistInfo(playlistId2, PlaylistSyncStatus.ACTIVE)))
@@ -175,7 +178,7 @@ class PlaylistDataRepositoryTests {
             Playlist(
                 spotifyPlaylistId = playlistId2,
                 snapshotId = "snap-1",
-                tracks = listOf(PlaylistTrack("t2", "T2", listOf(artistId2), listOf("A2"))),
+                tracks = listOf(PlaylistTrack("t2", "T2", listOf(artistId2), listOf("A2"), "album-t2")),
             ),
         )
 

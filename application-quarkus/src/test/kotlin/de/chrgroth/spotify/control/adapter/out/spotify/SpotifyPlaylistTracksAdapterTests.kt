@@ -36,6 +36,7 @@ class SpotifyPlaylistTracksAdapterTests {
         assertThat(playlist.tracks[0].trackName).isEqualTo("Track One")
         assertThat(playlist.tracks[0].artistIds).containsExactly("artist-1")
         assertThat(playlist.tracks[0].artistNames).containsExactly("Artist One")
+        assertThat(playlist.tracks[0].albumId).isEqualTo("album-1")
     }
 
     @Test

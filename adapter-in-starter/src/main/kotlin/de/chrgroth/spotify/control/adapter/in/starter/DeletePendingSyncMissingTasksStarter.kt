@@ -15,7 +15,7 @@ class DeletePendingSyncMissingTasksStarter(
     private val databaseName: String,
 ) : Starter {
 
-    override val id = "DeletePendingSyncMissingTasksStarter-v3"
+    override val id = "DeletePendingSyncMissingTasksStarter-v2"
 
     override fun execute() {
         val outboxResult = mongoClient.getDatabase(databaseName)

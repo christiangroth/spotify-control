@@ -143,12 +143,12 @@ class CatalogAdapter(
         return when (result) {
             is Either.Left -> result.value.left()
             is Either.Right -> {
-                val allAlbumResults = result.value
-                if (allAlbumResults.isNotEmpty()) {
-                    appTrackRepository.upsertAll(allAlbumResults.map { it.track })
-                    appAlbumRepository.upsertAll(listOf(allAlbumResults.first().album))
-                    val artistIds = allAlbumResults
-                        .flatMap { r -> (listOf(r.track.artistId) + r.track.additionalArtistIds).map { it.value } }
+                val albumResult = result.value
+                if (albumResult.tracks.isNotEmpty()) {
+                    appTrackRepository.upsertAll(albumResult.tracks)
+                    appAlbumRepository.upsertAll(listOf(albumResult.album))
+                    val artistIds = albumResult.tracks
+                        .flatMap { t -> (listOf(t.artistId) + t.additionalArtistIds).map { it.value } }
                         .filter { it.isNotBlank() }.distinct()
                     artistIds.forEach { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails(it, userId)) }
                 }
