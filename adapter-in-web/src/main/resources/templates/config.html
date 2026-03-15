@@ -5,6 +5,45 @@
 
         <h1 class="mb-4 fs-4 fw-semibold">Configuration</h1>
 
+        <div id="runtime-config-section" class="mb-4">
+            <h2 class="fs-5 fw-semibold mb-3">Runtime Config</h2>
+
+            <div id="runtime-config-status-banner" class="alert d-none mb-3" role="alert"></div>
+
+            <p class="text-secondary small mb-3">
+                These settings take effect immediately but are <strong>transient</strong> — they reset to their default values on the next application restart.
+            </p>
+
+            <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                <div class="card-body">
+                    <p class="card-subtitle mb-1 fw-semibold" style="color:#e0e0e0;">Spotify Request Throttling</p>
+                    <p class="text-secondary small mb-3">
+                        Minimum interval between outgoing Spotify API requests.
+                        Increasing this value slows down catalog sync but reduces the risk of hitting Spotify rate limits.
+                        Default: <span data-testid="default-throttle-interval">{runtimeConfig.defaultThrottleIntervalSeconds}</span> s.
+                    </p>
+                    <div class="row g-2 align-items-end">
+                        <div class="col-auto">
+                            <label for="throttle-interval-input" class="form-label text-secondary small mb-1">Interval (s)</label>
+                            <input
+                                type="number"
+                                id="throttle-interval-input"
+                                class="form-control form-control-sm bg-dark text-white border-secondary"
+                                style="width:140px"
+                                min="0"
+                                value="{runtimeConfig.throttleIntervalSeconds}"
+                                data-testid="throttle-interval-input"
+                            >
+                        </div>
+                        <div class="col-auto">
+                            <button id="throttle-save-btn" class="btn btn-spotify btn-sm" data-testid="throttle-save-btn">Save</button>
+                            <button id="throttle-reset-btn" class="btn btn-outline-secondary btn-sm ms-1" data-testid="throttle-reset-btn">Reset to Default</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div id="config-section">
             <div class="row g-3 mb-4">
                 <div class="col-12">
@@ -62,5 +101,74 @@
             </div>
         </div>
     </div>
+    <script>
+        const defaultThrottleIntervalSeconds = {runtimeConfig.defaultThrottleIntervalSeconds};
+
+        document.getElementById('throttle-save-btn').addEventListener('click', function() {
+            const input = document.getElementById('throttle-interval-input');
+            const intervalSeconds = parseInt(input.value, 10);
+            if (isNaN(intervalSeconds) || intervalSeconds < 0) {
+                showRuntimeConfigBanner('Please enter a valid non-negative number.', 'danger');
+                return;
+            }
+            const btn = this;
+            btn.disabled = true;
+            fetch('/settings/runtime-config/throttle-interval', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ intervalSeconds: intervalSeconds })
+            })
+            .then(function(response) {
+                return response.json().then(function(data) { return { ok: response.ok, data: data }; });
+            })
+            .then(function(result) {
+                if (result.ok) {
+                    input.value = result.data.intervalSeconds;
+                    showRuntimeConfigBanner('Throttle interval updated to ' + result.data.intervalSeconds + ' s.', 'success');
+                } else {
+                    showRuntimeConfigBanner('Failed to update throttle interval: ' + (result.data.error || 'Unknown error'), 'danger');
+                }
+            })
+            .catch(function(err) {
+                showRuntimeConfigBanner('Request failed: ' + err.message, 'danger');
+            })
+            .finally(function() { btn.disabled = false; });
+        });
+
+        document.getElementById('throttle-reset-btn').addEventListener('click', function() {
+            const input = document.getElementById('throttle-interval-input');
+            input.value = defaultThrottleIntervalSeconds;
+            const btn = this;
+            btn.disabled = true;
+            fetch('/settings/runtime-config/throttle-interval', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ intervalSeconds: defaultThrottleIntervalSeconds })
+            })
+            .then(function(response) {
+                return response.json().then(function(data) { return { ok: response.ok, data: data }; });
+            })
+            .then(function(result) {
+                if (result.ok) {
+                    showRuntimeConfigBanner('Throttle interval reset to default (' + defaultThrottleIntervalSeconds + ' s).', 'success');
+                } else {
+                    showRuntimeConfigBanner('Failed to reset throttle interval: ' + (result.data.error || 'Unknown error'), 'danger');
+                }
+            })
+            .catch(function(err) {
+                showRuntimeConfigBanner('Request failed: ' + err.message, 'danger');
+            })
+            .finally(function() { btn.disabled = false; });
+        });
+
+        function showRuntimeConfigBanner(message, type) {
+            const banner = document.getElementById('runtime-config-status-banner');
+            banner.textContent = message;
+            banner.className = 'alert alert-' + type + ' mb-3';
+            banner.classList.remove('d-none');
+            clearTimeout(banner._fadeTimer);
+            banner._fadeTimer = setTimeout(function() { banner.classList.add('d-none'); }, 5000);
+        }
+    </script>
     {/content}
 {/include}
