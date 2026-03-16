@@ -1,3 +1,12 @@
+# 0.67.2 (2026.03.16)
+
+## Bugfixes / Chore
+* Updated outbox-starters to 0.6.0.
+
+
+
+---
+
 # 0.67.1 (2026.03.16)
 
 ## Bugfixes / Chore
