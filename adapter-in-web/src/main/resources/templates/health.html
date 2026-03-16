@@ -260,6 +260,8 @@
 
     {#fragment id="snippet_navbar_outbox_status"}{#if stats.outboxAllActive}ok{#else}error{/if}{/fragment}
     {#fragment id="snippet_navbar_playback_status"}{#if stats.playbackActive}active{#else}inactive{/if}{/fragment}
+
+    <style>
         @keyframes cronjob-pulse-green {
             0%   { background-color: transparent; }
             30%  { background-color: rgba(30, 215, 96, 0.35); }
