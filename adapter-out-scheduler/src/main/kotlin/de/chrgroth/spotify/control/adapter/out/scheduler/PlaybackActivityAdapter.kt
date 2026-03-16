@@ -21,6 +21,11 @@ class PlaybackActivityAdapter : PlaybackActivityPort {
     override fun isPlaybackActive(): Boolean =
         Duration.between(lastPlaybackDetectedAtRef.get(), Instant.now()) < PLAYBACK_ACTIVE_THRESHOLD
 
+    override fun lastActivityTimestamp(): Instant? {
+        val ts = lastPlaybackDetectedAtRef.get()
+        return if (ts == Instant.EPOCH) null else ts
+    }
+
     companion object {
         private val PLAYBACK_ACTIVE_THRESHOLD: Duration = Duration.ofMinutes(5)
     }
