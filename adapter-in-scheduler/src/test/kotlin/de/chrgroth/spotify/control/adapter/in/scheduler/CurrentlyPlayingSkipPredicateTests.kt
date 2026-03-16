@@ -1,6 +1,6 @@
 package de.chrgroth.spotify.control.adapter.`in`.scheduler
 
-import de.chrgroth.quarkus.starters.StarterSkipPredicate
+import de.chrgroth.quarkus.starters.domain.ScheduledSkipPredicate
 import de.chrgroth.spotify.control.domain.port.out.PlaybackActivityPort
 import io.mockk.every
 import io.mockk.mockk
@@ -10,14 +10,14 @@ import org.junit.jupiter.api.Test
 
 class CurrentlyPlayingSkipPredicateTests {
 
-    private val starterSkipPredicate: StarterSkipPredicate = mockk(relaxed = true)
+    private val starterSkipPredicate: ScheduledSkipPredicate = mockk(relaxed = true)
     private val playbackActivity: PlaybackActivityPort = mockk()
     private val execution: ScheduledExecution = mockk(relaxed = true)
 
     private val predicate = CurrentlyPlayingSkipPredicate(starterSkipPredicate, playbackActivity)
 
     @Test
-    fun `skips when StarterSkipPredicate returns true`() {
+    fun `skips when ScheduledSkipPredicate returns true`() {
         every { starterSkipPredicate.test(execution) } returns true
 
         assertThat(predicate.test(execution)).isTrue()

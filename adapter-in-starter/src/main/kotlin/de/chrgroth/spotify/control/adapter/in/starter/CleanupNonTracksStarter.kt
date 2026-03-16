@@ -1,7 +1,7 @@
 package de.chrgroth.spotify.control.adapter.`in`.starter
 
 import de.chrgroth.spotify.control.domain.port.out.RecentlyPlayedRepositoryPort
-import de.chrgroth.quarkus.starters.Starter
+import de.chrgroth.quarkus.starters.domain.Starter
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
 
