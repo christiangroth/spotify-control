@@ -1,3 +1,12 @@
+# 0.67.1 (2026.03.16)
+
+## Bugfixes / Chore
+* Updated quarkus-one-time-starters dependency to version 0.5.0.
+
+
+
+---
+
 # 0.67.0 (2026.03.15)
 
 ## New Features
