@@ -2,7 +2,7 @@ package de.chrgroth.spotify.control.adapter.`in`.starter
 
 import com.mongodb.client.MongoClient
 import com.mongodb.client.model.Filters
-import de.chrgroth.quarkus.starters.Starter
+import de.chrgroth.quarkus.starters.domain.Starter
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
 import org.eclipse.microprofile.config.inject.ConfigProperty

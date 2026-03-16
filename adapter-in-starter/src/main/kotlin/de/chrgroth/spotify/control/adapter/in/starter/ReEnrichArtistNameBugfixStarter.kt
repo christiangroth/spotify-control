@@ -4,7 +4,7 @@ import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
-import de.chrgroth.quarkus.starters.Starter
+import de.chrgroth.quarkus.starters.domain.Starter
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
 
