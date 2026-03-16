@@ -31,7 +31,7 @@ class HealthPageTests {
       .statusCode(200)
       .body(containsString("""id="health-section""""))
       .body(containsString("Communication"))
-      .body(containsString("State &amp; Cronjobs"))
+      .body(containsString("Cronjobs &amp; State"))
       .body(containsString("MongoDB"))
       .body(containsString("Outgoing HTTP Requests"))
       .body(containsString("Outbox Partitions"))
@@ -450,7 +450,7 @@ class HealthPageTests {
       .get("/health")
       .then()
       .statusCode(200)
-      .body(containsString("State &amp; Cronjobs"))
+      .body(containsString("Cronjobs &amp; State"))
       .body(containsString("""id="snippet-cronjobs""""))
       .body(containsString("""id="snippet-predicates""""))
   }

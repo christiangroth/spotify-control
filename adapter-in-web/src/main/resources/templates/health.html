@@ -100,7 +100,7 @@
                 </div>
             </div>
 
-            <h2 class="mb-3 fs-6 fw-semibold text-uppercase" style="color:#888;letter-spacing:.05em;">State &amp; Cronjobs</h2>
+            <h2 class="mb-3 fs-6 fw-semibold text-uppercase" style="color:#888;letter-spacing:.05em;">Cronjobs &amp; State</h2>
             <div class="row g-3 mb-4">
                 <div class="col-12 col-lg-6">
                     <div id="snippet-cronjobs" class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
@@ -258,8 +258,7 @@
         </div>
     </div>
 
-    {#fragment id="snippet_navbar_outbox_status"}{#if stats.outboxAllActive}ok{#else}error{/if}{/fragment}
-    {#fragment id="snippet_navbar_playback_status"}{#if stats.playbackActive}active{#else}inactive{/if}{/fragment}
+    <span style="display:none;">{#fragment id="snippet_navbar_outbox_status"}{#if stats.outboxAllActive}ok{#else}error{/if}{/fragment}{#fragment id="snippet_navbar_playback_status"}{#if stats.playbackActive}active{#else}inactive{/if}{/fragment}</span>
 
     <style>
         @keyframes cronjob-pulse-green {

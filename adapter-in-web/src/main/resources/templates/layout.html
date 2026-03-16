@@ -143,6 +143,7 @@
     <script src="/webjars/marked/lib/marked.umd.js"></script>
     <script src="/sse-utils.js"></script>
     {#insert scripts}{/insert}
+    {#insert navbarSse}
     <script>
         (function () {
             var outboxWrapper = document.getElementById('navbar-outbox-wrapper');
@@ -150,7 +151,6 @@
             var outboxPopup = document.getElementById('navbar-outbox-popup');
             var outboxPopupContent = document.getElementById('navbar-outbox-popup-content');
             var playbackSvg = document.getElementById('navbar-playback-svg');
-            if (!outboxWrapper && !playbackSvg) return;
 
             function updateNavbarOutboxStatus() {
                 fetch('/health/snippets/navbar-outbox-status')
@@ -198,6 +198,7 @@
             });
         })();
     </script>
+    {/insert}
     {#insert content /}
 </body>
 </html>
