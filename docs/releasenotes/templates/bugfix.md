@@ -1,1 +1,1 @@
-* {branch-last-segment}: Description of the change.
+* Description of the change.
