@@ -150,7 +150,7 @@ Two categories of notifications are supported:
 
 ### `adapter-out-spotify`
 
-Encapsulates all communication with the Spotify Web API. Handles token refresh, rate limiting (10s throttle on the `to-spotify` partition), and backoff for hidden 24h bulk limits. Implements bulk fetch endpoints (`GET /v1/artists?ids=`, `GET /v1/tracks?ids=`, `GET /v1/albums/{id}`) with per-item fallback for the direct track endpoint.
+Encapsulates all communication with the Spotify Web API. Handles token refresh, rate limiting (8s throttle on the `to-spotify` partition), and backoff for hidden 24h bulk limits. Implements bulk fetch endpoints (`GET /v1/artists?ids=`, `GET /v1/tracks?ids=`, `GET /v1/albums/{id}`) with per-item fallback for the direct track endpoint.
 
 ### `application-quarkus`
 
@@ -480,7 +480,7 @@ SLACK_WEBHOOK_URL
 | Risk | Probability | Impact | Mitigation |
 |------|-------------|--------|------------|
 | Spotify API breaking changes | Medium | High | No versioned Spotify SDK; changes require adapter updates. Monitor Spotify changelog. |
-| Spotify API rate limiting | High | Medium | `to-spotify` partition throttles at 10s per request. `pauseOnRateLimit` stops the partition on 429 responses. |
+| Spotify API rate limiting | High | Medium | `to-spotify` partition throttles at 8s per request. `pauseOnRateLimit` stops the partition on 429 responses. |
 | Token encryption key loss | Low | High | If `APP_TOKEN_ENCRYPTION_KEY` is lost, all stored tokens are invalid and users must re-authenticate. Key must be backed up securely. |
 | MongoDB Atlas outage | Low | High | No local fallback. Application becomes unavailable. MongoDB Atlas provides its own replication and backup. |
 

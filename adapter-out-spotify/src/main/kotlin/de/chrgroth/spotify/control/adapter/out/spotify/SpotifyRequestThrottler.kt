@@ -32,6 +32,6 @@ class SpotifyRequestThrottler : SpotifyThrottlingPort {
     }
 
     companion object {
-        const val DEFAULT_THROTTLE_INTERVAL_MS = 10000L
+        const val DEFAULT_THROTTLE_INTERVAL_MS = 8000L
     }
 }
