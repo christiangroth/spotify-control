@@ -41,7 +41,7 @@ The outbox is provided as the external library `de.chrgroth.quarkus.outbox`
 ### Positive Consequences
 
 * Spotify API calls are fully decoupled from domain logic; the domain only writes events.
-* Partition-level throttling (10s for `to-spotify`) and pause-on-rate-limit prevent bulk limit breaches.
+* Partition-level throttling (8s for `to-spotify`) and pause-on-rate-limit prevent bulk limit breaches.
 * Outbox tasks survive application restarts; at-least-once delivery is guaranteed.
 * Deduplication keys prevent duplicate Spotify API calls for the same entity.
 * The `to-spotify-playback` partition bypasses throttling for time-sensitive playback data.
