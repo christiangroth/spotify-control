@@ -1,3 +1,12 @@
+# 0.68.1 (2026.03.16)
+
+## Bugfixes / Chore
+* Reduced default Spotify request throttle interval from 10s to 8s.
+
+
+
+---
+
 # 0.68.0 (2026.03.16)
 
 ## New Features
