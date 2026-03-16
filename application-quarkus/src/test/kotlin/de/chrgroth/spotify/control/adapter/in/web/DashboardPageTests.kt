@@ -203,4 +203,30 @@ class DashboardPageTests {
       .body(containsString("snippet-catalog-stats"))
       .body(containsString("/dashboard/snippets/catalog-stats"))
   }
+
+  @Test
+  fun `dashboard page contains navbar health indicator icons`() {
+    given()
+      .`when`()
+      .get("/dashboard")
+      .then()
+      .statusCode(200)
+      .body(containsString("""id="navbar-health-indicators""""))
+      .body(containsString("""data-testid="navbar-outbox-icon""""))
+      .body(containsString("""data-testid="navbar-playback-icon""""))
+  }
+
+  @Test
+  fun `dashboard page contains navbar health indicators sse connection`() {
+    given()
+      .`when`()
+      .get("/dashboard")
+      .then()
+      .statusCode(200)
+      .body(containsString("updateNavbarOutboxStatus"))
+      .body(containsString("updateNavbarPlaybackStatus"))
+      .body(containsString("/health/snippets/navbar-outbox-status"))
+      .body(containsString("/health/snippets/navbar-playback-status"))
+      .body(containsString("navbar-outbox-popup"))
+  }
 }

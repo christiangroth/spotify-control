@@ -30,4 +30,16 @@ class LoginPageTests {
       .body(containsString("""class="app-version"""))
       .body(not(containsString("@projectVersion@")))
   }
+
+  @Test
+  fun `login page does not display health indicator icons`() {
+    given()
+      .`when`()
+      .get("/")
+      .then()
+      .statusCode(200)
+      .body(not(containsString("""id="navbar-health-indicators"""")))
+      .body(not(containsString("""data-testid="navbar-outbox-icon"""")))
+      .body(not(containsString("""data-testid="navbar-playback-icon"""")))
+  }
 }

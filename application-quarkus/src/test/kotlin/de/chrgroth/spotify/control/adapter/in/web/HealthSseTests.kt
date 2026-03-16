@@ -1,6 +1,7 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
 import de.chrgroth.spotify.control.adapter.`in`.web.HealthSseAdapter
+import de.chrgroth.spotify.control.domain.model.PlaybackDetectedEvent
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
 import de.chrgroth.spotify.control.domain.port.out.OutboxTaskCountObserver
@@ -8,6 +9,7 @@ import de.chrgroth.spotify.control.domain.port.out.OutgoingRequestStatsObserver
 import de.chrgroth.outbox.OutboxPartitionObserver
 import io.quarkus.test.junit.QuarkusTest
 import io.smallrye.mutiny.subscription.Cancellable
+import jakarta.enterprise.event.Event
 import jakarta.inject.Inject
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -30,6 +32,9 @@ class HealthSseTests {
 
     @Inject
     lateinit var outboxTaskCountObserver: OutboxTaskCountObserver
+
+    @Inject
+    lateinit var playbackDetectedEvent: Event<PlaybackDetectedEvent>
 
     @Test
     fun `sse endpoint delivers refresh-outgoing-http-calls event when outgoing request is recorded`() {
@@ -87,6 +92,26 @@ class HealthSseTests {
 
         assertTrue(latch.await(5, TimeUnit.SECONDS), "SSE refresh event should be received within 5 seconds")
         assertEquals(listOf("refresh-outbox-partitions"), received.toList())
+
+        cancellable.cancel()
+    }
+
+    @Test
+    fun `sse endpoint delivers refresh-playback-state event when playback is detected`() {
+        val userId = UserId("test-user-health-sse-playback")
+        val received = CopyOnWriteArrayList<String>()
+        val latch = CountDownLatch(1)
+
+        val cancellable: Cancellable = healthSseService.stream(userId)
+            .subscribe().with(
+                { event: String -> received.add(event); latch.countDown() },
+                { _: Throwable -> /* ignore errors */ },
+            )
+
+        playbackDetectedEvent.fire(PlaybackDetectedEvent())
+
+        assertTrue(latch.await(5, TimeUnit.SECONDS), "SSE refresh event should be received within 5 seconds")
+        assertEquals(listOf("refresh-playback-state"), received.toList())
 
         cancellable.cancel()
     }

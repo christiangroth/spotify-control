@@ -100,52 +100,13 @@
                 </div>
             </div>
 
-            <h2 class="mb-3 fs-6 fw-semibold text-uppercase" style="color:#888;letter-spacing:.05em;">State</h2>
+            <h2 class="mb-3 fs-6 fw-semibold text-uppercase" style="color:#888;letter-spacing:.05em;">State &amp; Cronjobs</h2>
             <div class="row g-3 mb-4">
-                <div class="col-12">
-                    <div id="snippet-predicates" class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
-                        {#fragment id="snippet_predicates"}
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-sm mb-0" style="color:#e0e0e0;background-color:transparent;" data-testid="predicates-table">
-                                    <thead>
-                                        <tr style="border-color:#333;">
-                                            <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Predicate</th>
-                                            <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">Active</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {#for p in stats.predicateStats}
-                                        <tr style="border-color:#333;">
-                                            <td style="border-color:#333;color:#e0e0e0;background-color:transparent;">{p.name}</td>
-                                            <td style="border-color:#333;text-align:right;background-color:transparent;">
-                                                {#if p.active}
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#1db954" viewBox="0 0 16 16" style="vertical-align:middle;">
-                                                    <use href="#icon-check-circle"/>
-                                                </svg>
-                                                {#else}
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#dc3545" viewBox="0 0 16 16" style="vertical-align:middle;">
-                                                    <use href="#icon-x-circle"/>
-                                                </svg>
-                                                {/if}
-                                            </td>
-                                        </tr>
-                                        {/for}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                        {/fragment}
-                    </div>
-                </div>
-            </div>
-
-            <h2 class="mb-3 fs-6 fw-semibold text-uppercase" style="color:#888;letter-spacing:.05em;">Cronjobs</h2>
-            <div class="row g-3 mb-4">
-                <div class="col-12">
+                <div class="col-12 col-lg-6">
                     <div id="snippet-cronjobs" class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
                         {#fragment id="snippet_cronjobs"}
                         <div class="card-body">
+                            <p class="card-subtitle mb-3" style="color:#888;font-size:.8rem;">Cronjobs</p>
                             <div class="table-responsive">
                                 <table class="table table-sm mb-0" style="color:#e0e0e0;background-color:transparent;" data-testid="cronjobs-table">
                                     <thead>
@@ -172,6 +133,44 @@
                                             </td>
                                             <td style="border-color:#333;color:#e0e0e0;background-color:transparent;">{job.cronSchedule}</td>
                                             <td class="cronjob-countdown" style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">{#if job.nextExecution}-{#else}N/A{/if}</td>
+                                        </tr>
+                                        {/for}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        {/fragment}
+                    </div>
+                </div>
+                <div class="col-12 col-lg-6">
+                    <div id="snippet-predicates" class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                        {#fragment id="snippet_predicates"}
+                        <div class="card-body">
+                            <p class="card-subtitle mb-3" style="color:#888;font-size:.8rem;">State</p>
+                            <div class="table-responsive">
+                                <table class="table table-sm mb-0" style="color:#e0e0e0;background-color:transparent;" data-testid="predicates-table">
+                                    <thead>
+                                        <tr style="border-color:#333;">
+                                            <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Predicate</th>
+                                            <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">Since</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {#for p in stats.predicateStats}
+                                        <tr style="border-color:#333;">
+                                            <td style="border-color:#333;color:#e0e0e0;background-color:transparent;">
+                                                {#if p.active}
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#1db954" viewBox="0 0 16 16" style="vertical-align:middle;margin-right:4px;">
+                                                    <use href="#icon-check-circle"/>
+                                                </svg>
+                                                {#else}
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#888888" viewBox="0 0 16 16" style="vertical-align:middle;margin-right:4px;">
+                                                    <use href="#icon-x-circle"/>
+                                                </svg>
+                                                {/if}
+                                                {p.name}
+                                            </td>
+                                            <td class="predicate-last-check" {#if p.lastCheck}data-last-check="{p.lastCheck.toEpochMilli()}"{/if} style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">{#if p.lastCheck}-{#else}N/A{/if}</td>
                                         </tr>
                                         {/for}
                                     </tbody>
@@ -259,7 +258,8 @@
         </div>
     </div>
 
-    <style>
+    {#fragment id="snippet_navbar_outbox_status"}{#if stats.outboxAllActive}ok{#else}error{/if}{/fragment}
+    {#fragment id="snippet_navbar_playback_status"}{#if stats.playbackActive}active{#else}inactive{/if}{/fragment}
         @keyframes cronjob-pulse-green {
             0%   { background-color: transparent; }
             30%  { background-color: rgba(30, 215, 96, 0.35); }
@@ -376,6 +376,18 @@
             updateCronjobCountdowns();
             startOutboxBlockedUntilInterval();
 
+            function updatePredicateLastChecks() {
+                document.querySelectorAll('.predicate-last-check[data-last-check]').forEach(function (cell) {
+                    var ms = parseInt(cell.dataset.lastCheck, 10);
+                    var d = new Date(ms);
+                    var h = String(d.getHours()).padStart(2, '0');
+                    var m = String(d.getMinutes()).padStart(2, '0');
+                    var s = String(d.getSeconds()).padStart(2, '0');
+                    cell.textContent = h + ':' + m + ':' + s;
+                });
+            }
+            updatePredicateLastChecks();
+
             function resumeOutboxPartition(partitionKey) {
                 fetch('/health/outbox-partitions/' + encodeURIComponent(partitionKey) + '/activate', { method: 'POST' })
                     .catch(function (err) { console.error('Failed to resume partition', err); });
@@ -391,6 +403,8 @@
                         outboxBlockedUntilInterval = null;
                     }
                     fadeUpdate('snippet-outbox-partitions', '/health/snippets/outbox-partitions', startOutboxBlockedUntilInterval);
+                } else if (event.data === 'refresh-playback-state') {
+                    fadeUpdate('snippet-predicates', '/health/snippets/predicates', updatePredicateLastChecks);
                 }
             });
         })();

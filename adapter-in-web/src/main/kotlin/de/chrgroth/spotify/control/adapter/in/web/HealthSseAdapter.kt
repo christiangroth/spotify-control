@@ -1,5 +1,6 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
+import de.chrgroth.spotify.control.domain.model.PlaybackDetectedEvent
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.out.OutboxTaskCountObserver
 import de.chrgroth.spotify.control.domain.port.out.OutgoingRequestStatsObserver
@@ -8,6 +9,7 @@ import de.chrgroth.outbox.OutboxPartitionObserver
 import io.smallrye.mutiny.Multi
 import io.smallrye.mutiny.subscription.MultiEmitter
 import jakarta.enterprise.context.ApplicationScoped
+import jakarta.enterprise.event.Observes
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 
@@ -33,6 +35,9 @@ class HealthSseAdapter : OutboxPartitionObserver, OutgoingRequestStatsObserver, 
     override fun onRequestRecorded() = notifyAllUsers("refresh-outgoing-http-calls")
 
     override fun onOutboxTaskCountChanged() = notifyAllUsers("refresh-outbox-partitions")
+
+    @Suppress("UnusedParameter")
+    fun onPlaybackDetected(@Observes event: PlaybackDetectedEvent) = notifyAllUsers("refresh-playback-state")
 
     private fun notifyAllUsers(event: String) = emittersByUser.keys.toList().forEach { emitToUser(it, event) }
 

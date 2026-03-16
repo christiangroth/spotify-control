@@ -29,7 +29,7 @@ class HealthAdapter(
         mongoQueryStats = mongoStats.getQueryStats(),
         cronjobStats = cronjobInfo.getCronjobStats(),
         predicateStats = listOf(
-            PredicateStats(name = "playbackActive", active = playbackActivity.isPlaybackActive()),
+            PredicateStats(name = "playbackActive", active = playbackActivity.isPlaybackActive(), lastCheck = playbackActivity.lastActivityTimestamp()),
         ),
         configurationStats = configurationInfo.getConfigurationStats(),
     )
