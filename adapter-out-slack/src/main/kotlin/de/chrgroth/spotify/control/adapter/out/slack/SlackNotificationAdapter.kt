@@ -13,6 +13,7 @@ import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.util.Optional
 
 /**
  * Sends system notifications to a configured Slack webhook.
@@ -30,7 +31,7 @@ class SlackNotificationAdapter(
     @param:ConfigProperty(name = "quarkus.application.version")
     private val version: String,
     @param:ConfigProperty(name = "app.slack.webhook-url")
-    private val webhookUrl: String,
+    private val webhookUrl: Optional<String>,
     @param:ConfigProperty(name = "app.slack.username")
     private val username: String,
     @param:ConfigProperty(name = "app.slack.icon-emoji")
@@ -45,7 +46,7 @@ class SlackNotificationAdapter(
     private val partitionResumedEnabled: Boolean,
 ) : OutboxPartitionObserver {
 
-    private val enabled: Boolean = webhookUrl.isNotBlank()
+    private val enabled: Boolean = webhookUrl.orElse("").isNotBlank()
 
     init {
         if (enabled) {
@@ -86,7 +87,7 @@ class SlackNotificationAdapter(
                 append("}")
             }
             val request = HttpRequest.newBuilder()
-                .uri(URI.create(webhookUrl))
+                .uri(URI.create(webhookUrl.get()))
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(body))
                 .build()
