@@ -7,15 +7,18 @@
 
         <div id="status-banner" class="alert d-none mb-3" role="alert"></div>
 
-        <h2 class="fs-5 fw-semibold mb-2">Catalog Re-sync</h2>
-        <p class="text-secondary small mb-3">Re-queue all artists and tracks for re-sync from Spotify. Use this to refresh catalog metadata (images, track details) that may have changed since the last sync.</p>
-        <button id="resync-catalog-btn" class="btn btn-spotify btn-sm mb-4">Re-sync Catalog</button>
-
-        <hr class="my-4" style="border-color:#333;">
-
-        <h2 class="fs-5 fw-semibold mb-2">Wipe Catalog</h2>
-        <p class="text-secondary small mb-3">Delete all catalog data (artists, albums, tracks), remove catalog sync outbox events, set all playlists to sync inactive and delete all playlist checks. This operation cannot be undone.</p>
-        <button id="wipe-catalog-btn" class="btn btn-danger btn-sm mb-4">Wipe Catalog</button>
+        <div class="row g-3 mb-4">
+            <div class="col-md-6">
+                <h2 class="fs-5 fw-semibold mb-2">Catalog Re-sync</h2>
+                <p class="text-secondary small mb-3">Re-queue all artists and tracks for re-sync from Spotify. Use this to refresh catalog metadata (images, track details) that may have changed since the last sync.</p>
+                <button id="resync-catalog-btn" class="btn btn-spotify btn-sm">Re-sync Catalog</button>
+            </div>
+            <div class="col-md-6">
+                <h2 class="fs-5 fw-semibold mb-2">Wipe Catalog</h2>
+                <p class="text-secondary small mb-3">Delete all catalog data (artists, albums, tracks), remove catalog sync outbox events, set all playlists to sync inactive and delete all playlist checks. This operation cannot be undone.</p>
+                <button id="wipe-catalog-btn" class="btn btn-danger btn-sm">Wipe Catalog</button>
+            </div>
+        </div>
 
         <!-- Wipe Catalog Confirmation Modal -->
         <div id="wipe-catalog-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1050;align-items:center;justify-content:center;">
@@ -34,10 +37,12 @@
 
         <hr class="my-4" style="border-color:#333;">
 
+        <h2 class="fs-5 fw-semibold mb-3">Catalog Browser</h2>
+
         <div class="mb-3">
             <input type="text" id="catalog-filter" class="form-control"
                    style="background-color:#1e1e1e;border-color:#444;color:#e0e0e0;max-width:400px;"
-                   placeholder="Filter by name..."
+                   placeholder="Filter artists by name..."
                    value="{filter}"
                    oninput="filterArtists(this.value)">
         </div>
@@ -55,7 +60,7 @@
                             <th style="border-color:#333;">Artist</th>
                             <th class="text-end" style="border-color:#333;">Albums</th>
                             <th class="text-end" style="border-color:#333;">Tracks</th>
-                            <th style="border-color:#333;"></th>
+                            <th style="border-color:#333;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -98,10 +103,9 @@
 
         {#fragment id="fragment_album_list"}
         {#if albums.empty}
-        <p style="color:#888;font-size:.82rem;">No albums found.</p>
         {#else}
         <div class="table-responsive">
-            <table class="table table-dark align-middle mb-0" style="border-color:#2a2a2a;font-size:.85rem;">
+            <table class="table table-dark table-hover align-middle mb-0" style="border-color:#2a2a2a;font-size:.85rem;">
                 <thead>
                     <tr style="color:#888;font-size:.75rem;border-color:#2a2a2a;">
                         <th style="width:44px;border-color:#2a2a2a;"></th>
@@ -147,7 +151,6 @@
 
         {#fragment id="fragment_track_list"}
         {#if tracks.empty}
-        <p style="color:#888;font-size:.78rem;margin:4px 0 0 0;">No tracks found.</p>
         {#else}
         <table class="table table-dark align-middle mb-0" style="border-color:#1a1a1a;font-size:.8rem;">
             <thead>

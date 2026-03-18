@@ -22,11 +22,18 @@
                 <tbody>
                     {#for row in group.rows}
                     <tr style="border-color:#333;">
-                        <td style="border-color:#333;color:#fff;font-size:.9rem;">{row.playlistName}</td>
+                        <td style="border-color:#333;color:#fff;font-size:.9rem;">
+                            {#if row.check.violations.isEmpty()}
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#1db954" viewBox="0 0 16 16" style="vertical-align:middle;margin-right:4px;"><use href="#icon-check-circle"/></svg>
+                            {#else}
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#dc3545" viewBox="0 0 16 16" style="vertical-align:middle;margin-right:4px;"><use href="#icon-x-circle"/></svg>
+                            {/if}
+                            {row.playlistName}
+                        </td>
                         <td style="border-color:#333;color:#888;font-size:.82rem;">{row.checkDateFormatted}</td>
                         <td style="border-color:#333;color:#888;font-size:.82rem;">
                             {#if row.check.violations.isEmpty()}
-                            <span style="color:var(--spotify-green);">none</span>
+                            -
                             {#else}
                             <ul class="list-unstyled mb-0">
                                 {#for violation in row.check.violations}

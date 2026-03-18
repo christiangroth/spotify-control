@@ -102,7 +102,8 @@ class CatalogBrowserAdapter(
             val totalSeconds = durationMs / MS_PER_SECOND
             val hours = totalSeconds / SECONDS_PER_HOUR
             val minutes = (totalSeconds % SECONDS_PER_HOUR) / SECONDS_PER_MINUTE
-            return "%d:%02d".format(hours, minutes)
+            val seconds = totalSeconds % SECONDS_PER_MINUTE
+            return "%02d:%02d:%02d".format(hours, minutes, seconds)
         }
 
         private fun formatDurationMinSec(durationMs: Long): String {
