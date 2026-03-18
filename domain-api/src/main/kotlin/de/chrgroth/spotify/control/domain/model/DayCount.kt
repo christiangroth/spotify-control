@@ -7,4 +7,6 @@ data class DayCount(
     val count: Long,
     val heightPercent: Int,
     val dateLabel: String,
-)
+) {
+    val countFormatted: String get() = count.formatted()
+}

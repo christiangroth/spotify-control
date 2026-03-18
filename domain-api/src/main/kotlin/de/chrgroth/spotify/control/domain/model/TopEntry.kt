@@ -4,4 +4,6 @@ data class TopEntry(
     val name: String,
     val totalMinutes: Long,
     val imageUrl: String? = null,
-)
+) {
+    val totalMinutesFormatted: String get() = totalMinutes.formatted()
+}

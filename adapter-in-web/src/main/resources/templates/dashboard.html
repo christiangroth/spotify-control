@@ -5,94 +5,86 @@
         <h1 class="mb-4 fs-4 fw-semibold" data-testid="welcome-message">Hej {displayName}!</h1>
 
         <div id="stats-section">
-            <div id="snippet-catalog-stats" class="row g-3 mb-4">
-                {#fragment id="snippet_catalog_stats"}
-                <div class="col-6 col-sm-3">
-                    <a href="/catalog" class="text-decoration-none">
-                        <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
-                            <div class="card-body">
-                                <p class="card-subtitle mb-1" style="color:#888;font-size:.8rem;">Artists</p>
-                                <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.catalogStats.artistCount}</p>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-6 col-sm-3">
-                    <a href="/catalog" class="text-decoration-none">
-                        <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
-                            <div class="card-body">
-                                <p class="card-subtitle mb-1" style="color:#888;font-size:.8rem;">Albums</p>
-                                <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.catalogStats.albumCount}</p>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-6 col-sm-3">
-                    <a href="/catalog" class="text-decoration-none">
-                        <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
-                            <div class="card-body">
-                                <p class="card-subtitle mb-1" style="color:#888;font-size:.8rem;">Tracks</p>
-                                <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.catalogStats.trackCount}</p>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                {/fragment}
-            </div>
-
             <div class="row g-3 mb-4">
-                <div id="snippet-playlist-checks" class="col-6 col-sm-3">
-                    {#fragment id="snippet_playlist_checks"}
-                    <a href="/playlist-checks" class="text-decoration-none" data-testid="playlist-checks-link" aria-label="View playlist checks">
-                    <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
-                        <div class="card-body">
-                            <p class="card-subtitle mb-1" style="color:#888;font-size:.8rem;">Playlist checks</p>
-                            {#if stats.playlistCheckStats.allSucceeded}
-                            <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);" data-testid="playlist-checks-count">{stats.playlistCheckStats.succeededChecks} / {stats.playlistCheckStats.totalChecks}</p>
-                            {#else}
-                            <p class="card-text fs-3 fw-bold mb-0" style="color:#dc3545;" data-testid="playlist-checks-count">{stats.playlistCheckStats.succeededChecks} / {stats.playlistCheckStats.totalChecks}</p>
-                            {/if}
-                        </div>
-                    </div>
-                    </a>
-                    {/fragment}
-                </div>
-                <div id="snippet-playlist-metadata" class="col-6 col-sm-3">
-                    {#fragment id="snippet_playlist_metadata"}
-                    <a href="/settings/playlist" class="text-decoration-none" data-testid="playlist-settings-link" aria-label="View playlist settings">
-                    <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
-                        <div class="card-body">
-                            <p class="card-subtitle mb-1" style="color:#888;font-size:.8rem;">Playlists synced</p>
-                            <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.syncedPlaylists} / {stats.totalPlaylists}</p>
-                        </div>
-                    </div>
-                    </a>
-                    {/fragment}
-                </div>
-                <div id="snippet-playback-data" class="col-12 col-sm-6 col-lg-6">
-                    {#fragment id="snippet_playback_data"}
-                    <div class="row g-3">
-                        <div class="col-12 col-sm-6">
-                            <a href="/settings/playback" class="text-decoration-none">
+                <div class="col-12 col-sm-6">
+                    <div class="row g-3 h-100">
+                        <div id="snippet-playlist-metadata" class="col-6">
+                            {#fragment id="snippet_playlist_metadata"}
+                            <a href="/settings/playlist" class="text-decoration-none" data-testid="playlist-settings-link" aria-label="View playlist settings">
                             <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
                                 <div class="card-body">
-                                    <p class="card-subtitle mb-1" style="color:#888;font-size:.8rem;">Total Playback Events</p>
-                                    <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.totalPlaybackEvents}</p>
+                                    <p class="card-subtitle mb-1" style="color:#888;font-size:.8rem;">Playlists synced</p>
+                                    <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.syncedPlaylistsFormatted} / {stats.totalPlaylistsFormatted}</p>
                                 </div>
                             </div>
                             </a>
+                            {/fragment}
                         </div>
-                        <div class="col-12 col-sm-6">
-                            <a href="/settings/playback" class="text-decoration-none">
+                        <div id="snippet-playlist-checks" class="col-6">
+                            {#fragment id="snippet_playlist_checks"}
+                            <a href="/playlist-checks" class="text-decoration-none" data-testid="playlist-checks-link" aria-label="View playlist checks">
                             <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
                                 <div class="card-body">
-                                    <p class="card-subtitle mb-1" style="color:#888;font-size:.8rem;">Playback Events (Last 30 Days)</p>
-                                    <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.playbackEventsLast30Days}</p>
+                                    <p class="card-subtitle mb-1" style="color:#888;font-size:.8rem;">Playlist checks</p>
+                                    {#if stats.playlistCheckStats.allSucceeded}
+                                    <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);" data-testid="playlist-checks-count">{stats.playlistCheckStats.succeededChecksFormatted} / {stats.playlistCheckStats.totalChecksFormatted}</p>
+                                    {#else}
+                                    <p class="card-text fs-3 fw-bold mb-0" style="color:#dc3545;" data-testid="playlist-checks-count">{stats.playlistCheckStats.succeededChecksFormatted} / {stats.playlistCheckStats.totalChecksFormatted}</p>
+                                    {/if}
                                 </div>
                             </div>
                             </a>
+                            {/fragment}
+                        </div>
+                        <div id="snippet-playback-data" class="col-12">
+                            {#fragment id="snippet_playback_data"}
+                            <div class="row g-3">
+                                <div class="col-6">
+                                    <a href="/settings/playback" class="text-decoration-none">
+                                    <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                                        <div class="card-body">
+                                            <p class="card-subtitle mb-1" style="color:#888;font-size:.8rem;">Playback Events (Last 30 Days)</p>
+                                            <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.playbackEventsLast30DaysFormatted}</p>
+                                        </div>
+                                    </div>
+                                    </a>
+                                </div>
+                                <div class="col-6">
+                                    <a href="/settings/playback" class="text-decoration-none">
+                                    <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                                        <div class="card-body">
+                                            <p class="card-subtitle mb-1" style="color:#888;font-size:.8rem;">Total Playback Events</p>
+                                            <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.totalPlaybackEventsFormatted}</p>
+                                        </div>
+                                    </div>
+                                    </a>
+                                </div>
+                            </div>
+                            {/fragment}
                         </div>
                     </div>
+                </div>
+                <div id="snippet-catalog-stats" class="col-12 col-sm-6">
+                    {#fragment id="snippet_catalog_stats"}
+                    <a href="/catalog" class="text-decoration-none h-100 d-block" aria-label="Catalog statistics">
+                        <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                            <div class="card-body">
+                                <p class="card-subtitle mb-3" style="color:#888;font-size:.8rem;">Catalog</p>
+                                <div class="mb-3">
+                                    <p class="card-subtitle mb-1" style="color:#888;font-size:.75rem;">Artists</p>
+                                    <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.catalogStats.artistCountFormatted}</p>
+                                </div>
+                                <div class="mb-3">
+                                    <p class="card-subtitle mb-1" style="color:#888;font-size:.75rem;">Albums</p>
+                                    <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.catalogStats.albumCountFormatted}</p>
+                                </div>
+                                <div>
+                                    <p class="card-subtitle mb-1" style="color:#888;font-size:.75rem;">Tracks</p>
+                                    <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.catalogStats.trackCountFormatted}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
                     {/fragment}
                 </div>
             </div>
@@ -105,7 +97,7 @@
                         <div class="d-flex align-items-end" style="height:80px;gap:2px;" data-testid="histogram">
                             {#for entry in stats.playbackEventsPerDay}
                             <div style="height:{entry.heightPercent}%;min-height:2px;flex:1;min-width:6px;background-color:var(--spotify-green);border-radius:2px 2px 0 0;cursor:default;"
-                                 title="{entry.count} events"
+                                 title="{entry.countFormatted} events"
                                  onmouseover="this.style.opacity='0.7'"
                                  onmouseout="this.style.opacity='1'"></div>
                             {/for}
@@ -160,7 +152,7 @@
                         <div class="card-body">
                             <p class="card-subtitle mb-3" style="color:#888;font-size:.8rem;">Listening Stats (Last 30 Days)</p>
                             <p class="mb-3" style="color:#fff;font-size:.85rem;" data-testid="listened-minutes">
-                                <span style="color:var(--spotify-green);font-weight:600;">{stats.listeningStats.listenedMinutesLast30Days}</span>
+                                <span style="color:var(--spotify-green);font-weight:600;">{stats.listeningStats.listenedMinutesLast30DaysFormatted}</span>
                                 <span style="color:#888;"> minutes listened</span>
                             </p>
                             <div class="mb-3">
@@ -182,7 +174,7 @@
                                         {/if}
                                         <div style="overflow:hidden;flex:1;">
                                             <div class="text-truncate" style="color:#fff;font-size:.82rem;">{entry.name}</div>
-                                            <div style="color:#888;font-size:.75rem;white-space:nowrap;">{entry.totalMinutes} min</div>
+                                            <div style="color:#888;font-size:.75rem;white-space:nowrap;">{entry.totalMinutesFormatted} min</div>
                                         </div>
                                     </li>
                                     {/for}
@@ -206,7 +198,7 @@
                                         {/if}
                                         <div style="overflow:hidden;flex:1;">
                                             <div class="text-truncate" style="color:#fff;font-size:.82rem;">{entry.name}</div>
-                                            <div style="color:#888;font-size:.75rem;white-space:nowrap;">{entry.totalMinutes} min</div>
+                                            <div style="color:#888;font-size:.75rem;white-space:nowrap;">{entry.totalMinutesFormatted} min</div>
                                         </div>
                                     </li>
                                     {/for}

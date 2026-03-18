@@ -7,4 +7,6 @@ data class AlbumBrowseItem(
     val releaseDate: String?,
     val trackCount: Int,
     val durationFormatted: String,
-)
+) {
+    val trackCountFormatted: String get() = trackCount.formatted()
+}
