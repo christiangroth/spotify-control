@@ -8,6 +8,7 @@ import io.mockk.mockk
 import io.quarkus.runtime.ShutdownEvent
 import io.quarkus.runtime.StartupEvent
 import org.junit.jupiter.api.Test
+import java.util.Optional
 
 class SlackNotificationAdapterTests {
 
@@ -19,7 +20,7 @@ class SlackNotificationAdapterTests {
     }
 
     private fun adapter(
-        webhookUrl: String = "",
+        webhookUrl: Optional<String> = Optional.empty(),
         username: String = "SpCtl",
         iconEmoji: String = ":robot_face:",
         startupEnabled: Boolean = false,
@@ -40,12 +41,12 @@ class SlackNotificationAdapterTests {
 
     @Test
     fun `adapter logs on construction when webhook url is blank`() {
-        adapter(webhookUrl = "")
+        adapter(webhookUrl = Optional.empty())
     }
 
     @Test
     fun `adapter logs on construction when webhook url is set`() {
-        adapter(webhookUrl = "https://hooks.slack.com/test")
+        adapter(webhookUrl = Optional.of("https://hooks.slack.com/test"))
     }
 
     @Test
