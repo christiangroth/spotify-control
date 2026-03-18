@@ -1,7 +1,5 @@
 package de.chrgroth.spotify.control.domain.model
 
-import java.util.Locale
-
 data class ListeningStats(
     val listenedMinutesLast30Days: Long,
     val topTracksLast30Days: List<TopEntry>,
@@ -9,5 +7,3 @@ data class ListeningStats(
 ) {
     val listenedMinutesLast30DaysFormatted: String get() = listenedMinutesLast30Days.formatted()
 }
-
-private fun Long.formatted(): String = String.format(Locale.US, "%,d", this).replace(",", ".")
