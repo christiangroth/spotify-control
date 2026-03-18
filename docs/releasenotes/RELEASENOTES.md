@@ -1,3 +1,12 @@
+# 0.72.1 (2026.03.18)
+
+## Bugfixes / Chore
+* Track duration is now shown for recently played tracks on the dashboard.
+
+
+
+---
+
 # 0.72.0 (2026.03.18)
 
 ## New Features
