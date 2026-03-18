@@ -137,6 +137,7 @@
                                     <div style="overflow:hidden;">
                                         <div class="fw-semibold text-truncate" style="color:#fff;font-size:.85rem;">{track.trackName}</div>
                                         <div class="text-truncate" style="color:#888;font-size:.75rem;">{#if track.albumName}{track.albumName}{#else}Unknown Album{/if} &bull; {#if track.artistNames.empty}Unknown Artist{#else}{track.artistNames.get(0)}{/if}</div>
+                                        <div style="color:#666;font-size:.72rem;">{track.playedAtFormatted}{#if track.durationFormatted} &bull; {track.durationFormatted}{/if}</div>
                                     </div>
                                 </li>
                                 {/for}

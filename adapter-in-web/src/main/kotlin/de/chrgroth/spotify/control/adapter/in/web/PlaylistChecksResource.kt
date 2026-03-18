@@ -51,7 +51,6 @@ class PlaylistChecksResource {
         val playlistNameById = playlistRepository.findByUserId(userId).associateBy({ it.spotifyPlaylistId }, { it.name })
         val checks = playlistCheckRepository.findAll()
         val groups = checks
-            .sortedWith(compareBy({ it.succeeded }, { it.playlistId }))
             .map { check ->
                 PlaylistCheckRow(
                     check = check,
@@ -59,7 +58,8 @@ class PlaylistChecksResource {
                 )
             }
             .groupBy { it.check.checkId.substringAfterLast(":") }
-            .map { (checkType, rows) -> PlaylistCheckGroup(PlaylistCheckRow.formatCheckName(checkType), rows) }
+            .map { (checkType, rows) -> PlaylistCheckGroup(PlaylistCheckRow.formatCheckName(checkType), rows.sortedBy { it.playlistName }) }
+            .sortedBy { it.checkName }
         return playlistChecksTemplate
             .data("displayName", user?.displayName ?: userId.value)
             .data("groups", groups)
