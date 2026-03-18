@@ -123,7 +123,7 @@ class RecentlyPlayedRepositoryTests {
     }
 
     @Test
-    fun `findSince returns null durationSeconds when not set`() {
+    fun `findSince returns zero durationSeconds when not set`() {
         val itemWithoutDuration = RecentlyPlayedItem(
             spotifyUserId = userId,
             trackId = "track-noduration",
@@ -138,6 +138,6 @@ class RecentlyPlayedRepositoryTests {
         val result = recentlyPlayedRepository.findSince(userId, null)
 
         val found = result.first { it.trackId == "track-noduration" }
-        assertThat(found.durationSeconds).isNull()
+        assertThat(found.durationSeconds).isEqualTo(0L)
     }
 }

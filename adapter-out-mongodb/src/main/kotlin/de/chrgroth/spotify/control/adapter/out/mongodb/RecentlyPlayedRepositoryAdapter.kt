@@ -73,7 +73,7 @@ class RecentlyPlayedRepositoryAdapter : RecentlyPlayedRepositoryPort {
                 artistIds = item.artistIds
                 artistNames = item.artistNames
                 playedAt = item.playedAt.toJavaInstant()
-                durationSeconds = item.durationSeconds
+                durationSeconds = item.durationSeconds ?: 0L
             }
         }
         logger.info { "Saving ${documents.size} recently played documents" }
