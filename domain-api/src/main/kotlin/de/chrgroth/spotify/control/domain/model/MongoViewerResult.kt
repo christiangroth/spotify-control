@@ -13,4 +13,6 @@ data class MongoViewerResult(
     val totalPages: Int,
     val hasPrev: Boolean,
     val hasNext: Boolean,
+    val prevPage: Int,
+    val nextPage: Int,
 )

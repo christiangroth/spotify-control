@@ -130,9 +130,9 @@
                 Page {result.page} of {result.totalPages}
             </div>
             <div class="d-flex gap-2">
-                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="goToPage({result.page - 1})"
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="goToPage({result.prevPage})"
                         {#if !result.hasPrev}disabled{/if}>← Prev</button>
-                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="goToPage({result.page + 1})"
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="goToPage({result.nextPage})"
                         {#if !result.hasNext}disabled{/if}>Next →</button>
             </div>
         </div>

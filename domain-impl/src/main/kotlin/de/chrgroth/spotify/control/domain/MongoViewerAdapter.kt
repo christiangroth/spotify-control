@@ -48,6 +48,8 @@ class MongoViewerAdapter(
         totalPages = 0,
         hasPrev = false,
         hasNext = false,
+        prevPage = 1,
+        nextPage = 1,
     )
 
     private fun buildResult(
@@ -84,6 +86,8 @@ class MongoViewerAdapter(
             totalPages = totalPages,
             hasPrev = effectivePage > 1,
             hasNext = effectivePage < totalPages,
+            prevPage = (effectivePage - 1).coerceAtLeast(1),
+            nextPage = (effectivePage + 1).coerceAtMost(if (totalPages > 0) totalPages else 1),
         )
     }
 
