@@ -1,3 +1,14 @@
+# 0.68.5 (2026.03.18)
+
+## Bugfixes / Chore
+* Menu bar health widgets now refresh correctly when the SSE connection reconnects after a drop.
+* The outbox status popup now shows a live countdown for paused partitions.
+* The resume button in the outbox status popup now works on all pages.
+
+
+
+---
+
 # 0.68.3 (2026.03.18)
 
 ## Bugfixes / Chore
