@@ -8,12 +8,17 @@
         <div id="status-banner" class="alert d-none mb-3" role="alert"></div>
 
         <div class="row g-3 mb-4">
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <h2 class="fs-5 fw-semibold mb-2">Catalog Re-sync</h2>
                 <p class="text-secondary small mb-3">Re-queue all artists and tracks for re-sync from Spotify. Use this to refresh catalog metadata (images, track details) that may have changed since the last sync.</p>
                 <button id="resync-catalog-btn" class="btn btn-spotify btn-sm">Re-sync Catalog</button>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-4">
+                <h2 class="fs-5 fw-semibold mb-2">Sync from Playback</h2>
+                <p class="text-secondary small mb-3">Find all tracks in your playback history that are missing from the catalog and enqueue their albums for sync. Use this after wiping the catalog to recover data not covered by playlists.</p>
+                <button id="sync-from-playback-btn" class="btn btn-spotify btn-sm">Sync from Playback</button>
+            </div>
+            <div class="col-md-4">
                 <h2 class="fs-5 fw-semibold mb-2">Wipe Catalog</h2>
                 <p class="text-secondary small mb-3">Delete all catalog data (artists, albums, tracks), remove catalog sync outbox events, set all playlists to sync inactive and delete all playlist checks. This operation cannot be undone.</p>
                 <button id="wipe-catalog-btn" class="btn btn-danger btn-sm">Wipe Catalog</button>
@@ -178,6 +183,10 @@
     <script>
         document.getElementById('resync-catalog-btn').addEventListener('click', function() {
             postWithButton(this, '/settings/playback/resync-catalog', 'Catalog re-sync enqueued successfully.', 'Re-sync failed');
+        });
+
+        document.getElementById('sync-from-playback-btn').addEventListener('click', function() {
+            postWithButton(this, '/catalog/sync-from-playback', 'Playback sync enqueued successfully.', 'Sync failed');
         });
 
         const wipeModal = document.getElementById('wipe-catalog-modal');

@@ -73,3 +73,8 @@ internal data class SpotifyAlbumResponse(
     val artists: List<SpotifyArtistRef> = emptyList(),
     val tracks: SpotifyAlbumTracksPage = SpotifyAlbumTracksPage(),
 )
+
+@Serializable
+internal data class SpotifyTracksResponse(
+    val tracks: List<SpotifyTrackResponse?> = emptyList(),
+)

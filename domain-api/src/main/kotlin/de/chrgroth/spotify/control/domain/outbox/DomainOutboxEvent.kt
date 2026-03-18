@@ -152,8 +152,23 @@ sealed interface DomainOutboxEvent : OutboxEvent {
     }
 
     /**
+     * Finds all tracks in playback history that are missing from the catalog,
+     * fetches their album info from Spotify, and enqueues SyncAlbumDetails for missing albums.
+     * Deduplication ensures only one instance is queued at a time.
+     */
+    data class SyncCatalogFromPlayback(val placeholder: String = "") : DomainOutboxEvent {
+        override val key = KEY
+        override fun deduplicationKey() = KEY
+        override val partition = DomainOutboxPartition.ToSpotify
+        override fun toPayload() = ""
+
+        companion object {
+            const val KEY = "SyncCatalogFromPlayback"
+        }
+    }
+
+    /**
      * Runs all playlist checks for a given user's playlist.
-     * Triggered when playlist data changes (snapshotId changed).
      * payload = "${userId.value}:$playlistId"
      */
     data class RunPlaylistChecks(val userId: UserId, val playlistId: String) : DomainOutboxEvent {
@@ -185,6 +200,7 @@ sealed interface DomainOutboxEvent : OutboxEvent {
             SyncArtistDetails.KEY, SyncArtistDetails.LEGACY_KEY -> SyncArtistDetails.fromPayload(payload)
             SyncAlbumDetails.KEY -> SyncAlbumDetails.fromPayload(payload)
             ResyncCatalog.KEY -> ResyncCatalog()
+            SyncCatalogFromPlayback.KEY -> SyncCatalogFromPlayback()
             RunPlaylistChecks.KEY -> RunPlaylistChecks.fromPayload(payload)
             else -> throw IllegalArgumentException("Unknown outbox event type: $key")
         }
