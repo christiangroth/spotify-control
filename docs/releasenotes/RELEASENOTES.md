@@ -1,3 +1,12 @@
+# 0.70.1 (2026.03.18)
+
+## Bugfixes / Chore
+* Restored default Spotify request throttle interval to 10s.
+
+
+
+---
+
 # 0.70.0 (2026.03.18)
 
 ## New Features
