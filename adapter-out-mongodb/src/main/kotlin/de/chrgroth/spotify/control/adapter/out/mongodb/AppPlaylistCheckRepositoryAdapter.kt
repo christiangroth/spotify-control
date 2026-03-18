@@ -25,6 +25,11 @@ class AppPlaylistCheckRepositoryAdapter : AppPlaylistCheckRepositoryPort {
         }
     }
 
+    override fun findByCheckId(checkId: String): AppPlaylistCheck? =
+        mongoQueryMetrics.timed("app_playlist_check.findByCheckId") {
+            appPlaylistCheckDocumentRepository.findById(checkId)?.toDomain()
+        }
+
     override fun findAll(): List<AppPlaylistCheck> =
         mongoQueryMetrics.timed("app_playlist_check.findAll") {
             appPlaylistCheckDocumentRepository.listAll().map { it.toDomain() }

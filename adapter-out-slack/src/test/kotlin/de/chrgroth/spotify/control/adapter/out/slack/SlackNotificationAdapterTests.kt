@@ -27,6 +27,8 @@ class SlackNotificationAdapterTests {
         stoppingEnabled: Boolean = false,
         partitionPausedEnabled: Boolean = false,
         partitionResumedEnabled: Boolean = false,
+        checkPassedEnabled: Boolean = false,
+        violationsChangedEnabled: Boolean = false,
     ) = SlackNotificationAdapter(
         repository = repository,
         version = "1.0.0-TEST",
@@ -37,6 +39,8 @@ class SlackNotificationAdapterTests {
         stoppingEnabled = stoppingEnabled,
         partitionPausedEnabled = partitionPausedEnabled,
         partitionResumedEnabled = partitionResumedEnabled,
+        checkPassedEnabled = checkPassedEnabled,
+        violationsChangedEnabled = violationsChangedEnabled,
     )
 
     @Test
@@ -101,6 +105,39 @@ class SlackNotificationAdapterTests {
     fun `partition resumed notification does not throw when no webhook url configured`() {
         adapter(partitionResumedEnabled = true).onPartitionActivated(testPartition)
     }
+
+    @Test
+    fun `check passed notification does not throw when disabled`() {
+        adapter().notifyCheckPassed(buildCheck())
+    }
+
+    @Test
+    fun `check passed notification does not throw when no webhook url configured`() {
+        adapter(checkPassedEnabled = true).notifyCheckPassed(buildCheck())
+    }
+
+    @Test
+    fun `violations changed notification does not throw when disabled`() {
+        adapter().notifyViolationsChanged(buildCheck(violations = listOf("Artist – Track")))
+    }
+
+    @Test
+    fun `violations changed notification does not throw when no webhook url configured`() {
+        adapter(violationsChangedEnabled = true).notifyViolationsChanged(buildCheck(violations = listOf("Artist – Track")))
+    }
+
+    private fun buildCheck(
+        playlistId: String = "playlist-1",
+        checkId: String = "playlist-1:duplicate-tracks",
+        succeeded: Boolean = true,
+        violations: List<String> = emptyList(),
+    ) = de.chrgroth.spotify.control.domain.model.AppPlaylistCheck(
+        checkId = checkId,
+        playlistId = playlistId,
+        lastCheck = kotlin.time.Clock.System.now(),
+        succeeded = succeeded,
+        violations = violations,
+    )
 
     private fun partitionInfo(statusReason: String) =
         OutboxPartitionInfo(key = testPartition.key, status = "PAUSED", statusReason = statusReason, pausedUntil = null)
