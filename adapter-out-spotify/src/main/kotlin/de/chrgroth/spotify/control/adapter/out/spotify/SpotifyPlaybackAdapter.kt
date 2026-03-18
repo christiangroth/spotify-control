@@ -124,11 +124,13 @@ class SpotifyPlaybackAdapter(
             artistIds = track.artists.map { it.id },
             artistNames = track.artists.map { it.name },
             playedAt = Instant.parse(playedAt),
+            durationSeconds = track.durationMs?.let { it / MS_PER_SECOND },
         )
     }
 
     companion object : KLogging() {
         private const val HTTP_NO_CONTENT = 204
+        private const val MS_PER_SECOND = 1_000L
     }
 }
 

@@ -58,6 +58,7 @@ class RecentlyPlayedRepositoryAdapter : RecentlyPlayedRepositoryPort {
                     artistIds = doc.artistIds,
                     artistNames = doc.artistNames,
                     playedAt = doc.playedAt.toKotlinInstant(),
+                    durationSeconds = doc.durationSeconds,
                 )
             }
         }
@@ -72,6 +73,7 @@ class RecentlyPlayedRepositoryAdapter : RecentlyPlayedRepositoryPort {
                 artistIds = item.artistIds
                 artistNames = item.artistNames
                 playedAt = item.playedAt.toJavaInstant()
+                durationSeconds = item.durationSeconds
             }
         }
         logger.info { "Saving ${documents.size} recently played documents" }

@@ -69,46 +69,45 @@ class DashboardAdapterTests {
     }
 
     @Test
-    fun `listening stats exclude items from Spotify recently played with no app-tracked duration`() {
+    fun `listening stats exclude items without tracked duration`() {
         setupCommonMocks()
 
-        // Items from Spotify recently played API have secondsPlayed = 0
-        val spotifyRecentlyPlayedItem = AppPlaybackItem(
+        // Items without a tracked duration have secondsPlayed = 0
+        val noDurationItem = AppPlaybackItem(
             userId = userId,
             playedAt = Instant.fromEpochSeconds(1000),
             trackId = "track-1",
             secondsPlayed = 0L,
         )
-        // Items from app partial play tracking have actual secondsPlayed > 0
+        // Items with a tracked duration have actual secondsPlayed > 0
         val appTrackedItem = AppPlaybackItem(
             userId = userId,
             playedAt = Instant.fromEpochSeconds(2000),
             trackId = "track-1",
             secondsPlayed = 180L, // 3 minutes
         )
-        every { appPlaybackRepository.findAllSince(userId, any()) } returns listOf(spotifyRecentlyPlayedItem, appTrackedItem)
+        every { appPlaybackRepository.findAllSince(userId, any()) } returns listOf(noDurationItem, appTrackedItem)
         every { appTrackRepository.findByTrackIds(setOf(TrackId("track-1"))) } returns listOf(track1)
         every { appArtistRepository.findByArtistIds(setOf("artist-1")) } returns listOf(artist1)
         every { appAlbumRepository.findByAlbumIds(any()) } returns emptyList()
 
         val stats = adapter.getStats(userId)
 
-        // Only the app-tracked item (180 seconds = 3 minutes) should count, not the Spotify recently played item
-        // The Spotify recently played item (0 seconds) must NOT fall back to the full track duration (300s = 5min)
+        // Only the item with duration (180 seconds = 3 minutes) should count
         assertThat(stats.listeningStats.listenedMinutesLast30Days).isEqualTo(3L)
     }
 
     @Test
-    fun `listening stats are zero when all playback items come from Spotify recently played with no app-tracked duration`() {
+    fun `listening stats are zero when all playback items have zero secondsPlayed`() {
         setupCommonMocks()
 
-        val spotifyOnlyItem = AppPlaybackItem(
+        val noDurationItem = AppPlaybackItem(
             userId = userId,
             playedAt = Instant.fromEpochSeconds(1000),
             trackId = "track-1",
             secondsPlayed = 0L,
         )
-        every { appPlaybackRepository.findAllSince(userId, any()) } returns listOf(spotifyOnlyItem)
+        every { appPlaybackRepository.findAllSince(userId, any()) } returns listOf(noDurationItem)
         every { appTrackRepository.findByTrackIds(any()) } returns listOf(track1)
         every { appArtistRepository.findByArtistIds(any()) } returns listOf(artist1)
 
@@ -120,7 +119,7 @@ class DashboardAdapterTests {
     }
 
     @Test
-    fun `listening stats aggregate only app-tracked play durations across multiple tracks`() {
+    fun `listening stats aggregate play durations across multiple tracks`() {
         setupCommonMocks()
 
         val track2 = AppTrack(
@@ -140,8 +139,39 @@ class DashboardAdapterTests {
 
         val stats = adapter.getStats(userId)
 
-        // track-1: 120s, track-2: 180s → total 300s = 5 minutes; Spotify recently played (0s) item ignored
+        // track-1: 120s, track-2: 180s → total 300s = 5 minutes; item without duration (0s) ignored
         assertThat(stats.listeningStats.listenedMinutesLast30Days).isEqualTo(5L)
         assertThat(stats.listeningStats.topTracksLast30Days).hasSize(2)
+    }
+
+    @Test
+    fun `recently played tracks include duration from secondsPlayed`() {
+        every { appPlaybackRepository.countAll(userId) } returns 1L
+        every { appPlaybackRepository.countSince(userId, any()) } returns 1L
+        every { appPlaybackRepository.countPerDaySince(userId, any()) } returns emptyList()
+        every { appPlaybackRepository.findAllSince(userId, any()) } returns emptyList()
+        every { playlistRepository.findByUserId(userId) } returns emptyList()
+        every { playlistCheckRepository.countAll() } returns 0L
+        every { playlistCheckRepository.countSucceeded() } returns 0L
+        every { catalogBrowser.getCatalogStats() } returns CatalogStats(0, 0, 0)
+        every { appAlbumRepository.findByAlbumIds(any()) } returns emptyList()
+        every { appTrackRepository.findByTrackIds(any()) } returns emptyList()
+        every { appArtistRepository.findByArtistIds(any()) } returns emptyList()
+
+        val playbackItem = AppPlaybackItem(
+            userId = userId,
+            playedAt = Instant.fromEpochSeconds(1000),
+            trackId = "track-1",
+            secondsPlayed = 210L,
+        )
+        every { appPlaybackRepository.findRecentlyPlayed(userId, any()) } returns listOf(playbackItem)
+        every { appTrackRepository.findByTrackIds(setOf(TrackId("track-1"))) } returns listOf(track1)
+        every { appArtistRepository.findByArtistIds(setOf("artist-1")) } returns listOf(artist1)
+
+        val stats = adapter.getStats(userId)
+
+        assertThat(stats.recentlyPlayedTracks).hasSize(1)
+        assertThat(stats.recentlyPlayedTracks[0].durationSeconds).isEqualTo(210L)
+        assertThat(stats.recentlyPlayedTracks[0].durationFormatted).isEqualTo("3:30")
     }
 }

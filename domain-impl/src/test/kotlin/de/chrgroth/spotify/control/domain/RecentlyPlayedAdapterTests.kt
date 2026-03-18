@@ -4,6 +4,7 @@ import arrow.core.left
 import arrow.core.right
 import de.chrgroth.spotify.control.domain.error.PlaybackError
 import de.chrgroth.spotify.control.domain.model.AccessToken
+import de.chrgroth.spotify.control.domain.model.AppPlaybackItem
 import de.chrgroth.spotify.control.domain.model.CurrentlyPlayingItem
 import de.chrgroth.spotify.control.domain.model.RecentlyPartialPlayedItem
 import de.chrgroth.spotify.control.domain.model.RecentlyPlayedItem
@@ -569,6 +570,48 @@ class RecentlyPlayedAdapterTests {
         adapter.fetchRecentlyPlayed(userId)
 
         verify(exactly = 0) { recentlyPlayedRepository.saveAll(any()) }
+    }
+
+    // --- appendPlaybackData tests ---
+
+    private fun setupAppendPlaybackData(
+        recentlyPlayed: List<RecentlyPlayedItem> = emptyList(),
+        partialPlayed: List<RecentlyPartialPlayedItem> = emptyList(),
+    ) {
+        every { appPlaybackRepository.findMostRecentPlayedAt(userId) } returns null
+        every { recentlyPlayedRepository.findSince(userId, null) } returns recentlyPlayed
+        every { recentlyPartialPlayedRepository.findSince(userId, null) } returns partialPlayed
+        every { appArtistRepository.findByPlaybackProcessingStatus(any()) } returns emptyList()
+        every { appPlaybackRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
+        every { appPlaybackRepository.saveAll(any()) } just runs
+        every { appArtistRepository.findByArtistIds(any()) } returns emptyList()
+        every { outboxPort.enqueue(any()) } just runs
+    }
+
+    @Test
+    fun `appendPlaybackData sets secondsPlayed from durationSeconds of recently played item`() {
+        val recentlyPlayedItem = item(1).copy(durationSeconds = 210L)
+        setupAppendPlaybackData(recentlyPlayed = listOf(recentlyPlayedItem))
+
+        adapter.appendPlaybackData(userId)
+
+        val savedSlot = slot<List<AppPlaybackItem>>()
+        verify { appPlaybackRepository.saveAll(capture(savedSlot)) }
+        assertThat(savedSlot.captured).hasSize(1)
+        assertThat(savedSlot.captured[0].secondsPlayed).isEqualTo(210L)
+    }
+
+    @Test
+    fun `appendPlaybackData sets secondsPlayed to zero when durationSeconds is null`() {
+        val recentlyPlayedItem = item(1).copy(durationSeconds = null)
+        setupAppendPlaybackData(recentlyPlayed = listOf(recentlyPlayedItem))
+
+        adapter.appendPlaybackData(userId)
+
+        val savedSlot = slot<List<AppPlaybackItem>>()
+        verify { appPlaybackRepository.saveAll(capture(savedSlot)) }
+        assertThat(savedSlot.captured).hasSize(1)
+        assertThat(savedSlot.captured[0].secondsPlayed).isEqualTo(0L)
     }
 }
 
