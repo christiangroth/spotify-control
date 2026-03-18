@@ -111,6 +111,7 @@ class DashboardAdapter(
                 playedAt = playback.playedAt,
                 albumName = album?.title ?: track?.albumName,
                 imageUrl = album?.imageLink,
+                durationSeconds = playback.secondsPlayed.takeIf { it > 0 },
             )
         }
     }
