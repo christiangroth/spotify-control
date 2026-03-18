@@ -15,11 +15,13 @@ function fadeUpdate(elementId, url, callback) {
         });
 }
 
-function connectSse(url, onMessage) {
+function connectSse(url, onMessage, onOpen) {
     var source;
     function connect() {
         source = new EventSource(url);
-        source.onopen = function () { };
+        source.onopen = function () {
+            if (onOpen) onOpen();
+        };
         source.onmessage = onMessage;
         source.onerror = function () {
             source.close();

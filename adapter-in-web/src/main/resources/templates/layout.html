@@ -151,6 +151,58 @@
             var outboxPopup = document.getElementById('navbar-outbox-popup');
             var outboxPopupContent = document.getElementById('navbar-outbox-popup-content');
             var playbackSvg = document.getElementById('navbar-playback-svg');
+            var outboxPopupCountdownInterval;
+            var TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
+
+            function formatCountdown(ms) {
+                if (ms <= 0) return 'now';
+                var totalSeconds = Math.floor(ms / 1000);
+                var hours = Math.floor(totalSeconds / 3600);
+                var minutes = Math.floor((totalSeconds % 3600) / 60);
+                var seconds = totalSeconds % 60;
+                return String(hours).padStart(2, '0') + ':'
+                    + String(minutes).padStart(2, '0') + ':'
+                    + String(seconds).padStart(2, '0');
+            }
+
+            function formatBlockedUntil(epochMs) {
+                var d = new Date(epochMs);
+                var hours = String(d.getHours()).padStart(2, '0');
+                var minutes = String(d.getMinutes()).padStart(2, '0');
+                var remaining = epochMs - Date.now();
+                if (remaining < TWENTY_FOUR_HOURS_MS) {
+                    return hours + ':' + minutes;
+                }
+                var day = String(d.getDate()).padStart(2, '0');
+                var month = String(d.getMonth() + 1).padStart(2, '0');
+                var year = d.getFullYear();
+                return day + '.' + month + '.' + year + ' ' + hours + ':' + minutes;
+            }
+
+            function updateNavbarOutboxPopupCountdown() {
+                if (!outboxPopupContent) return;
+                outboxPopupContent.querySelectorAll('[data-blocked-until]').forEach(function (row) {
+                    var blockedUntil = parseInt(row.dataset.blockedUntil, 10);
+                    var remaining = blockedUntil - Date.now();
+                    var cell = row.querySelector('.outbox-blocked-until');
+                    if (!cell) return;
+                    if (remaining <= 1000) {
+                        cell.textContent = 'now';
+                    } else if (remaining < TWENTY_FOUR_HOURS_MS) {
+                        cell.textContent = formatCountdown(remaining);
+                    } else {
+                        cell.textContent = formatBlockedUntil(blockedUntil);
+                    }
+                });
+            }
+
+            function startNavbarOutboxPopupCountdown() {
+                if (outboxPopupCountdownInterval) {
+                    clearInterval(outboxPopupCountdownInterval);
+                }
+                updateNavbarOutboxPopupCountdown();
+                outboxPopupCountdownInterval = setInterval(updateNavbarOutboxPopupCountdown, 500);
+            }
 
             function updateNavbarOutboxStatus() {
                 fetch('/health/snippets/navbar-outbox-status')
@@ -174,19 +226,29 @@
                 fetch('/health/snippets/outbox-partitions')
                     .then(function (r) { return r.text(); })
                     .then(function (html) {
-                        if (outboxPopupContent) outboxPopupContent.innerHTML = html;
+                        if (outboxPopupContent) {
+                            outboxPopupContent.innerHTML = html;
+                            startNavbarOutboxPopupCountdown();
+                        }
                     })
                     .catch(function () {});
             }
+
+            function resumeOutboxPartition(partitionKey) {
+                fetch('/health/outbox-partitions/' + encodeURIComponent(partitionKey) + '/activate', { method: 'POST' })
+                    .then(function () {
+                        updateNavbarOutboxStatus();
+                        refreshOutboxPopupContent();
+                    })
+                    .catch(function (err) { console.error('Failed to resume partition', err); });
+            }
+            window.resumeOutboxPartition = window.resumeOutboxPartition || resumeOutboxPartition;
 
             if (outboxWrapper && outboxPopup) {
                 outboxWrapper.addEventListener('mouseenter', function () { outboxPopup.style.display = 'block'; });
                 outboxWrapper.addEventListener('mouseleave', function () { outboxPopup.style.display = 'none'; });
                 refreshOutboxPopupContent();
             }
-
-            updateNavbarOutboxStatus();
-            updateNavbarPlaybackStatus();
 
             connectSse('/health/events', function (event) {
                 if (event.data === 'refresh-outbox-partitions') {
@@ -195,6 +257,9 @@
                 } else if (event.data === 'refresh-playback-state') {
                     updateNavbarPlaybackStatus();
                 }
+            }, function () {
+                updateNavbarOutboxStatus();
+                updateNavbarPlaybackStatus();
             });
         })();
     </script>

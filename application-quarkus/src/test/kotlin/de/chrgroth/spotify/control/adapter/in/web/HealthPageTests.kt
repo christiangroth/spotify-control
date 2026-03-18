@@ -521,4 +521,28 @@ class HealthPageTests {
       .body(not(containsString("toggleOutboxDetail")))
       .body(not(containsString("display:none;border-color")))
   }
+
+  @Test
+  fun `health page navbar sse connection refreshes widgets on open`() {
+    given()
+      .`when`()
+      .get("/health")
+      .then()
+      .statusCode(200)
+      .body(containsString("connectSse('/health/events'"))
+      .body(containsString("updateNavbarOutboxStatus"))
+      .body(containsString("updateNavbarPlaybackStatus"))
+  }
+
+  @Test
+  fun `health page navbar popup shows blocked countdown for paused outbox partitions`() {
+    given()
+      .`when`()
+      .get("/health")
+      .then()
+      .statusCode(200)
+      .body(containsString("updateNavbarOutboxPopupCountdown"))
+      .body(containsString("startNavbarOutboxPopupCountdown"))
+      .body(containsString("outboxPopupCountdownInterval"))
+  }
 }
