@@ -36,6 +36,7 @@ class SpotifyRecentlyPlayedAdapterTests {
         assertThat(items[0].artistIds).containsExactly("artist-1")
         assertThat(items[0].artistNames).containsExactly("Artist One")
         assertThat(items[0].spotifyUserId).isEqualTo(UserId("test-user-a"))
+        assertThat(items[0].durationSeconds).isEqualTo(210L)
     }
 
     @Test

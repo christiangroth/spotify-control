@@ -28,6 +28,7 @@ class RecentlyPlayedRepositoryTests {
         artistIds = listOf("artist-id-$index"),
         artistNames = listOf("Artist $index"),
         playedAt = now - index.hours,
+        durationSeconds = (index * 180).toLong(),
     )
 
     @Test
@@ -108,5 +109,35 @@ class RecentlyPlayedRepositoryTests {
         val deleted = recentlyPlayedRepository.deleteNonTracks()
 
         assertThat(deleted).isEqualTo(0L)
+    }
+
+    @Test
+    fun `findSince persists and returns durationSeconds`() {
+        val itemWithDuration = item(1)
+        recentlyPlayedRepository.saveAll(listOf(itemWithDuration))
+
+        val result = recentlyPlayedRepository.findSince(userId, null)
+
+        assertThat(result).hasSize(1)
+        assertThat(result[0].durationSeconds).isEqualTo(itemWithDuration.durationSeconds)
+    }
+
+    @Test
+    fun `findSince returns zero durationSeconds when not set`() {
+        val itemWithoutDuration = RecentlyPlayedItem(
+            spotifyUserId = userId,
+            trackId = "track-noduration",
+            trackName = "Track No Duration",
+            artistIds = listOf("artist-id-1"),
+            artistNames = listOf("Artist 1"),
+            playedAt = now - 10.hours,
+            durationSeconds = null,
+        )
+        recentlyPlayedRepository.saveAll(listOf(itemWithoutDuration))
+
+        val result = recentlyPlayedRepository.findSince(userId, null)
+
+        val found = result.first { it.trackId == "track-noduration" }
+        assertThat(found.durationSeconds).isEqualTo(0L)
     }
 }
