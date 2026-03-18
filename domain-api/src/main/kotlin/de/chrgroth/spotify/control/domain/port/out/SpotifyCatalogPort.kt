@@ -10,4 +10,5 @@ import de.chrgroth.spotify.control.domain.model.UserId
 interface SpotifyCatalogPort {
     fun getArtist(userId: UserId, accessToken: AccessToken, artistId: String): Either<DomainError, AppArtist?>
     fun getAlbum(userId: UserId, accessToken: AccessToken, albumId: String): Either<DomainError, AlbumSyncResult>
+    fun getTracks(userId: UserId, accessToken: AccessToken, trackIds: List<String>): Either<DomainError, Map<String, String>>
 }

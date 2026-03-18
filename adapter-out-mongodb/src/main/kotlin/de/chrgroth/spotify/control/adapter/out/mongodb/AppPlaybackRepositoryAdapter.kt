@@ -147,5 +147,13 @@ class AppPlaybackRepositoryAdapter : AppPlaybackRepositoryPort {
                 }
         }
 
+    override fun findAllDistinctTrackIds(): Set<String> =
+        mongoQueryMetrics.timed("app_playback.findAllDistinctTrackIds") {
+            appPlaybackDocumentRepository.mongoCollection()
+                .distinct("trackId", String::class.java)
+                .toList()
+                .toSet()
+        }
+
     companion object : KLogging()
 }

@@ -16,4 +16,5 @@ interface AppPlaybackRepositoryPort {
     fun countPerDaySince(userId: UserId, since: Instant): List<Pair<LocalDate, Long>>
     fun findRecentlyPlayed(userId: UserId, limit: Int): List<AppPlaybackItem>
     fun findAllSince(userId: UserId, since: Instant): List<AppPlaybackItem>
+    fun findAllDistinctTrackIds(): Set<String>
 }

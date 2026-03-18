@@ -10,6 +10,7 @@ import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
 import de.chrgroth.spotify.control.domain.model.AppArtist
 import de.chrgroth.spotify.control.domain.model.AccessToken
+import de.chrgroth.spotify.control.domain.model.AlbumId
 import de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus
 import de.chrgroth.spotify.control.domain.model.ArtistId
 import de.chrgroth.spotify.control.domain.model.UserId
@@ -152,6 +153,39 @@ class CatalogAdapter(
         return Unit.right()
     }
 
+    override fun syncCatalogFromPlayback(): Either<DomainError, Unit> {
+        outboxPort.enqueue(DomainOutboxEvent.SyncCatalogFromPlayback())
+        return Unit.right()
+    }
+
+    private fun syncCatalogFromPlaybackData(): Either<DomainError, Unit> {
+        val missingTrackIds = appPlaybackRepository.findAllDistinctTrackIds() -
+            appTrackRepository.findAll().map { it.id.value }.toSet()
+        val userId = userRepository.findAll().firstOrNull()?.spotifyUserId
+
+        if (missingTrackIds.isEmpty() || userId == null) {
+            if (missingTrackIds.isEmpty()) logger.info { "No missing tracks found in playback data, catalog is up to date" }
+            else logger.warn { "No users available, skipping syncCatalogFromPlayback" }
+            return Unit.right()
+        }
+
+        logger.info { "Found ${missingTrackIds.size} missing track(s) from playback data, fetching album info" }
+        val accessToken = spotifyAccessToken.getValidAccessToken(userId)
+        val albumIds = mutableSetOf<String>()
+        for (batch in missingTrackIds.chunked(TRACK_BATCH_SIZE)) {
+            when (val result = spotifyCatalog.getTracks(userId, accessToken, batch)) {
+                is Either.Left -> return result.value.left()
+                is Either.Right -> albumIds.addAll(result.value.values)
+            }
+        }
+
+        val existingAlbumIds = appAlbumRepository.findByAlbumIds(albumIds.map { AlbumId(it) }.toSet()).map { it.id.value }.toSet()
+        val newAlbumIds = albumIds - existingAlbumIds
+        logger.info { "Enqueueing SyncAlbumDetails for ${newAlbumIds.size} new album(s) from playback data" }
+        newAlbumIds.forEach { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails(it)) }
+        return Unit.right()
+    }
+
     private fun syncAlbumDetails(albumId: String): Either<DomainError, Int> {
         val userId = userRepository.findAll().firstOrNull()?.spotifyUserId
         if (userId == null) {
@@ -199,6 +233,9 @@ class CatalogAdapter(
     override fun handle(event: DomainOutboxEvent.ResyncCatalog): OutboxTaskResult =
         handleOutboxTask("ResyncCatalog") { resyncCatalog() }
 
+    override fun handle(event: DomainOutboxEvent.SyncCatalogFromPlayback): OutboxTaskResult =
+        handleOutboxTask("SyncCatalogFromPlayback") { syncCatalogFromPlaybackData() }
+
     private fun handleOutboxTask(taskDescription: String, operation: () -> Either<DomainError, *>): OutboxTaskResult = try {
         when (val result = operation()) {
             is Either.Right -> OutboxTaskResult.Success
@@ -219,11 +256,13 @@ class CatalogAdapter(
     }
 
     companion object : KLogging() {
+        private const val TRACK_BATCH_SIZE = 50
         private val CATALOG_OUTBOX_EVENT_KEYS = listOf(
             DomainOutboxEvent.SyncArtistDetails.KEY,
             DomainOutboxEvent.SyncArtistDetails.LEGACY_KEY,
             DomainOutboxEvent.SyncAlbumDetails.KEY,
             DomainOutboxEvent.ResyncCatalog.KEY,
+            DomainOutboxEvent.SyncCatalogFromPlayback.KEY,
         )
     }
 }
