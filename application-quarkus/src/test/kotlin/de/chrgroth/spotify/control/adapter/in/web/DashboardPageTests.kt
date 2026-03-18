@@ -229,4 +229,41 @@ class DashboardPageTests {
       .body(containsString("/health/snippets/navbar-playback-status"))
       .body(containsString("navbar-outbox-popup"))
   }
+
+  @Test
+  fun `dashboard page navbar sse connection to health events refreshes widgets on open`() {
+    given()
+      .`when`()
+      .get("/dashboard")
+      .then()
+      .statusCode(200)
+      .body(containsString("connectSse('/health/events'"))
+      .body(containsString("refresh-outbox-partitions"))
+      .body(containsString("refresh-playback-state"))
+  }
+
+  @Test
+  fun `dashboard page navbar popup shows blocked countdown for paused outbox partitions`() {
+    given()
+      .`when`()
+      .get("/dashboard")
+      .then()
+      .statusCode(200)
+      .body(containsString("updateNavbarOutboxPopupCountdown"))
+      .body(containsString("startNavbarOutboxPopupCountdown"))
+      .body(containsString("outboxPopupCountdownInterval"))
+      .body(containsString("data-blocked-until"))
+      .body(containsString("outbox-blocked-until"))
+  }
+
+  @Test
+  fun `dashboard page navbar popup resume partition button is functional`() {
+    given()
+      .`when`()
+      .get("/dashboard")
+      .then()
+      .statusCode(200)
+      .body(containsString("resumeOutboxPartition"))
+      .body(containsString("window.resumeOutboxPartition"))
+  }
 }
