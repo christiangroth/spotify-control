@@ -6,6 +6,7 @@ import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.PlaylistCheckPort
 import de.chrgroth.spotify.control.domain.port.out.AppPlaylistCheckRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.DashboardRefreshPort
+import de.chrgroth.spotify.control.domain.port.out.PlaylistCheckNotificationPort
 import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Timer
@@ -20,6 +21,7 @@ class PlaylistCheckAdapter(
     private val playlistRepository: PlaylistRepositoryPort,
     private val playlistCheckRepository: AppPlaylistCheckRepositoryPort,
     private val dashboardRefresh: DashboardRefreshPort,
+    private val notification: PlaylistCheckNotificationPort,
     private val meterRegistry: MeterRegistry,
 ) : PlaylistCheckPort {
 
@@ -33,7 +35,9 @@ class PlaylistCheckAdapter(
         val duplicateTrackCheck = timedCheck(CHECK_DUPLICATE_TRACKS, event.playlistId) {
             runDuplicateTrackCheck(event.playlistId, playlist.tracks)
         }
+        val previousDuplicateTrackCheck = playlistCheckRepository.findByCheckId(duplicateTrackCheck.checkId)
         playlistCheckRepository.save(duplicateTrackCheck)
+        notifyIfChanged(previousDuplicateTrackCheck, duplicateTrackCheck)
 
         val status = if (duplicateTrackCheck.succeeded) "all passed" else "${duplicateTrackCheck.violations.size} violation(s)"
         logger.info { "Ran playlist checks for playlist ${event.playlistId} (user ${event.userId.value}): $status" }
@@ -42,6 +46,15 @@ class PlaylistCheckAdapter(
     } catch (e: Exception) {
         logger.error(e) { "Unexpected error in handle(RunPlaylistChecks) for playlist ${event.playlistId} (user ${event.userId.value})" }
         OutboxTaskResult.Failed("Unexpected error in playlist checks: ${e.message}", e)
+    }
+
+    private fun notifyIfChanged(previous: AppPlaylistCheck?, current: AppPlaylistCheck) {
+        if (previous == null) return
+        if (!previous.succeeded && current.succeeded) {
+            notification.notifyCheckPassed(current)
+        } else if (!previous.succeeded && !current.succeeded && previous.violations != current.violations) {
+            notification.notifyViolationsChanged(current)
+        }
     }
 
     private fun <T> timedCheck(checkId: String, playlistId: String, block: () -> T): T {
