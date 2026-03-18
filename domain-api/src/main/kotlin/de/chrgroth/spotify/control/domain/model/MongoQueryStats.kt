@@ -12,4 +12,7 @@ data class MongoQueryStats(
     val name: String,
     val executionCountLast24h: Long,
     val slowQueryCount: Long,
-)
+) {
+    val executionCountLast24hFormatted: String get() = executionCountLast24h.formatted()
+    val slowQueryCountFormatted: String get() = slowQueryCount.formatted()
+}

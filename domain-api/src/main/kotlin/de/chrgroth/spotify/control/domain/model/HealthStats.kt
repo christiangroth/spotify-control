@@ -13,4 +13,6 @@ data class HealthStats(
     val mongoCollectionSizeTotalKb: Long get() = mongoCollectionStats.sumOf { it.sizeKb }
     val outboxAllActive: Boolean get() = outboxPartitions.all { it.status == "ACTIVE" }
     val playbackActive: Boolean? get() = predicateStats.firstOrNull { it.name == "playbackActive" }?.active
+    val mongoCollectionDocumentTotalFormatted: String get() = mongoCollectionDocumentTotal.formatted()
+    val mongoCollectionSizeTotalKbFormatted: String get() = mongoCollectionSizeTotalKb.formatted()
 }

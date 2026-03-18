@@ -6,6 +6,8 @@ data class MongoCollectionStats(
     val size: Long,
 ) {
     val sizeKb: Long get() = size / BYTES_PER_KILOBYTE
+    val documentCountFormatted: String get() = documentCount.formatted()
+    val sizeKbFormatted: String get() = sizeKb.formatted()
 
     companion object {
         private const val BYTES_PER_KILOBYTE = 1024
