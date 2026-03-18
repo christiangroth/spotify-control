@@ -1,3 +1,12 @@
+# 0.71.0 (2026.03.18)
+
+## New Features
+* Added "Sync from Playback" button to the catalog page to enqueue album syncs for tracks found in playback history but missing from the catalog.
+
+
+
+---
+
 # 0.70.1 (2026.03.18)
 
 ## Bugfixes / Chore
