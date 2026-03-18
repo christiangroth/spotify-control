@@ -1,3 +1,13 @@
+# 0.73.0 (2026.03.18)
+
+## New Features
+* MongoDB Viewer: new page at /mongodb-viewer to browse MongoDB collections with field-level filters (string contains, ID equals/in/not in), sorting, and paginated results (10/25/50/100 per page).
+* Renamed MongoDB dropdown item to Atlas.
+
+
+
+---
+
 # 0.72.1 (2026.03.18)
 
 ## Bugfixes / Chore
