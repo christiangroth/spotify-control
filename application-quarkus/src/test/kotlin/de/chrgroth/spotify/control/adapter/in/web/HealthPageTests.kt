@@ -162,6 +162,11 @@ class HealthPageTests {
       .then()
       .statusCode(200)
       .body(containsString("TWENTY_FOUR_HOURS_MS"))
+    given()
+      .`when`()
+      .get("/sse-utils.js")
+      .then()
+      .statusCode(200)
       .body(containsString("day + '.' + month + '.' + year + ' ' + hours + ':' + minutes"))
   }
 
