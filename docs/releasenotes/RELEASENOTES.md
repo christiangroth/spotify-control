@@ -1,3 +1,12 @@
+# 0.68.3 (2026.03.18)
+
+## Bugfixes / Chore
+* Fixed Slack notifications not working due to missing beans.xml in the notification adapter module.
+
+
+
+---
+
 # 0.68.1 (2026.03.16)
 
 ## Bugfixes / Chore
