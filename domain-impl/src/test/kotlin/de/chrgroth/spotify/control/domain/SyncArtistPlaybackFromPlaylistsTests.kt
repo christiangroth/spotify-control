@@ -6,8 +6,10 @@ import de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.CatalogPort
 import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.AppAlbumRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppPlaybackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.SpotifyCatalogPort
 import de.chrgroth.spotify.control.domain.port.out.CurrentlyPlayingRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
@@ -36,6 +38,8 @@ class SyncArtistPlaybackFromPlaylistsTests {
     private val appPlaybackRepository: AppPlaybackRepositoryPort = mockk(relaxed = true)
     private val appArtistRepository: AppArtistRepositoryPort = mockk()
     private val appTrackRepository: AppTrackRepositoryPort = mockk(relaxed = true)
+    private val appAlbumRepository: AppAlbumRepositoryPort = mockk(relaxed = true)
+    private val spotifyCatalog: SpotifyCatalogPort = mockk(relaxed = true)
     private val outboxPort: OutboxPort = mockk(relaxed = true)
     private val dashboardRefresh: DashboardRefreshPort = mockk(relaxed = true)
     private val playbackState: PlaybackStatePort = mockk(relaxed = true)
@@ -52,6 +56,8 @@ class SyncArtistPlaybackFromPlaylistsTests {
         appPlaybackRepository,
         appArtistRepository,
         appTrackRepository,
+        appAlbumRepository,
+        spotifyCatalog,
         outboxPort,
         dashboardRefresh,
         playbackState,

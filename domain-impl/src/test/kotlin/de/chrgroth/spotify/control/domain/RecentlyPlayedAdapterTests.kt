@@ -4,6 +4,8 @@ import arrow.core.left
 import arrow.core.right
 import de.chrgroth.spotify.control.domain.error.PlaybackError
 import de.chrgroth.spotify.control.domain.model.AccessToken
+import de.chrgroth.spotify.control.domain.model.AlbumId
+import de.chrgroth.spotify.control.domain.model.AppAlbum
 import de.chrgroth.spotify.control.domain.model.AppPlaybackItem
 import de.chrgroth.spotify.control.domain.model.AppTrack
 import de.chrgroth.spotify.control.domain.model.ArtistId
@@ -15,8 +17,10 @@ import de.chrgroth.spotify.control.domain.model.User
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.AppAlbumRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppPlaybackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.SpotifyCatalogPort
 import de.chrgroth.spotify.control.domain.port.out.CurrentlyPlayingRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
@@ -53,6 +57,8 @@ class RecentlyPlayedAdapterTests {
     private val appPlaybackRepository: AppPlaybackRepositoryPort = mockk(relaxed = true)
     private val appArtistRepository: AppArtistRepositoryPort = mockk(relaxed = true)
     private val appTrackRepository: AppTrackRepositoryPort = mockk(relaxed = true)
+    private val appAlbumRepository: AppAlbumRepositoryPort = mockk(relaxed = true)
+    private val spotifyCatalog: SpotifyCatalogPort = mockk(relaxed = true)
     private val outboxPort: OutboxPort = mockk(relaxed = true)
     private val dashboardRefresh: DashboardRefreshPort = mockk(relaxed = true)
     private val playbackState: PlaybackStatePort = mockk(relaxed = true)
@@ -69,6 +75,8 @@ class RecentlyPlayedAdapterTests {
         appPlaybackRepository,
         appArtistRepository,
         appTrackRepository,
+        appAlbumRepository,
+        spotifyCatalog,
         outboxPort,
         dashboardRefresh,
         playbackState,
@@ -584,6 +592,8 @@ class RecentlyPlayedAdapterTests {
         recentlyPlayed: List<RecentlyPlayedItem> = emptyList(),
         partialPlayed: List<RecentlyPartialPlayedItem> = emptyList(),
         existingTrackIds: Set<TrackId> = emptySet(),
+        tracksToAlbumMap: Map<String, String> = emptyMap(),
+        existingAlbumIds: Set<String> = emptySet(),
     ) {
         every { appPlaybackRepository.findMostRecentPlayedAt(userId) } returns null
         every { recentlyPlayedRepository.findSince(userId, null) } returns recentlyPlayed
@@ -602,6 +612,17 @@ class RecentlyPlayedAdapterTests {
                     artistId = ArtistId("artist-${trackId.value}"),
                     lastSync = now,
                 )
+            }
+        }
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { spotifyCatalog.getTracks(userId, accessToken, any()) } answers {
+            val requestedIds = thirdArg<List<String>>()
+            tracksToAlbumMap.filterKeys { it in requestedIds }.right()
+        }
+        every { appAlbumRepository.findByAlbumIds(any()) } answers {
+            val requested = firstArg<Set<AlbumId>>()
+            existingAlbumIds.filter { AlbumId(it) in requested }.map { albumId ->
+                AppAlbum(id = AlbumId(albumId), lastSync = now)
             }
         }
     }
@@ -633,37 +654,74 @@ class RecentlyPlayedAdapterTests {
     }
 
     @Test
-    fun `appendPlaybackData enqueues SyncCatalogFromPlayback when track is missing from catalog`() {
+    fun `appendPlaybackData enqueues SyncAlbumDetails when track is missing from catalog`() {
         val recentlyPlayedItem = item(1)
-        setupAppendPlaybackData(recentlyPlayed = listOf(recentlyPlayedItem), existingTrackIds = emptySet())
-
-        adapter.appendPlaybackData(userId)
-
-        verify { outboxPort.enqueue(DomainOutboxEvent.SyncCatalogFromPlayback()) }
-    }
-
-    @Test
-    fun `appendPlaybackData does not enqueue SyncCatalogFromPlayback when all tracks are in catalog`() {
-        val recentlyPlayedItem = item(1)
-        setupAppendPlaybackData(recentlyPlayed = listOf(recentlyPlayedItem), existingTrackIds = setOf(TrackId("track-1")))
-
-        adapter.appendPlaybackData(userId)
-
-        verify(exactly = 0) { outboxPort.enqueue(DomainOutboxEvent.SyncCatalogFromPlayback()) }
-    }
-
-    @Test
-    fun `appendPlaybackData enqueues SyncCatalogFromPlayback when at least one track is missing from catalog`() {
-        val item1 = item(1)
-        val item2 = item(2)
         setupAppendPlaybackData(
-            recentlyPlayed = listOf(item1, item2),
+            recentlyPlayed = listOf(recentlyPlayedItem),
+            tracksToAlbumMap = mapOf("track-1" to "album-1"),
+        )
+
+        adapter.appendPlaybackData(userId)
+
+        verify { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails("album-1")) }
+    }
+
+    @Test
+    fun `appendPlaybackData does not enqueue SyncAlbumDetails when all tracks are in catalog`() {
+        val recentlyPlayedItem = item(1)
+        setupAppendPlaybackData(
+            recentlyPlayed = listOf(recentlyPlayedItem),
             existingTrackIds = setOf(TrackId("track-1")),
         )
 
         adapter.appendPlaybackData(userId)
 
-        verify { outboxPort.enqueue(DomainOutboxEvent.SyncCatalogFromPlayback()) }
+        verify(exactly = 0) { spotifyCatalog.getTracks(any(), any(), any()) }
+        verify(exactly = 0) { outboxPort.enqueue(match { it is DomainOutboxEvent.SyncAlbumDetails }) }
+    }
+
+    @Test
+    fun `appendPlaybackData enqueues SyncAlbumDetails when at least one track is missing from catalog`() {
+        val item1 = item(1)
+        val item2 = item(2)
+        setupAppendPlaybackData(
+            recentlyPlayed = listOf(item1, item2),
+            existingTrackIds = setOf(TrackId("track-1")),
+            tracksToAlbumMap = mapOf("track-2" to "album-2"),
+        )
+
+        adapter.appendPlaybackData(userId)
+
+        verify { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails("album-2")) }
+        verify(exactly = 0) { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails("album-1")) }
+    }
+
+    @Test
+    fun `appendPlaybackData does not enqueue SyncAlbumDetails when album already in catalog`() {
+        val recentlyPlayedItem = item(1)
+        setupAppendPlaybackData(
+            recentlyPlayed = listOf(recentlyPlayedItem),
+            tracksToAlbumMap = mapOf("track-1" to "album-1"),
+            existingAlbumIds = setOf("album-1"),
+        )
+
+        adapter.appendPlaybackData(userId)
+
+        verify(exactly = 0) { outboxPort.enqueue(match { it is DomainOutboxEvent.SyncAlbumDetails }) }
+    }
+
+    @Test
+    fun `appendPlaybackData enqueues SyncAlbumDetails for distinct albums across multiple missing tracks`() {
+        val item1 = item(1)
+        val item2 = item(2)
+        setupAppendPlaybackData(
+            recentlyPlayed = listOf(item1, item2),
+            tracksToAlbumMap = mapOf("track-1" to "album-shared", "track-2" to "album-shared"),
+        )
+
+        adapter.appendPlaybackData(userId)
+
+        verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails("album-shared")) }
     }
 }
 

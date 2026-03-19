@@ -2,11 +2,13 @@ package de.chrgroth.spotify.control.domain
 
 import arrow.core.Either
 import arrow.core.flatMap
+import arrow.core.left
 import arrow.core.right
 import de.chrgroth.outbox.OutboxTaskResult
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
 import de.chrgroth.spotify.control.domain.model.AppPlaybackItem
+import de.chrgroth.spotify.control.domain.model.AlbumId
 import de.chrgroth.spotify.control.domain.model.ArtistId
 import de.chrgroth.spotify.control.domain.model.TrackId
 import de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus
@@ -19,6 +21,7 @@ import de.chrgroth.spotify.control.domain.port.`in`.CatalogPort
 import de.chrgroth.spotify.control.domain.port.`in`.PlaybackPort
 import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppPlaybackRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.AppAlbumRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.CurrentlyPlayingRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.DashboardRefreshPort
@@ -28,6 +31,7 @@ import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.RecentlyPartialPlayedRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.RecentlyPlayedRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
+import de.chrgroth.spotify.control.domain.port.out.SpotifyCatalogPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyPlaybackPort
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
@@ -46,6 +50,8 @@ class PlaybackAdapter(
     private val appPlaybackRepository: AppPlaybackRepositoryPort,
     private val appArtistRepository: AppArtistRepositoryPort,
     private val appTrackRepository: AppTrackRepositoryPort,
+    private val appAlbumRepository: AppAlbumRepositoryPort,
+    private val spotifyCatalog: SpotifyCatalogPort,
     private val outboxPort: OutboxPort,
     private val dashboardRefresh: DashboardRefreshPort,
     private val playbackState: PlaybackStatePort,
@@ -193,13 +199,13 @@ class PlaybackAdapter(
         outboxPort.enqueue(DomainOutboxEvent.RebuildPlaybackData(userId))
     }
 
-    override fun rebuildPlaybackData(userId: UserId) {
+    override fun rebuildPlaybackData(userId: UserId): Either<DomainError, Unit> {
         logger.info { "Rebuilding playback data for user: ${userId.value}" }
         appPlaybackRepository.deleteAllByUserId(userId)
-        appendPlaybackData(userId)
+        return appendPlaybackData(userId)
     }
 
-    override fun appendPlaybackData(userId: UserId) {
+    override fun appendPlaybackData(userId: UserId): Either<DomainError, Unit> {
         logger.info { "Appending playback data for user: ${userId.value}" }
         val since = appPlaybackRepository.findMostRecentPlayedAt(userId)
         val recentlyPlayed = recentlyPlayedRepository.findSince(userId, since)
@@ -215,7 +221,7 @@ class PlaybackAdapter(
         val allPlaybackItems = buildPlaybackItems(filteredRecentlyPlayed, filteredPartialPlayed)
         if (allPlaybackItems.isEmpty()) {
             logger.info { "No new playback items to append for user: ${userId.value}" }
-            return
+            return Unit.right()
         }
 
         val existingPlayedAts = appPlaybackRepository.findExistingPlayedAts(
@@ -225,7 +231,7 @@ class PlaybackAdapter(
         val newPlaybackItems = allPlaybackItems.filter { it.playedAt !in existingPlayedAts }
         if (newPlaybackItems.isEmpty()) {
             logger.info { "All playback items already exist for user: ${userId.value}" }
-            return
+            return Unit.right()
         }
 
         logger.info { "Persisting ${newPlaybackItems.size} new app_playback items for user: ${userId.value}" }
@@ -238,10 +244,26 @@ class PlaybackAdapter(
 
         val newTrackIds = newPlaybackItems.map { TrackId(it.trackId) }.toSet()
         val existingTrackIds = appTrackRepository.findByTrackIds(newTrackIds).map { it.id }.toSet()
-        if (newTrackIds.any { it !in existingTrackIds }) {
-            logger.info { "Found track(s) missing from catalog for user: ${userId.value}, enqueueing SyncCatalogFromPlayback" }
-            outboxPort.enqueue(DomainOutboxEvent.SyncCatalogFromPlayback())
+        val missingTrackIds = (newTrackIds - existingTrackIds).map { it.value }
+        if (missingTrackIds.isNotEmpty()) {
+            logger.info { "Found ${missingTrackIds.size} missing track(s) in catalog for user: ${userId.value}, fetching album info" }
+            val accessToken = spotifyAccessToken.getValidAccessToken(userId)
+            val albumIds = mutableSetOf<String>()
+            for (batch in missingTrackIds.chunked(TRACK_BATCH_SIZE)) {
+                when (val result = spotifyCatalog.getTracks(userId, accessToken, batch)) {
+                    is Either.Left -> return result.value.left()
+                    is Either.Right -> albumIds.addAll(result.value.values)
+                }
+            }
+            val existingAlbumIds = appAlbumRepository.findByAlbumIds(albumIds.map { AlbumId(it) }.toSet()).map { it.id.value }.toSet()
+            val newAlbumIds = albumIds - existingAlbumIds
+            if (newAlbumIds.isNotEmpty()) {
+                logger.info { "Enqueueing SyncAlbumDetails for ${newAlbumIds.size} album(s) from missing tracks for user: ${userId.value}" }
+                newAlbumIds.forEach { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails(it)) }
+            }
         }
+
+        return Unit.right()
     }
 
     private fun buildPlaybackItems(
@@ -335,16 +357,38 @@ class PlaybackAdapter(
     }
 
     override fun handle(event: DomainOutboxEvent.RebuildPlaybackData): OutboxTaskResult = try {
-        rebuildPlaybackData(event.userId)
-        OutboxTaskResult.Success
+        when (val result = rebuildPlaybackData(event.userId)) {
+            is Either.Right -> OutboxTaskResult.Success
+            is Either.Left -> when (val error = result.value) {
+                is SpotifyRateLimitError -> {
+                    logger.warn { "Rate limited on RebuildPlaybackData for user ${event.userId.value}, retry after ${error.retryAfter.seconds}s" }
+                    OutboxTaskResult.RateLimited(error.retryAfter)
+                }
+                else -> {
+                    logger.error { "Failed to rebuild playback data for user ${event.userId.value}: ${error.code}" }
+                    OutboxTaskResult.Failed("Failed to rebuild playback data: ${error.code}")
+                }
+            }
+        }
     } catch (e: Exception) {
         logger.error(e) { "Unexpected error in handle(RebuildPlaybackData) for user ${event.userId.value}" }
         OutboxTaskResult.Failed("Unexpected error in rebuild: ${e.message}", e)
     }
 
     override fun handle(event: DomainOutboxEvent.AppendPlaybackData): OutboxTaskResult = try {
-        appendPlaybackData(event.userId)
-        OutboxTaskResult.Success
+        when (val result = appendPlaybackData(event.userId)) {
+            is Either.Right -> OutboxTaskResult.Success
+            is Either.Left -> when (val error = result.value) {
+                is SpotifyRateLimitError -> {
+                    logger.warn { "Rate limited on AppendPlaybackData for user ${event.userId.value}, retry after ${error.retryAfter.seconds}s" }
+                    OutboxTaskResult.RateLimited(error.retryAfter)
+                }
+                else -> {
+                    logger.error { "Failed to append playback data for user ${event.userId.value}: ${error.code}" }
+                    OutboxTaskResult.Failed("Failed to append playback data: ${error.code}")
+                }
+            }
+        }
     } catch (e: Exception) {
         logger.error(e) { "Unexpected error in handle(AppendPlaybackData) for user ${event.userId.value}" }
         OutboxTaskResult.Failed("Unexpected error in append: ${e.message}", e)
@@ -352,5 +396,6 @@ class PlaybackAdapter(
 
     companion object : KLogging() {
         private const val MS_PER_SECOND = 1_000L
+        private const val TRACK_BATCH_SIZE = 50
     }
 }

@@ -12,8 +12,8 @@ interface PlaybackPort {
     fun enqueueFetchRecentlyPlayed()
     fun fetchRecentlyPlayed(userId: UserId): Either<DomainError, Unit>
     fun enqueueRebuildPlaybackData(userId: UserId)
-    fun rebuildPlaybackData(userId: UserId)
-    fun appendPlaybackData(userId: UserId)
+    fun rebuildPlaybackData(userId: UserId): Either<DomainError, Unit>
+    fun appendPlaybackData(userId: UserId): Either<DomainError, Unit>
     fun syncArtistPlaybackFromPlaylists(userId: UserId)
     fun handle(event: DomainOutboxEvent.FetchCurrentlyPlaying): OutboxTaskResult
     fun handle(event: DomainOutboxEvent.FetchRecentlyPlayed): OutboxTaskResult
