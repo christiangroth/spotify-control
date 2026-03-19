@@ -1,3 +1,12 @@
+# 0.73.1 (2026.03.19)
+
+## Bugfixes / Chore
+* Updated quarkus starters dependency to 0.6.1.
+
+
+
+---
+
 # 0.73.0 (2026.03.18)
 
 ## New Features
