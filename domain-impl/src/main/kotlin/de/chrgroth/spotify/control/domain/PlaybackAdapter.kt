@@ -8,6 +8,7 @@ import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
 import de.chrgroth.spotify.control.domain.model.AppPlaybackItem
 import de.chrgroth.spotify.control.domain.model.ArtistId
+import de.chrgroth.spotify.control.domain.model.TrackId
 import de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus
 import de.chrgroth.spotify.control.domain.model.CurrentlyPlayingItem
 import de.chrgroth.spotify.control.domain.model.RecentlyPartialPlayedItem
@@ -18,6 +19,7 @@ import de.chrgroth.spotify.control.domain.port.`in`.CatalogPort
 import de.chrgroth.spotify.control.domain.port.`in`.PlaybackPort
 import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppPlaybackRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.CurrentlyPlayingRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
@@ -43,6 +45,7 @@ class PlaybackAdapter(
     private val recentlyPartialPlayedRepository: RecentlyPartialPlayedRepositoryPort,
     private val appPlaybackRepository: AppPlaybackRepositoryPort,
     private val appArtistRepository: AppArtistRepositoryPort,
+    private val appTrackRepository: AppTrackRepositoryPort,
     private val outboxPort: OutboxPort,
     private val dashboardRefresh: DashboardRefreshPort,
     private val playbackState: PlaybackStatePort,
@@ -232,6 +235,13 @@ class PlaybackAdapter(
         val existingArtistIds = appArtistRepository.findByArtistIds(artists.toSet()).map { it.artistId }.toSet()
         artists.filter { it !in existingArtistIds }
             .forEach { artistId -> outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails(artistId, userId)) }
+
+        val newTrackIds = newPlaybackItems.map { TrackId(it.trackId) }.toSet()
+        val existingTrackIds = appTrackRepository.findByTrackIds(newTrackIds).map { it.id }.toSet()
+        if (newTrackIds.any { it !in existingTrackIds }) {
+            logger.info { "Found track(s) missing from catalog for user: ${userId.value}, enqueueing SyncCatalogFromPlayback" }
+            outboxPort.enqueue(DomainOutboxEvent.SyncCatalogFromPlayback())
+        }
     }
 
     private fun buildPlaybackItems(
