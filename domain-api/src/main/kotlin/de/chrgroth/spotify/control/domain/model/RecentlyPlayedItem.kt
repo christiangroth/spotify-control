@@ -17,6 +17,7 @@ data class RecentlyPlayedItem(
     val artistIds: List<String>,
     val artistNames: List<String>,
     val playedAt: Instant,
+    val albumId: String? = null,
     val albumName: String? = null,
     val imageUrl: String? = null,
     val durationSeconds: Long? = null,

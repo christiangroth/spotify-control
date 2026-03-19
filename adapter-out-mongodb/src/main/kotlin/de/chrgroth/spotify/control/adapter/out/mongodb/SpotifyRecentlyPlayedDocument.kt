@@ -17,4 +17,5 @@ class SpotifyRecentlyPlayedDocument {
   lateinit var artistNames: List<String>
   lateinit var playedAt: Instant
   var durationSeconds: Long = 0L
+  var albumId: String? = null
 }

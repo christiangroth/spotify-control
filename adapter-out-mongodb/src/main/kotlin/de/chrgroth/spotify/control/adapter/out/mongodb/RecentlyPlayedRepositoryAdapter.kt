@@ -58,6 +58,7 @@ class RecentlyPlayedRepositoryAdapter : RecentlyPlayedRepositoryPort {
                     artistIds = doc.artistIds,
                     artistNames = doc.artistNames,
                     playedAt = doc.playedAt.toKotlinInstant(),
+                    albumId = doc.albumId,
                     durationSeconds = doc.durationSeconds,
                 )
             }
@@ -73,6 +74,7 @@ class RecentlyPlayedRepositoryAdapter : RecentlyPlayedRepositoryPort {
                 artistIds = item.artistIds
                 artistNames = item.artistNames
                 playedAt = item.playedAt.toJavaInstant()
+                albumId = item.albumId
                 durationSeconds = item.durationSeconds ?: 0L
             }
         }

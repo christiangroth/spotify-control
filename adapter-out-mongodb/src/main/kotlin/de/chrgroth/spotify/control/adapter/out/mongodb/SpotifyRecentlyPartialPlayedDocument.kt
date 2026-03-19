@@ -17,4 +17,5 @@ class SpotifyRecentlyPartialPlayedDocument {
   lateinit var artistNames: List<String>
   lateinit var playedAt: Instant
   var playedSeconds: Long = 0L
+  var albumId: String? = null
 }

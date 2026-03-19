@@ -29,6 +29,7 @@ class CurrentlyPlayingRepositoryAdapter : CurrentlyPlayingRepositoryPort {
             durationMs = item.durationMs
             isPlaying = item.isPlaying
             observedAt = item.observedAt.toJavaInstant()
+            albumId = item.albumId
         }
         logger.info { "Saving currently playing document for user ${item.spotifyUserId.value}, track ${item.trackId}" }
         mongoQueryMetrics.timed("spotify_currently_playing.save") {
@@ -65,6 +66,7 @@ class CurrentlyPlayingRepositoryAdapter : CurrentlyPlayingRepositoryPort {
                         durationMs = doc.durationMs,
                         isPlaying = doc.isPlaying,
                         observedAt = doc.observedAt.toKotlinInstant(),
+                        albumId = doc.albumId,
                     )
                 }
         }
