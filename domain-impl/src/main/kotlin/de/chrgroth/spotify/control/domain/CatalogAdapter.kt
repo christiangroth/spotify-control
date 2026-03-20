@@ -46,6 +46,7 @@ class CatalogAdapter(
     private val playlistRepository: PlaylistRepositoryPort,
     private val playlistCheckRepository: AppPlaylistCheckRepositoryPort,
     private val dashboardRefresh: DashboardRefreshPort,
+    private val syncController: SyncController,
 ) : CatalogPort {
 
     // --- Artist Settings ---
@@ -182,9 +183,7 @@ class CatalogAdapter(
                     val artistIds = albumResult.tracks
                         .flatMap { t -> (listOf(t.artistId) + t.additionalArtistIds).map { it.value } }
                         .filter { it.isNotBlank() }.distinct()
-                    val existingArtistIds = appArtistRepository.findByArtistIds(artistIds.toSet()).map { it.artistId }.toSet()
-                    artistIds.filter { it !in existingArtistIds }
-                        .forEach { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails(it, userId)) }
+                    syncController.syncArtists(artistIds, userId)
                     val expectedTracks = albumResult.album.totalTracks
                     if (expectedTracks != null && albumResult.tracks.size < expectedTracks) {
                         logger.warn { "Album $albumId: synced ${albumResult.tracks.size} track(s) but album reports $expectedTracks total" }
