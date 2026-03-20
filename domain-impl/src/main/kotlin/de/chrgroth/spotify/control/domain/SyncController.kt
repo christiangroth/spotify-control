@@ -18,7 +18,6 @@ data class CatalogSyncRequest(
 )
 
 @ApplicationScoped
-@Suppress("Unused")
 class SyncController(
     private val appTrackRepository: AppTrackRepositoryPort,
     private val appAlbumRepository: AppAlbumRepositoryPort,
