@@ -46,18 +46,18 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
     }
 
     override fun findAll(): List<AppArtist> =
-        mongoQueryMetrics.timedWithFallback("app_artist.findAll", emptyList()) {
+        mongoQueryMetrics.timed("app_artist.findAll") {
             appArtistDocumentRepository.listAll().map { it.toDomain() }
         }
 
     override fun findByPlaybackProcessingStatus(status: ArtistPlaybackProcessingStatus): List<AppArtist> =
-        mongoQueryMetrics.timedWithFallback("app_artist.findByPlaybackProcessingStatus", emptyList()) {
+        mongoQueryMetrics.timed("app_artist.findByPlaybackProcessingStatus") {
             appArtistDocumentRepository.list("playbackProcessingStatus = ?1", status).map { it.toDomain() }
         }
 
     override fun findByArtistIds(artistIds: Set<String>): List<AppArtist> {
         if (artistIds.isEmpty()) return emptyList()
-        return mongoQueryMetrics.timedWithFallback("app_artist.findByArtistIds", emptyList()) {
+        return mongoQueryMetrics.timed("app_artist.findByArtistIds") {
             appArtistDocumentRepository.mongoCollection()
                 .find(Filters.`in`("_id", artistIds))
                 .toList()
@@ -66,7 +66,7 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
     }
 
     override fun findWithImageLinkAndBlankName(): List<AppArtist> =
-        mongoQueryMetrics.timedWithFallback("app_artist.findWithImageLinkAndBlankName", emptyList()) {
+        mongoQueryMetrics.timed("app_artist.findWithImageLinkAndBlankName") {
             appArtistDocumentRepository.mongoCollection()
                 .find(
                     Filters.and(

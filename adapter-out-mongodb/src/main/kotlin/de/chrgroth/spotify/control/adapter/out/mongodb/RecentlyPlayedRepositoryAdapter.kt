@@ -23,7 +23,7 @@ class RecentlyPlayedRepositoryAdapter : RecentlyPlayedRepositoryPort {
     override fun findExistingPlayedAts(spotifyUserId: UserId, playedAts: Set<Instant>): Set<Instant> {
         if (playedAts.isEmpty()) return emptySet()
         val javaPlayedAts = playedAts.map { it.toJavaInstant() }
-        return mongoQueryMetrics.timedWithFallback("spotify_recently_played.findExistingPlayedAts", emptySet()) {
+        return mongoQueryMetrics.timed("spotify_recently_played.findExistingPlayedAts") {
             recentlyPlayedDocumentRepository
                 .list("spotifyUserId = ?1 and playedAt in ?2", spotifyUserId.value, javaPlayedAts)
                 .map { it.playedAt.toKotlinInstant() }
@@ -32,7 +32,7 @@ class RecentlyPlayedRepositoryAdapter : RecentlyPlayedRepositoryPort {
     }
 
     override fun findMostRecentPlayedAt(spotifyUserId: UserId): Instant? =
-        mongoQueryMetrics.timedWithFallback("spotify_recently_played.findMostRecentPlayedAt", null) {
+        mongoQueryMetrics.timed("spotify_recently_played.findMostRecentPlayedAt") {
             recentlyPlayedDocumentRepository
                 .find("spotifyUserId = ?1", Sort.by("playedAt").descending(), spotifyUserId.value)
                 .firstResult()
@@ -40,7 +40,7 @@ class RecentlyPlayedRepositoryAdapter : RecentlyPlayedRepositoryPort {
         }
 
     override fun findSince(spotifyUserId: UserId, since: Instant?): List<RecentlyPlayedItem> =
-        mongoQueryMetrics.timedWithFallback("spotify_recently_played.findSince", emptyList()) {
+        mongoQueryMetrics.timed("spotify_recently_played.findSince") {
             val query = if (since != null) {
                 recentlyPlayedDocumentRepository.list(
                     "spotifyUserId = ?1 and playedAt > ?2",

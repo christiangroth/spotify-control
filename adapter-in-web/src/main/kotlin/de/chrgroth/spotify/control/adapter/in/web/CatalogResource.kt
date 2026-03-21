@@ -1,9 +1,11 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
 import de.chrgroth.spotify.control.domain.model.AlbumBrowseItem
+import de.chrgroth.spotify.control.domain.model.ArtistBrowseItem
 import de.chrgroth.spotify.control.domain.model.TrackBrowseItem
 import de.chrgroth.spotify.control.domain.port.`in`.CatalogBrowserPort
 import de.chrgroth.spotify.control.domain.port.`in`.CatalogPort
+import de.chrgroth.spotify.control.domain.port.out.MongoReadTimeoutPort
 import io.quarkus.qute.Location
 import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
@@ -35,11 +37,14 @@ class CatalogResource {
     @Inject
     private lateinit var catalog: CatalogPort
 
+    @Inject
+    private lateinit var readTimeout: MongoReadTimeoutPort
+
     @GET
     @Authenticated
     @Produces(MediaType.TEXT_HTML)
     fun catalog(@QueryParam("filter") filter: String?): TemplateInstance {
-        val artists = catalogBrowser.getArtists(filter)
+        val artists = readTimeout.timedWithFallback("catalogBrowser.getArtists", emptyList<ArtistBrowseItem>()) { catalogBrowser.getArtists(filter) }
         return catalogTemplate
             .data("artists", artists)
             .data("filter", filter ?: "")
@@ -52,7 +57,7 @@ class CatalogResource {
     @Authenticated
     @Produces(MediaType.TEXT_HTML)
     fun artistList(@QueryParam("filter") filter: String?): TemplateInstance {
-        val artists = catalogBrowser.getArtists(filter)
+        val artists = readTimeout.timedWithFallback("catalogBrowser.getArtists", emptyList<ArtistBrowseItem>()) { catalogBrowser.getArtists(filter) }
         return catalogTemplate.getFragment("fragment_artist_list")
             .data("artists", artists)
             .data("filter", filter ?: "")
@@ -63,7 +68,7 @@ class CatalogResource {
     @Authenticated
     @Produces(MediaType.TEXT_HTML)
     fun artistAlbums(@PathParam("artistId") artistId: String): TemplateInstance {
-        val albums = catalogBrowser.getArtistAlbums(artistId)
+        val albums = readTimeout.timedWithFallback("catalogBrowser.getArtistAlbums", emptyList<AlbumBrowseItem>()) { catalogBrowser.getArtistAlbums(artistId) }
         return catalogTemplate.getFragment("fragment_album_list")
             .data("albums", albums)
             .data("artistId", artistId)
@@ -74,7 +79,7 @@ class CatalogResource {
     @Authenticated
     @Produces(MediaType.TEXT_HTML)
     fun albumTracks(@PathParam("albumId") albumId: String): TemplateInstance {
-        val tracks = catalogBrowser.getAlbumTracks(albumId)
+        val tracks = readTimeout.timedWithFallback("catalogBrowser.getAlbumTracks", emptyList<TrackBrowseItem>()) { catalogBrowser.getAlbumTracks(albumId) }
         return catalogTemplate.getFragment("fragment_track_list")
             .data("tracks", tracks)
     }

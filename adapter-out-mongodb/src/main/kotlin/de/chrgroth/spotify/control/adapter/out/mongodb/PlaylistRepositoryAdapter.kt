@@ -28,7 +28,7 @@ class PlaylistRepositoryAdapter : PlaylistRepositoryPort {
     lateinit var mongoQueryMetrics: MongoQueryMetrics
 
     override fun findByUserId(userId: UserId): List<PlaylistInfo> =
-        mongoQueryMetrics.timedWithFallback("spotify_playlist_metadata.findByUserId", emptyList()) {
+        mongoQueryMetrics.timed("spotify_playlist_metadata.findByUserId") {
             playlistMetadataDocumentRepository
                 .list("spotifyUserId = ?1", userId.value)
                 .map { it.toDomain() }
@@ -48,7 +48,7 @@ class PlaylistRepositoryAdapter : PlaylistRepositoryPort {
     }
 
     override fun findByUserIdAndPlaylistId(userId: UserId, playlistId: String): Playlist? =
-        mongoQueryMetrics.timedWithFallback("spotify_playlist.findByUserIdAndPlaylistId", null) {
+        mongoQueryMetrics.timed("spotify_playlist.findByUserIdAndPlaylistId") {
             playlistDocumentRepository.findById("${userId.value}:$playlistId")?.toDomain()
         }
 
@@ -71,10 +71,10 @@ class PlaylistRepositoryAdapter : PlaylistRepositoryPort {
     }
 
     override fun findArtistIdsInActivePlaylists(): Set<String> {
-        val activeMetadata = mongoQueryMetrics.timedWithFallback("spotify_playlist_metadata.findAllActive", emptyList()) {
+        val activeMetadata = mongoQueryMetrics.timed("spotify_playlist_metadata.findAllActive") {
             playlistMetadataDocumentRepository.list("syncStatus = ?1", PlaylistSyncStatus.ACTIVE.name)
         }
-        return mongoQueryMetrics.timedWithFallback("spotify_playlist.findArtistIdsInActivePlaylists", emptySet()) {
+        return mongoQueryMetrics.timed("spotify_playlist.findArtistIdsInActivePlaylists") {
             activeMetadata
                 .mapNotNull { meta -> playlistDocumentRepository.findById("${meta.spotifyUserId}:${meta.spotifyPlaylistId}") }
                 .flatMap { playlist -> playlist.tracks.flatMap { it.artistIds } }

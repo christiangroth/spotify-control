@@ -1,6 +1,7 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
 import de.chrgroth.spotify.control.domain.model.MongoQueryStats
+import de.chrgroth.spotify.control.domain.port.out.MongoReadTimeoutPort
 import io.micrometer.core.instrument.Counter
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Timer
@@ -22,7 +23,7 @@ class MongoQueryMetrics(
     private val slowQueryThresholdMs: Long,
     @param:ConfigProperty(name = "app.mongodb.query-timeout-ms")
     private val queryTimeoutMs: Long,
-) {
+) : MongoReadTimeoutPort {
 
     private val timers = ConcurrentHashMap<String, Timer>()
     private val slowQueryCounters = ConcurrentHashMap<String, Counter>()
@@ -40,7 +41,7 @@ class MongoQueryMetrics(
         return result
     }
 
-    fun <T> timedWithFallback(operation: String, fallback: T, block: () -> T): T {
+    override fun <T> timedWithFallback(operation: String, fallback: T, block: () -> T): T {
         val startMs = System.currentTimeMillis()
         val future = executor.submit<T>(block)
         val result = try {

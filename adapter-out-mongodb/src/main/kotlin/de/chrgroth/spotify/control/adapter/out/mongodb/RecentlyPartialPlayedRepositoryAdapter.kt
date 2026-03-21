@@ -22,7 +22,7 @@ class RecentlyPartialPlayedRepositoryAdapter : RecentlyPartialPlayedRepositoryPo
     override fun findExistingPlayedAts(userId: UserId, playedAts: Set<Instant>): Set<Instant> {
         if (playedAts.isEmpty()) return emptySet()
         val javaPlayedAts = playedAts.map { it.toJavaInstant() }
-        return mongoQueryMetrics.timedWithFallback("recently_partial_played.findExistingPlayedAts", emptySet()) {
+        return mongoQueryMetrics.timed("recently_partial_played.findExistingPlayedAts") {
             recentlyPartialPlayedDocumentRepository
                 .list("spotifyUserId = ?1 and playedAt in ?2", userId.value, javaPlayedAts)
                 .map { it.playedAt.toKotlinInstant() }
@@ -31,7 +31,7 @@ class RecentlyPartialPlayedRepositoryAdapter : RecentlyPartialPlayedRepositoryPo
     }
 
     override fun findSince(userId: UserId, since: Instant?): List<RecentlyPartialPlayedItem> =
-        mongoQueryMetrics.timedWithFallback("recently_partial_played.findSince", emptyList()) {
+        mongoQueryMetrics.timed("recently_partial_played.findSince") {
             val query = if (since != null) {
                 recentlyPartialPlayedDocumentRepository.list(
                     "spotifyUserId = ?1 and playedAt > ?2",

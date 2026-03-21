@@ -55,12 +55,12 @@ class AppTrackRepositoryAdapter : AppTrackRepositoryPort {
     }
 
     override fun findAll(): List<AppTrack> =
-        mongoQueryMetrics.timedWithFallback("app_track.findAll", emptyList()) {
+        mongoQueryMetrics.timed("app_track.findAll") {
             appTrackDocumentRepository.listAll().map { it.toDomain() }
         }
 
     override fun findByTrackIds(trackIds: Set<TrackId>): List<AppTrack> {        if (trackIds.isEmpty()) return emptyList()
-        return mongoQueryMetrics.timedWithFallback("app_track.findByTrackIds", emptyList()) {
+        return mongoQueryMetrics.timed("app_track.findByTrackIds") {
             appTrackDocumentRepository.mongoCollection()
                 .find(Filters.`in`("_id", trackIds.map { it.value }))
                 .toList()
@@ -69,12 +69,12 @@ class AppTrackRepositoryAdapter : AppTrackRepositoryPort {
     }
 
     override fun findByArtistId(artistId: ArtistId): List<AppTrack> =
-        mongoQueryMetrics.timedWithFallback("app_track.findByArtistId", emptyList()) {
+        mongoQueryMetrics.timed("app_track.findByArtistId") {
             appTrackDocumentRepository.list("artistId = ?1", artistId.value).map { it.toDomain() }
         }
 
     override fun findByAlbumId(albumId: AlbumId): List<AppTrack> =
-        mongoQueryMetrics.timedWithFallback("app_track.findByAlbumId", emptyList()) {
+        mongoQueryMetrics.timed("app_track.findByAlbumId") {
             appTrackDocumentRepository.list("albumId = ?1", albumId.value).map { it.toDomain() }
         }
 

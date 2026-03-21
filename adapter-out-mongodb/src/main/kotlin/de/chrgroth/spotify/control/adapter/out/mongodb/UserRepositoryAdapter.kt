@@ -21,12 +21,12 @@ class UserRepositoryAdapter : UserRepositoryPort {
     lateinit var mongoQueryMetrics: MongoQueryMetrics
 
     override fun findById(spotifyUserId: UserId): User? =
-        mongoQueryMetrics.timedWithFallback("app_user.findById", null) {
+        mongoQueryMetrics.timed("app_user.findById") {
             userDocumentRepository.findById(spotifyUserId.value)?.toDomain()
         }
 
     override fun findAll(): List<User> =
-        mongoQueryMetrics.timedWithFallback("app_user.findAll", emptyList()) {
+        mongoQueryMetrics.timed("app_user.findAll") {
             userDocumentRepository.listAll().map { it.toDomain() }
         }
 

@@ -39,7 +39,7 @@ class CurrentlyPlayingRepositoryAdapter : CurrentlyPlayingRepositoryPort {
     override fun existsByUserAndTrackAndObservedMinute(item: CurrentlyPlayingItem): Boolean {
         val observedMinuteStart = item.observedAt.toJavaInstant().truncatedTo(java.time.temporal.ChronoUnit.MINUTES)
         val observedMinuteEnd = observedMinuteStart.plusSeconds(SECONDS_PER_MINUTE)
-        return mongoQueryMetrics.timedWithFallback("spotify_currently_playing.existsByUserAndTrackAndObservedMinute", false) {
+        return mongoQueryMetrics.timed("spotify_currently_playing.existsByUserAndTrackAndObservedMinute") {
             currentlyPlayingDocumentRepository.count(
                 "spotifyUserId = ?1 and trackId = ?2 and observedAt >= ?3 and observedAt < ?4",
                 item.spotifyUserId.value,
@@ -51,7 +51,7 @@ class CurrentlyPlayingRepositoryAdapter : CurrentlyPlayingRepositoryPort {
     }
 
     override fun findByUserId(userId: UserId): List<CurrentlyPlayingItem> =
-        mongoQueryMetrics.timedWithFallback("spotify_currently_playing.findByUserId", emptyList()) {
+        mongoQueryMetrics.timed("spotify_currently_playing.findByUserId") {
             currentlyPlayingDocumentRepository
                 .list("spotifyUserId = ?1", userId.value)
                 .map { doc ->

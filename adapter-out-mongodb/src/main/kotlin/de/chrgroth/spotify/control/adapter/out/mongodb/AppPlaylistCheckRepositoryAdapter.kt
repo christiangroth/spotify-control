@@ -26,22 +26,22 @@ class AppPlaylistCheckRepositoryAdapter : AppPlaylistCheckRepositoryPort {
     }
 
     override fun findByCheckId(checkId: String): AppPlaylistCheck? =
-        mongoQueryMetrics.timedWithFallback("app_playlist_check.findByCheckId", null) {
+        mongoQueryMetrics.timed("app_playlist_check.findByCheckId") {
             appPlaylistCheckDocumentRepository.findById(checkId)?.toDomain()
         }
 
     override fun findAll(): List<AppPlaylistCheck> =
-        mongoQueryMetrics.timedWithFallback("app_playlist_check.findAll", emptyList()) {
+        mongoQueryMetrics.timed("app_playlist_check.findAll") {
             appPlaylistCheckDocumentRepository.listAll().map { it.toDomain() }
         }
 
     override fun countAll(): Long =
-        mongoQueryMetrics.timedWithFallback("app_playlist_check.countAll", 0L) {
+        mongoQueryMetrics.timed("app_playlist_check.countAll") {
             appPlaylistCheckDocumentRepository.count()
         }
 
     override fun countSucceeded(): Long =
-        mongoQueryMetrics.timedWithFallback("app_playlist_check.countSucceeded", 0L) {
+        mongoQueryMetrics.timed("app_playlist_check.countSucceeded") {
             appPlaylistCheckDocumentRepository.count("succeeded = ?1", true)
         }
 
