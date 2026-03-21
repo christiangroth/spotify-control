@@ -4,7 +4,7 @@ import arrow.core.Either
 import arrow.core.flatMap
 import arrow.core.left
 import arrow.core.right
-import de.chrgroth.outbox.OutboxTaskResult
+import de.chrgroth.quarkus.outbox.domain.DispatchResult
 import de.chrgroth.spotify.control.domain.error.ArtistSettingsError
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
@@ -188,34 +188,34 @@ class CatalogAdapter(
 
     // --- Outbox Handlers ---
 
-    override fun handle(event: DomainOutboxEvent.SyncArtistDetails): OutboxTaskResult =
+    override fun handle(event: DomainOutboxEvent.SyncArtistDetails): DispatchResult =
         handleOutboxTask("SyncArtistDetails[artist=${event.artistId},user=${event.userId.value}]") {
             syncArtistDetails(event.artistId, event.userId)
         }
 
-    override fun handle(event: DomainOutboxEvent.SyncAlbumDetails): OutboxTaskResult =
+    override fun handle(event: DomainOutboxEvent.SyncAlbumDetails): DispatchResult =
         handleOutboxTask("SyncAlbumDetails[album=${event.albumId}]") { syncAlbumDetails(event.albumId) }
 
-    override fun handle(event: DomainOutboxEvent.ResyncCatalog): OutboxTaskResult =
+    override fun handle(event: DomainOutboxEvent.ResyncCatalog): DispatchResult =
         handleOutboxTask("ResyncCatalog") { resyncCatalog() }
 
-    private fun handleOutboxTask(taskDescription: String, operation: () -> Either<DomainError, *>): OutboxTaskResult = try {
+    private fun handleOutboxTask(taskDescription: String, operation: () -> Either<DomainError, *>): DispatchResult = try {
         when (val result = operation()) {
-            is Either.Right -> OutboxTaskResult.Success
+            is Either.Right -> DispatchResult.Success
             is Either.Left -> when (val error = result.value) {
                 is SpotifyRateLimitError -> {
                     logger.warn { "Rate limited on $taskDescription, retry after ${error.retryAfter.seconds}s" }
-                    OutboxTaskResult.RateLimited(error.retryAfter)
+                    DispatchResult.RateLimited(error.retryAfter)
                 }
                 else -> {
                     logger.error { "Failed $taskDescription: ${error.code}" }
-                    OutboxTaskResult.Failed("Failed $taskDescription: ${error.code}")
+                    DispatchResult.Failed("Failed $taskDescription: ${error.code}")
                 }
             }
         }
     } catch (e: Exception) {
         logger.error(e) { "Unexpected error in $taskDescription" }
-        OutboxTaskResult.Failed("Unexpected error in $taskDescription: ${e.message}", e)
+        DispatchResult.Failed("Unexpected error in $taskDescription: ${e.message}", e)
     }
 
     companion object : KLogging() {

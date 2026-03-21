@@ -1,6 +1,6 @@
 package de.chrgroth.spotify.control.domain
 
-import de.chrgroth.outbox.OutboxTaskResult
+import de.chrgroth.quarkus.outbox.domain.DispatchResult
 import arrow.core.left
 import arrow.core.right
 import de.chrgroth.spotify.control.domain.error.SyncError
@@ -229,7 +229,7 @@ class CatalogAdapterTests {
 
         val result = adapter.handle(DomainOutboxEvent.ResyncCatalog())
 
-        assertThat(result).isEqualTo(OutboxTaskResult.Success)
+        assertThat(result).isEqualTo(DispatchResult.Success)
     }
 
     @Test
@@ -240,7 +240,7 @@ class CatalogAdapterTests {
 
         val result = adapter.handle(DomainOutboxEvent.ResyncCatalog())
 
-        assertThat(result).isEqualTo(OutboxTaskResult.Success)
+        assertThat(result).isEqualTo(DispatchResult.Success)
     }
 
     // --- SyncAlbumDetails tests ---
@@ -251,7 +251,7 @@ class CatalogAdapterTests {
 
         val result = adapter.handle(DomainOutboxEvent.SyncAlbumDetails("album-1"))
 
-        assertThat(result).isEqualTo(OutboxTaskResult.Success)
+        assertThat(result).isEqualTo(DispatchResult.Success)
         verify(exactly = 0) { spotifyCatalog.getAlbum(any(), any(), any()) }
     }
 
@@ -266,7 +266,7 @@ class CatalogAdapterTests {
 
         val result = adapter.handle(DomainOutboxEvent.SyncAlbumDetails("album-1"))
 
-        assertThat(result).isEqualTo(OutboxTaskResult.Success)
+        assertThat(result).isEqualTo(DispatchResult.Success)
         verify { spotifyCatalog.getAlbum(userId, accessToken, "album-1") }
         verify { appTrackRepository.upsertAll(listOf(trackWithAlbum1, trackWithAlbum2)) }
         verify { appAlbumRepository.upsertAll(listOf(album1)) }
@@ -307,7 +307,7 @@ class CatalogAdapterTests {
 
         val result = adapter.handle(DomainOutboxEvent.SyncAlbumDetails("album-1"))
 
-        assertThat(result).isInstanceOf(OutboxTaskResult.Failed::class.java)
+        assertThat(result).isInstanceOf(DispatchResult.Failed::class.java)
         verify(exactly = 0) { appTrackRepository.upsertAll(any()) }
     }
 
@@ -320,7 +320,7 @@ class CatalogAdapterTests {
 
         val result = adapter.handle(DomainOutboxEvent.SyncAlbumDetails("album-1"))
 
-        assertThat(result).isInstanceOf(OutboxTaskResult.RateLimited::class.java)
+        assertThat(result).isInstanceOf(DispatchResult.RateLimited::class.java)
     }
 
     // --- wipeCatalog tests ---

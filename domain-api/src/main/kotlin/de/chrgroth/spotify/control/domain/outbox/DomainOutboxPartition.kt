@@ -1,8 +1,8 @@
 package de.chrgroth.spotify.control.domain.outbox
 
-import de.chrgroth.outbox.OutboxPartition
+import de.chrgroth.quarkus.outbox.domain.ApplicationOutboxPartition
 
-sealed interface DomainOutboxPartition : OutboxPartition {
+sealed interface DomainOutboxPartition : ApplicationOutboxPartition {
     data object ToSpotify : DomainOutboxPartition {
         override val key = "to-spotify"
     }

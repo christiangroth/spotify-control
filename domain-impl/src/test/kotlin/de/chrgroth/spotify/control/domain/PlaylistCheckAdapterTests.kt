@@ -1,6 +1,6 @@
 package de.chrgroth.spotify.control.domain
 
-import de.chrgroth.outbox.OutboxTaskResult
+import de.chrgroth.quarkus.outbox.domain.DispatchResult
 import de.chrgroth.spotify.control.domain.model.AppPlaylistCheck
 import de.chrgroth.spotify.control.domain.model.Playlist
 import de.chrgroth.spotify.control.domain.model.PlaylistTrack
@@ -69,7 +69,7 @@ class PlaylistCheckAdapterTests {
 
         val result = adapter.handle(event)
 
-        assertThat(result).isEqualTo(OutboxTaskResult.Success)
+        assertThat(result).isEqualTo(DispatchResult.Success)
         verify(exactly = 0) { playlistCheckRepository.findByCheckId(any()) }
         verify(exactly = 0) { notification.notifyCheckPassed(any()) }
         verify(exactly = 0) { notification.notifyViolationsChanged(any()) }
@@ -85,7 +85,7 @@ class PlaylistCheckAdapterTests {
 
         val result = adapter.handle(event)
 
-        assertThat(result).isEqualTo(OutboxTaskResult.Success)
+        assertThat(result).isEqualTo(DispatchResult.Success)
         verify(exactly = 1) { playlistCheckRepository.save(any()) }
         verify(exactly = 0) { notification.notifyCheckPassed(any()) }
         verify(exactly = 0) { notification.notifyViolationsChanged(any()) }
@@ -103,7 +103,7 @@ class PlaylistCheckAdapterTests {
 
         val result = adapter.handle(event)
 
-        assertThat(result).isEqualTo(OutboxTaskResult.Success)
+        assertThat(result).isEqualTo(DispatchResult.Success)
         verify(exactly = 1) { notification.notifyCheckPassed(any()) }
         verify(exactly = 0) { notification.notifyViolationsChanged(any()) }
     }
@@ -127,7 +127,7 @@ class PlaylistCheckAdapterTests {
 
         val result = adapter.handle(event)
 
-        assertThat(result).isEqualTo(OutboxTaskResult.Success)
+        assertThat(result).isEqualTo(DispatchResult.Success)
         verify(exactly = 0) { notification.notifyCheckPassed(any()) }
         verify(exactly = 1) { notification.notifyViolationsChanged(any()) }
     }
@@ -148,7 +148,7 @@ class PlaylistCheckAdapterTests {
 
         val result = adapter.handle(event)
 
-        assertThat(result).isEqualTo(OutboxTaskResult.Success)
+        assertThat(result).isEqualTo(DispatchResult.Success)
         verify(exactly = 0) { notification.notifyCheckPassed(any()) }
         verify(exactly = 0) { notification.notifyViolationsChanged(any()) }
     }
@@ -164,7 +164,7 @@ class PlaylistCheckAdapterTests {
 
         val result = adapter.handle(event)
 
-        assertThat(result).isEqualTo(OutboxTaskResult.Success)
+        assertThat(result).isEqualTo(DispatchResult.Success)
         verify(exactly = 0) { notification.notifyCheckPassed(any()) }
         verify(exactly = 0) { notification.notifyViolationsChanged(any()) }
     }
@@ -175,6 +175,6 @@ class PlaylistCheckAdapterTests {
 
         val result = adapter.handle(event)
 
-        assertThat(result).isInstanceOf(OutboxTaskResult.Failed::class.java)
+        assertThat(result).isInstanceOf(DispatchResult.Failed::class.java)
     }
 }

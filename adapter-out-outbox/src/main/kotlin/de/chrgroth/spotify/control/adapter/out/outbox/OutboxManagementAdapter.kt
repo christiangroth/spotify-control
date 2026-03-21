@@ -2,9 +2,9 @@ package de.chrgroth.spotify.control.adapter.out.outbox
 
 import com.mongodb.client.MongoClient
 import com.mongodb.client.model.Filters
-import de.chrgroth.outbox.Outbox
-import de.chrgroth.outbox.OutboxPartitionStatus
-import de.chrgroth.outbox.OutboxRepository
+import de.chrgroth.quarkus.outbox.domain.ApplicationOutboxClient
+import de.chrgroth.quarkus.outbox.domain.OutboxControllerAdapter
+import de.chrgroth.quarkus.outbox.domain.OutboxPartitionStatus
 import de.chrgroth.spotify.control.domain.model.OutboxEventTypeCount
 import de.chrgroth.spotify.control.domain.model.OutboxPartitionStats
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
@@ -17,29 +17,30 @@ import org.eclipse.microprofile.config.inject.ConfigProperty
 @ApplicationScoped
 @Suppress("Unused")
 class OutboxManagementAdapter(
-    private val repository: OutboxRepository,
-    private val outbox: Outbox,
+    private val client: ApplicationOutboxClient,
+    private val outboxController: OutboxControllerAdapter,
     private val mongoClient: MongoClient,
     @param:ConfigProperty(name = "quarkus.mongodb.database")
     private val databaseName: String,
 ) : OutboxManagementPort {
 
-    override fun getPartitionStats(): List<OutboxPartitionStats> =
-        DomainOutboxPartition.all.map { partition ->
-            val info = repository.findPartition(partition)
+    override fun getPartitionStats(): List<OutboxPartitionStats> {
+        val partitionInfosByKey = client.partitionInfos().associateBy { it.key }
+        return DomainOutboxPartition.all.map { partition ->
+            val info = partitionInfosByKey[partition.key]
             OutboxPartitionStats(
                 name = partition.key,
-                status = info?.status ?: OutboxPartitionStatus.ACTIVE.name,
-                documentCount = repository.countByPartition(partition),
+                status = info?.status?.name ?: OutboxPartitionStatus.ACTIVE.name,
+                documentCount = countByPartition(partition.key),
                 blockedUntil = info?.pausedUntil,
                 eventTypeCounts = queryEventTypeCounts(partition.key),
             )
         }
+    }
 
     override fun activate(partitionKey: String): Boolean {
         val partition = DomainOutboxPartition.all.firstOrNull { it.key == partitionKey } ?: return false
-        outbox.activatePartition(partition)
-        outbox.signal(partition)
+        outboxController.activatePartition(partition)
         return true
     }
 
@@ -50,6 +51,11 @@ class OutboxManagementAdapter(
             .deleteMany(Filters.`in`("eventType", eventTypeKeys))
         logger.info { "Deleted ${result.deletedCount} outbox tasks for event types: ${eventTypeKeys.joinToString()}" }
     }
+
+    private fun countByPartition(partitionKey: String): Long =
+        mongoClient.getDatabase(databaseName)
+            .getCollection(OUTBOX_COLLECTION)
+            .countDocuments(Filters.eq("partition", partitionKey))
 
     private fun queryEventTypeCounts(partitionKey: String): List<OutboxEventTypeCount> =
         mongoClient.getDatabase(databaseName)

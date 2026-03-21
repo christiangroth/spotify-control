@@ -3,7 +3,7 @@ package de.chrgroth.spotify.control.domain
 import arrow.core.Either
 import arrow.core.flatMap
 import arrow.core.right
-import de.chrgroth.outbox.OutboxTaskResult
+import de.chrgroth.quarkus.outbox.domain.DispatchResult
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
 import de.chrgroth.spotify.control.domain.model.AppPlaybackItem
@@ -284,58 +284,58 @@ class PlaybackAdapter(
 
     // --- Outbox Handlers ---
 
-    override fun handle(event: DomainOutboxEvent.FetchCurrentlyPlaying): OutboxTaskResult = try {
+    override fun handle(event: DomainOutboxEvent.FetchCurrentlyPlaying): DispatchResult = try {
         when (val result = fetchCurrentlyPlaying(event.userId)) {
-            is Either.Right -> OutboxTaskResult.Success
+            is Either.Right -> DispatchResult.Success
             is Either.Left -> when (val error = result.value) {
                 is SpotifyRateLimitError -> {
                     logger.warn { "Rate limited on FetchCurrentlyPlaying for user ${event.userId.value}, retry after ${error.retryAfter.seconds}s" }
-                    OutboxTaskResult.RateLimited(error.retryAfter)
+                    DispatchResult.RateLimited(error.retryAfter)
                 }
                 else -> {
                     logger.error { "Failed to fetch currently playing for user ${event.userId.value}: ${error.code}" }
-                    OutboxTaskResult.Failed("Failed to fetch currently playing: ${error.code}")
+                    DispatchResult.Failed("Failed to fetch currently playing: ${error.code}")
                 }
             }
         }
     } catch (e: Exception) {
         logger.error(e) { "Unexpected error in handle(FetchCurrentlyPlaying) for user ${event.userId.value}" }
-        OutboxTaskResult.Failed("Unexpected error in update: ${e.message}", e)
+        DispatchResult.Failed("Unexpected error in update: ${e.message}", e)
     }
 
-    override fun handle(event: DomainOutboxEvent.FetchRecentlyPlayed): OutboxTaskResult = try {
+    override fun handle(event: DomainOutboxEvent.FetchRecentlyPlayed): DispatchResult = try {
         when (val result = fetchRecentlyPlayed(event.userId)) {
-            is Either.Right -> OutboxTaskResult.Success
+            is Either.Right -> DispatchResult.Success
             is Either.Left -> when (val error = result.value) {
                 is SpotifyRateLimitError -> {
                     logger.warn { "Rate limited on FetchRecentlyPlayed for user ${event.userId.value}, retry after ${error.retryAfter.seconds}s" }
-                    OutboxTaskResult.RateLimited(error.retryAfter)
+                    DispatchResult.RateLimited(error.retryAfter)
                 }
                 else -> {
                     logger.error { "Failed to fetch recently played for user ${event.userId.value}: ${error.code}" }
-                    OutboxTaskResult.Failed("Failed to fetch recently played: ${error.code}")
+                    DispatchResult.Failed("Failed to fetch recently played: ${error.code}")
                 }
             }
         }
     } catch (e: Exception) {
         logger.error(e) { "Unexpected error in handle(FetchRecentlyPlayed) for user ${event.userId.value}" }
-        OutboxTaskResult.Failed("Unexpected error in update: ${e.message}", e)
+        DispatchResult.Failed("Unexpected error in update: ${e.message}", e)
     }
 
-    override fun handle(event: DomainOutboxEvent.RebuildPlaybackData): OutboxTaskResult = try {
+    override fun handle(event: DomainOutboxEvent.RebuildPlaybackData): DispatchResult = try {
         rebuildPlaybackData(event.userId)
-        OutboxTaskResult.Success
+        DispatchResult.Success
     } catch (e: Exception) {
         logger.error(e) { "Unexpected error in handle(RebuildPlaybackData) for user ${event.userId.value}" }
-        OutboxTaskResult.Failed("Unexpected error in rebuild: ${e.message}", e)
+        DispatchResult.Failed("Unexpected error in rebuild: ${e.message}", e)
     }
 
-    override fun handle(event: DomainOutboxEvent.AppendPlaybackData): OutboxTaskResult = try {
+    override fun handle(event: DomainOutboxEvent.AppendPlaybackData): DispatchResult = try {
         appendPlaybackData(event.userId)
-        OutboxTaskResult.Success
+        DispatchResult.Success
     } catch (e: Exception) {
         logger.error(e) { "Unexpected error in handle(AppendPlaybackData) for user ${event.userId.value}" }
-        OutboxTaskResult.Failed("Unexpected error in append: ${e.message}", e)
+        DispatchResult.Failed("Unexpected error in append: ${e.message}", e)
     }
 
     companion object : KLogging() {

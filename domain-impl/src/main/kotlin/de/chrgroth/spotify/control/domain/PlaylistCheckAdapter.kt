@@ -1,6 +1,6 @@
 package de.chrgroth.spotify.control.domain
 
-import de.chrgroth.outbox.OutboxTaskResult
+import de.chrgroth.quarkus.outbox.domain.DispatchResult
 import de.chrgroth.spotify.control.domain.model.AppPlaylistCheck
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.PlaylistCheckPort
@@ -25,11 +25,11 @@ class PlaylistCheckAdapter(
     private val meterRegistry: MeterRegistry,
 ) : PlaylistCheckPort {
 
-    override fun handle(event: DomainOutboxEvent.RunPlaylistChecks): OutboxTaskResult = try {
+    override fun handle(event: DomainOutboxEvent.RunPlaylistChecks): DispatchResult = try {
         val playlist = playlistRepository.findByUserIdAndPlaylistId(event.userId, event.playlistId)
         if (playlist == null) {
             logger.warn { "Playlist ${event.playlistId} not found for user ${event.userId.value}, skipping checks" }
-            return OutboxTaskResult.Success
+            return DispatchResult.Success
         }
 
         val duplicateTrackCheck = timedCheck(CHECK_DUPLICATE_TRACKS, event.playlistId) {
@@ -42,10 +42,10 @@ class PlaylistCheckAdapter(
         val status = if (duplicateTrackCheck.succeeded) "all passed" else "${duplicateTrackCheck.violations.size} violation(s)"
         logger.info { "Ran playlist checks for playlist ${event.playlistId} (user ${event.userId.value}): $status" }
         dashboardRefresh.notifyUserPlaylistChecks(event.userId)
-        OutboxTaskResult.Success
+        DispatchResult.Success
     } catch (e: Exception) {
         logger.error(e) { "Unexpected error in handle(RunPlaylistChecks) for playlist ${event.playlistId} (user ${event.userId.value})" }
-        OutboxTaskResult.Failed("Unexpected error in playlist checks: ${e.message}", e)
+        DispatchResult.Failed("Unexpected error in playlist checks: ${e.message}", e)
     }
 
     private fun notifyIfChanged(previous: AppPlaylistCheck?, current: AppPlaylistCheck) {

@@ -252,7 +252,7 @@ class HealthPageTests {
       .body(containsString("PlaylistSyncJob"))
       .body(containsString("RecentlyPlayedFetchJob"))
       .body(containsString("UserProfileUpdateJob"))
-      .body(containsString("OutboxArchiveCleanupJob"))
+      .body(containsString("ArchiverJob"))
   }
 
   @Test
