@@ -1,3 +1,12 @@
+# 0.73.5 (2026.03.21)
+
+## Bugfixes / Chore
+* Fixed dashboard stats timeout by replacing full document fetch with a MongoDB aggregation for listening stats.
+
+
+
+---
+
 # 0.73.4 (2026.03.21)
 
 ## Bugfixes / Chore
