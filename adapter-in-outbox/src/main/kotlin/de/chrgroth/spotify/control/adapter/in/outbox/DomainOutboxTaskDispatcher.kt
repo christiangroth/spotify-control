@@ -11,10 +11,7 @@ import de.chrgroth.spotify.control.domain.port.`in`.PlaybackPort
 import de.chrgroth.spotify.control.domain.port.`in`.PlaylistCheckPort
 import de.chrgroth.spotify.control.domain.port.`in`.PlaylistPort
 import de.chrgroth.spotify.control.domain.port.`in`.UserProfilePort
-import de.chrgroth.spotify.control.domain.port.out.OutboxTaskCountObserver
 import jakarta.enterprise.context.ApplicationScoped
-import jakarta.enterprise.inject.Any
-import jakarta.enterprise.inject.Instance
 
 @ApplicationScoped
 @Suppress("Unused")
@@ -24,7 +21,6 @@ class DomainOutboxTaskDispatcher(
     private val playlist: PlaylistPort,
     private val playlistCheck: PlaylistCheckPort,
     private val userProfile: UserProfilePort,
-    @param:Any private val outboxTaskCountObservers: Instance<OutboxTaskCountObserver>,
 ) : ApplicationOutboxDispatcher {
 
     override fun getAllPartitions(): List<ApplicationOutboxPartition> = DomainOutboxPartition.all
@@ -32,17 +28,7 @@ class DomainOutboxTaskDispatcher(
     override fun deserialize(partition: ApplicationOutboxPartition, eventType: String, payload: String): ApplicationOutboxEvent =
         DomainOutboxEvent.fromKey(eventType, payload)
 
-    override fun dispatch(event: ApplicationOutboxEvent): DispatchResult {
-        try {
-          val result = dispatchEvent(event as DomainOutboxEvent)
-          if (result is DispatchResult.Success) {
-            outboxTaskCountObservers.forEach { it.onOutboxTaskCountChanged() }
-          }
-          return result
-        } catch (e: IllegalArgumentException) {
-            return DispatchResult.Failed("Unknown event type: ${event.key}", e)
-        }
-    }
+    override fun dispatch(event: ApplicationOutboxEvent): DispatchResult = dispatchEvent(event as DomainOutboxEvent)
 
   @Suppress("CyclomaticComplexMethod")
   private fun dispatchEvent(event: DomainOutboxEvent): DispatchResult =

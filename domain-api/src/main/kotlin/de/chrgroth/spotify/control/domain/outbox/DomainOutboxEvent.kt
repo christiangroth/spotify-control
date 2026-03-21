@@ -1,19 +1,19 @@
 package de.chrgroth.spotify.control.domain.outbox
 
 import de.chrgroth.quarkus.outbox.domain.ApplicationOutboxEvent
-import de.chrgroth.quarkus.outbox.domain.OutboxTaskPriority
+import de.chrgroth.quarkus.outbox.domain.OutboxEventPriority
 import de.chrgroth.spotify.control.domain.model.UserId
 
 sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
     override val partition: DomainOutboxPartition
-    override val priority: OutboxTaskPriority get() = OutboxTaskPriority.NORMAL
+    override val priority: OutboxEventPriority get() = OutboxEventPriority.NORMAL
     override val serializePayload: String
 
     data class FetchCurrentlyPlaying(val userId: UserId) : DomainOutboxEvent {
         override val key = KEY
         override val deduplicationKey = "$KEY:${userId.value}"
         override val partition = DomainOutboxPartition.ToSpotifyPlayback
-        override val priority = OutboxTaskPriority.HIGH
+        override val priority = OutboxEventPriority.HIGH
         override val serializePayload = userId.value
 
         companion object {
@@ -25,7 +25,7 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
         override val key = KEY
         override val deduplicationKey = "$KEY:${userId.value}"
         override val partition = DomainOutboxPartition.ToSpotifyPlayback
-        override val priority = OutboxTaskPriority.HIGH
+        override val priority = OutboxEventPriority.HIGH
         override val serializePayload = userId.value
 
         companion object {
