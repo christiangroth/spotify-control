@@ -6,7 +6,6 @@ import de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.CatalogPort
 import de.chrgroth.spotify.control.domain.port.`in`.PlaybackPort
-import de.chrgroth.spotify.control.domain.port.out.MongoReadTimeoutPort
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
 import io.quarkus.qute.Location
 import io.quarkus.qute.Template
@@ -46,18 +45,13 @@ class PlaybackSettingsResource {
   @Inject
   private lateinit var catalog: CatalogPort
 
-  @Inject
-  private lateinit var readTimeout: MongoReadTimeoutPort
-
   @GET
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
   fun playback(): TemplateInstance {
     val userId = UserId(securityIdentity.principal.name)
-    val user = readTimeout.timedWithFallback("userRepository.findById", null) { userRepository.findById(userId) }
-    val allArtists = readTimeout.timedWithFallback("catalog.findAllArtists", emptyList()) {
-      catalog.findAllArtists()
-    }.sortedBy { it.artistName }
+    val user = userRepository.findById(userId)
+    val allArtists = catalog.findAllArtists().sortedBy { it.artistName }
     return playbackTemplate
       .data("displayName", user?.displayName ?: userId.value)
       .data("undecidedArtists", allArtists.filter { it.playbackProcessingStatus == ArtistPlaybackProcessingStatus.UNDECIDED })
