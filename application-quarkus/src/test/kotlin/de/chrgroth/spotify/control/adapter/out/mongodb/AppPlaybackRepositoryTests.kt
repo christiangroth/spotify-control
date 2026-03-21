@@ -92,4 +92,40 @@ class AppPlaybackRepositoryTests {
 
         assertThat(result).hasSizeLessThanOrEqualTo(2)
     }
+
+    @Test
+    fun `sumSecondsPlayedByTrackIdSince aggregates seconds per track excluding zero values`() {
+        val itemWithSeconds = AppPlaybackItem(
+            userId = userId,
+            playedAt = now - 1.hours,
+            trackId = "track-a",
+            secondsPlayed = 120L,
+        )
+        val anotherItemSameTrack = AppPlaybackItem(
+            userId = userId,
+            playedAt = now - 2.hours,
+            trackId = "track-a",
+            secondsPlayed = 60L,
+        )
+        val itemOtherTrack = AppPlaybackItem(
+            userId = userId,
+            playedAt = now - 3.hours,
+            trackId = "track-b",
+            secondsPlayed = 90L,
+        )
+        val itemNoSeconds = AppPlaybackItem(
+            userId = userId,
+            playedAt = now - 4.hours,
+            trackId = "track-c",
+            secondsPlayed = 0L,
+        )
+        appPlaybackRepository.saveAll(listOf(itemWithSeconds, anotherItemSameTrack, itemOtherTrack, itemNoSeconds))
+
+        val since = now - 24.hours
+        val result = appPlaybackRepository.sumSecondsPlayedByTrackIdSince(userId, since)
+
+        assertThat(result["track-a"]).isEqualTo(180L)
+        assertThat(result["track-b"]).isEqualTo(90L)
+        assertThat(result).doesNotContainKey("track-c")
+    }
 }
