@@ -149,17 +149,18 @@ class MongoOutboxRepositoryTests {
     }
 
     @Test
-    fun `pausePartition blocks claim and activatePartition restores it`() {
+    fun `pausePartition and resume transitions partition status`() {
         val partition = uniquePartition()
         taskRepository.enqueue(partition, event(), """{"id":"1"}""", OutboxTaskPriority.NORMAL)
         partitionRepository.pause(partition, "rate limited", Instant.now().plus(Duration.ofMinutes(5)))
 
-        assertThat(taskRepository.claim(partition)).isNotNull() // claim is independent of pause in repository layer
+        val pausedInfo = partitionRepository.findOrCreate(partition)
+        assertThat(pausedInfo.status).isEqualTo(OutboxPartitionStatus.PAUSED)
 
         partitionRepository.resume(partition)
 
-        val info = partitionRepository.findOrCreate(partition)
-        assertThat(info.status).isEqualTo(OutboxPartitionStatus.ACTIVE)
+        val activeInfo = partitionRepository.findOrCreate(partition)
+        assertThat(activeInfo.status).isEqualTo(OutboxPartitionStatus.ACTIVE)
     }
 
     @Test
