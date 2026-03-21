@@ -1,3 +1,12 @@
+# 0.73.4 (2026.03.21)
+
+## Bugfixes / Chore
+* Internal refactoring: consolidated catalog sync logic into a shared component.
+
+
+
+---
+
 # 0.73.3 (2026.03.21)
 
 ## Bugfixes / Chore
