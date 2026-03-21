@@ -154,16 +154,6 @@ class CatalogAdapter(
         return Unit.right()
     }
 
-    override fun syncCatalogFromPlayback(): Either<DomainError, Unit> {
-        outboxPort.enqueue(DomainOutboxEvent.SyncCatalogFromPlayback())
-        return Unit.right()
-    }
-
-    private fun syncCatalogFromPlaybackData(): Either<DomainError, Unit> {
-        logger.info { "SyncCatalogFromPlayback is now handled inline by PlaybackAdapter.appendPlaybackData() using stored album IDs — skipping legacy handler" }
-        return Unit.right()
-    }
-
     private fun syncAlbumDetails(albumId: String): Either<DomainError, Int> {
         val userId = userRepository.findAll().firstOrNull()?.spotifyUserId
         if (userId == null) {
@@ -209,9 +199,6 @@ class CatalogAdapter(
     override fun handle(event: DomainOutboxEvent.ResyncCatalog): OutboxTaskResult =
         handleOutboxTask("ResyncCatalog") { resyncCatalog() }
 
-    override fun handle(event: DomainOutboxEvent.SyncCatalogFromPlayback): OutboxTaskResult =
-        handleOutboxTask("SyncCatalogFromPlayback") { syncCatalogFromPlaybackData() }
-
     private fun handleOutboxTask(taskDescription: String, operation: () -> Either<DomainError, *>): OutboxTaskResult = try {
         when (val result = operation()) {
             is Either.Right -> OutboxTaskResult.Success
@@ -237,7 +224,6 @@ class CatalogAdapter(
             DomainOutboxEvent.SyncArtistDetails.LEGACY_KEY,
             DomainOutboxEvent.SyncAlbumDetails.KEY,
             DomainOutboxEvent.ResyncCatalog.KEY,
-            DomainOutboxEvent.SyncCatalogFromPlayback.KEY,
         )
     }
 }
