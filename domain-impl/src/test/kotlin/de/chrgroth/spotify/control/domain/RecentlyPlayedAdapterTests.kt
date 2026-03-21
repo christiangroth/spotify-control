@@ -100,6 +100,7 @@ class RecentlyPlayedAdapterTests {
         trackId: String,
         progressMs: Long,
         observedAt: Instant = now,
+        durationMs: Long = 600_000L,
     ) = CurrentlyPlayingItem(
         spotifyUserId = userId,
         trackId = trackId,
@@ -107,7 +108,7 @@ class RecentlyPlayedAdapterTests {
         artistIds = listOf("artist-$trackId"),
         artistNames = listOf("Artist $trackId"),
         progressMs = progressMs,
-        durationMs = 200_000L,
+        durationMs = durationMs,
         isPlaying = true,
         observedAt = observedAt,
     )
@@ -346,6 +347,31 @@ class RecentlyPlayedAdapterTests {
         // playedSeconds = (latestTrack.observedAt - firstObserved) / 1000 = 6 minutes
         val expectedPlayedSeconds = (now - firstObserved).inWholeSeconds
         assertThat(savedSlot.captured[0].playedSeconds).isEqualTo(expectedPlayedSeconds)
+    }
+
+    @Test
+    fun `update caps playedSeconds at track durationMs when computed duration exceeds track length`() {
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
+        every { spotifyPlayback.getRecentlyPlayed(userId, accessToken, null) } returns emptyList<RecentlyPlayedItem>().right()
+        every { recentlyPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
+        every { recentlyPartialPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
+        every { recentlyPartialPlayedRepository.saveAll(any()) } just runs
+
+        // track-old was briefly played hours ago; a different track is observed much later,
+        // causing the timestamp-based computation to produce an impossibly large duration
+        val trackDurationMs = 210_000L // 3.5 minutes
+        val firstObserved = now - 12.hours
+        val olderItem = currentlyPlayingItem("track-old", progressMs = 30_000L, observedAt = firstObserved, durationMs = trackDurationMs)
+        val latestTrack = currentlyPlayingItem("track-latest", progressMs = 10_000L, observedAt = now)
+        every { currentlyPlayingRepository.findByUserId(userId) } returns listOf(olderItem, latestTrack)
+
+        adapter.fetchRecentlyPlayed(userId)
+
+        val savedSlot = slot<List<RecentlyPartialPlayedItem>>()
+        verify { recentlyPartialPlayedRepository.saveAll(capture(savedSlot)) }
+        // raw timestamp computation would give 12 hours = 43200 seconds, but must be capped at track duration
+        assertThat(savedSlot.captured[0].playedSeconds).isEqualTo(trackDurationMs / 1_000L)
     }
 
     @Test
