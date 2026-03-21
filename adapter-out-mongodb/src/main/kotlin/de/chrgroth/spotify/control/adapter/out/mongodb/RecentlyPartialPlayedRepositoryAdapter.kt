@@ -50,6 +50,7 @@ class RecentlyPartialPlayedRepositoryAdapter : RecentlyPartialPlayedRepositoryPo
                     artistNames = doc.artistNames,
                     playedAt = doc.playedAt.toKotlinInstant(),
                     playedSeconds = doc.playedSeconds,
+                    albumId = doc.albumId,
                 )
             }
         }
@@ -65,6 +66,7 @@ class RecentlyPartialPlayedRepositoryAdapter : RecentlyPartialPlayedRepositoryPo
                 artistNames = item.artistNames
                 playedAt = item.playedAt.toJavaInstant()
                 playedSeconds = item.playedSeconds
+                albumId = item.albumId
             }
         }
         logger.info { "Saving ${documents.size} recently partial played documents" }

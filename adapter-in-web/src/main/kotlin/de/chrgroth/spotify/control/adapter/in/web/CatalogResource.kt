@@ -100,21 +100,5 @@ class CatalogResource {
         )
     }
 
-    @POST
-    @Authenticated
-    @Path("/sync-from-playback")
-    @Produces(MediaType.APPLICATION_JSON)
-    fun syncCatalogFromPlayback(): Response {
-        return catalog.syncCatalogFromPlayback().fold(
-            ifLeft = { error ->
-                logger.error { "Catalog sync from playback failed: ${error.code}" }
-                Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(mapOf("error" to "Sync failed: ${error.code}"))
-                    .build()
-            },
-            ifRight = { Response.ok(mapOf("status" to "ok")).build() },
-        )
-    }
-
     companion object : KLogging()
 }

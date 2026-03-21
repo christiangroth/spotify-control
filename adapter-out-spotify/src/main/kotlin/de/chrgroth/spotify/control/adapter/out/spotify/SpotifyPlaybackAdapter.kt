@@ -56,28 +56,29 @@ class SpotifyPlaybackAdapter(
     }
   }
 
-  private fun parseCurrentlyPlayingItem(userId: UserId, response: SpotifyCurrentlyPlayingResponse): CurrentlyPlayingItem? {
-    val track = response.item
-    if (track == null || track.type != "track") {
-      logger.info { "Ignoring non-track currently playing event of type '${track?.type}'" }
-      return null
+    private fun parseCurrentlyPlayingItem(userId: UserId, response: SpotifyCurrentlyPlayingResponse): CurrentlyPlayingItem? {
+        val track = response.item
+        if (track == null || track.type != "track") {
+          logger.info { "Ignoring non-track currently playing event of type '${track?.type}'" }
+          return null
+        }
+        if (track.isLocal) {
+          logger.info { "Ignoring local currently playing track '${track.name}'" }
+          return null
+        }
+        return CurrentlyPlayingItem(
+          spotifyUserId = userId,
+          trackId = track.id,
+          trackName = track.name,
+          artistIds = track.artists.map { it.id },
+          artistNames = track.artists.map { it.name },
+          progressMs = response.progressMs ?: 0L,
+          durationMs = track.durationMs ?: 0L,
+          isPlaying = response.isPlaying,
+          observedAt = Clock.System.now(),
+          albumId = track.album?.id,
+        )
     }
-    if (track.isLocal) {
-      logger.info { "Ignoring local currently playing track '${track.name}'" }
-      return null
-    }
-    return CurrentlyPlayingItem(
-      spotifyUserId = userId,
-      trackId = track.id,
-      trackName = track.name,
-      artistIds = track.artists.map { it.id },
-      artistNames = track.artists.map { it.name },
-      progressMs = response.progressMs ?: 0L,
-      durationMs = track.durationMs ?: 0L,
-      isPlaying = response.isPlaying,
-      observedAt = Clock.System.now(),
-    )
-  }
 
     override fun getRecentlyPlayed(userId: UserId, accessToken: AccessToken, after: Instant?): Either<DomainError, List<RecentlyPlayedItem>> {
         return try {
@@ -124,6 +125,7 @@ class SpotifyPlaybackAdapter(
             artistIds = track.artists.map { it.id },
             artistNames = track.artists.map { it.name },
             playedAt = Instant.parse(playedAt),
+            albumId = track.album?.id,
             durationSeconds = track.durationMs?.let { it / MS_PER_SECOND },
         )
     }

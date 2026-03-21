@@ -5,11 +5,6 @@ import arrow.core.right
 import de.chrgroth.spotify.control.domain.error.PlaylistSyncError
 import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
 import de.chrgroth.spotify.control.domain.model.AccessToken
-import de.chrgroth.spotify.control.domain.model.AlbumId
-import de.chrgroth.spotify.control.domain.model.AppAlbum
-import de.chrgroth.spotify.control.domain.model.AppArtist
-import de.chrgroth.spotify.control.domain.model.ArtistId
-import de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus
 import de.chrgroth.spotify.control.domain.model.Playlist
 import de.chrgroth.spotify.control.domain.model.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.PlaylistTrack
@@ -18,8 +13,6 @@ import de.chrgroth.spotify.control.domain.model.SpotifyPlaylistItem
 import de.chrgroth.spotify.control.domain.model.User
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
-import de.chrgroth.spotify.control.domain.port.out.AppAlbumRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppPlaylistCheckRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
@@ -48,21 +41,19 @@ class PlaylistAdapterTests {
     private val outboxPort: OutboxPort = mockk()
     private val dashboardRefresh: DashboardRefreshPort = mockk()
     private val playlistCheckRepository: AppPlaylistCheckRepositoryPort = mockk()
-    private val appArtistRepository: AppArtistRepositoryPort = mockk()
-    private val appAlbumRepository: AppAlbumRepositoryPort = mockk()
+    private val syncController: SyncController = mockk(relaxed = true)
 
     private val adapter = PlaylistAdapter(
         userRepository, playlistRepository,
         spotifyAccessToken, spotifyPlaylist,
         outboxPort, dashboardRefresh,
         playlistCheckRepository,
-        appArtistRepository, appAlbumRepository,
+        syncController,
     )
 
     private val userId = UserId("user-1")
     private val accessToken = AccessToken("access-token")
     private val now = Clock.System.now()
-    private val syncTimestamp = kotlin.time.Instant.fromEpochSeconds(1)
 
     private fun buildUser(id: String = "user-1") = User(
         spotifyUserId = UserId(id),
@@ -451,8 +442,6 @@ class PlaylistAdapterTests {
         every { playlistRepository.save(userId, playlist) } just runs
         every { outboxPort.enqueue(any()) } just runs
         every { playlistRepository.updateLastSyncTime(userId, "p1", any()) } just runs
-        every { appArtistRepository.findByArtistIds(any()) } returns emptyList()
-        every { appAlbumRepository.findByAlbumIds(any()) } returns emptyList()
 
         val result = adapter.syncPlaylistData(userId, "p1")
 
@@ -461,7 +450,7 @@ class PlaylistAdapterTests {
     }
 
     @Test
-    fun `syncPlaylistData enqueues SyncArtistDetails and SyncAlbumDetails for playlist tracks`() {
+    fun `syncPlaylistData delegates catalog sync to syncController`() {
         val user = buildUser()
         val playlist = buildPlaylist("p1")
         every { userRepository.findById(userId) } returns user
@@ -470,59 +459,15 @@ class PlaylistAdapterTests {
         every { playlistRepository.save(userId, playlist) } just runs
         every { outboxPort.enqueue(any()) } just runs
         every { playlistRepository.updateLastSyncTime(userId, "p1", any()) } just runs
-        every { appArtistRepository.findByArtistIds(any()) } returns emptyList()
-        every { appAlbumRepository.findByAlbumIds(any()) } returns emptyList()
 
         adapter.syncPlaylistData(userId, "p1")
 
-        verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails("artist-1", userId)) }
-        verify { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails("album-1")) }
-    }
-
-    @Test
-    fun `syncPlaylistData does not enqueue SyncArtistDetails when artist already exists`() {
-        val user = buildUser()
-        val playlist = buildPlaylist("p1")
-        val existingArtist = AppArtist(
-            artistId = "artist-1", artistName = "Artist One",
-            playbackProcessingStatus = ArtistPlaybackProcessingStatus.UNDECIDED, lastSync = syncTimestamp,
-        )
-        every { userRepository.findById(userId) } returns user
-        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
-        every { spotifyPlaylist.getPlaylistTracks(userId, accessToken, "p1") } returns playlist.right()
-        every { playlistRepository.save(userId, playlist) } just runs
-        every { outboxPort.enqueue(any()) } just runs
-        every { playlistRepository.updateLastSyncTime(userId, "p1", any()) } just runs
-        every { appArtistRepository.findByArtistIds(setOf("artist-1")) } returns listOf(existingArtist)
-        every { appAlbumRepository.findByAlbumIds(any()) } returns emptyList()
-
-        adapter.syncPlaylistData(userId, "p1")
-
-        verify(exactly = 0) { outboxPort.enqueue(match { it is DomainOutboxEvent.SyncArtistDetails }) }
-        verify { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails("album-1")) }
-    }
-
-    @Test
-    fun `syncPlaylistData does not enqueue SyncAlbumDetails when album already exists`() {
-        val user = buildUser()
-        val playlist = buildPlaylist("p1")
-        val existingAlbum = AppAlbum(
-            id = AlbumId("album-1"), title = "Album One",
-            artistId = ArtistId("artist-1"), artistName = "Artist One", lastSync = syncTimestamp,
-        )
-        every { userRepository.findById(userId) } returns user
-        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
-        every { spotifyPlaylist.getPlaylistTracks(userId, accessToken, "p1") } returns playlist.right()
-        every { playlistRepository.save(userId, playlist) } just runs
-        every { outboxPort.enqueue(any()) } just runs
-        every { playlistRepository.updateLastSyncTime(userId, "p1", any()) } just runs
-        every { appArtistRepository.findByArtistIds(any()) } returns emptyList()
-        every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"))) } returns listOf(existingAlbum)
-
-        adapter.syncPlaylistData(userId, "p1")
-
-        verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails("artist-1", userId)) }
-        verify(exactly = 0) { outboxPort.enqueue(match { it is DomainOutboxEvent.SyncAlbumDetails }) }
+        verify {
+            syncController.syncForTracks(
+                listOf(CatalogSyncRequest("track-1", "album-1", listOf("artist-1"))),
+                userId,
+            )
+        }
     }
 
     @Test
@@ -535,8 +480,6 @@ class PlaylistAdapterTests {
         every { playlistRepository.save(userId, playlist) } just runs
         every { outboxPort.enqueue(any()) } just runs
         every { playlistRepository.updateLastSyncTime(userId, "p1", any()) } just runs
-        every { appArtistRepository.findByArtistIds(any()) } returns emptyList()
-        every { appAlbumRepository.findByAlbumIds(any()) } returns emptyList()
 
         adapter.syncPlaylistData(userId, "p1")
 

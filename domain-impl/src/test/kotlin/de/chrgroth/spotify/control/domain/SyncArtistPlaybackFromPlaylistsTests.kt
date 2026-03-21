@@ -34,6 +34,7 @@ class SyncArtistPlaybackFromPlaylistsTests {
     private val recentlyPartialPlayedRepository: RecentlyPartialPlayedRepositoryPort = mockk(relaxed = true)
     private val appPlaybackRepository: AppPlaybackRepositoryPort = mockk(relaxed = true)
     private val appArtistRepository: AppArtistRepositoryPort = mockk()
+    private val syncController: SyncController = mockk(relaxed = true)
     private val outboxPort: OutboxPort = mockk(relaxed = true)
     private val dashboardRefresh: DashboardRefreshPort = mockk(relaxed = true)
     private val playbackState: PlaybackStatePort = mockk(relaxed = true)
@@ -49,6 +50,7 @@ class SyncArtistPlaybackFromPlaylistsTests {
         recentlyPartialPlayedRepository,
         appPlaybackRepository,
         appArtistRepository,
+        syncController,
         outboxPort,
         dashboardRefresh,
         playbackState,

@@ -51,13 +51,14 @@ class CatalogAdapterTests {
     private val playlistRepository: PlaylistRepositoryPort = mockk()
     private val playlistCheckRepository: AppPlaylistCheckRepositoryPort = mockk()
     private val dashboardRefresh: DashboardRefreshPort = mockk(relaxed = true)
+    private val syncController: SyncController = mockk(relaxed = true)
 
     private val adapter = CatalogAdapter(
         spotifyAccessToken, spotifyCatalog,
         appArtistRepository, appTrackRepository, appAlbumRepository,
         appPlaybackRepository, userRepository, outboxPort,
         outboxManagement, playlistRepository, playlistCheckRepository,
-        dashboardRefresh,
+        dashboardRefresh, syncController,
     )
 
     private val syncTimestamp = Instant.fromEpochSeconds(1)
@@ -261,7 +262,6 @@ class CatalogAdapterTests {
         every { spotifyCatalog.getAlbum(userId, accessToken, "album-1") } returns albumSyncResult.right()
         every { appTrackRepository.upsertAll(any()) } just runs
         every { appAlbumRepository.upsertAll(any()) } just runs
-        every { appArtistRepository.findByArtistIds(any()) } returns emptyList()
         every { outboxPort.enqueue(any()) } just runs
 
         val result = adapter.handle(DomainOutboxEvent.SyncAlbumDetails("album-1"))
@@ -279,12 +279,11 @@ class CatalogAdapterTests {
         every { spotifyCatalog.getAlbum(userId, accessToken, "album-1") } returns albumSyncResult.right()
         every { appTrackRepository.upsertAll(any()) } just runs
         every { appAlbumRepository.upsertAll(any()) } just runs
-        every { appArtistRepository.findByArtistIds(any()) } returns emptyList()
         every { outboxPort.enqueue(any()) } just runs
 
         adapter.handle(DomainOutboxEvent.SyncAlbumDetails("album-1"))
 
-        verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails("artist-1", userId)) }
+        verify { syncController.syncArtists(listOf("artist-1"), userId) }
     }
 
     @Test
@@ -294,11 +293,10 @@ class CatalogAdapterTests {
         every { spotifyCatalog.getAlbum(userId, accessToken, "album-1") } returns albumSyncResult.right()
         every { appTrackRepository.upsertAll(any()) } just runs
         every { appAlbumRepository.upsertAll(any()) } just runs
-        every { appArtistRepository.findByArtistIds(any()) } returns listOf(artist1)
 
         adapter.handle(DomainOutboxEvent.SyncAlbumDetails("album-1"))
 
-        verify(exactly = 0) { outboxPort.enqueue(match { it is DomainOutboxEvent.SyncArtistDetails }) }
+        verify { syncController.syncArtists(listOf("artist-1"), userId) }
     }
 
     @Test

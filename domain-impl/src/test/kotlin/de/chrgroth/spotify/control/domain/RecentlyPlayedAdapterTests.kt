@@ -48,6 +48,7 @@ class RecentlyPlayedAdapterTests {
     private val recentlyPartialPlayedRepository: RecentlyPartialPlayedRepositoryPort = mockk(relaxed = true)
     private val appPlaybackRepository: AppPlaybackRepositoryPort = mockk(relaxed = true)
     private val appArtistRepository: AppArtistRepositoryPort = mockk(relaxed = true)
+    private val syncController: SyncController = mockk(relaxed = true)
     private val outboxPort: OutboxPort = mockk(relaxed = true)
     private val dashboardRefresh: DashboardRefreshPort = mockk(relaxed = true)
     private val playbackState: PlaybackStatePort = mockk(relaxed = true)
@@ -63,6 +64,7 @@ class RecentlyPlayedAdapterTests {
         recentlyPartialPlayedRepository,
         appPlaybackRepository,
         appArtistRepository,
+        syncController,
         outboxPort,
         dashboardRefresh,
         playbackState,
@@ -84,13 +86,14 @@ class RecentlyPlayedAdapterTests {
         lastLoginAt = now,
     )
 
-    private fun item(index: Int, forUserId: UserId = userId) = RecentlyPlayedItem(
+    private fun item(index: Int, forUserId: UserId = userId, albumId: String? = null) = RecentlyPlayedItem(
         spotifyUserId = forUserId,
         trackId = "track-$index",
         trackName = "Track $index",
         artistIds = listOf("artist-id-$index"),
         artistNames = listOf("Artist $index"),
         playedAt = now - index.hours,
+        albumId = albumId,
     )
 
     private fun currentlyPlayingItem(
@@ -584,7 +587,6 @@ class RecentlyPlayedAdapterTests {
         every { appArtistRepository.findByPlaybackProcessingStatus(any()) } returns emptyList()
         every { appPlaybackRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
         every { appPlaybackRepository.saveAll(any()) } just runs
-        every { appArtistRepository.findByArtistIds(any()) } returns emptyList()
         every { outboxPort.enqueue(any()) } just runs
     }
 
@@ -612,6 +614,72 @@ class RecentlyPlayedAdapterTests {
         verify { appPlaybackRepository.saveAll(capture(savedSlot)) }
         assertThat(savedSlot.captured).hasSize(1)
         assertThat(savedSlot.captured[0].secondsPlayed).isEqualTo(0L)
+    }
+
+    @Test
+    fun `appendPlaybackData delegates catalog sync to syncController`() {
+        val recentlyPlayedItem = item(1, albumId = "album-1")
+        setupAppendPlaybackData(recentlyPlayed = listOf(recentlyPlayedItem))
+
+        adapter.appendPlaybackData(userId)
+
+        verify {
+            syncController.syncForTracks(
+                listOf(CatalogSyncRequest("track-1", "album-1", listOf("artist-id-1"))),
+                userId,
+            )
+        }
+    }
+
+    @Test
+    fun `appendPlaybackData passes all filtered tracks to syncController`() {
+        val item1 = item(1, albumId = "album-1")
+        val item2 = item(2, albumId = "album-2")
+        setupAppendPlaybackData(recentlyPlayed = listOf(item1, item2))
+
+        adapter.appendPlaybackData(userId)
+
+        verify {
+            syncController.syncForTracks(
+                match { requests ->
+                    requests.size == 2 &&
+                        requests.any { it.trackId == "track-1" && it.albumId == "album-1" } &&
+                        requests.any { it.trackId == "track-2" && it.albumId == "album-2" }
+                },
+                userId,
+            )
+        }
+    }
+
+    @Test
+    fun `appendPlaybackData deduplicates tracks by trackId when passing to syncController`() {
+        val item1 = item(1, albumId = "album-shared")
+        val item2 = item(2, albumId = "album-shared")
+        setupAppendPlaybackData(recentlyPlayed = listOf(item1, item2))
+
+        adapter.appendPlaybackData(userId)
+
+        verify {
+            syncController.syncForTracks(
+                match { requests -> requests.size == 2 },
+                userId,
+            )
+        }
+    }
+
+    @Test
+    fun `appendPlaybackData passes track with no albumId to syncController`() {
+        val recentlyPlayedItem = item(1) // no albumId
+        setupAppendPlaybackData(recentlyPlayed = listOf(recentlyPlayedItem))
+
+        adapter.appendPlaybackData(userId)
+
+        verify {
+            syncController.syncForTracks(
+                listOf(CatalogSyncRequest("track-1", null, listOf("artist-id-1"))),
+                userId,
+            )
+        }
     }
 }
 

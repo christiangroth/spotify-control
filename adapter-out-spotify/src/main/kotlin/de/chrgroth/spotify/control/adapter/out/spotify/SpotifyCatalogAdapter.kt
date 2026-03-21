@@ -7,7 +7,6 @@ import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyAlbumRespons
 import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyAlbumTracksPage
 import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyArtistResponse
 import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifySimplifiedTrackResponse
-import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyTracksResponse
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.SyncError
 import de.chrgroth.spotify.control.domain.model.AccessToken
@@ -116,36 +115,6 @@ class SpotifyCatalogAdapter(
             ).right()
         } catch (e: Exception) {
             logger.error(e) { "Unexpected error fetching album tracks for album $albumId (user ${userId.value})" }
-            SyncError.TRACK_DETAILS_FETCH_FAILED.left()
-        }
-    }
-
-    override fun getTracks(
-        userId: UserId,
-        accessToken: AccessToken,
-        trackIds: List<String>,
-    ): Either<DomainError, Map<String, String>> {
-        return try {
-            throttler.throttle(DomainOutboxPartition.ToSpotify.key)
-            val request = HttpRequest.newBuilder()
-                .uri(URI.create("$apiBaseUrl/v1/tracks?ids=${trackIds.joinToString(",")}"))
-                .header("Authorization", "Bearer ${accessToken.value}")
-                .GET()
-                .build()
-            val response = httpMetrics.timed("/v1/tracks") {
-                httpClient.send(request, HttpResponse.BodyHandlers.ofString())
-            }
-            val errorResult = response.checkRateLimitOrError(logger, SyncError.TRACK_DETAILS_FETCH_FAILED)
-            if (errorResult != null) return errorResult
-            val tracksResponse = spotifyJson.decodeFromString<SpotifyTracksResponse>(response.body())
-            tracksResponse.tracks
-                .filterNotNull()
-                .filter { !it.isLocal && it.type == "track" }
-                .mapNotNull { track -> track.album?.id?.let { albumId -> track.id to albumId } }
-                .toMap()
-                .right()
-        } catch (e: Exception) {
-            logger.error(e) { "Unexpected error fetching tracks for ${trackIds.size} track(s) (user ${userId.value})" }
             SyncError.TRACK_DETAILS_FETCH_FAILED.left()
         }
     }

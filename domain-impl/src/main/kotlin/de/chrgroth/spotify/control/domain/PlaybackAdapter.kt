@@ -43,6 +43,7 @@ class PlaybackAdapter(
     private val recentlyPartialPlayedRepository: RecentlyPartialPlayedRepositoryPort,
     private val appPlaybackRepository: AppPlaybackRepositoryPort,
     private val appArtistRepository: AppArtistRepositoryPort,
+    private val syncController: SyncController,
     private val outboxPort: OutboxPort,
     private val dashboardRefresh: DashboardRefreshPort,
     private val playbackState: PlaybackStatePort,
@@ -147,6 +148,7 @@ class PlaybackAdapter(
           artistNames = representative.artistNames,
           playedAt = firstObservedAt,
           playedSeconds = playedMs / MS_PER_SECOND,
+          albumId = representative.albumId,
         )
       }
       val existingPlayedAts = recentlyPartialPlayedRepository.findExistingPlayedAts(userId, partialItems.map { it.playedAt }.toSet())
@@ -228,10 +230,11 @@ class PlaybackAdapter(
         logger.info { "Persisting ${newPlaybackItems.size} new app_playback items for user: ${userId.value}" }
         appPlaybackRepository.saveAll(newPlaybackItems)
 
-        val artists = buildArtists(filteredRecentlyPlayed, filteredPartialPlayed)
-        val existingArtistIds = appArtistRepository.findByArtistIds(artists.toSet()).map { it.artistId }.toSet()
-        artists.filter { it !in existingArtistIds }
-            .forEach { artistId -> outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails(artistId, userId)) }
+        val catalogRequests = (
+            filteredRecentlyPlayed.map { CatalogSyncRequest(it.trackId, it.albumId, it.artistIds) } +
+                filteredPartialPlayed.map { CatalogSyncRequest(it.trackId, it.albumId, it.artistIds) }
+        ).distinctBy { it.trackId }
+        syncController.syncForTracks(catalogRequests, userId)
     }
 
     private fun buildPlaybackItems(
@@ -252,11 +255,6 @@ class PlaybackAdapter(
             secondsPlayed = item.playedSeconds,
         )
     }
-
-    private fun buildArtists(
-        recentlyPlayed: List<RecentlyPlayedItem>,
-        partialPlayed: List<RecentlyPartialPlayedItem>,
-    ) = (recentlyPlayed.flatMap { it.artistIds } + partialPlayed.flatMap { it.artistIds }).distinct()
 
     // --- Artist Playback Sync ---
 

@@ -10,4 +10,5 @@ data class RecentlyPartialPlayedItem(
     val artistNames: List<String>,
     val playedAt: Instant,
     val playedSeconds: Long,
+    val albumId: String? = null,
 )

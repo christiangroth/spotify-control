@@ -19,4 +19,5 @@ class SpotifyCurrentlyPlayingDocument {
   var durationMs: Long = 0L
   var isPlaying: Boolean = false
   lateinit var observedAt: Instant
+  var albumId: String? = null
 }
