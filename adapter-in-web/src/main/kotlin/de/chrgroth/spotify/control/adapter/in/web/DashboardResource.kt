@@ -16,6 +16,9 @@ import jakarta.ws.rs.GET
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.Produces
 import jakarta.ws.rs.core.MediaType
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.runBlocking
 
 @Path("/dashboard")
 @ApplicationScoped
@@ -43,11 +46,22 @@ class DashboardResource {
   @Produces(MediaType.TEXT_HTML)
   fun dashboard(): TemplateInstance {
     val userId = UserId(securityIdentity.principal.name)
-    val user = readTimeout.timedWithFallback("userRepository.findById", null) { userRepository.findById(userId) }
-    val stats = readTimeout.timedWithFallback("dashboard.getStats", DashboardStats.EMPTY) { dashboard.getStats(userId) }
-    return dashboardTemplate
-      .data("displayName", user?.displayName ?: userId.value)
-      .data("stats", stats)
+    val contextClassLoader = Thread.currentThread().contextClassLoader
+    return runBlocking {
+      val userAsync = async(Dispatchers.IO) {
+        Thread.currentThread().contextClassLoader = contextClassLoader
+        readTimeout.timedWithFallback("userRepository.findById", null) { userRepository.findById(userId) }
+      }
+      val statsAsync = async(Dispatchers.IO) {
+        Thread.currentThread().contextClassLoader = contextClassLoader
+        readTimeout.timedWithFallback("dashboard.getStats", DashboardStats.EMPTY) { dashboard.getStats(userId) }
+      }
+      val user = userAsync.await()
+      val stats = statsAsync.await()
+      dashboardTemplate
+        .data("displayName", user?.displayName ?: userId.value)
+        .data("stats", stats)
+    }
   }
 
   @GET

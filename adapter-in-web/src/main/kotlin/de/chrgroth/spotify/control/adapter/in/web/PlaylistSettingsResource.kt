@@ -30,6 +30,9 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.time.toJavaInstant
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.runBlocking
 
 @Path("/settings/playlist")
 @ApplicationScoped
@@ -60,10 +63,20 @@ class PlaylistSettingsResource {
   @Produces(MediaType.TEXT_HTML)
   fun playlist(): TemplateInstance {
     val userId = UserId(securityIdentity.principal.name)
-    val user = readTimeout.timedWithFallback("userRepository.findById", null) { userRepository.findById(userId) }
-    val sortedPlaylists = readTimeout.timedWithFallback("playlistRepository.findByUserId", emptyList()) {
-      playlistRepository.findByUserId(userId)
-    }.sortedBy { it.name }
+    val contextClassLoader = Thread.currentThread().contextClassLoader
+    val (user, sortedPlaylists) = runBlocking {
+      val userAsync = async(Dispatchers.IO) {
+        Thread.currentThread().contextClassLoader = contextClassLoader
+        readTimeout.timedWithFallback("userRepository.findById", null) { userRepository.findById(userId) }
+      }
+      val playlistsAsync = async(Dispatchers.IO) {
+        Thread.currentThread().contextClassLoader = contextClassLoader
+        readTimeout.timedWithFallback("playlistRepository.findByUserId", emptyList()) {
+          playlistRepository.findByUserId(userId)
+        }
+      }
+      Pair(userAsync.await(), playlistsAsync.await().sortedBy { it.name })
+    }
     val padWidth = sortedPlaylists.size.toString().length
     val rows = sortedPlaylists.mapIndexed { index, playlist ->
       PlaylistRow(

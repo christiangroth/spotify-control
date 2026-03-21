@@ -24,6 +24,9 @@ import jakarta.ws.rs.PathParam
 import jakarta.ws.rs.Produces
 import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.runBlocking
 
 @Path("/settings/playback")
 @ApplicationScoped
@@ -54,10 +57,18 @@ class PlaybackSettingsResource {
   @Produces(MediaType.TEXT_HTML)
   fun playback(): TemplateInstance {
     val userId = UserId(securityIdentity.principal.name)
-    val user = readTimeout.timedWithFallback("userRepository.findById", null) { userRepository.findById(userId) }
-    val allArtists = readTimeout.timedWithFallback("catalog.findAllArtists", emptyList()) {
-      catalog.findAllArtists()
-    }.sortedBy { it.artistName }
+    val contextClassLoader = Thread.currentThread().contextClassLoader
+    val (user, allArtists) = runBlocking {
+      val userAsync = async(Dispatchers.IO) {
+        Thread.currentThread().contextClassLoader = contextClassLoader
+        readTimeout.timedWithFallback("userRepository.findById", null) { userRepository.findById(userId) }
+      }
+      val artistsAsync = async(Dispatchers.IO) {
+        Thread.currentThread().contextClassLoader = contextClassLoader
+        readTimeout.timedWithFallback("catalog.findAllArtists", emptyList()) { catalog.findAllArtists() }
+      }
+      Pair(userAsync.await(), artistsAsync.await().sortedBy { it.artistName })
+    }
     return playbackTemplate
       .data("displayName", user?.displayName ?: userId.value)
       .data("undecidedArtists", allArtists.filter { it.playbackProcessingStatus == ArtistPlaybackProcessingStatus.UNDECIDED })

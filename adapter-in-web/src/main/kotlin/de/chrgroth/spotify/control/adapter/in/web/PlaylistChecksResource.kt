@@ -21,6 +21,9 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.time.toJavaInstant
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.runBlocking
 
 @Path("/playlist-checks")
 @ApplicationScoped
@@ -51,12 +54,25 @@ class PlaylistChecksResource {
     @Produces(MediaType.TEXT_HTML)
     fun playlistChecks(): TemplateInstance {
         val userId = UserId(securityIdentity.principal.name)
-        val user = readTimeout.timedWithFallback("userRepository.findById", null) { userRepository.findById(userId) }
-        val playlistNameById = readTimeout.timedWithFallback("playlistRepository.findByUserId", emptyList()) {
-            playlistRepository.findByUserId(userId)
-        }.associateBy({ it.spotifyPlaylistId }, { it.name })
-        val checks = readTimeout.timedWithFallback("playlistCheckRepository.findAll", emptyList<AppPlaylistCheck>()) {
-            playlistCheckRepository.findAll()
+        val contextClassLoader = Thread.currentThread().contextClassLoader
+        val (user, playlistNameById, checks) = runBlocking {
+            val userAsync = async(Dispatchers.IO) {
+                Thread.currentThread().contextClassLoader = contextClassLoader
+                readTimeout.timedWithFallback("userRepository.findById", null) { userRepository.findById(userId) }
+            }
+            val playlistsAsync = async(Dispatchers.IO) {
+                Thread.currentThread().contextClassLoader = contextClassLoader
+                readTimeout.timedWithFallback("playlistRepository.findByUserId", emptyList()) {
+                    playlistRepository.findByUserId(userId)
+                }
+            }
+            val checksAsync = async(Dispatchers.IO) {
+                Thread.currentThread().contextClassLoader = contextClassLoader
+                readTimeout.timedWithFallback("playlistCheckRepository.findAll", emptyList<AppPlaylistCheck>()) {
+                    playlistCheckRepository.findAll()
+                }
+            }
+            Triple(userAsync.await(), playlistsAsync.await().associateBy({ it.spotifyPlaylistId }, { it.name }), checksAsync.await())
         }
         val groups = checks
             .map { check ->
