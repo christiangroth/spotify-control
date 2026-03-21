@@ -117,15 +117,10 @@ class DashboardAdapter(
     }
 
     private fun buildListeningStats(userId: UserId, since: Instant): ListeningStats {
-        val playbackItems = appPlaybackRepository.findAllSince(userId, since)
-            .filter { it.secondsPlayed > 0 }
+        val secondsByTrackId = appPlaybackRepository.sumSecondsPlayedByTrackIdSince(userId, since)
 
-        val allTrackIds = playbackItems.map { it.trackId }.toSet()
+        val allTrackIds = secondsByTrackId.keys.toSet()
         val statsTrackMap = appTrackRepository.findByTrackIds(allTrackIds.map { TrackId(it) }.toSet()).associateBy { it.id.value }
-
-        val secondsByTrackId = playbackItems
-            .groupBy { it.trackId }
-            .mapValues { (_, items) -> items.sumOf { it.secondsPlayed } }
 
         val listenedMinutes = secondsByTrackId.values.sum() / SECONDS_PER_MINUTE
         val statsAlbumIds = statsTrackMap.values.mapNotNull { it.albumId }.toSet()

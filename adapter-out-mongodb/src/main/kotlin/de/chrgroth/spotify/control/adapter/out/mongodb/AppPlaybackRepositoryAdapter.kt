@@ -147,6 +147,28 @@ class AppPlaybackRepositoryAdapter : AppPlaybackRepositoryPort {
                 }
         }
 
+    override fun sumSecondsPlayedByTrackIdSince(userId: UserId, since: Instant): Map<String, Long> {
+        val pipeline = listOf(
+            Aggregates.match(
+                Filters.and(
+                    Filters.eq("spotifyUserId", userId.value),
+                    Filters.gte("playedAt", since.toJavaInstant()),
+                    Filters.gt("secondsPlayed", 0),
+                ),
+            ),
+            Aggregates.group("\$trackId", Accumulators.sum("totalSeconds", "\$secondsPlayed")),
+        )
+        return mongoQueryMetrics.timed("app_playback.sumSecondsPlayedByTrackIdSince") {
+            appPlaybackDocumentRepository.mongoCollection()
+                .aggregate(pipeline, Document::class.java)
+                .associate { doc ->
+                    val trackId = doc.getString("_id")
+                    val totalSeconds = (doc["totalSeconds"] as? Int)?.toLong() ?: doc.getLong("totalSeconds") ?: 0L
+                    trackId to totalSeconds
+                }
+        }
+    }
+
     override fun findAllDistinctTrackIds(): Set<String> =
         mongoQueryMetrics.timed("app_playback.findAllDistinctTrackIds") {
             appPlaybackDocumentRepository.mongoCollection()

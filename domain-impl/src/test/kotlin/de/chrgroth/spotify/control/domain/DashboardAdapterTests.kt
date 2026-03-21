@@ -6,8 +6,6 @@ import de.chrgroth.spotify.control.domain.model.AppPlaybackItem
 import de.chrgroth.spotify.control.domain.model.AppTrack
 import de.chrgroth.spotify.control.domain.model.ArtistId
 import de.chrgroth.spotify.control.domain.model.CatalogStats
-import de.chrgroth.spotify.control.domain.model.PlaylistCheckStats
-import de.chrgroth.spotify.control.domain.model.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.TrackId
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.CatalogBrowserPort
@@ -59,6 +57,7 @@ class DashboardAdapterTests {
         every { appPlaybackRepository.countSince(userId, any()) } returns 5L
         every { appPlaybackRepository.countPerDaySince(userId, any()) } returns emptyList()
         every { appPlaybackRepository.findRecentlyPlayed(userId, any()) } returns emptyList()
+        every { appPlaybackRepository.sumSecondsPlayedByTrackIdSince(userId, any()) } returns emptyMap()
         every { playlistRepository.findByUserId(userId) } returns emptyList()
         every { playlistCheckRepository.countAll() } returns 0L
         every { playlistCheckRepository.countSucceeded() } returns 0L
@@ -72,21 +71,8 @@ class DashboardAdapterTests {
     fun `listening stats exclude items without tracked duration`() {
         setupCommonMocks()
 
-        // Items without a tracked duration have secondsPlayed = 0
-        val noDurationItem = AppPlaybackItem(
-            userId = userId,
-            playedAt = Instant.fromEpochSeconds(1000),
-            trackId = "track-1",
-            secondsPlayed = 0L,
-        )
-        // Items with a tracked duration have actual secondsPlayed > 0
-        val appTrackedItem = AppPlaybackItem(
-            userId = userId,
-            playedAt = Instant.fromEpochSeconds(2000),
-            trackId = "track-1",
-            secondsPlayed = 180L, // 3 minutes
-        )
-        every { appPlaybackRepository.findAllSince(userId, any()) } returns listOf(noDurationItem, appTrackedItem)
+        // MongoDB aggregation filters out secondsPlayed = 0, so only track-1 with 180s is returned
+        every { appPlaybackRepository.sumSecondsPlayedByTrackIdSince(userId, any()) } returns mapOf("track-1" to 180L)
         every { appTrackRepository.findByTrackIds(setOf(TrackId("track-1"))) } returns listOf(track1)
         every { appArtistRepository.findByArtistIds(setOf("artist-1")) } returns listOf(artist1)
         every { appAlbumRepository.findByAlbumIds(any()) } returns emptyList()
@@ -101,15 +87,8 @@ class DashboardAdapterTests {
     fun `listening stats are zero when all playback items have zero secondsPlayed`() {
         setupCommonMocks()
 
-        val noDurationItem = AppPlaybackItem(
-            userId = userId,
-            playedAt = Instant.fromEpochSeconds(1000),
-            trackId = "track-1",
-            secondsPlayed = 0L,
-        )
-        every { appPlaybackRepository.findAllSince(userId, any()) } returns listOf(noDurationItem)
-        every { appTrackRepository.findByTrackIds(any()) } returns listOf(track1)
-        every { appArtistRepository.findByArtistIds(any()) } returns listOf(artist1)
+        // MongoDB aggregation filters out all zero-secondsPlayed items, returning empty map
+        every { appPlaybackRepository.sumSecondsPlayedByTrackIdSince(userId, any()) } returns emptyMap()
 
         val stats = adapter.getStats(userId)
 
@@ -127,12 +106,8 @@ class DashboardAdapterTests {
             artistId = ArtistId("artist-1"), durationMs = 240_000L,
             lastSync = syncTimestamp,
         )
-        val items = listOf(
-            AppPlaybackItem(userId = userId, playedAt = Instant.fromEpochSeconds(1000), trackId = "track-1", secondsPlayed = 0L),
-            AppPlaybackItem(userId = userId, playedAt = Instant.fromEpochSeconds(2000), trackId = "track-1", secondsPlayed = 120L),
-            AppPlaybackItem(userId = userId, playedAt = Instant.fromEpochSeconds(3000), trackId = "track-2", secondsPlayed = 180L),
-        )
-        every { appPlaybackRepository.findAllSince(userId, any()) } returns items
+        // MongoDB aggregation groups by trackId and sums seconds; zero-second item for track-1 is excluded
+        every { appPlaybackRepository.sumSecondsPlayedByTrackIdSince(userId, any()) } returns mapOf("track-1" to 120L, "track-2" to 180L)
         every { appTrackRepository.findByTrackIds(setOf(TrackId("track-1"), TrackId("track-2"))) } returns listOf(track1, track2)
         every { appArtistRepository.findByArtistIds(setOf("artist-1")) } returns listOf(artist1)
         every { appAlbumRepository.findByAlbumIds(any()) } returns emptyList()
@@ -149,7 +124,7 @@ class DashboardAdapterTests {
         every { appPlaybackRepository.countAll(userId) } returns 1L
         every { appPlaybackRepository.countSince(userId, any()) } returns 1L
         every { appPlaybackRepository.countPerDaySince(userId, any()) } returns emptyList()
-        every { appPlaybackRepository.findAllSince(userId, any()) } returns emptyList()
+        every { appPlaybackRepository.sumSecondsPlayedByTrackIdSince(userId, any()) } returns emptyMap()
         every { playlistRepository.findByUserId(userId) } returns emptyList()
         every { playlistCheckRepository.countAll() } returns 0L
         every { playlistCheckRepository.countSucceeded() } returns 0L
