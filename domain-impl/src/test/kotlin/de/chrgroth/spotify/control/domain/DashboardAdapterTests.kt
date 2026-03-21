@@ -17,6 +17,7 @@ import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlin.time.Instant
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -148,5 +149,99 @@ class DashboardAdapterTests {
         assertThat(stats.recentlyPlayedTracks).hasSize(1)
         assertThat(stats.recentlyPlayedTracks[0].durationSeconds).isEqualTo(210L)
         assertThat(stats.recentlyPlayedTracks[0].durationFormatted).isEqualTo("3:30")
+    }
+
+    @Test
+    fun `getPlaybackStats only queries playback repository`() {
+        every { appPlaybackRepository.countAll(userId) } returns 42L
+        every { appPlaybackRepository.countSince(userId, any()) } returns 7L
+        every { appPlaybackRepository.countPerDaySince(userId, any()) } returns emptyList()
+
+        val stats = adapter.getPlaybackStats(userId)
+
+        assertThat(stats.totalPlaybackEvents).isEqualTo(42L)
+        assertThat(stats.playbackEventsLast30Days).isEqualTo(7L)
+        assertThat(stats.playbackEventsPerDay).hasSize(30)
+        verify(exactly = 0) { playlistRepository.findByUserId(any()) }
+        verify(exactly = 0) { playlistCheckRepository.countAll() }
+        verify(exactly = 0) { catalogBrowser.getCatalogStats() }
+        verify(exactly = 0) { appPlaybackRepository.findRecentlyPlayed(any(), any()) }
+        verify(exactly = 0) { appPlaybackRepository.sumSecondsPlayedByTrackIdSince(any(), any()) }
+    }
+
+    @Test
+    fun `getPlaylistMetadata only queries playlist repository`() {
+        every { playlistRepository.findByUserId(userId) } returns emptyList()
+
+        val stats = adapter.getPlaylistMetadata(userId)
+
+        assertThat(stats.syncedPlaylists).isEqualTo(0L)
+        assertThat(stats.totalPlaylists).isEqualTo(0L)
+        verify(exactly = 0) { appPlaybackRepository.countAll(any()) }
+        verify(exactly = 0) { playlistCheckRepository.countAll() }
+        verify(exactly = 0) { catalogBrowser.getCatalogStats() }
+    }
+
+    @Test
+    fun `getRecentlyPlayed only queries playback and catalog repositories for track data`() {
+        every { appPlaybackRepository.findRecentlyPlayed(userId, any()) } returns emptyList()
+        every { appTrackRepository.findByTrackIds(any()) } returns emptyList()
+        every { appAlbumRepository.findByAlbumIds(any()) } returns emptyList()
+        every { appArtistRepository.findByArtistIds(any()) } returns emptyList()
+
+        val stats = adapter.getRecentlyPlayed(userId)
+
+        assertThat(stats.recentlyPlayedTracks).isEmpty()
+        verify(exactly = 0) { appPlaybackRepository.countAll(any()) }
+        verify(exactly = 0) { appPlaybackRepository.countSince(any(), any()) }
+        verify(exactly = 0) { playlistRepository.findByUserId(any()) }
+        verify(exactly = 0) { playlistCheckRepository.countAll() }
+        verify(exactly = 0) { catalogBrowser.getCatalogStats() }
+    }
+
+    @Test
+    fun `getListeningStats only queries playback and catalog repositories for stats`() {
+        every { appPlaybackRepository.sumSecondsPlayedByTrackIdSince(userId, any()) } returns emptyMap()
+        every { appTrackRepository.findByTrackIds(any()) } returns emptyList()
+        every { appAlbumRepository.findByAlbumIds(any()) } returns emptyList()
+        every { appArtistRepository.findByArtistIds(any()) } returns emptyList()
+
+        val stats = adapter.getListeningStats(userId)
+
+        assertThat(stats.listeningStats.listenedMinutesLast30Days).isEqualTo(0L)
+        verify(exactly = 0) { appPlaybackRepository.countAll(any()) }
+        verify(exactly = 0) { appPlaybackRepository.countSince(any(), any()) }
+        verify(exactly = 0) { playlistRepository.findByUserId(any()) }
+        verify(exactly = 0) { playlistCheckRepository.countAll() }
+        verify(exactly = 0) { catalogBrowser.getCatalogStats() }
+    }
+
+    @Test
+    fun `getPlaylistCheckStats only queries playlist check repository`() {
+        every { playlistCheckRepository.countAll() } returns 3L
+        every { playlistCheckRepository.countSucceeded() } returns 3L
+
+        val stats = adapter.getPlaylistCheckStats()
+
+        assertThat(stats.playlistCheckStats.totalChecks).isEqualTo(3L)
+        assertThat(stats.playlistCheckStats.succeededChecks).isEqualTo(3L)
+        assertThat(stats.playlistCheckStats.allSucceeded).isTrue()
+        verify(exactly = 0) { appPlaybackRepository.countAll(any()) }
+        verify(exactly = 0) { playlistRepository.findByUserId(any()) }
+        verify(exactly = 0) { catalogBrowser.getCatalogStats() }
+    }
+
+    @Test
+    fun `getCatalogStats only queries catalog browser`() {
+        every { catalogBrowser.getCatalogStats() } returns CatalogStats(artistCount = 10L, albumCount = 20L, trackCount = 30L)
+
+        val stats = adapter.getCatalogStats()
+
+        assertThat(stats.catalogStats.artistCount).isEqualTo(10L)
+        assertThat(stats.catalogStats.albumCount).isEqualTo(20L)
+        assertThat(stats.catalogStats.trackCount).isEqualTo(30L)
+        verify(exactly = 0) { appPlaybackRepository.countAll(any()) }
+        verify(exactly = 0) { playlistRepository.findByUserId(any()) }
+        verify(exactly = 0) { playlistCheckRepository.countAll() }
     }
 }
