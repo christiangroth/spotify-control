@@ -1,3 +1,12 @@
+# 0.73.3 (2026.03.21)
+
+## Bugfixes / Chore
+* Fixed dashboard stats query timeout caused by inefficient MongoDB lookups.
+
+
+
+---
+
 # 0.73.2 (2026.03.21)
 
 ## Bugfixes / Chore
