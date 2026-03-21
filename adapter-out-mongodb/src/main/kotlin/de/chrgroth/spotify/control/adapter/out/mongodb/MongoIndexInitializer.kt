@@ -67,6 +67,11 @@ class MongoIndexInitializer {
             IndexOptions().name("app_playback_trackId_1"),
         )
 
+        appPlaybackDocumentRepository.mongoCollection().createIndex(
+            Document("spotifyUserId", 1).append("playedAt", 1).append("trackId", 1).append("secondsPlayed", 1),
+            IndexOptions().name("app_playback_spotifyUserId_1_playedAt_1_trackId_1_secondsPlayed_1"),
+        )
+
         appArtistDocumentRepository.mongoCollection().createIndex(
             Document("playbackProcessingStatus", 1),
             IndexOptions().name("app_artist_playbackProcessingStatus_1"),

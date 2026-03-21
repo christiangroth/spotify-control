@@ -5,4 +5,10 @@ import de.chrgroth.spotify.control.domain.model.UserId
 
 interface DashboardPort {
     fun getStats(userId: UserId): DashboardStats
+    fun getPlaybackStats(userId: UserId): DashboardStats
+    fun getPlaylistMetadata(userId: UserId): DashboardStats
+    fun getRecentlyPlayed(userId: UserId): DashboardStats
+    fun getListeningStats(userId: UserId): DashboardStats
+    fun getPlaylistCheckStats(): DashboardStats
+    fun getCatalogStats(): DashboardStats
 }

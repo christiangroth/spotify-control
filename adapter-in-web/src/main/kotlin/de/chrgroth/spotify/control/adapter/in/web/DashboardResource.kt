@@ -56,7 +56,7 @@ class DashboardResource {
   @Produces(MediaType.TEXT_HTML)
   fun snippetPlaybackData(): TemplateInstance {
     val userId = UserId(securityIdentity.principal.name)
-    val stats = readTimeout.timedWithFallback("dashboard.getStats", DashboardStats.EMPTY) { dashboard.getStats(userId) }
+    val stats = readTimeout.timedWithFallback("dashboard.getPlaybackStats", DashboardStats.EMPTY) { dashboard.getPlaybackStats(userId) }
     return dashboardTemplate.getFragment("snippet_playback_data").data("stats", stats)
   }
 
@@ -66,7 +66,7 @@ class DashboardResource {
   @Produces(MediaType.TEXT_HTML)
   fun snippetPlaybackHistogram(): TemplateInstance {
     val userId = UserId(securityIdentity.principal.name)
-    val stats = readTimeout.timedWithFallback("dashboard.getStats", DashboardStats.EMPTY) { dashboard.getStats(userId) }
+    val stats = readTimeout.timedWithFallback("dashboard.getPlaybackStats", DashboardStats.EMPTY) { dashboard.getPlaybackStats(userId) }
     return dashboardTemplate.getFragment("snippet_playback_histogram").data("stats", stats)
   }
 
@@ -76,7 +76,7 @@ class DashboardResource {
   @Produces(MediaType.TEXT_HTML)
   fun snippetPlaylistMetadata(): TemplateInstance {
     val userId = UserId(securityIdentity.principal.name)
-    val stats = readTimeout.timedWithFallback("dashboard.getStats", DashboardStats.EMPTY) { dashboard.getStats(userId) }
+    val stats = readTimeout.timedWithFallback("dashboard.getPlaylistMetadata", DashboardStats.EMPTY) { dashboard.getPlaylistMetadata(userId) }
     return dashboardTemplate.getFragment("snippet_playlist_metadata").data("stats", stats)
   }
 
@@ -86,7 +86,7 @@ class DashboardResource {
   @Produces(MediaType.TEXT_HTML)
   fun snippetRecentlyPlayed(): TemplateInstance {
     val userId = UserId(securityIdentity.principal.name)
-    val stats = readTimeout.timedWithFallback("dashboard.getStats", DashboardStats.EMPTY) { dashboard.getStats(userId) }
+    val stats = readTimeout.timedWithFallback("dashboard.getRecentlyPlayed", DashboardStats.EMPTY) { dashboard.getRecentlyPlayed(userId) }
     return dashboardTemplate.getFragment("snippet_recently_played").data("stats", stats)
   }
 
@@ -96,7 +96,7 @@ class DashboardResource {
   @Produces(MediaType.TEXT_HTML)
   fun snippetListeningStats(): TemplateInstance {
     val userId = UserId(securityIdentity.principal.name)
-    val stats = readTimeout.timedWithFallback("dashboard.getStats", DashboardStats.EMPTY) { dashboard.getStats(userId) }
+    val stats = readTimeout.timedWithFallback("dashboard.getListeningStats", DashboardStats.EMPTY) { dashboard.getListeningStats(userId) }
     return dashboardTemplate.getFragment("snippet_listening_stats").data("stats", stats)
   }
 
@@ -105,8 +105,7 @@ class DashboardResource {
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
   fun snippetPlaylistChecks(): TemplateInstance {
-    val userId = UserId(securityIdentity.principal.name)
-    val stats = readTimeout.timedWithFallback("dashboard.getStats", DashboardStats.EMPTY) { dashboard.getStats(userId) }
+    val stats = readTimeout.timedWithFallback("dashboard.getPlaylistCheckStats", DashboardStats.EMPTY) { dashboard.getPlaylistCheckStats() }
     return dashboardTemplate.getFragment("snippet_playlist_checks").data("stats", stats)
   }
 
@@ -115,8 +114,7 @@ class DashboardResource {
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
   fun snippetCatalogStats(): TemplateInstance {
-    val userId = UserId(securityIdentity.principal.name)
-    val stats = readTimeout.timedWithFallback("dashboard.getStats", DashboardStats.EMPTY) { dashboard.getStats(userId) }
+    val stats = readTimeout.timedWithFallback("dashboard.getCatalogStats", DashboardStats.EMPTY) { dashboard.getCatalogStats() }
     return dashboardTemplate.getFragment("snippet_catalog_stats").data("stats", stats)
   }
 }

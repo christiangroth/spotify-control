@@ -46,7 +46,44 @@ class DashboardAdapter(
 
     override fun getStats(userId: UserId): DashboardStats {
         val since = Clock.System.now() - STATS_DAYS.days
+        val playbackStats = computePlaybackStats(userId, since)
+        val playlistMetadata = computePlaylistMetadata(userId)
+        val playlistCheckStats = computePlaylistCheckStats()
+        return DashboardStats(
+            syncedPlaylists = playlistMetadata.syncedPlaylists,
+            totalPlaylists = playlistMetadata.totalPlaylists,
+            playlistCheckStats = playlistCheckStats,
+            totalPlaybackEvents = playbackStats.totalPlaybackEvents,
+            playbackEventsLast30Days = playbackStats.playbackEventsLast30Days,
+            playbackEventsPerDay = playbackStats.playbackEventsPerDay,
+            recentlyPlayedTracks = buildRecentlyPlayedTracks(userId),
+            listeningStats = buildListeningStats(userId, since),
+            catalogStats = catalogBrowser.getCatalogStats(),
+        )
+    }
 
+    override fun getPlaybackStats(userId: UserId): DashboardStats {
+        val since = Clock.System.now() - STATS_DAYS.days
+        return computePlaybackStats(userId, since)
+    }
+
+    override fun getPlaylistMetadata(userId: UserId): DashboardStats = computePlaylistMetadata(userId)
+
+    override fun getRecentlyPlayed(userId: UserId): DashboardStats =
+        DashboardStats.EMPTY.copy(recentlyPlayedTracks = buildRecentlyPlayedTracks(userId))
+
+    override fun getListeningStats(userId: UserId): DashboardStats {
+        val since = Clock.System.now() - STATS_DAYS.days
+        return DashboardStats.EMPTY.copy(listeningStats = buildListeningStats(userId, since))
+    }
+
+    override fun getPlaylistCheckStats(): DashboardStats =
+        DashboardStats.EMPTY.copy(playlistCheckStats = computePlaylistCheckStats())
+
+    override fun getCatalogStats(): DashboardStats =
+        DashboardStats.EMPTY.copy(catalogStats = catalogBrowser.getCatalogStats())
+
+    private fun computePlaybackStats(userId: UserId, since: Instant): DashboardStats {
         val total = appPlaybackRepository.countAll(userId)
         val last30Days = appPlaybackRepository.countSince(userId, since)
         val rawPerDay = appPlaybackRepository.countPerDaySince(userId, since)
@@ -64,29 +101,30 @@ class DashboardAdapter(
                 dateLabel = "%02d.%02d".format(date.day, date.month.ordinal + 1),
             )
         }
-
-        val playlists = playlistRepository.findByUserId(userId)
-        val totalPlaylists = playlists.size.toLong()
-        val syncedPlaylists = playlists.count { it.syncStatus == PlaylistSyncStatus.ACTIVE }.toLong()
-
-        val totalChecks = playlistCheckRepository.countAll()
-        val succeededChecks = playlistCheckRepository.countSucceeded()
-        val playlistCheckStats = PlaylistCheckStats(
-            succeededChecks = succeededChecks,
-            totalChecks = totalChecks,
-            allSucceeded = totalChecks == 0L || succeededChecks == totalChecks,
-        )
-
-        return DashboardStats(
-            syncedPlaylists = syncedPlaylists,
-            totalPlaylists = totalPlaylists,
-            playlistCheckStats = playlistCheckStats,
+        return DashboardStats.EMPTY.copy(
             totalPlaybackEvents = total,
             playbackEventsLast30Days = last30Days,
             playbackEventsPerDay = perDay,
-            recentlyPlayedTracks = buildRecentlyPlayedTracks(userId),
-            listeningStats = buildListeningStats(userId, since),
-            catalogStats = catalogBrowser.getCatalogStats(),
+        )
+    }
+
+    private fun computePlaylistMetadata(userId: UserId): DashboardStats {
+        val playlists = playlistRepository.findByUserId(userId)
+        val totalPlaylists = playlists.size.toLong()
+        val syncedPlaylists = playlists.count { it.syncStatus == PlaylistSyncStatus.ACTIVE }.toLong()
+        return DashboardStats.EMPTY.copy(
+            syncedPlaylists = syncedPlaylists,
+            totalPlaylists = totalPlaylists,
+        )
+    }
+
+    private fun computePlaylistCheckStats(): PlaylistCheckStats {
+        val totalChecks = playlistCheckRepository.countAll()
+        val succeededChecks = playlistCheckRepository.countSucceeded()
+        return PlaylistCheckStats(
+            succeededChecks = succeededChecks,
+            totalChecks = totalChecks,
+            allSucceeded = totalChecks == 0L || succeededChecks == totalChecks,
         )
     }
 
