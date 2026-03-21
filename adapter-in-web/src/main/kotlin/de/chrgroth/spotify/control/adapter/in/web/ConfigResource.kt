@@ -12,9 +12,6 @@ import jakarta.ws.rs.GET
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.Produces
 import jakarta.ws.rs.core.MediaType
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.runBlocking
 
 @Path("/config")
 @ApplicationScoped
@@ -34,11 +31,7 @@ class ConfigResource {
     @GET
     @Authenticated
     @Produces(MediaType.TEXT_HTML)
-    fun config(): TemplateInstance = runBlocking {
-        val statsAsync = async(Dispatchers.IO) { configurationInfo.getConfigurationStats() }
-        val runtimeConfigAsync = async(Dispatchers.IO) { runtimeConfig.getRuntimeConfig() }
-        configTemplate
-            .data("stats", statsAsync.await())
-            .data("runtimeConfig", runtimeConfigAsync.await())
-    }
+    fun config(): TemplateInstance = configTemplate
+        .data("stats", configurationInfo.getConfigurationStats())
+        .data("runtimeConfig", runtimeConfig.getRuntimeConfig())
 }

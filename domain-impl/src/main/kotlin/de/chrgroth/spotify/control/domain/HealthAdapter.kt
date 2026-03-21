@@ -10,9 +10,6 @@ import de.chrgroth.spotify.control.domain.port.out.OutboxManagementPort
 import de.chrgroth.spotify.control.domain.port.out.OutgoingRequestStatsPort
 import de.chrgroth.spotify.control.domain.port.out.PlaybackActivityPort
 import jakarta.enterprise.context.ApplicationScoped
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.runBlocking
 
 @ApplicationScoped
 @Suppress("Unused")
@@ -25,27 +22,17 @@ class HealthAdapter(
     private val playbackActivity: PlaybackActivityPort,
 ) : HealthPort {
 
-    override fun getStats(): HealthStats = runBlocking {
-        val outgoingRequestStatsAsync = async(Dispatchers.IO) { outgoingRequestStats.getRequestStats() }
-        val outboxPartitionsAsync = async(Dispatchers.IO) { outboxManagement.getPartitionStats() }
-        val mongoCollectionStatsAsync = async(Dispatchers.IO) { mongoStats.getCollectionStats() }
-        val mongoQueryStatsAsync = async(Dispatchers.IO) { mongoStats.getQueryStats() }
-        val cronjobStatsAsync = async(Dispatchers.IO) { cronjobInfo.getCronjobStats() }
-        val playbackActiveAsync = async(Dispatchers.IO) { playbackActivity.isPlaybackActive() }
-        val lastActivityTimestampAsync = async(Dispatchers.IO) { playbackActivity.lastActivityTimestamp() }
-        val configurationStatsAsync = async(Dispatchers.IO) { configurationInfo.getConfigurationStats() }
-        HealthStats(
-            outgoingRequestStats = outgoingRequestStatsAsync.await(),
-            outboxPartitions = outboxPartitionsAsync.await(),
-            mongoCollectionStats = mongoCollectionStatsAsync.await(),
-            mongoQueryStats = mongoQueryStatsAsync.await(),
-            cronjobStats = cronjobStatsAsync.await(),
-            predicateStats = listOf(
-                PredicateStats(name = "playbackActive", active = playbackActiveAsync.await(), lastCheck = lastActivityTimestampAsync.await()),
-            ),
-            configurationStats = configurationStatsAsync.await(),
-        )
-    }
+    override fun getStats(): HealthStats = HealthStats(
+        outgoingRequestStats = outgoingRequestStats.getRequestStats(),
+        outboxPartitions = outboxManagement.getPartitionStats(),
+        mongoCollectionStats = mongoStats.getCollectionStats(),
+        mongoQueryStats = mongoStats.getQueryStats(),
+        cronjobStats = cronjobInfo.getCronjobStats(),
+        predicateStats = listOf(
+            PredicateStats(name = "playbackActive", active = playbackActivity.isPlaybackActive(), lastCheck = playbackActivity.lastActivityTimestamp()),
+        ),
+        configurationStats = configurationInfo.getConfigurationStats(),
+    )
 
     override fun activatePartition(partitionKey: String): Boolean =
         outboxManagement.activate(partitionKey)
