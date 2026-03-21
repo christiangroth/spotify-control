@@ -1,3 +1,12 @@
+# 0.73.7 (2026.03.21)
+
+## Bugfixes / Chore
+* Dashboard stats sub-queries now run in parallel, reducing overall load time.
+
+
+
+---
+
 # 0.73.6 (2026.03.21)
 
 ## Bugfixes / Chore
