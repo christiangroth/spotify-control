@@ -137,7 +137,7 @@ class PlaybackAdapter(
         val rawPlayedMs = if (nextItem != null) {
           (nextItem.observedAt - firstObservedAt).inWholeMilliseconds
         } else {
-          session.items.maxOf { it.progressMs }
+          session.items.maxOf { minOf(it.progressMs, it.durationMs) }
         }
         val representative = session.items.maxBy { it.progressMs }
         val playedMs = minOf(rawPlayedMs, representative.durationMs)

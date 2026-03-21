@@ -375,6 +375,30 @@ class RecentlyPlayedAdapterTests {
     }
 
     @Test
+    fun `update caps playedSeconds at track durationMs when progressMs exceeds track length`() {
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
+        every { spotifyPlayback.getRecentlyPlayed(userId, accessToken, null) } returns emptyList<RecentlyPlayedItem>().right()
+        every { recentlyPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
+        every { recentlyPartialPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
+        every { recentlyPartialPlayedRepository.saveAll(any()) } just runs
+
+        // Spotify returned a progressMs larger than the track's durationMs (bad data);
+        // the observation gap also exceeds durationMs — result must be capped at track duration
+        val trackDurationMs = 210_000L // 3.5 minutes
+        val olderItem = currentlyPlayingItem("track-old", progressMs = 999_000L, observedAt = now - 5.minutes, durationMs = trackDurationMs)
+        val latestTrack = currentlyPlayingItem("track-latest", progressMs = 10_000L, observedAt = now)
+        every { currentlyPlayingRepository.findByUserId(userId) } returns listOf(olderItem, latestTrack)
+
+        adapter.fetchRecentlyPlayed(userId)
+
+        val savedSlot = slot<List<RecentlyPartialPlayedItem>>()
+        verify { recentlyPartialPlayedRepository.saveAll(capture(savedSlot)) }
+        // observation gap = 5 min = 300s and progressMs = 999s both exceed durationMs of 210s; must be capped
+        assertThat(savedSlot.captured[0].playedSeconds).isEqualTo(trackDurationMs / 1_000L)
+    }
+
+    @Test
     fun `update does not convert the sole non-completed track even when completed tracks exist`() {
         val completedItems = listOf(item(1))
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
