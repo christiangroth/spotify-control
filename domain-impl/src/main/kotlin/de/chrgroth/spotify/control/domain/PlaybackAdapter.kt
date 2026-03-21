@@ -134,12 +134,13 @@ class PlaybackAdapter(
         val firstObservedAt = session.items.minOf { it.observedAt }
         val lastObservedAtForSession = session.items.maxOf { it.observedAt }
         val nextItem = sortedItems.firstOrNull { it.observedAt > lastObservedAtForSession && it.trackId != session.trackId }
-        val playedMs = if (nextItem != null) {
+        val rawPlayedMs = if (nextItem != null) {
           (nextItem.observedAt - firstObservedAt).inWholeMilliseconds
         } else {
-          session.items.maxOf { it.progressMs }
+          session.items.maxOf { minOf(it.progressMs, it.durationMs) }
         }
         val representative = session.items.maxBy { it.progressMs }
+        val playedMs = minOf(rawPlayedMs, representative.durationMs)
         RecentlyPartialPlayedItem(
           spotifyUserId = userId,
           trackId = session.trackId,
