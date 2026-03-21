@@ -20,6 +20,9 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.time.toJavaInstant
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.runBlocking
 
 @Path("/playlist-checks")
 @ApplicationScoped
@@ -47,10 +50,14 @@ class PlaylistChecksResource {
     @Produces(MediaType.TEXT_HTML)
     fun playlistChecks(): TemplateInstance {
         val userId = UserId(securityIdentity.principal.name)
-        val user = userRepository.findById(userId)
-        val playlistNameById = playlistRepository.findByUserId(userId)
-            .associateBy({ it.spotifyPlaylistId }, { it.name })
-        val checks = playlistCheckRepository.findAll()
+        val (user, playlistNameById, checks) = runBlocking {
+            val userAsync = async(Dispatchers.IO) { userRepository.findById(userId) }
+            val playlistNamesAsync = async(Dispatchers.IO) {
+                playlistRepository.findByUserId(userId).associateBy({ it.spotifyPlaylistId }, { it.name })
+            }
+            val checksAsync = async(Dispatchers.IO) { playlistCheckRepository.findAll() }
+            Triple(userAsync.await(), playlistNamesAsync.await(), checksAsync.await())
+        }
         val groups = checks
             .map { check ->
                 PlaylistCheckRow(
