@@ -162,4 +162,16 @@ class AppTrackDataRepositoryTests {
 
         assertThat(result).isEmpty()
     }
+
+    @Test
+    fun `countAll returns total number of tracks`() {
+        val before = appTrackRepository.countAll()
+        val track1 = trackData("count1")
+        val track2 = trackData("count2")
+        appTrackRepository.upsertAll(listOf(track1, track2))
+
+        val after = appTrackRepository.countAll()
+
+        assertThat(after).isEqualTo(before + 2)
+    }
 }

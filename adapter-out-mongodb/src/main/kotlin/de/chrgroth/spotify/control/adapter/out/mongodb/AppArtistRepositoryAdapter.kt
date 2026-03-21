@@ -50,6 +50,11 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
             appArtistDocumentRepository.listAll().map { it.toDomain() }
         }
 
+    override fun countAll(): Long =
+        mongoQueryMetrics.timed("app_artist.countAll") {
+            appArtistDocumentRepository.count()
+        }
+
     override fun findByPlaybackProcessingStatus(status: ArtistPlaybackProcessingStatus): List<AppArtist> =
         mongoQueryMetrics.timed("app_artist.findByPlaybackProcessingStatus") {
             appArtistDocumentRepository.list("playbackProcessingStatus = ?1", status).map { it.toDomain() }

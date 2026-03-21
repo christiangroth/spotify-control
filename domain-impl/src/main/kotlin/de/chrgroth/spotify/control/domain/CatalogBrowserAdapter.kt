@@ -21,11 +21,11 @@ class CatalogBrowserAdapter(
 ) : CatalogBrowserPort {
 
     override fun getCatalogStats(): CatalogStats {
-        val artists = appArtistRepository.findAll()
-        val albumCount = appAlbumRepository.findAll().size.toLong()
-        val trackCount = appTrackRepository.findAll().size.toLong()
+        val artistCount = appArtistRepository.countAll()
+        val albumCount = appAlbumRepository.countAll()
+        val trackCount = appTrackRepository.countAll()
         return CatalogStats(
-            artistCount = artists.size.toLong(),
+            artistCount = artistCount,
             albumCount = albumCount,
             trackCount = trackCount,
         )

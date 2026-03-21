@@ -57,12 +57,18 @@ class AppAlbumRepositoryAdapter : AppAlbumRepositoryPort {
             appAlbumDocumentRepository.listAll().map { it.toDomain() }
         }
 
+    override fun countAll(): Long =
+        mongoQueryMetrics.timed("app_album.countAll") {
+            appAlbumDocumentRepository.count()
+        }
+
     override fun findByAlbumIds(albumIds: Set<AlbumId>): List<AppAlbum> {
         if (albumIds.isEmpty()) return emptyList()
         return mongoQueryMetrics.timed("app_album.findByAlbumIds") {
-            albumIds.mapNotNull { albumId ->
-                appAlbumDocumentRepository.findById(albumId.value)?.toDomain()
-            }
+            appAlbumDocumentRepository.mongoCollection()
+                .find(Filters.`in`("_id", albumIds.map { it.value }))
+                .toList()
+                .map { it.toDomain() }
         }
     }
 

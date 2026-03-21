@@ -59,6 +59,11 @@ class AppTrackRepositoryAdapter : AppTrackRepositoryPort {
             appTrackDocumentRepository.listAll().map { it.toDomain() }
         }
 
+    override fun countAll(): Long =
+        mongoQueryMetrics.timed("app_track.countAll") {
+            appTrackDocumentRepository.count()
+        }
+
     override fun findByTrackIds(trackIds: Set<TrackId>): List<AppTrack> {        if (trackIds.isEmpty()) return emptyList()
         return mongoQueryMetrics.timed("app_track.findByTrackIds") {
             appTrackDocumentRepository.mongoCollection()
