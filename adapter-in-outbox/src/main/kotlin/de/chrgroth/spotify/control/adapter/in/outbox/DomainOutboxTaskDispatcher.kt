@@ -1,9 +1,9 @@
 package de.chrgroth.spotify.control.adapter.`in`.outbox
 
 import de.chrgroth.quarkus.outbox.domain.ApplicationOutboxDispatcher
+import de.chrgroth.quarkus.outbox.domain.ApplicationOutboxEvent
 import de.chrgroth.quarkus.outbox.domain.ApplicationOutboxPartition
 import de.chrgroth.quarkus.outbox.domain.DispatchResult
-import de.chrgroth.quarkus.outbox.domain.OutboxTask
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
 import de.chrgroth.spotify.control.domain.port.`in`.CatalogPort
@@ -29,15 +29,18 @@ class DomainOutboxTaskDispatcher(
 
     override fun getAllPartitions(): List<ApplicationOutboxPartition> = DomainOutboxPartition.all
 
-    override fun dispatch(task: OutboxTask): DispatchResult {
+    override fun deserialize(partition: ApplicationOutboxPartition, eventType: String, payload: String): ApplicationOutboxEvent =
+        DomainOutboxEvent.fromKey(eventType, payload)
+
+    override fun dispatch(event: ApplicationOutboxEvent): DispatchResult {
         try {
-          val result = dispatchEvent(DomainOutboxEvent.fromKey(task.eventType, task.payload))
+          val result = dispatchEvent(event as DomainOutboxEvent)
           if (result is DispatchResult.Success) {
             outboxTaskCountObservers.forEach { it.onOutboxTaskCountChanged() }
           }
           return result
         } catch (e: IllegalArgumentException) {
-            return DispatchResult.Failed("Unknown event type: ${task.eventType}", e)
+            return DispatchResult.Failed("Unknown event type: ${event.key}", e)
         }
     }
 
