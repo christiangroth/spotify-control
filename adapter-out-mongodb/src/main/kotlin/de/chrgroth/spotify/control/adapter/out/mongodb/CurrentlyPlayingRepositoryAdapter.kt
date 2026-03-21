@@ -31,7 +31,7 @@ class CurrentlyPlayingRepositoryAdapter : CurrentlyPlayingRepositoryPort {
             observedAt = item.observedAt.toJavaInstant()
         }
         logger.info { "Saving currently playing document for user ${item.spotifyUserId.value}, track ${item.trackId}" }
-        mongoQueryMetrics.timedWithFallback("spotify_currently_playing.save", Unit) {
+        mongoQueryMetrics.timed("spotify_currently_playing.save") {
             currentlyPlayingDocumentRepository.persist(document)
         }
     }
@@ -71,7 +71,7 @@ class CurrentlyPlayingRepositoryAdapter : CurrentlyPlayingRepositoryPort {
 
     override fun deleteByUserIdAndTrackIds(userId: UserId, trackIds: Set<String>) {
         if (trackIds.isEmpty()) return
-        mongoQueryMetrics.timedWithFallback("spotify_currently_playing.deleteByUserIdAndTrackIds", Unit) {
+        mongoQueryMetrics.timed("spotify_currently_playing.deleteByUserIdAndTrackIds") {
             currentlyPlayingDocumentRepository.delete(
                 "spotifyUserId = ?1 and trackId in ?2",
                 userId.value,

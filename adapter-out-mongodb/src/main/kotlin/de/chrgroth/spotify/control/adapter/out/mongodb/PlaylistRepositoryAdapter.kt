@@ -36,12 +36,12 @@ class PlaylistRepositoryAdapter : PlaylistRepositoryPort {
 
     override fun saveAll(userId: UserId, playlists: List<PlaylistInfo>) {
         logger.info { "Saving ${playlists.size} playlist metadata document(s) for user ${userId.value}" }
-        mongoQueryMetrics.timedWithFallback("spotify_playlist_metadata.deleteByUserId", Unit) {
+        mongoQueryMetrics.timed("spotify_playlist_metadata.deleteByUserId") {
             playlistMetadataDocumentRepository.delete("spotifyUserId = ?1", userId.value)
         }
         if (playlists.isNotEmpty()) {
             val documents = playlists.map { it.toDocument(userId) }
-            mongoQueryMetrics.timedWithFallback("spotify_playlist_metadata.saveAll", Unit) {
+            mongoQueryMetrics.timed("spotify_playlist_metadata.saveAll") {
                 playlistMetadataDocumentRepository.persist(documents)
             }
         }
@@ -55,14 +55,14 @@ class PlaylistRepositoryAdapter : PlaylistRepositoryPort {
     override fun save(userId: UserId, playlist: Playlist) {
         logger.info { "Saving playlist document for playlist ${playlist.spotifyPlaylistId} (user ${userId.value}) with ${playlist.tracks.size} track(s)" }
         val document = playlist.toDocument(userId)
-        mongoQueryMetrics.timedWithFallback("spotify_playlist.save", Unit) {
+        mongoQueryMetrics.timed("spotify_playlist.save") {
             playlistDocumentRepository.persistOrUpdate(document)
         }
     }
 
     override fun updateLastSyncTime(userId: UserId, playlistId: String, time: kotlin.time.Instant) {
         val id = "${userId.value}:$playlistId"
-        mongoQueryMetrics.timedWithFallback("spotify_playlist_metadata.updateLastSyncTime", Unit) {
+        mongoQueryMetrics.timed("spotify_playlist_metadata.updateLastSyncTime") {
             playlistMetadataDocumentRepository.findById(id)?.let { doc ->
                 doc.lastSyncTime = time.toJavaInstant()
                 playlistMetadataDocumentRepository.persistOrUpdate(doc)
@@ -136,7 +136,7 @@ class PlaylistRepositoryAdapter : PlaylistRepositoryPort {
 
     override fun setAllSyncInactive() {
         logger.info { "Setting all playlist sync statuses to inactive" }
-        mongoQueryMetrics.timedWithFallback("spotify_playlist_metadata.setAllSyncInactive", Unit) {
+        mongoQueryMetrics.timed("spotify_playlist_metadata.setAllSyncInactive") {
             playlistMetadataDocumentRepository.mongoCollection().updateMany(
                 Document(),
                 Updates.set("syncStatus", PlaylistSyncStatus.PASSIVE.name),

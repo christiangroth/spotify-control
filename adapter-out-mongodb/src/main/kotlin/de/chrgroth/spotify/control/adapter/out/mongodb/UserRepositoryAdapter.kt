@@ -32,7 +32,7 @@ class UserRepositoryAdapter : UserRepositoryPort {
 
     override fun upsert(user: User) {
         val now = java.time.Instant.now()
-        mongoQueryMetrics.timedWithFallback("app_user.upsert", Unit) {
+        mongoQueryMetrics.timed("app_user.upsert") {
             userDocumentRepository.mongoCollection().updateOne(
                 Filters.eq("_id", user.spotifyUserId.value),
                 Updates.combine(

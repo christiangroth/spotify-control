@@ -68,7 +68,7 @@ class RecentlyPartialPlayedRepositoryAdapter : RecentlyPartialPlayedRepositoryPo
             }
         }
         logger.info { "Saving ${documents.size} recently partial played documents" }
-        mongoQueryMetrics.timedWithFallback("recently_partial_played.saveAll", Unit) {
+        mongoQueryMetrics.timed("recently_partial_played.saveAll") {
             recentlyPartialPlayedDocumentRepository.persist(documents)
         }
     }

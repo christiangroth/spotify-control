@@ -28,7 +28,7 @@ class AppAlbumRepositoryAdapter : AppAlbumRepositoryPort {
         val collection = appAlbumDocumentRepository.mongoCollection()
         val upsertOptions = UpdateOptions().upsert(true)
         val now = java.time.Instant.now()
-        mongoQueryMetrics.timedWithFallback("app_album.upsertAll", Unit) {
+        mongoQueryMetrics.timed("app_album.upsertAll") {
             val requests = items.map { item ->
                 UpdateOneModel<AppAlbumDocument>(
                     Filters.eq("_id", item.id.value),
@@ -73,7 +73,7 @@ class AppAlbumRepositoryAdapter : AppAlbumRepositoryPort {
 
     override fun deleteAll() {
         logger.info { "Deleting all app_album documents" }
-        mongoQueryMetrics.timedWithFallback("app_album.deleteAll", Unit) {
+        mongoQueryMetrics.timed("app_album.deleteAll") {
             appAlbumDocumentRepository.deleteAll()
         }
     }

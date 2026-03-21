@@ -29,7 +29,7 @@ class AppTrackRepositoryAdapter : AppTrackRepositoryPort {
         val collection = appTrackDocumentRepository.mongoCollection()
         val upsertOptions = UpdateOptions().upsert(true)
         val now = java.time.Instant.now()
-        mongoQueryMetrics.timedWithFallback("app_track.upsertAll", Unit) {
+        mongoQueryMetrics.timed("app_track.upsertAll") {
             val requests = items.map { item ->
                 UpdateOneModel<AppTrackDocument>(
                     Filters.eq("_id", item.id.value),
@@ -80,7 +80,7 @@ class AppTrackRepositoryAdapter : AppTrackRepositoryPort {
 
     override fun deleteAll() {
         logger.info { "Deleting all app_track documents" }
-        mongoQueryMetrics.timedWithFallback("app_track.deleteAll", Unit) {
+        mongoQueryMetrics.timed("app_track.deleteAll") {
             appTrackDocumentRepository.deleteAll()
         }
     }

@@ -77,13 +77,13 @@ class RecentlyPlayedRepositoryAdapter : RecentlyPlayedRepositoryPort {
             }
         }
         logger.info { "Saving ${documents.size} recently played documents" }
-        mongoQueryMetrics.timedWithFallback("spotify_recently_played.saveAll", Unit) {
+        mongoQueryMetrics.timed("spotify_recently_played.saveAll") {
             recentlyPlayedDocumentRepository.persist(documents)
         }
     }
 
     override fun deleteNonTracks(): Long =
-        mongoQueryMetrics.timedWithFallback("spotify_recently_played.deleteNonTracks", 0L) {
+        mongoQueryMetrics.timed("spotify_recently_played.deleteNonTracks") {
             recentlyPlayedDocumentRepository.delete("artistIds = ?1 and artistNames = ?2", emptyList<String>(), emptyList<String>())
         }
 

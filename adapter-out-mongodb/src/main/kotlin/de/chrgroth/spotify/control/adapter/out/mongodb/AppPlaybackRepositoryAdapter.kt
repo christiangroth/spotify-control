@@ -38,14 +38,14 @@ class AppPlaybackRepositoryAdapter : AppPlaybackRepositoryPort {
             }
         }
         logger.info { "Saving ${documents.size} app_playback documents" }
-        mongoQueryMetrics.timedWithFallback("app_playback.saveAll", Unit) {
+        mongoQueryMetrics.timed("app_playback.saveAll") {
             appPlaybackDocumentRepository.persistOrUpdate(documents)
         }
     }
 
     override fun deleteAllByUserId(userId: UserId) {
         logger.info { "Deleting all app_playback documents for user: ${userId.value}" }
-        mongoQueryMetrics.timedWithFallback("app_playback.deleteAllByUserId", Unit) {
+        mongoQueryMetrics.timed("app_playback.deleteAllByUserId") {
             appPlaybackDocumentRepository.delete("spotifyUserId = ?1", userId.value)
         }
     }
@@ -53,7 +53,7 @@ class AppPlaybackRepositoryAdapter : AppPlaybackRepositoryPort {
     override fun deleteAllByTrackIds(trackIds: Set<String>) {
         if (trackIds.isEmpty()) return
         logger.info { "Deleting all app_playback documents for ${trackIds.size} track(s)" }
-        mongoQueryMetrics.timedWithFallback("app_playback.deleteAllByTrackIds", Unit) {
+        mongoQueryMetrics.timed("app_playback.deleteAllByTrackIds") {
             appPlaybackDocumentRepository.delete("trackId in ?1", trackIds.toList())
         }
     }

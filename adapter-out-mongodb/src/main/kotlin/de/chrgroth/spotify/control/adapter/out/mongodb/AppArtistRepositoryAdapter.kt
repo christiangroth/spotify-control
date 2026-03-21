@@ -27,7 +27,7 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
         val collection = appArtistDocumentRepository.mongoCollection()
         val upsertOptions = UpdateOptions().upsert(true)
         val now = java.time.Instant.now()
-        mongoQueryMetrics.timedWithFallback("app_artist.upsertAll", Unit) {
+        mongoQueryMetrics.timed("app_artist.upsertAll") {
             val requests = items.map { item ->
                 UpdateOneModel<AppArtistDocument>(
                     Filters.eq("_id", item.artistId),
@@ -82,7 +82,7 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
         }
 
     override fun updatePlaybackProcessingStatus(artistId: String, status: ArtistPlaybackProcessingStatus) {
-        mongoQueryMetrics.timedWithFallback("app_artist.updatePlaybackProcessingStatus", Unit) {
+        mongoQueryMetrics.timed("app_artist.updatePlaybackProcessingStatus") {
             appArtistDocumentRepository.mongoCollection().updateOne(
                 Filters.eq("_id", artistId),
                 Updates.set("playbackProcessingStatus", status.name),
@@ -92,7 +92,7 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
 
     override fun deleteAll() {
         logger.info { "Deleting all app_artist documents" }
-        mongoQueryMetrics.timedWithFallback("app_artist.deleteAll", Unit) {
+        mongoQueryMetrics.timed("app_artist.deleteAll") {
             appArtistDocumentRepository.deleteAll()
         }
     }

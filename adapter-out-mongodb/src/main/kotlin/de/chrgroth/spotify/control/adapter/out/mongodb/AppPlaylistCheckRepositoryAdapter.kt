@@ -20,7 +20,7 @@ class AppPlaylistCheckRepositoryAdapter : AppPlaylistCheckRepositoryPort {
     override fun save(check: AppPlaylistCheck) {
         logger.info { "Saving playlist check ${check.checkId} for playlist ${check.playlistId}" }
         val document = check.toDocument()
-        mongoQueryMetrics.timedWithFallback("app_playlist_check.save", Unit) {
+        mongoQueryMetrics.timed("app_playlist_check.save") {
             appPlaylistCheckDocumentRepository.persistOrUpdate(document)
         }
     }
@@ -47,14 +47,14 @@ class AppPlaylistCheckRepositoryAdapter : AppPlaylistCheckRepositoryPort {
 
     override fun deleteByPlaylistId(playlistId: String) {
         logger.info { "Deleting playlist check documents for playlist $playlistId" }
-        mongoQueryMetrics.timedWithFallback("app_playlist_check.deleteByPlaylistId", Unit) {
+        mongoQueryMetrics.timed("app_playlist_check.deleteByPlaylistId") {
             appPlaylistCheckDocumentRepository.delete("playlistId = ?1", playlistId)
         }
     }
 
     override fun deleteAll() {
         logger.info { "Deleting all playlist check documents" }
-        mongoQueryMetrics.timedWithFallback("app_playlist_check.deleteAll", Unit) {
+        mongoQueryMetrics.timed("app_playlist_check.deleteAll") {
             appPlaylistCheckDocumentRepository.deleteAll()
         }
     }
