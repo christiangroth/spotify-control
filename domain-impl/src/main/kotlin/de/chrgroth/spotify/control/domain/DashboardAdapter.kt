@@ -22,6 +22,9 @@ import jakarta.enterprise.context.ApplicationScoped
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.minus
@@ -46,20 +49,27 @@ class DashboardAdapter(
 
     override fun getStats(userId: UserId): DashboardStats {
         val since = Clock.System.now() - STATS_DAYS.days
-        val playbackStats = computePlaybackStats(userId, since)
-        val playlistMetadata = computePlaylistMetadata(userId)
-        val playlistCheckStats = computePlaylistCheckStats()
-        return DashboardStats(
-            syncedPlaylists = playlistMetadata.syncedPlaylists,
-            totalPlaylists = playlistMetadata.totalPlaylists,
-            playlistCheckStats = playlistCheckStats,
-            totalPlaybackEvents = playbackStats.totalPlaybackEvents,
-            playbackEventsLast30Days = playbackStats.playbackEventsLast30Days,
-            playbackEventsPerDay = playbackStats.playbackEventsPerDay,
-            recentlyPlayedTracks = buildRecentlyPlayedTracks(userId),
-            listeningStats = buildListeningStats(userId, since),
-            catalogStats = catalogBrowser.getCatalogStats(),
-        )
+        return runBlocking {
+            val playbackStatsAsync = async(Dispatchers.IO) { computePlaybackStats(userId, since) }
+            val playlistMetadataAsync = async(Dispatchers.IO) { computePlaylistMetadata(userId) }
+            val playlistCheckStatsAsync = async(Dispatchers.IO) { computePlaylistCheckStats() }
+            val recentlyPlayedAsync = async(Dispatchers.IO) { buildRecentlyPlayedTracks(userId) }
+            val listeningStatsAsync = async(Dispatchers.IO) { buildListeningStats(userId, since) }
+            val catalogStatsAsync = async(Dispatchers.IO) { catalogBrowser.getCatalogStats() }
+            val playbackStats = playbackStatsAsync.await()
+            val playlistMetadata = playlistMetadataAsync.await()
+            DashboardStats(
+                syncedPlaylists = playlistMetadata.syncedPlaylists,
+                totalPlaylists = playlistMetadata.totalPlaylists,
+                playlistCheckStats = playlistCheckStatsAsync.await(),
+                totalPlaybackEvents = playbackStats.totalPlaybackEvents,
+                playbackEventsLast30Days = playbackStats.playbackEventsLast30Days,
+                playbackEventsPerDay = playbackStats.playbackEventsPerDay,
+                recentlyPlayedTracks = recentlyPlayedAsync.await(),
+                listeningStats = listeningStatsAsync.await(),
+                catalogStats = catalogStatsAsync.await(),
+            )
+        }
     }
 
     override fun getPlaybackStats(userId: UserId): DashboardStats {
