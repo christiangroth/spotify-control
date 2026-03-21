@@ -1,3 +1,13 @@
+# 0.73.2 (2026.03.21)
+
+## Bugfixes / Chore
+* MongoDB queries now time out after 2 seconds and return safe default values when MongoDB Atlas is unavailable or slow.
+* Timeout counts per query are now tracked and visible in the health dashboard.
+
+
+
+---
+
 # 0.73.1 (2026.03.19)
 
 ## Bugfixes / Chore
