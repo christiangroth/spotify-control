@@ -15,4 +15,18 @@ data class DashboardStats(
     val totalPlaylistsFormatted: String get() = totalPlaylists.formatted()
     val totalPlaybackEventsFormatted: String get() = totalPlaybackEvents.formatted()
     val playbackEventsLast30DaysFormatted: String get() = playbackEventsLast30Days.formatted()
+
+    companion object {
+        val EMPTY = DashboardStats(
+            syncedPlaylists = 0L,
+            totalPlaylists = 0L,
+            playlistCheckStats = PlaylistCheckStats(succeededChecks = 0L, totalChecks = 0L, allSucceeded = true),
+            totalPlaybackEvents = 0L,
+            playbackEventsLast30Days = 0L,
+            playbackEventsPerDay = emptyList(),
+            recentlyPlayedTracks = emptyList(),
+            listeningStats = ListeningStats(listenedMinutesLast30Days = 0L, topTracksLast30Days = emptyList(), topArtistsLast30Days = emptyList()),
+            catalogStats = CatalogStats(artistCount = 0L, albumCount = 0L, trackCount = 0L),
+        )
+    }
 }
