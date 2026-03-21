@@ -1,8 +1,7 @@
 package de.chrgroth.spotify.control.adapter.out.slack
 
-import de.chrgroth.quarkus.outbox.domain.event.OutboxPartitionActivatedEvent
-import de.chrgroth.quarkus.outbox.domain.event.OutboxPartitionPausedEvent
 import de.chrgroth.spotify.control.domain.model.AppPlaylistCheck
+import de.chrgroth.spotify.control.domain.port.out.OutboxPartitionObserver
 import de.chrgroth.spotify.control.domain.port.out.PlaylistCheckNotificationPort
 import io.quarkus.runtime.ShutdownEvent
 import io.quarkus.runtime.StartupEvent
@@ -48,7 +47,7 @@ class SlackNotificationAdapter(
     private val checkPassedEnabled: Boolean,
     @param:ConfigProperty(name = "app.slack.playlist-check-notifications.violations-changed")
     private val violationsChangedEnabled: Boolean,
-) : PlaylistCheckNotificationPort {
+) : OutboxPartitionObserver, PlaylistCheckNotificationPort {
 
     private val enabled: Boolean = webhookUrl.orElse("").isNotBlank()
 
@@ -70,14 +69,13 @@ class SlackNotificationAdapter(
         if (stoppingEnabled) send("SpCtl $version about to stop")
     }
 
-    fun onPartitionPaused(@Observes event: OutboxPartitionPausedEvent) {
+    override fun onPartitionPaused(partitionKey: String, reason: String) {
         if (!partitionPausedEnabled) return
-        val reason = if (event.reason.isBlank()) "unknown" else event.reason
-        send("Outbox partition ${event.partition.key} paused (reason: $reason)")
+        send("Outbox partition $partitionKey paused (reason: $reason)")
     }
 
-    fun onPartitionActivated(@Observes event: OutboxPartitionActivatedEvent) {
-        if (partitionResumedEnabled) send("Outbox partition ${event.partition.key} resumed")
+    override fun onPartitionActivated(partitionKey: String) {
+        if (partitionResumedEnabled) send("Outbox partition $partitionKey resumed")
     }
 
     override fun notifyCheckPassed(check: AppPlaylistCheck) {

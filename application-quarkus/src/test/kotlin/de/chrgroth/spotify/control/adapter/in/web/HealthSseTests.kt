@@ -1,10 +1,8 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
-import de.chrgroth.quarkus.outbox.domain.event.OutboxPartitionActivatedEvent
 import de.chrgroth.spotify.control.adapter.`in`.web.HealthSseAdapter
 import de.chrgroth.spotify.control.domain.model.PlaybackDetectedEvent
 import de.chrgroth.spotify.control.domain.model.UserId
-import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
 import de.chrgroth.spotify.control.domain.port.out.OutboxTaskCountObserver
 import de.chrgroth.spotify.control.domain.port.out.OutgoingRequestStatsObserver
 import io.quarkus.test.junit.QuarkusTest
@@ -65,7 +63,7 @@ class HealthSseTests {
                 { _: Throwable -> /* ignore errors */ },
             )
 
-        healthSseService.onPartitionActivated(OutboxPartitionActivatedEvent(DomainOutboxPartition.ToSpotify))
+        healthSseService.onPartitionActivated("to-spotify")
 
         assertTrue(latch.await(5, TimeUnit.SECONDS), "SSE refresh event should be received within 5 seconds")
         assertEquals(listOf("refresh-outbox-partitions"), received.toList())

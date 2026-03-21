@@ -1,19 +1,11 @@
 package de.chrgroth.spotify.control.adapter.out.slack
 
-import de.chrgroth.quarkus.outbox.domain.ApplicationOutboxPartition
-import de.chrgroth.quarkus.outbox.domain.event.OutboxPartitionActivatedEvent
-import de.chrgroth.quarkus.outbox.domain.event.OutboxPartitionPausedEvent
 import io.quarkus.runtime.ShutdownEvent
 import io.quarkus.runtime.StartupEvent
 import org.junit.jupiter.api.Test
 import java.util.Optional
 
 class SlackNotificationAdapterTests {
-
-    private val testPartition = object : ApplicationOutboxPartition {
-        override val key = "test-partition"
-        override val pauseOnRateLimit = true
-    }
 
     private fun adapter(
         webhookUrl: Optional<String> = Optional.empty(),
@@ -70,32 +62,32 @@ class SlackNotificationAdapterTests {
 
     @Test
     fun `partition paused notification does not throw when disabled`() {
-        adapter().onPartitionPaused(OutboxPartitionPausedEvent(testPartition, "RATE_LIMITED", null))
+        adapter().onPartitionPaused("test-partition", "RATE_LIMITED")
     }
 
     @Test
     fun `partition paused notification does not throw when no webhook url configured`() {
-        adapter(partitionPausedEnabled = true).onPartitionPaused(OutboxPartitionPausedEvent(testPartition, "RATE_LIMITED", null))
+        adapter(partitionPausedEnabled = true).onPartitionPaused("test-partition", "RATE_LIMITED")
     }
 
     @Test
     fun `partition paused notification includes status reason`() {
-        adapter(partitionPausedEnabled = true).onPartitionPaused(OutboxPartitionPausedEvent(testPartition, "RATE_LIMITED", null))
+        adapter(partitionPausedEnabled = true).onPartitionPaused("test-partition", "RATE_LIMITED")
     }
 
     @Test
     fun `partition paused notification handles blank reason`() {
-        adapter(partitionPausedEnabled = true).onPartitionPaused(OutboxPartitionPausedEvent(testPartition, "", null))
+        adapter(partitionPausedEnabled = true).onPartitionPaused("test-partition", "unknown")
     }
 
     @Test
     fun `partition resumed notification does not throw when disabled`() {
-        adapter().onPartitionActivated(OutboxPartitionActivatedEvent(testPartition))
+        adapter().onPartitionActivated("test-partition")
     }
 
     @Test
     fun `partition resumed notification does not throw when no webhook url configured`() {
-        adapter(partitionResumedEnabled = true).onPartitionActivated(OutboxPartitionActivatedEvent(testPartition))
+        adapter(partitionResumedEnabled = true).onPartitionActivated("test-partition")
     }
 
     @Test
