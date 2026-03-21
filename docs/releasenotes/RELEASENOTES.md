@@ -1,3 +1,12 @@
+# 0.73.8 (2026.03.21)
+
+## Bugfixes / Chore
+* Removed MongoDB query timeout and fallback value mechanism.
+
+
+
+---
+
 # 0.73.7 (2026.03.21)
 
 ## Bugfixes / Chore
