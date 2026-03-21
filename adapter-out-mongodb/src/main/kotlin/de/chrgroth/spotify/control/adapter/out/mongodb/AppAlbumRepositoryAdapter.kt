@@ -28,7 +28,7 @@ class AppAlbumRepositoryAdapter : AppAlbumRepositoryPort {
         val collection = appAlbumDocumentRepository.mongoCollection()
         val upsertOptions = UpdateOptions().upsert(true)
         val now = java.time.Instant.now()
-        mongoQueryMetrics.timed("app_album.upsertAll") {
+        mongoQueryMetrics.timedWithFallback("app_album.upsertAll", Unit) {
             val requests = items.map { item ->
                 UpdateOneModel<AppAlbumDocument>(
                     Filters.eq("_id", item.id.value),
@@ -53,13 +53,13 @@ class AppAlbumRepositoryAdapter : AppAlbumRepositoryPort {
     }
 
     override fun findAll(): List<AppAlbum> =
-        mongoQueryMetrics.timed("app_album.findAll") {
+        mongoQueryMetrics.timedWithFallback("app_album.findAll", emptyList()) {
             appAlbumDocumentRepository.listAll().map { it.toDomain() }
         }
 
     override fun findByAlbumIds(albumIds: Set<AlbumId>): List<AppAlbum> {
         if (albumIds.isEmpty()) return emptyList()
-        return mongoQueryMetrics.timed("app_album.findByAlbumIds") {
+        return mongoQueryMetrics.timedWithFallback("app_album.findByAlbumIds", emptyList()) {
             albumIds.mapNotNull { albumId ->
                 appAlbumDocumentRepository.findById(albumId.value)?.toDomain()
             }
@@ -67,13 +67,13 @@ class AppAlbumRepositoryAdapter : AppAlbumRepositoryPort {
     }
 
     override fun findByArtistId(artistId: ArtistId): List<AppAlbum> =
-        mongoQueryMetrics.timed("app_album.findByArtistId") {
+        mongoQueryMetrics.timedWithFallback("app_album.findByArtistId", emptyList()) {
             appAlbumDocumentRepository.list("artistId = ?1", artistId.value).map { it.toDomain() }
         }
 
     override fun deleteAll() {
         logger.info { "Deleting all app_album documents" }
-        mongoQueryMetrics.timed("app_album.deleteAll") {
+        mongoQueryMetrics.timedWithFallback("app_album.deleteAll", Unit) {
             appAlbumDocumentRepository.deleteAll()
         }
     }

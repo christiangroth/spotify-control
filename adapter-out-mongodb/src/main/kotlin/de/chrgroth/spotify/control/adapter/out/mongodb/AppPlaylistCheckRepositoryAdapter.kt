@@ -20,41 +20,41 @@ class AppPlaylistCheckRepositoryAdapter : AppPlaylistCheckRepositoryPort {
     override fun save(check: AppPlaylistCheck) {
         logger.info { "Saving playlist check ${check.checkId} for playlist ${check.playlistId}" }
         val document = check.toDocument()
-        mongoQueryMetrics.timed("app_playlist_check.save") {
+        mongoQueryMetrics.timedWithFallback("app_playlist_check.save", Unit) {
             appPlaylistCheckDocumentRepository.persistOrUpdate(document)
         }
     }
 
     override fun findByCheckId(checkId: String): AppPlaylistCheck? =
-        mongoQueryMetrics.timed("app_playlist_check.findByCheckId") {
+        mongoQueryMetrics.timedWithFallback("app_playlist_check.findByCheckId", null) {
             appPlaylistCheckDocumentRepository.findById(checkId)?.toDomain()
         }
 
     override fun findAll(): List<AppPlaylistCheck> =
-        mongoQueryMetrics.timed("app_playlist_check.findAll") {
+        mongoQueryMetrics.timedWithFallback("app_playlist_check.findAll", emptyList()) {
             appPlaylistCheckDocumentRepository.listAll().map { it.toDomain() }
         }
 
     override fun countAll(): Long =
-        mongoQueryMetrics.timed("app_playlist_check.countAll") {
+        mongoQueryMetrics.timedWithFallback("app_playlist_check.countAll", 0L) {
             appPlaylistCheckDocumentRepository.count()
         }
 
     override fun countSucceeded(): Long =
-        mongoQueryMetrics.timed("app_playlist_check.countSucceeded") {
+        mongoQueryMetrics.timedWithFallback("app_playlist_check.countSucceeded", 0L) {
             appPlaylistCheckDocumentRepository.count("succeeded = ?1", true)
         }
 
     override fun deleteByPlaylistId(playlistId: String) {
         logger.info { "Deleting playlist check documents for playlist $playlistId" }
-        mongoQueryMetrics.timed("app_playlist_check.deleteByPlaylistId") {
+        mongoQueryMetrics.timedWithFallback("app_playlist_check.deleteByPlaylistId", Unit) {
             appPlaylistCheckDocumentRepository.delete("playlistId = ?1", playlistId)
         }
     }
 
     override fun deleteAll() {
         logger.info { "Deleting all playlist check documents" }
-        mongoQueryMetrics.timed("app_playlist_check.deleteAll") {
+        mongoQueryMetrics.timedWithFallback("app_playlist_check.deleteAll", Unit) {
             appPlaylistCheckDocumentRepository.deleteAll()
         }
     }

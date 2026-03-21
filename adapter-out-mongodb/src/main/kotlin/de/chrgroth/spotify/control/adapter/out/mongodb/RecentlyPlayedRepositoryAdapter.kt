@@ -23,7 +23,7 @@ class RecentlyPlayedRepositoryAdapter : RecentlyPlayedRepositoryPort {
     override fun findExistingPlayedAts(spotifyUserId: UserId, playedAts: Set<Instant>): Set<Instant> {
         if (playedAts.isEmpty()) return emptySet()
         val javaPlayedAts = playedAts.map { it.toJavaInstant() }
-        return mongoQueryMetrics.timed("spotify_recently_played.findExistingPlayedAts") {
+        return mongoQueryMetrics.timedWithFallback("spotify_recently_played.findExistingPlayedAts", emptySet()) {
             recentlyPlayedDocumentRepository
                 .list("spotifyUserId = ?1 and playedAt in ?2", spotifyUserId.value, javaPlayedAts)
                 .map { it.playedAt.toKotlinInstant() }
@@ -32,7 +32,7 @@ class RecentlyPlayedRepositoryAdapter : RecentlyPlayedRepositoryPort {
     }
 
     override fun findMostRecentPlayedAt(spotifyUserId: UserId): Instant? =
-        mongoQueryMetrics.timed("spotify_recently_played.findMostRecentPlayedAt") {
+        mongoQueryMetrics.timedWithFallback("spotify_recently_played.findMostRecentPlayedAt", null) {
             recentlyPlayedDocumentRepository
                 .find("spotifyUserId = ?1", Sort.by("playedAt").descending(), spotifyUserId.value)
                 .firstResult()
@@ -40,7 +40,7 @@ class RecentlyPlayedRepositoryAdapter : RecentlyPlayedRepositoryPort {
         }
 
     override fun findSince(spotifyUserId: UserId, since: Instant?): List<RecentlyPlayedItem> =
-        mongoQueryMetrics.timed("spotify_recently_played.findSince") {
+        mongoQueryMetrics.timedWithFallback("spotify_recently_played.findSince", emptyList()) {
             val query = if (since != null) {
                 recentlyPlayedDocumentRepository.list(
                     "spotifyUserId = ?1 and playedAt > ?2",
@@ -77,13 +77,13 @@ class RecentlyPlayedRepositoryAdapter : RecentlyPlayedRepositoryPort {
             }
         }
         logger.info { "Saving ${documents.size} recently played documents" }
-        mongoQueryMetrics.timed("spotify_recently_played.saveAll") {
+        mongoQueryMetrics.timedWithFallback("spotify_recently_played.saveAll", Unit) {
             recentlyPlayedDocumentRepository.persist(documents)
         }
     }
 
     override fun deleteNonTracks(): Long =
-        mongoQueryMetrics.timed("spotify_recently_played.deleteNonTracks") {
+        mongoQueryMetrics.timedWithFallback("spotify_recently_played.deleteNonTracks", 0L) {
             recentlyPlayedDocumentRepository.delete("artistIds = ?1 and artistNames = ?2", emptyList<String>(), emptyList<String>())
         }
 

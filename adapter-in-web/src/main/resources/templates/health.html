@@ -230,6 +230,7 @@
                                     <thead>
                                         <tr style="border-color:#333;">
                                             <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Query</th>
+                                            <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">Timeouts</th>
                                             <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">Executions</th>
                                         </tr>
                                     </thead>
@@ -237,6 +238,13 @@
                                         {#for q in stats.mongoQueryStats}
                                         <tr style="border-color:#333;">
                                             <td style="border-color:#333;color:#e0e0e0;background-color:transparent;">{q.name}</td>
+                                            <td style="border-color:#333;background-color:transparent;text-align:right;">
+                                                {#if q.timeoutCount > 0}
+                                                <span style="color:#f44;">{q.timeoutCountFormatted}</span>
+                                                {#else}
+                                                <span style="color:#e0e0e0;">{q.timeoutCountFormatted}</span>
+                                                {/if}
+                                            </td>
                                             <td style="border-color:#333;background-color:transparent;text-align:right;">
                                                 {#if q.slowQueryCount > 0}
                                                 <span style="color:#f90;">{q.slowQueryCountFormatted}</span>

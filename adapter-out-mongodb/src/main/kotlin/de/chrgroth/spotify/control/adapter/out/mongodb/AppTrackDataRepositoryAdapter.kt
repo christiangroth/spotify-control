@@ -29,7 +29,7 @@ class AppTrackRepositoryAdapter : AppTrackRepositoryPort {
         val collection = appTrackDocumentRepository.mongoCollection()
         val upsertOptions = UpdateOptions().upsert(true)
         val now = java.time.Instant.now()
-        mongoQueryMetrics.timed("app_track.upsertAll") {
+        mongoQueryMetrics.timedWithFallback("app_track.upsertAll", Unit) {
             val requests = items.map { item ->
                 UpdateOneModel<AppTrackDocument>(
                     Filters.eq("_id", item.id.value),
@@ -55,12 +55,12 @@ class AppTrackRepositoryAdapter : AppTrackRepositoryPort {
     }
 
     override fun findAll(): List<AppTrack> =
-        mongoQueryMetrics.timed("app_track.findAll") {
+        mongoQueryMetrics.timedWithFallback("app_track.findAll", emptyList()) {
             appTrackDocumentRepository.listAll().map { it.toDomain() }
         }
 
     override fun findByTrackIds(trackIds: Set<TrackId>): List<AppTrack> {        if (trackIds.isEmpty()) return emptyList()
-        return mongoQueryMetrics.timed("app_track.findByTrackIds") {
+        return mongoQueryMetrics.timedWithFallback("app_track.findByTrackIds", emptyList()) {
             appTrackDocumentRepository.mongoCollection()
                 .find(Filters.`in`("_id", trackIds.map { it.value }))
                 .toList()
@@ -69,18 +69,18 @@ class AppTrackRepositoryAdapter : AppTrackRepositoryPort {
     }
 
     override fun findByArtistId(artistId: ArtistId): List<AppTrack> =
-        mongoQueryMetrics.timed("app_track.findByArtistId") {
+        mongoQueryMetrics.timedWithFallback("app_track.findByArtistId", emptyList()) {
             appTrackDocumentRepository.list("artistId = ?1", artistId.value).map { it.toDomain() }
         }
 
     override fun findByAlbumId(albumId: AlbumId): List<AppTrack> =
-        mongoQueryMetrics.timed("app_track.findByAlbumId") {
+        mongoQueryMetrics.timedWithFallback("app_track.findByAlbumId", emptyList()) {
             appTrackDocumentRepository.list("albumId = ?1", albumId.value).map { it.toDomain() }
         }
 
     override fun deleteAll() {
         logger.info { "Deleting all app_track documents" }
-        mongoQueryMetrics.timed("app_track.deleteAll") {
+        mongoQueryMetrics.timedWithFallback("app_track.deleteAll", Unit) {
             appTrackDocumentRepository.deleteAll()
         }
     }

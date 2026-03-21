@@ -38,14 +38,14 @@ class AppPlaybackRepositoryAdapter : AppPlaybackRepositoryPort {
             }
         }
         logger.info { "Saving ${documents.size} app_playback documents" }
-        mongoQueryMetrics.timed("app_playback.saveAll") {
+        mongoQueryMetrics.timedWithFallback("app_playback.saveAll", Unit) {
             appPlaybackDocumentRepository.persistOrUpdate(documents)
         }
     }
 
     override fun deleteAllByUserId(userId: UserId) {
         logger.info { "Deleting all app_playback documents for user: ${userId.value}" }
-        mongoQueryMetrics.timed("app_playback.deleteAllByUserId") {
+        mongoQueryMetrics.timedWithFallback("app_playback.deleteAllByUserId", Unit) {
             appPlaybackDocumentRepository.delete("spotifyUserId = ?1", userId.value)
         }
     }
@@ -53,13 +53,13 @@ class AppPlaybackRepositoryAdapter : AppPlaybackRepositoryPort {
     override fun deleteAllByTrackIds(trackIds: Set<String>) {
         if (trackIds.isEmpty()) return
         logger.info { "Deleting all app_playback documents for ${trackIds.size} track(s)" }
-        mongoQueryMetrics.timed("app_playback.deleteAllByTrackIds") {
+        mongoQueryMetrics.timedWithFallback("app_playback.deleteAllByTrackIds", Unit) {
             appPlaybackDocumentRepository.delete("trackId in ?1", trackIds.toList())
         }
     }
 
     override fun findMostRecentPlayedAt(userId: UserId): Instant? =
-        mongoQueryMetrics.timed("app_playback.findMostRecentPlayedAt") {
+        mongoQueryMetrics.timedWithFallback("app_playback.findMostRecentPlayedAt", null) {
             appPlaybackDocumentRepository
                 .find("spotifyUserId = ?1", Sort.by("playedAt").descending(), userId.value)
                 .firstResult()
@@ -69,7 +69,7 @@ class AppPlaybackRepositoryAdapter : AppPlaybackRepositoryPort {
     override fun findExistingPlayedAts(userId: UserId, playedAts: Set<Instant>): Set<Instant> {
         if (playedAts.isEmpty()) return emptySet()
         val javaPlayedAts = playedAts.map { it.toJavaInstant() }
-        return mongoQueryMetrics.timed("app_playback.findExistingPlayedAts") {
+        return mongoQueryMetrics.timedWithFallback("app_playback.findExistingPlayedAts", emptySet()) {
             appPlaybackDocumentRepository
                 .list("spotifyUserId = ?1 and playedAt in ?2", userId.value, javaPlayedAts)
                 .map { it.playedAt.toKotlinInstant() }
@@ -78,12 +78,12 @@ class AppPlaybackRepositoryAdapter : AppPlaybackRepositoryPort {
     }
 
     override fun countAll(userId: UserId): Long =
-        mongoQueryMetrics.timed("app_playback.countAll") {
+        mongoQueryMetrics.timedWithFallback("app_playback.countAll", 0L) {
             appPlaybackDocumentRepository.count("spotifyUserId = ?1", userId.value)
         }
 
     override fun countSince(userId: UserId, since: Instant): Long =
-        mongoQueryMetrics.timed("app_playback.countSince") {
+        mongoQueryMetrics.timedWithFallback("app_playback.countSince", 0L) {
             appPlaybackDocumentRepository.count(
                 "spotifyUserId = ?1 and playedAt >= ?2",
                 userId.value,
@@ -105,7 +105,7 @@ class AppPlaybackRepositoryAdapter : AppPlaybackRepositoryPort {
             ),
             Aggregates.sort(Sorts.ascending("_id")),
         )
-        return mongoQueryMetrics.timed("app_playback.countPerDaySince") {
+        return mongoQueryMetrics.timedWithFallback("app_playback.countPerDaySince", emptyList()) {
             appPlaybackDocumentRepository.mongoCollection()
                 .aggregate(pipeline, Document::class.java)
                 .map { doc ->
@@ -118,7 +118,7 @@ class AppPlaybackRepositoryAdapter : AppPlaybackRepositoryPort {
     }
 
     override fun findRecentlyPlayed(userId: UserId, limit: Int): List<AppPlaybackItem> =
-        mongoQueryMetrics.timed("app_playback.findRecentlyPlayed") {
+        mongoQueryMetrics.timedWithFallback("app_playback.findRecentlyPlayed", emptyList()) {
             appPlaybackDocumentRepository
                 .find("spotifyUserId = ?1", Sort.by("playedAt").descending(), userId.value)
                 .page(0, limit)
@@ -134,7 +134,7 @@ class AppPlaybackRepositoryAdapter : AppPlaybackRepositoryPort {
         }
 
     override fun findAllSince(userId: UserId, since: Instant): List<AppPlaybackItem> =
-        mongoQueryMetrics.timed("app_playback.findAllSince") {
+        mongoQueryMetrics.timedWithFallback("app_playback.findAllSince", emptyList()) {
             appPlaybackDocumentRepository
                 .list("spotifyUserId = ?1 and playedAt >= ?2", userId.value, since.toJavaInstant())
                 .map { doc ->
@@ -148,7 +148,7 @@ class AppPlaybackRepositoryAdapter : AppPlaybackRepositoryPort {
         }
 
     override fun findAllDistinctTrackIds(): Set<String> =
-        mongoQueryMetrics.timed("app_playback.findAllDistinctTrackIds") {
+        mongoQueryMetrics.timedWithFallback("app_playback.findAllDistinctTrackIds", emptySet()) {
             appPlaybackDocumentRepository.mongoCollection()
                 .distinct("trackId", String::class.java)
                 .toList()

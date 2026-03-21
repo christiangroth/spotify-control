@@ -27,7 +27,7 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
         val collection = appArtistDocumentRepository.mongoCollection()
         val upsertOptions = UpdateOptions().upsert(true)
         val now = java.time.Instant.now()
-        mongoQueryMetrics.timed("app_artist.upsertAll") {
+        mongoQueryMetrics.timedWithFallback("app_artist.upsertAll", Unit) {
             val requests = items.map { item ->
                 UpdateOneModel<AppArtistDocument>(
                     Filters.eq("_id", item.artistId),
@@ -46,18 +46,18 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
     }
 
     override fun findAll(): List<AppArtist> =
-        mongoQueryMetrics.timed("app_artist.findAll") {
+        mongoQueryMetrics.timedWithFallback("app_artist.findAll", emptyList()) {
             appArtistDocumentRepository.listAll().map { it.toDomain() }
         }
 
     override fun findByPlaybackProcessingStatus(status: ArtistPlaybackProcessingStatus): List<AppArtist> =
-        mongoQueryMetrics.timed("app_artist.findByPlaybackProcessingStatus") {
+        mongoQueryMetrics.timedWithFallback("app_artist.findByPlaybackProcessingStatus", emptyList()) {
             appArtistDocumentRepository.list("playbackProcessingStatus = ?1", status).map { it.toDomain() }
         }
 
     override fun findByArtistIds(artistIds: Set<String>): List<AppArtist> {
         if (artistIds.isEmpty()) return emptyList()
-        return mongoQueryMetrics.timed("app_artist.findByArtistIds") {
+        return mongoQueryMetrics.timedWithFallback("app_artist.findByArtistIds", emptyList()) {
             appArtistDocumentRepository.mongoCollection()
                 .find(Filters.`in`("_id", artistIds))
                 .toList()
@@ -66,7 +66,7 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
     }
 
     override fun findWithImageLinkAndBlankName(): List<AppArtist> =
-        mongoQueryMetrics.timed("app_artist.findWithImageLinkAndBlankName") {
+        mongoQueryMetrics.timedWithFallback("app_artist.findWithImageLinkAndBlankName", emptyList()) {
             appArtistDocumentRepository.mongoCollection()
                 .find(
                     Filters.and(
@@ -82,7 +82,7 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
         }
 
     override fun updatePlaybackProcessingStatus(artistId: String, status: ArtistPlaybackProcessingStatus) {
-        mongoQueryMetrics.timed("app_artist.updatePlaybackProcessingStatus") {
+        mongoQueryMetrics.timedWithFallback("app_artist.updatePlaybackProcessingStatus", Unit) {
             appArtistDocumentRepository.mongoCollection().updateOne(
                 Filters.eq("_id", artistId),
                 Updates.set("playbackProcessingStatus", status.name),
@@ -92,7 +92,7 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
 
     override fun deleteAll() {
         logger.info { "Deleting all app_artist documents" }
-        mongoQueryMetrics.timed("app_artist.deleteAll") {
+        mongoQueryMetrics.timedWithFallback("app_artist.deleteAll", Unit) {
             appArtistDocumentRepository.deleteAll()
         }
     }
