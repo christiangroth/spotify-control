@@ -112,4 +112,16 @@ class AppAlbumRepositoryTests {
 
         assertThat(result).isEmpty()
     }
+
+    @Test
+    fun `countAll returns total number of albums`() {
+        val before = appAlbumRepository.countAll()
+        val album1 = album("count1")
+        val album2 = album("count2")
+        appAlbumRepository.upsertAll(listOf(album1, album2))
+
+        val after = appAlbumRepository.countAll()
+
+        assertThat(after).isEqualTo(before + 2)
+    }
 }

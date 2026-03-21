@@ -98,4 +98,16 @@ class AppArtistRepositoryTests {
         assertThat(result.map { it.artistId }).contains(withImageAndBlankName.artistId)
         assertThat(result.map { it.artistId }).doesNotContain(withImageAndName.artistId, withoutImage.artistId)
     }
+
+    @Test
+    fun `countAll returns total number of artists`() {
+        val before = appArtistRepository.countAll()
+        val artist1 = artist("count1")
+        val artist2 = artist("count2")
+        appArtistRepository.upsertAll(listOf(artist1, artist2))
+
+        val after = appArtistRepository.countAll()
+
+        assertThat(after).isEqualTo(before + 2)
+    }
 }
