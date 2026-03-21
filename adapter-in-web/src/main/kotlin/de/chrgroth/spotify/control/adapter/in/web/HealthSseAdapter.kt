@@ -1,11 +1,11 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
+import de.chrgroth.quarkus.outbox.domain.event.OutboxPartitionActivatedEvent
+import de.chrgroth.quarkus.outbox.domain.event.OutboxPartitionPausedEvent
 import de.chrgroth.spotify.control.domain.model.PlaybackDetectedEvent
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.out.OutboxTaskCountObserver
 import de.chrgroth.spotify.control.domain.port.out.OutgoingRequestStatsObserver
-import de.chrgroth.outbox.OutboxPartition
-import de.chrgroth.outbox.OutboxPartitionObserver
 import io.smallrye.mutiny.Multi
 import io.smallrye.mutiny.subscription.MultiEmitter
 import jakarta.enterprise.context.ApplicationScoped
@@ -14,7 +14,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 
 @ApplicationScoped
-class HealthSseAdapter : OutboxPartitionObserver, OutgoingRequestStatsObserver, OutboxTaskCountObserver {
+class HealthSseAdapter : OutgoingRequestStatsObserver, OutboxTaskCountObserver {
 
     private val emittersByUser = ConcurrentHashMap<String, CopyOnWriteArrayList<MultiEmitter<in String>>>()
 
@@ -28,9 +28,11 @@ class HealthSseAdapter : OutboxPartitionObserver, OutgoingRequestStatsObserver, 
         }
     }
 
-    override fun onPartitionPaused(partition: OutboxPartition) = notifyAllUsers("refresh-outbox-partitions")
+    @Suppress("UnusedParameter")
+    fun onPartitionPaused(@Observes event: OutboxPartitionPausedEvent) = notifyAllUsers("refresh-outbox-partitions")
 
-    override fun onPartitionActivated(partition: OutboxPartition) = notifyAllUsers("refresh-outbox-partitions")
+    @Suppress("UnusedParameter")
+    fun onPartitionActivated(@Observes event: OutboxPartitionActivatedEvent) = notifyAllUsers("refresh-outbox-partitions")
 
     override fun onRequestRecorded() = notifyAllUsers("refresh-outgoing-http-calls")
 

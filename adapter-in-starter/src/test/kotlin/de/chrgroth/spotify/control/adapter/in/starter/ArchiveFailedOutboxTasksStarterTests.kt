@@ -1,16 +1,17 @@
 package de.chrgroth.spotify.control.adapter.`in`.starter
 
-import de.chrgroth.outbox.Outbox
+import de.chrgroth.quarkus.outbox.domain.port.`in`.ArchiverPort
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import java.time.Instant
 
 class ArchiveFailedOutboxTasksStarterTests {
 
-    private val outbox: Outbox = mockk()
-    private val starter = ArchiveFailedOutboxTasksStarter(outbox)
+    private val archiverPort: ArchiverPort = mockk()
+    private val starter = ArchiveFailedOutboxTasksStarter(archiverPort, 30L)
 
     @Test
     fun `id is stable`() {
@@ -18,20 +19,20 @@ class ArchiveFailedOutboxTasksStarterTests {
     }
 
     @Test
-    fun `execute archives failed tasks and logs result`() {
-        every { outbox.archiveFailedTasks() } returns 3L
+    fun `execute deletes old archive entries and logs result`() {
+        every { archiverPort.deleteOlderThan(any()) } returns 3L
 
         starter.execute()
 
-        verify(exactly = 1) { outbox.archiveFailedTasks() }
+        verify(exactly = 1) { archiverPort.deleteOlderThan(match { it.isBefore(Instant.now()) }) }
     }
 
     @Test
-    fun `execute handles zero archived tasks without throwing`() {
-        every { outbox.archiveFailedTasks() } returns 0L
+    fun `execute handles zero deleted entries without throwing`() {
+        every { archiverPort.deleteOlderThan(any()) } returns 0L
 
         starter.execute()
 
-        verify(exactly = 1) { outbox.archiveFailedTasks() }
+        verify(exactly = 1) { archiverPort.deleteOlderThan(any()) }
     }
 }

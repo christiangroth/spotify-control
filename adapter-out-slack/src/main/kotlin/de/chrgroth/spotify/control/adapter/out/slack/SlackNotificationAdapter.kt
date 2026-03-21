@@ -1,8 +1,7 @@
 package de.chrgroth.spotify.control.adapter.out.slack
 
-import de.chrgroth.outbox.OutboxPartition
-import de.chrgroth.outbox.OutboxPartitionObserver
-import de.chrgroth.outbox.OutboxRepository
+import de.chrgroth.quarkus.outbox.domain.event.OutboxPartitionActivatedEvent
+import de.chrgroth.quarkus.outbox.domain.event.OutboxPartitionPausedEvent
 import de.chrgroth.spotify.control.domain.model.AppPlaylistCheck
 import de.chrgroth.spotify.control.domain.port.out.PlaylistCheckNotificationPort
 import io.quarkus.runtime.ShutdownEvent
@@ -29,7 +28,6 @@ import java.util.Optional
 @ApplicationScoped
 @Suppress("Unused", "TooGenericExceptionCaught")
 class SlackNotificationAdapter(
-    private val repository: OutboxRepository,
     @param:ConfigProperty(name = "quarkus.application.version")
     private val version: String,
     @param:ConfigProperty(name = "app.slack.webhook-url")
@@ -50,7 +48,7 @@ class SlackNotificationAdapter(
     private val checkPassedEnabled: Boolean,
     @param:ConfigProperty(name = "app.slack.playlist-check-notifications.violations-changed")
     private val violationsChangedEnabled: Boolean,
-) : OutboxPartitionObserver, PlaylistCheckNotificationPort {
+) : PlaylistCheckNotificationPort {
 
     private val enabled: Boolean = webhookUrl.orElse("").isNotBlank()
 
@@ -72,15 +70,14 @@ class SlackNotificationAdapter(
         if (stoppingEnabled) send("SpCtl $version about to stop")
     }
 
-    override fun onPartitionPaused(partition: OutboxPartition) {
+    fun onPartitionPaused(@Observes event: OutboxPartitionPausedEvent) {
         if (!partitionPausedEnabled) return
-        val statusReason = repository.findPartition(partition)?.statusReason
-        val reason = if (statusReason.isNullOrBlank()) "unknown" else statusReason
-        send("Outbox partition ${partition.key} paused (reason: $reason)")
+        val reason = if (event.reason.isBlank()) "unknown" else event.reason
+        send("Outbox partition ${event.partition.key} paused (reason: $reason)")
     }
 
-    override fun onPartitionActivated(partition: OutboxPartition) {
-        if (partitionResumedEnabled) send("Outbox partition ${partition.key} resumed")
+    fun onPartitionActivated(@Observes event: OutboxPartitionActivatedEvent) {
+        if (partitionResumedEnabled) send("Outbox partition ${event.partition.key} resumed")
     }
 
     override fun notifyCheckPassed(check: AppPlaylistCheck) {

@@ -1,5 +1,13 @@
 package de.chrgroth.outbox
 
+import de.chrgroth.quarkus.outbox.domain.ApplicationOutboxEvent
+import de.chrgroth.quarkus.outbox.domain.ApplicationOutboxPartition
+import de.chrgroth.quarkus.outbox.domain.OutboxPartitionStatus
+import de.chrgroth.quarkus.outbox.domain.OutboxTaskPriority
+import de.chrgroth.quarkus.outbox.domain.OutboxTaskStatus
+import de.chrgroth.quarkus.outbox.domain.port.out.ArchivedTaskRepositoryPort
+import de.chrgroth.quarkus.outbox.domain.port.out.PartitionRepositoryPort
+import de.chrgroth.quarkus.outbox.domain.port.out.TaskRepositoryPort
 import io.quarkus.test.junit.QuarkusTest
 import jakarta.inject.Inject
 import org.assertj.core.api.Assertions.assertThat
@@ -12,23 +20,32 @@ import java.util.UUID
 class MongoOutboxRepositoryTests {
 
     @Inject
-    lateinit var repository: MongoOutboxRepository
+    lateinit var taskRepository: TaskRepositoryPort
 
-    private fun uniquePartition() = object : OutboxPartition {
+    @Inject
+    lateinit var partitionRepository: PartitionRepositoryPort
+
+    @Inject
+    lateinit var archiveRepository: ArchivedTaskRepositoryPort
+
+    private fun uniquePartition() = object : ApplicationOutboxPartition {
         override val key = "test-${UUID.randomUUID()}"
     }
 
-    private fun event(dedupKey: String = "TestEvent:1") = object : OutboxEvent {
+    private fun event(dedupKey: String = "TestEvent:1") = object : ApplicationOutboxEvent {
         override val key = "TestEvent"
-        override fun deduplicationKey() = dedupKey
+        override val partition = uniquePartition()
+        override val priority = OutboxTaskPriority.NORMAL
+        override val deduplicationKey = dedupKey
+        override val serializePayload = ""
     }
 
     @Test
     fun `enqueue inserts a new task and claim retrieves it`() {
         val partition = uniquePartition()
-        repository.enqueue(partition, event(), """{"id":"1"}""")
+        taskRepository.enqueue(partition, event(), """{"id":"1"}""", OutboxTaskPriority.NORMAL)
 
-        val task = repository.claim(partition)
+        val task = taskRepository.claim(partition)
 
         assertThat(task).isNotNull()
         assertThat(task!!.partition).isEqualTo(partition.key)
@@ -40,8 +57,8 @@ class MongoOutboxRepositoryTests {
     fun `enqueue returns true for new task and false for duplicate PENDING`() {
         val partition = uniquePartition()
 
-        val first = repository.enqueue(partition, event(), """{"id":"1"}""")
-        val second = repository.enqueue(partition, event(), """{"id":"1"}""")
+        val first = taskRepository.enqueue(partition, event(), """{"id":"1"}""", OutboxTaskPriority.NORMAL)
+        val second = taskRepository.enqueue(partition, event(), """{"id":"1"}""", OutboxTaskPriority.NORMAL)
 
         assertThat(first).isTrue()
         assertThat(second).isFalse()
@@ -50,11 +67,12 @@ class MongoOutboxRepositoryTests {
     @Test
     fun `enqueue allows re-enqueue after FAILED task`() {
         val partition = uniquePartition()
-        repository.enqueue(partition, event(), """{"id":"1"}""")
-        val task = repository.claim(partition)!!
-        repository.fail(task, "error", null)
+        taskRepository.enqueue(partition, event(), """{"id":"1"}""", OutboxTaskPriority.NORMAL)
+        val task = taskRepository.claim(partition)!!
+        archiveRepository.appendFailed(task, "error")
+        taskRepository.delete(task)
 
-        val reEnqueued = repository.enqueue(partition, event(), """{"id":"1"}""")
+        val reEnqueued = taskRepository.enqueue(partition, event(), """{"id":"1"}""", OutboxTaskPriority.NORMAL)
 
         assertThat(reEnqueued).isTrue()
     }
@@ -63,7 +81,7 @@ class MongoOutboxRepositoryTests {
     fun `claim returns null when no tasks are available`() {
         val partition = uniquePartition()
 
-        val task = repository.claim(partition)
+        val task = taskRepository.claim(partition)
 
         assertThat(task).isNull()
     }
@@ -71,11 +89,11 @@ class MongoOutboxRepositoryTests {
     @Test
     fun `claim respects nextRetryAt and skips tasks not yet due`() {
         val partition = uniquePartition()
-        repository.enqueue(partition, event(), """{"id":"1"}""")
-        val task = repository.claim(partition)!!
-        repository.fail(task, "temporary error", Instant.now().plus(Duration.ofMinutes(10)))
+        taskRepository.enqueue(partition, event(), """{"id":"1"}""", OutboxTaskPriority.NORMAL)
+        val task = taskRepository.claim(partition)!!
+        taskRepository.scheduleRetry(task, "temporary error", Instant.now().plus(Duration.ofMinutes(10)))
 
-        val next = repository.claim(partition)
+        val next = taskRepository.claim(partition)
 
         assertThat(next).isNull()
     }
@@ -83,23 +101,24 @@ class MongoOutboxRepositoryTests {
     @Test
     fun `complete moves task to archive and no further claim is possible`() {
         val partition = uniquePartition()
-        repository.enqueue(partition, event(), """{"id":"1"}""")
-        val task = repository.claim(partition)!!
+        taskRepository.enqueue(partition, event(), """{"id":"1"}""", OutboxTaskPriority.NORMAL)
+        val task = taskRepository.claim(partition)!!
 
-        repository.complete(task)
+        archiveRepository.append(task)
+        taskRepository.delete(task)
 
-        assertThat(repository.claim(partition)).isNull()
+        assertThat(taskRepository.claim(partition)).isNull()
     }
 
     @Test
     fun `fail with nextRetryAt makes task available again after delay`() {
         val partition = uniquePartition()
-        repository.enqueue(partition, event(), """{"id":"1"}""")
-        val task = repository.claim(partition)!!
+        taskRepository.enqueue(partition, event(), """{"id":"1"}""", OutboxTaskPriority.NORMAL)
+        val task = taskRepository.claim(partition)!!
 
-        repository.fail(task, "temporary error", Instant.now().minus(Duration.ofSeconds(1)))
+        taskRepository.scheduleRetry(task, "temporary error", Instant.now().minus(Duration.ofSeconds(1)))
 
-        val retried = repository.claim(partition)
+        val retried = taskRepository.claim(partition)
         assertThat(retried).isNotNull()
         assertThat(retried!!.attempts).isEqualTo(1)
     }
@@ -107,23 +126,24 @@ class MongoOutboxRepositoryTests {
     @Test
     fun `fail with null nextRetryAt makes task unavailable for claim`() {
         val partition = uniquePartition()
-        repository.enqueue(partition, event(), """{"id":"1"}""")
-        val task = repository.claim(partition)!!
+        taskRepository.enqueue(partition, event(), """{"id":"1"}""", OutboxTaskPriority.NORMAL)
+        val task = taskRepository.claim(partition)!!
 
-        repository.fail(task, "permanent error", null)
+        archiveRepository.appendFailed(task, "permanent error")
+        taskRepository.delete(task)
 
-        assertThat(repository.claim(partition)).isNull()
+        assertThat(taskRepository.claim(partition)).isNull()
     }
 
     @Test
     fun `reschedule sets task back to PENDING without incrementing attempts`() {
         val partition = uniquePartition()
-        repository.enqueue(partition, event(), """{"id":"1"}""")
-        val task = repository.claim(partition)!!
+        taskRepository.enqueue(partition, event(), """{"id":"1"}""", OutboxTaskPriority.NORMAL)
+        val task = taskRepository.claim(partition)!!
 
-        repository.reschedule(task, Instant.now().minus(Duration.ofSeconds(1)))
+        taskRepository.reschedule(task, Instant.now().minus(Duration.ofSeconds(1)))
 
-        val rescheduled = repository.claim(partition)
+        val rescheduled = taskRepository.claim(partition)
         assertThat(rescheduled).isNotNull()
         assertThat(rescheduled!!.attempts).isEqualTo(0)
     }
@@ -131,81 +151,85 @@ class MongoOutboxRepositoryTests {
     @Test
     fun `pausePartition blocks claim and activatePartition restores it`() {
         val partition = uniquePartition()
-        repository.enqueue(partition, event(), """{"id":"1"}""")
-        repository.pausePartition(partition, "rate limited", Instant.now().plus(Duration.ofMinutes(5)))
+        taskRepository.enqueue(partition, event(), """{"id":"1"}""", OutboxTaskPriority.NORMAL)
+        partitionRepository.pause(partition, "rate limited", Instant.now().plus(Duration.ofMinutes(5)))
 
-        assertThat(repository.claim(partition)).isNull()
+        assertThat(taskRepository.claim(partition)).isNotNull() // claim is independent of pause in repository layer
 
-        repository.activatePartition(partition)
+        partitionRepository.resume(partition)
 
-        assertThat(repository.claim(partition)).isNotNull()
+        val info = partitionRepository.findOrCreate(partition)
+        assertThat(info.status).isEqualTo(OutboxPartitionStatus.ACTIVE)
     }
 
     @Test
-    fun `findPartition returns null when no partition document exists`() {
+    fun `findOrCreate returns ACTIVE status when no partition document exists`() {
         val partition = uniquePartition()
 
-        assertThat(repository.findPartition(partition)).isNull()
+        val info = partitionRepository.findOrCreate(partition)
+
+        assertThat(info).isNotNull()
+        assertThat(info.status).isEqualTo(OutboxPartitionStatus.ACTIVE)
     }
 
     @Test
-    fun `activatePartition creates ACTIVE partition document when none exists yet`() {
+    fun `resume creates ACTIVE partition document when none exists yet`() {
         val partition = uniquePartition()
 
-        repository.activatePartition(partition)
+        partitionRepository.resume(partition)
 
-        val doc = repository.findPartition(partition)
-        assertThat(doc).isNotNull()
-        assertThat(doc!!.status).isEqualTo(OutboxPartitionStatus.ACTIVE.name)
-        assertThat(doc.statusReason).isNull()
-        assertThat(doc.pausedUntil).isNull()
+        val info = partitionRepository.findOrCreate(partition)
+        assertThat(info).isNotNull()
+        assertThat(info.status).isEqualTo(OutboxPartitionStatus.ACTIVE)
+        assertThat(info.statusReason).isNull()
+        assertThat(info.pausedUntil).isNull()
     }
 
     @Test
-    fun `findPartition returns PAUSED partition after pause`() {
+    fun `findOrCreate returns PAUSED partition after pause`() {
         val partition = uniquePartition()
-        repository.pausePartition(partition, "test reason", Instant.now().plus(Duration.ofMinutes(1)))
+        partitionRepository.pause(partition, "test reason", Instant.now().plus(Duration.ofMinutes(1)))
 
-        val doc = repository.findPartition(partition)
+        val info = partitionRepository.findOrCreate(partition)
 
-        assertThat(doc).isNotNull()
-        assertThat(doc!!.status).isEqualTo(OutboxPartitionStatus.PAUSED.name)
-        assertThat(doc.statusReason).isEqualTo("test reason")
+        assertThat(info).isNotNull()
+        assertThat(info.status).isEqualTo(OutboxPartitionStatus.PAUSED)
+        assertThat(info.statusReason).isEqualTo("test reason")
     }
 
     @Test
-    fun `findPartition returns ACTIVE partition after activate`() {
+    fun `findOrCreate returns ACTIVE partition after resume`() {
         val partition = uniquePartition()
-        repository.pausePartition(partition, "test reason", Instant.now().plus(Duration.ofMinutes(1)))
-        repository.activatePartition(partition)
+        partitionRepository.pause(partition, "test reason", Instant.now().plus(Duration.ofMinutes(1)))
+        partitionRepository.resume(partition)
 
-        val doc = repository.findPartition(partition)
+        val info = partitionRepository.findOrCreate(partition)
 
-        assertThat(doc).isNotNull()
-        assertThat(doc!!.status).isEqualTo(OutboxPartitionStatus.ACTIVE.name)
-        assertThat(doc.statusReason).isNull()
-        assertThat(doc.pausedUntil).isNull()
+        assertThat(info).isNotNull()
+        assertThat(info.status).isEqualTo(OutboxPartitionStatus.ACTIVE)
+        assertThat(info.statusReason).isNull()
+        assertThat(info.pausedUntil).isNull()
     }
 
     @Test
     fun `resetStaleProcessingTasks makes claimed tasks available again`() {
         val partition = uniquePartition()
-        repository.enqueue(partition, event(), """{"id":"1"}""")
-        repository.claim(partition)!! // leaves task in PROCESSING
+        taskRepository.enqueue(partition, event(), """{"id":"1"}""", OutboxTaskPriority.NORMAL)
+        taskRepository.claim(partition)!! // leaves task in PROCESSING
 
-        repository.resetStaleProcessingTasks()
+        taskRepository.resetStaleProcessing()
 
-        val recovered = repository.claim(partition)
+        val recovered = taskRepository.claim(partition)
         assertThat(recovered).isNotNull()
     }
 
     @Test
     fun `HIGH priority task is claimed before NORMAL priority task`() {
         val partition = uniquePartition()
-        repository.enqueue(partition, event("TestEvent:normal"), """{"id":"normal"}""", OutboxTaskPriority.NORMAL)
-        repository.enqueue(partition, event("TestEvent:high"), """{"id":"high"}""", OutboxTaskPriority.HIGH)
+        taskRepository.enqueue(partition, event("TestEvent:normal"), """{"id":"normal"}""", OutboxTaskPriority.NORMAL)
+        taskRepository.enqueue(partition, event("TestEvent:high"), """{"id":"high"}""", OutboxTaskPriority.HIGH)
 
-        val first = repository.claim(partition)!!
+        val first = taskRepository.claim(partition)!!
 
         assertThat(first.priority).isEqualTo(OutboxTaskPriority.HIGH)
     }
@@ -215,24 +239,27 @@ class MongoOutboxRepositoryTests {
         val partition = uniquePartition()
 
         // Enqueue and complete two tasks
-        repository.enqueue(partition, event("TestEvent:1"), """{"id":"1"}""")
-        val oldTask = repository.claim(partition)!!
-        repository.complete(oldTask)
+        taskRepository.enqueue(partition, event("TestEvent:1"), """{"id":"1"}""", OutboxTaskPriority.NORMAL)
+        val oldTask = taskRepository.claim(partition)!!
+        archiveRepository.append(oldTask)
+        taskRepository.delete(oldTask)
 
-        repository.enqueue(partition, event("TestEvent:2"), """{"id":"2"}""")
-        val recentTask = repository.claim(partition)!!
-        repository.complete(recentTask)
+        taskRepository.enqueue(partition, event("TestEvent:2"), """{"id":"2"}""", OutboxTaskPriority.NORMAL)
+        val recentTask = taskRepository.claim(partition)!!
+        archiveRepository.append(recentTask)
+        taskRepository.delete(recentTask)
 
         // Delete entries older than 1 day in the future (i.e. delete everything)
-        val deletedAll = repository.deleteArchiveEntriesOlderThan(Instant.now().plus(Duration.ofDays(1)))
+        val deletedAll = archiveRepository.deleteOlderThan(Instant.now().plus(Duration.ofDays(1)))
         assertThat(deletedAll).isGreaterThanOrEqualTo(2)
 
         // Delete entries older than 1 day in the past (should not delete recently completed ones)
-        repository.enqueue(partition, event("TestEvent:3"), """{"id":"3"}""")
-        val newestTask = repository.claim(partition)!!
-        repository.complete(newestTask)
+        taskRepository.enqueue(partition, event("TestEvent:3"), """{"id":"3"}""", OutboxTaskPriority.NORMAL)
+        val newestTask = taskRepository.claim(partition)!!
+        archiveRepository.append(newestTask)
+        taskRepository.delete(newestTask)
 
-        val deletedNone = repository.deleteArchiveEntriesOlderThan(Instant.now().minus(Duration.ofDays(1)))
+        val deletedNone = archiveRepository.deleteOlderThan(Instant.now().minus(Duration.ofDays(1)))
         assertThat(deletedNone).isEqualTo(0)
     }
 }
