@@ -301,7 +301,7 @@ class RecentlyPlayedAdapterTests {
     }
 
     @Test
-    fun `update computes playedSeconds using next track first observation timestamp`() {
+    fun `update computes playedSeconds using progressMs when another track was observed next`() {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
         every { spotifyPlayback.getRecentlyPlayed(userId, accessToken, null) } returns emptyList<RecentlyPlayedItem>().right()
@@ -309,22 +309,19 @@ class RecentlyPlayedAdapterTests {
         every { recentlyPartialPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
         every { recentlyPartialPlayedRepository.saveAll(any()) } just runs
 
-        val firstObserved = now - 5.minutes
-        val nextTrackObserved = now - 1.minutes
-        val olderItem = currentlyPlayingItem("track-old", progressMs = 30_000L, observedAt = firstObserved)
-        val latestTrack = currentlyPlayingItem("track-latest", progressMs = 10_000L, observedAt = nextTrackObserved)
+        val olderItem = currentlyPlayingItem("track-old", progressMs = 30_000L, observedAt = now - 5.minutes)
+        val latestTrack = currentlyPlayingItem("track-latest", progressMs = 10_000L, observedAt = now - 1.minutes)
         every { currentlyPlayingRepository.findByUserId(userId) } returns listOf(olderItem, latestTrack)
 
         adapter.fetchRecentlyPlayed(userId)
 
         val savedSlot = slot<List<RecentlyPartialPlayedItem>>()
         verify { recentlyPartialPlayedRepository.saveAll(capture(savedSlot)) }
-        val expectedPlayedSeconds = (nextTrackObserved - firstObserved).inWholeSeconds
-        assertThat(savedSlot.captured[0].playedSeconds).isEqualTo(expectedPlayedSeconds)
+        assertThat(savedSlot.captured[0].playedSeconds).isEqualTo(30_000L / 1_000L)
     }
 
     @Test
-    fun `update computes playedSeconds using full session span to next different track observation`() {
+    fun `update computes playedSeconds using max progressMs across session observations`() {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
         every { spotifyPlayback.getRecentlyPlayed(userId, accessToken, null) } returns emptyList<RecentlyPlayedItem>().right()
@@ -333,8 +330,7 @@ class RecentlyPlayedAdapterTests {
         every { recentlyPartialPlayedRepository.saveAll(any()) } just runs
 
         // track-old has multiple observations in one session; latestTrack is a different track observed after
-        val firstObserved = now - 6.minutes
-        val olderFirst = currentlyPlayingItem("track-old", progressMs = 35_000L, observedAt = firstObserved)
+        val olderFirst = currentlyPlayingItem("track-old", progressMs = 35_000L, observedAt = now - 6.minutes)
         val olderSecond = currentlyPlayingItem("track-old", progressMs = 45_000L, observedAt = now - 4.minutes)
         val olderThird = currentlyPlayingItem("track-old", progressMs = 50_000L, observedAt = now - 2.minutes)
         val latestTrack = currentlyPlayingItem("track-latest", progressMs = 10_000L, observedAt = now)
@@ -344,13 +340,12 @@ class RecentlyPlayedAdapterTests {
 
         val savedSlot = slot<List<RecentlyPartialPlayedItem>>()
         verify { recentlyPartialPlayedRepository.saveAll(capture(savedSlot)) }
-        // playedSeconds = (latestTrack.observedAt - firstObserved) / 1000 = 6 minutes
-        val expectedPlayedSeconds = (now - firstObserved).inWholeSeconds
-        assertThat(savedSlot.captured[0].playedSeconds).isEqualTo(expectedPlayedSeconds)
+        // playedSeconds = max(progressMs) / 1000 = 50_000 / 1000 = 50s
+        assertThat(savedSlot.captured[0].playedSeconds).isEqualTo(50_000L / 1_000L)
     }
 
     @Test
-    fun `update caps playedSeconds at track durationMs when computed duration exceeds track length`() {
+    fun `update computes playedSeconds using progressMs regardless of observation gap to next track`() {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
         every { spotifyPlayback.getRecentlyPlayed(userId, accessToken, null) } returns emptyList<RecentlyPlayedItem>().right()
@@ -358,11 +353,10 @@ class RecentlyPlayedAdapterTests {
         every { recentlyPartialPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
         every { recentlyPartialPlayedRepository.saveAll(any()) } just runs
 
-        // track-old was briefly played hours ago; a different track is observed much later,
-        // causing the timestamp-based computation to produce an impossibly large duration
+        // track-old was briefly played hours ago; a different track is observed much later.
+        // The large observation gap is irrelevant — playedSeconds is based on progressMs only.
         val trackDurationMs = 210_000L // 3.5 minutes
-        val firstObserved = now - 12.hours
-        val olderItem = currentlyPlayingItem("track-old", progressMs = 30_000L, observedAt = firstObserved, durationMs = trackDurationMs)
+        val olderItem = currentlyPlayingItem("track-old", progressMs = 30_000L, observedAt = now - 12.hours, durationMs = trackDurationMs)
         val latestTrack = currentlyPlayingItem("track-latest", progressMs = 10_000L, observedAt = now)
         every { currentlyPlayingRepository.findByUserId(userId) } returns listOf(olderItem, latestTrack)
 
@@ -370,8 +364,8 @@ class RecentlyPlayedAdapterTests {
 
         val savedSlot = slot<List<RecentlyPartialPlayedItem>>()
         verify { recentlyPartialPlayedRepository.saveAll(capture(savedSlot)) }
-        // raw timestamp computation would give 12 hours = 43200 seconds, but must be capped at track duration
-        assertThat(savedSlot.captured[0].playedSeconds).isEqualTo(trackDurationMs / 1_000L)
+        // progressMs = 30s, well within track duration — no cap needed
+        assertThat(savedSlot.captured[0].playedSeconds).isEqualTo(30_000L / 1_000L)
     }
 
     @Test
@@ -416,7 +410,7 @@ class RecentlyPlayedAdapterTests {
     }
 
     @Test
-    fun `update uses next track observation as playedSeconds end time even when that track is completed`() {
+    fun `update computes playedSeconds using max progressMs even when later track is completed`() {
         val completedItems = listOf(item(1))
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
@@ -426,19 +420,18 @@ class RecentlyPlayedAdapterTests {
         every { recentlyPartialPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
         every { recentlyPartialPlayedRepository.saveAll(any()) } just runs
 
-        val firstObserved = now - 8.minutes
+        val olderTrackFirst = currentlyPlayingItem("track-old", progressMs = 30_000L, observedAt = now - 8.minutes)
         val olderTrackSecond = currentlyPlayingItem("track-old", progressMs = 45_000L, observedAt = now - 6.minutes)
         val completedEntry = currentlyPlayingItem("track-1", progressMs = 5_000L, observedAt = now - 4.minutes)
         val latestTrack = currentlyPlayingItem("track-latest", progressMs = 10_000L, observedAt = now - 2.minutes)
-        val olderTrackFirst = currentlyPlayingItem("track-old", progressMs = 30_000L, observedAt = firstObserved)
         every { currentlyPlayingRepository.findByUserId(userId) } returns listOf(olderTrackFirst, olderTrackSecond, completedEntry, latestTrack)
 
         adapter.fetchRecentlyPlayed(userId)
 
         val savedSlot = slot<List<RecentlyPartialPlayedItem>>()
         verify { recentlyPartialPlayedRepository.saveAll(capture(savedSlot)) }
-        val expectedPlayedSeconds = (now - 4.minutes - firstObserved).inWholeSeconds
-        assertThat(savedSlot.captured[0].playedSeconds).isEqualTo(expectedPlayedSeconds)
+        // playedSeconds = max(progressMs) / 1000 = 45_000 / 1000 = 45s
+        assertThat(savedSlot.captured[0].playedSeconds).isEqualTo(45_000L / 1_000L)
     }
 
     @Test
