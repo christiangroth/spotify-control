@@ -165,14 +165,14 @@ class PlaybackAdapter(
 
   private fun buildSessions(sortedItems: List<CurrentlyPlayingItem>): List<PlaySession> {
     val result = mutableListOf<PlaySession>()
-    var lastTrackId: String? = null
     for (item in sortedItems) {
-      if (lastTrackId == item.trackId) {
-        result.last().items.add(item)
+      val lastSession = result.lastOrNull()
+      if (lastSession != null && lastSession.trackId == item.trackId &&
+        item.progressMs >= lastSession.items.last().progressMs) {
+        lastSession.items.add(item)
       } else {
         result.add(PlaySession(item.trackId, mutableListOf(item)))
       }
-      lastTrackId = item.trackId
     }
     return result
   }

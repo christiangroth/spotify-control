@@ -471,6 +471,39 @@ class RecentlyPlayedAdapterTests {
     }
 
     @Test
+    fun `update creates two partial played items when same track played twice consecutively with progress reset`() {
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
+        every { spotifyPlayback.getRecentlyPlayed(userId, accessToken, null) } returns emptyList<RecentlyPlayedItem>().right()
+        every { recentlyPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
+        every { recentlyPartialPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
+        every { recentlyPartialPlayedRepository.saveAll(any()) } just runs
+
+        // First play of track-a
+        val firstPlay1 = currentlyPlayingItem("track-a", progressMs = 5_000L, observedAt = now - 10.minutes)
+        val firstPlay2 = currentlyPlayingItem("track-a", progressMs = 30_000L, observedAt = now - 9.minutes)
+        // track-a restarted immediately: progress drops back to 5s (no different track in between)
+        val secondPlay1 = currentlyPlayingItem("track-a", progressMs = 5_000L, observedAt = now - 8.minutes)
+        val secondPlay2 = currentlyPlayingItem("track-a", progressMs = 30_000L, observedAt = now - 7.minutes)
+        // track-latest is the protected session
+        val latestTrack = currentlyPlayingItem("track-latest", progressMs = 10_000L, observedAt = now)
+        every { currentlyPlayingRepository.findByUserId(userId) } returns listOf(
+            firstPlay1, firstPlay2, secondPlay1, secondPlay2, latestTrack,
+        )
+
+        adapter.fetchRecentlyPlayed(userId)
+
+        val savedSlot = slot<List<RecentlyPartialPlayedItem>>()
+        verify { recentlyPartialPlayedRepository.saveAll(capture(savedSlot)) }
+        val trackAItems = savedSlot.captured.filter { it.trackId == "track-a" }
+        assertThat(trackAItems).hasSize(2)
+        assertThat(trackAItems.map { it.playedAt }).containsExactlyInAnyOrder(
+            now - 10.minutes,
+            now - 8.minutes,
+        )
+    }
+
+    @Test
     fun `update does not convert the most recently observed non-completed session`() {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
