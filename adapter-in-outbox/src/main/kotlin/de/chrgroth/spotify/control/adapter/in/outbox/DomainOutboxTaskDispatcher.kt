@@ -16,6 +16,7 @@ import de.chrgroth.spotify.control.domain.port.`in`.PlaylistPort
 import de.chrgroth.spotify.control.domain.port.`in`.UserProfilePort
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
+import java.time.Instant
 
 @ApplicationScoped
 @Suppress("Unused", "TooGenericExceptionCaught")
@@ -58,7 +59,7 @@ class DomainOutboxTaskDispatcher(
             is Either.Left -> when (val error = result.value) {
                 is SpotifyRateLimitError -> {
                     logger.warn { "Rate limited on $taskDescription, retry after ${error.retryAfter.seconds}s" }
-                    DispatchResult.RateLimited(error.retryAfter)
+                    DispatchResult.Paused("Rate limited: $taskDescription", Instant.now().plus(error.retryAfter))
                 }
                 else -> {
                     logger.error { "Failed $taskDescription: ${error.code}" }
