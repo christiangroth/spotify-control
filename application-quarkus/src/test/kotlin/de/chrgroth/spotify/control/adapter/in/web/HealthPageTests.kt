@@ -361,36 +361,6 @@ class HealthPageTests {
   }
 
   @Test
-  fun `health page outbox table contains resume button javascript function`() {
-    given()
-      .`when`()
-      .get("/health")
-      .then()
-      .statusCode(200)
-      .body(containsString("resumeOutboxPartition"))
-      .body(containsString("/health/outbox-partitions/"))
-      .body(containsString("activate"))
-  }
-
-  @Test
-  fun `health activate outbox partition endpoint returns 404 for unknown partition`() {
-    given()
-      .`when`()
-      .post("/health/outbox-partitions/unknown-partition/activate")
-      .then()
-      .statusCode(404)
-  }
-
-  @Test
-  fun `health activate outbox partition endpoint returns 204 for known partition`() {
-    given()
-      .`when`()
-      .post("/health/outbox-partitions/to-spotify/activate")
-      .then()
-      .statusCode(204)
-  }
-
-  @Test
   fun `health page outbox document count is shown statically`() {
     given()
       .`when`()

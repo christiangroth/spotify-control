@@ -33,7 +33,4 @@ class HealthAdapter(
         ),
         configurationStats = configurationInfo.getConfigurationStats(),
     )
-
-    override fun activatePartition(partitionKey: String): Boolean =
-        outboxManagement.activate(partitionKey)
 }

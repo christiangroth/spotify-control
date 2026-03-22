@@ -63,13 +63,6 @@
                                                 </svg>
                                                 {/if}
                                                 {p.name}
-                                                {#if p.status != "ACTIVE"}
-                                                <button onclick="resumeOutboxPartition(this.dataset.partitionKey)" data-partition-key="{p.name}" class="btn btn-sm btn-outline-success" style="padding:1px 6px;font-size:0.75rem;margin-left:4px;" title="Resume partition" data-testid="resume-partition-btn">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
-                                                        <path d="M10.804 8 5 4.633v6.734L10.804 8zm.792-.696a.802.802 0 0 1 0 1.392l-6.363 3.692C4.713 12.69 4 12.345 4 11.692V4.308c0-.653.713-.998 1.233-.696l6.363 3.692z"/>
-                                                    </svg>
-                                                </button>
-                                                {/if}
                                             </td>
                                             <td class="outbox-blocked-until" style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">-</td>
                                             <td style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;" data-testid="outbox-doc-count">{p.documentCountFormatted}</td>
@@ -370,12 +363,6 @@
                 });
             }
             updatePredicateLastChecks();
-
-            function resumeOutboxPartition(partitionKey) {
-                fetch('/health/outbox-partitions/' + encodeURIComponent(partitionKey) + '/activate', { method: 'POST' })
-                    .catch(function (err) { console.error('Failed to resume partition', err); });
-            }
-            window.resumeOutboxPartition = resumeOutboxPartition;
 
             connectSse('/health/events', function (event) {
                 if (event.data === 'refresh-outgoing-http-calls') {
