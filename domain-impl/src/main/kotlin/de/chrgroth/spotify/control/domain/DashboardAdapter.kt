@@ -24,6 +24,7 @@ import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.TimeZone
@@ -80,15 +81,15 @@ class DashboardAdapter(
     override fun getPlaylistMetadata(userId: UserId): DashboardStats = computePlaylistMetadata(userId)
 
     override fun getRecentlyPlayed(userId: UserId): DashboardStats =
-        DashboardStats.EMPTY.copy(recentlyPlayedTracks = buildRecentlyPlayedTracks(userId))
+        DashboardStats.EMPTY.copy(recentlyPlayedTracks = runBlocking { buildRecentlyPlayedTracks(userId) })
 
     override fun getListeningStats(userId: UserId): DashboardStats {
         val since = Clock.System.now() - STATS_DAYS.days
-        return DashboardStats.EMPTY.copy(listeningStats = buildListeningStats(userId, since))
+        return DashboardStats.EMPTY.copy(listeningStats = runBlocking { buildListeningStats(userId, since) })
     }
 
     override fun getPlaylistCheckStats(): DashboardStats =
-        DashboardStats.EMPTY.copy(playlistCheckStats = computePlaylistCheckStats())
+        DashboardStats.EMPTY.copy(playlistCheckStats = runBlocking { computePlaylistCheckStats() })
 
     override fun getCatalogStats(): DashboardStats =
         DashboardStats.EMPTY.copy(catalogStats = catalogBrowser.getCatalogStats())
@@ -128,43 +129,49 @@ class DashboardAdapter(
         )
     }
 
-    private fun computePlaylistCheckStats(): PlaylistCheckStats {
-        val totalChecks = playlistCheckRepository.countAll()
-        val succeededChecks = playlistCheckRepository.countSucceeded()
-        return PlaylistCheckStats(
+    private suspend fun computePlaylistCheckStats(): PlaylistCheckStats = coroutineScope {
+        val totalChecksAsync = async(Dispatchers.IO) { playlistCheckRepository.countAll() }
+        val succeededChecksAsync = async(Dispatchers.IO) { playlistCheckRepository.countSucceeded() }
+        val totalChecks = totalChecksAsync.await()
+        val succeededChecks = succeededChecksAsync.await()
+        PlaylistCheckStats(
             succeededChecks = succeededChecks,
             totalChecks = totalChecks,
             allSucceeded = totalChecks == 0L || succeededChecks == totalChecks,
         )
     }
 
-    private fun buildRecentlyPlayedTracks(userId: UserId): List<RecentlyPlayedItem> {
+    private suspend fun buildRecentlyPlayedTracks(userId: UserId): List<RecentlyPlayedItem> {
         val recentPlaybackItems = appPlaybackRepository.findRecentlyPlayed(userId, recentlyPlayedLimit)
         val trackIds = recentPlaybackItems.map { it.trackId }.toSet()
         val trackMap = appTrackRepository.findByTrackIds(trackIds.map { TrackId(it) }.toSet()).associateBy { it.id.value }
         val albumIds = trackMap.values.mapNotNull { it.albumId }.toSet()
-        val albumMap = appAlbumRepository.findByAlbumIds(albumIds).associateBy { it.id.value }
         val allArtistIds = trackMap.values.flatMap { it.allArtistIds() }.toSet()
-        val artistMap = appArtistRepository.findByArtistIds(allArtistIds).associateBy { it.artistId }
-        return recentPlaybackItems.map { playback ->
-            val track = trackMap[playback.trackId]
-            val trackArtistIds = track?.allArtistIds() ?: emptyList()
-            val album = track?.albumId?.let { albumMap[it.value] }
-            RecentlyPlayedItem(
-                spotifyUserId = playback.userId,
-                trackId = playback.trackId,
-                trackName = track?.title ?: playback.trackId,
-                artistIds = trackArtistIds,
-                artistNames = trackArtistIds.mapNotNull { artistMap[it]?.artistName },
-                playedAt = playback.playedAt,
-                albumName = album?.title ?: track?.albumName,
-                imageUrl = album?.imageLink,
-                durationSeconds = playback.secondsPlayed.takeIf { it > 0 },
-            )
+        return coroutineScope {
+            val albumMapAsync = async(Dispatchers.IO) { appAlbumRepository.findByAlbumIds(albumIds).associateBy { it.id.value } }
+            val artistMapAsync = async(Dispatchers.IO) { appArtistRepository.findByArtistIds(allArtistIds).associateBy { it.artistId } }
+            val albumMap = albumMapAsync.await()
+            val artistMap = artistMapAsync.await()
+            recentPlaybackItems.map { playback ->
+                val track = trackMap[playback.trackId]
+                val trackArtistIds = track?.allArtistIds() ?: emptyList()
+                val album = track?.albumId?.let { albumMap[it.value] }
+                RecentlyPlayedItem(
+                    spotifyUserId = playback.userId,
+                    trackId = playback.trackId,
+                    trackName = track?.title ?: playback.trackId,
+                    artistIds = trackArtistIds,
+                    artistNames = trackArtistIds.mapNotNull { artistMap[it]?.artistName },
+                    playedAt = playback.playedAt,
+                    albumName = album?.title ?: track?.albumName,
+                    imageUrl = album?.imageLink,
+                    durationSeconds = playback.secondsPlayed.takeIf { it > 0 },
+                )
+            }
         }
     }
 
-    private fun buildListeningStats(userId: UserId, since: Instant): ListeningStats {
+    private suspend fun buildListeningStats(userId: UserId, since: Instant): ListeningStats {
         val secondsByTrackId = appPlaybackRepository.sumSecondsPlayedByTrackIdSince(userId, since)
 
         val allTrackIds = secondsByTrackId.keys.toSet()
@@ -172,30 +179,34 @@ class DashboardAdapter(
 
         val listenedMinutes = secondsByTrackId.values.sum() / SECONDS_PER_MINUTE
         val statsAlbumIds = statsTrackMap.values.mapNotNull { it.albumId }.toSet()
-        val statsAlbumMap = appAlbumRepository.findByAlbumIds(statsAlbumIds).associateBy { it.id.value }
-        val topTracks = buildTopEntries(secondsByTrackId, { statsTrackMap[it]?.title ?: it }) { id ->
-            statsTrackMap[id]?.albumId?.let { statsAlbumMap[it.value]?.imageLink }
-        }
-
         val statsArtistIds = statsTrackMap.values.flatMap { it.allArtistIds() }.toSet()
-        val statsArtistMap = appArtistRepository.findByArtistIds(statsArtistIds).associateBy { it.artistId }
+        return coroutineScope {
+            val statsAlbumMapAsync = async(Dispatchers.IO) { appAlbumRepository.findByAlbumIds(statsAlbumIds).associateBy { it.id.value } }
+            val statsArtistMapAsync = async(Dispatchers.IO) { appArtistRepository.findByArtistIds(statsArtistIds).associateBy { it.artistId } }
+            val statsAlbumMap = statsAlbumMapAsync.await()
+            val statsArtistMap = statsArtistMapAsync.await()
 
-        val secondsByArtistId = mutableMapOf<String, Long>()
-        for ((trackId, seconds) in secondsByTrackId) {
-            val track = statsTrackMap[trackId] ?: continue
-            for (artistId in track.allArtistIds()) {
-                secondsByArtistId.merge(artistId, seconds, Long::plus)
+            val topTracks = buildTopEntries(secondsByTrackId, { statsTrackMap[it]?.title ?: it }) { id ->
+                statsTrackMap[id]?.albumId?.let { statsAlbumMap[it.value]?.imageLink }
             }
-        }
-        val topArtists = buildTopEntries(secondsByArtistId, { statsArtistMap[it]?.artistName ?: it }) { id ->
-            statsArtistMap[id]?.imageLink
-        }
 
-        return ListeningStats(
-            listenedMinutesLast30Days = listenedMinutes,
-            topTracksLast30Days = topTracks,
-            topArtistsLast30Days = topArtists,
-        )
+            val secondsByArtistId = mutableMapOf<String, Long>()
+            for ((trackId, seconds) in secondsByTrackId) {
+                val track = statsTrackMap[trackId] ?: continue
+                for (artistId in track.allArtistIds()) {
+                    secondsByArtistId.merge(artistId, seconds, Long::plus)
+                }
+            }
+            val topArtists = buildTopEntries(secondsByArtistId, { statsArtistMap[it]?.artistName ?: it }) { id ->
+                statsArtistMap[id]?.imageLink
+            }
+
+            ListeningStats(
+                listenedMinutesLast30Days = listenedMinutes,
+                topTracksLast30Days = topTracks,
+                topArtistsLast30Days = topArtists,
+            )
+        }
     }
 
     private fun buildTopEntries(

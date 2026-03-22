@@ -7,7 +7,6 @@ import de.chrgroth.spotify.control.domain.model.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.PlaylistType
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.PlaylistPort
-import de.chrgroth.spotify.control.domain.port.out.MongoReadTimeoutPort
 import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
 import io.quarkus.qute.Location
@@ -52,18 +51,13 @@ class PlaylistSettingsResource {
   @Inject
   private lateinit var playlist: PlaylistPort
 
-  @Inject
-  private lateinit var readTimeout: MongoReadTimeoutPort
-
   @GET
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
   fun playlist(): TemplateInstance {
     val userId = UserId(securityIdentity.principal.name)
-    val user = readTimeout.timedWithFallback("userRepository.findById", null) { userRepository.findById(userId) }
-    val sortedPlaylists = readTimeout.timedWithFallback("playlistRepository.findByUserId", emptyList()) {
-      playlistRepository.findByUserId(userId)
-    }.sortedBy { it.name }
+    val user = userRepository.findById(userId)
+    val sortedPlaylists = playlistRepository.findByUserId(userId).sortedBy { it.name }
     val padWidth = sortedPlaylists.size.toString().length
     val rows = sortedPlaylists.mapIndexed { index, playlist ->
       PlaylistRow(
@@ -105,9 +99,7 @@ class PlaylistSettingsResource {
         .build()
     return when (playlist.updateSyncStatus(userId, playlistId, syncStatus).isRight()) {
       true -> {
-        val updated = readTimeout.timedWithFallback("playlistRepository.findByUserId", emptyList()) {
-          playlistRepository.findByUserId(userId)
-        }.find { it.spotifyPlaylistId == playlistId }
+        val updated = playlistRepository.findByUserId(userId).find { it.spotifyPlaylistId == playlistId }
         Response.ok(mapOf("syncStatus" to syncStatus.name, "type" to updated?.type?.name)).build()
       }
       false -> {

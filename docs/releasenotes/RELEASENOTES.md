@@ -1,3 +1,21 @@
+# 0.74.0 (2026.03.21)
+
+## New Features
+* Optimized page rendering time by running independent database queries in parallel for health, config, dashboard, and playlist checks pages.
+
+
+
+---
+
+# 0.73.8 (2026.03.21)
+
+## Bugfixes / Chore
+* Removed MongoDB query timeout and fallback value mechanism.
+
+
+
+---
+
 # 0.73.7 (2026.03.21)
 
 ## Bugfixes / Chore

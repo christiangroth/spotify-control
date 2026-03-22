@@ -3,7 +3,6 @@ package de.chrgroth.spotify.control.adapter.`in`.web
 import de.chrgroth.spotify.control.domain.model.AppPlaylistCheck
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.out.AppPlaylistCheckRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.MongoReadTimeoutPort
 import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
 import io.quarkus.qute.Location
@@ -21,6 +20,9 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.time.toJavaInstant
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.runBlocking
 
 @Path("/playlist-checks")
 @ApplicationScoped
@@ -43,20 +45,18 @@ class PlaylistChecksResource {
     @Inject
     private lateinit var playlistCheckRepository: AppPlaylistCheckRepositoryPort
 
-    @Inject
-    private lateinit var readTimeout: MongoReadTimeoutPort
-
     @GET
     @Authenticated
     @Produces(MediaType.TEXT_HTML)
     fun playlistChecks(): TemplateInstance {
         val userId = UserId(securityIdentity.principal.name)
-        val user = readTimeout.timedWithFallback("userRepository.findById", null) { userRepository.findById(userId) }
-        val playlistNameById = readTimeout.timedWithFallback("playlistRepository.findByUserId", emptyList()) {
-            playlistRepository.findByUserId(userId)
-        }.associateBy({ it.spotifyPlaylistId }, { it.name })
-        val checks = readTimeout.timedWithFallback("playlistCheckRepository.findAll", emptyList<AppPlaylistCheck>()) {
-            playlistCheckRepository.findAll()
+        val (user, playlistNameById, checks) = runBlocking {
+            val userAsync = async(Dispatchers.IO) { userRepository.findById(userId) }
+            val playlistNamesAsync = async(Dispatchers.IO) {
+                playlistRepository.findByUserId(userId).associateBy({ it.spotifyPlaylistId }, { it.name })
+            }
+            val checksAsync = async(Dispatchers.IO) { playlistCheckRepository.findAll() }
+            Triple(userAsync.await(), playlistNamesAsync.await(), checksAsync.await())
         }
         val groups = checks
             .map { check ->
