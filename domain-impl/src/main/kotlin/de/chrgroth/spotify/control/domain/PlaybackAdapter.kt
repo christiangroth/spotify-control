@@ -120,23 +120,23 @@ class PlaybackAdapter(
 
     // The most recently observed non-completed session is protected — it may still be active
     val latestNonCompletedSession = sessions
-      .filter { it.trackId !in completedTrackIds }
-      .maxByOrNull { session -> session.items.maxOf { it.observedAt } }
+      .filter { it.first().trackId !in completedTrackIds }
+      .maxByOrNull { session -> session.maxOf { it.observedAt } }
 
     val convertibleSessions = sessions.filter { session ->
-      session.trackId !in completedTrackIds
+      session.first().trackId !in completedTrackIds
           && session !== latestNonCompletedSession
-          && session.items.maxOf { it.progressMs } > minimumProgressMs
+          && session.maxOf { it.progressMs } > minimumProgressMs
     }
 
     val newComputedCount = if (convertibleSessions.isNotEmpty()) {
       val partialItems = convertibleSessions.map { session ->
-        val firstObservedAt = session.items.minOf { it.observedAt }
-        val representative = session.items.maxBy { it.progressMs }
+        val firstObservedAt = session.minOf { it.observedAt }
+        val representative = session.maxBy { it.progressMs }
         val playedMs = minOf(representative.progressMs, representative.durationMs)
         RecentlyPartialPlayedItem(
           spotifyUserId = userId,
-          trackId = session.trackId,
+          trackId = session.first().trackId,
           trackName = representative.trackName,
           artistIds = representative.artistIds,
           artistNames = representative.artistNames,
@@ -157,27 +157,25 @@ class PlaybackAdapter(
     }
 
     // Only delete track entries that are not held by a protected session
-    val protectedTrackIds = latestNonCompletedSession?.let { setOf(it.trackId) } ?: emptySet()
-    val convertedTrackIds = convertibleSessions.map { it.trackId }.filter { it !in protectedTrackIds }.toSet()
+    val protectedTrackIds = latestNonCompletedSession?.let { setOf(it.first().trackId) } ?: emptySet()
+    val convertedTrackIds = convertibleSessions.map { it.first().trackId }.filter { it !in protectedTrackIds }.toSet()
     currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, completedTrackIds + convertedTrackIds)
     return newComputedCount
   }
 
-  private fun buildSessions(sortedItems: List<CurrentlyPlayingItem>): List<PlaySession> {
-    val result = mutableListOf<PlaySession>()
+  private fun buildSessions(sortedItems: List<CurrentlyPlayingItem>): List<List<CurrentlyPlayingItem>> {
+    val result = mutableListOf<MutableList<CurrentlyPlayingItem>>()
     for (item in sortedItems) {
       val lastSession = result.lastOrNull()
-      if (lastSession != null && lastSession.trackId == item.trackId &&
-        item.progressMs >= lastSession.items.last().progressMs) {
-        lastSession.items.add(item)
+      if (lastSession != null && lastSession.last().trackId == item.trackId &&
+        item.progressMs >= lastSession.last().progressMs) {
+        lastSession.add(item)
       } else {
-        result.add(PlaySession(item.trackId, mutableListOf(item)))
+        result.add(mutableListOf(item))
       }
     }
     return result
   }
-
-  private data class PlaySession(val trackId: String, val items: MutableList<CurrentlyPlayingItem>)
 
     // --- Playback Data ---
 
