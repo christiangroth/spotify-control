@@ -287,10 +287,9 @@ class RecentlyPlayedAdapterTests {
         every { recentlyPartialPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
         every { recentlyPartialPlayedRepository.saveAll(any()) } just runs
 
-        val olderFirst = currentlyPlayingItem("track-old", progressMs = 30_000L, observedAt = now - 6.minutes)
-        val olderSecond = currentlyPlayingItem("track-old", progressMs = 50_000L, observedAt = now - 4.minutes)
+        val olderItem = currentlyPlayingItem("track-old", progressMs = 50_000L, observedAt = now - 4.minutes)
         val latestTrack = currentlyPlayingItem("track-latest", progressMs = 10_000L, observedAt = now)
-        every { currentlyPlayingRepository.findByUserId(userId) } returns listOf(olderFirst, olderSecond, latestTrack)
+        every { currentlyPlayingRepository.findByUserId(userId) } returns listOf(olderItem, latestTrack)
 
         adapter.fetchRecentlyPlayed(userId)
 
@@ -321,7 +320,7 @@ class RecentlyPlayedAdapterTests {
     }
 
     @Test
-    fun `update computes playedSeconds using max progressMs across session observations`() {
+    fun `update converts each item independently to a separate partial played record`() {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
         every { spotifyPlayback.getRecentlyPlayed(userId, accessToken, null) } returns emptyList<RecentlyPlayedItem>().right()
@@ -329,7 +328,7 @@ class RecentlyPlayedAdapterTests {
         every { recentlyPartialPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
         every { recentlyPartialPlayedRepository.saveAll(any()) } just runs
 
-        // track-old has multiple observations in one session; latestTrack is a different track observed after
+        // Three observations of the same track — each becomes its own partial play record
         val olderFirst = currentlyPlayingItem("track-old", progressMs = 35_000L, observedAt = now - 6.minutes)
         val olderSecond = currentlyPlayingItem("track-old", progressMs = 45_000L, observedAt = now - 4.minutes)
         val olderThird = currentlyPlayingItem("track-old", progressMs = 50_000L, observedAt = now - 2.minutes)
@@ -340,8 +339,9 @@ class RecentlyPlayedAdapterTests {
 
         val savedSlot = slot<List<RecentlyPartialPlayedItem>>()
         verify { recentlyPartialPlayedRepository.saveAll(capture(savedSlot)) }
-        // playedSeconds = max(progressMs) / 1000 = 50_000 / 1000 = 50s
-        assertThat(savedSlot.captured[0].playedSeconds).isEqualTo(50_000L / 1_000L)
+        // Each observation above the minimum threshold produces its own record
+        assertThat(savedSlot.captured).hasSize(3)
+        assertThat(savedSlot.captured.map { it.playedSeconds }).containsExactlyInAnyOrder(35L, 45L, 50L)
     }
 
     @Test
@@ -410,7 +410,7 @@ class RecentlyPlayedAdapterTests {
     }
 
     @Test
-    fun `update computes playedSeconds using max progressMs even when later track is completed`() {
+    fun `update converts each item using its own progressMs even when later track is completed`() {
         val completedItems = listOf(item(1))
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
@@ -430,8 +430,10 @@ class RecentlyPlayedAdapterTests {
 
         val savedSlot = slot<List<RecentlyPartialPlayedItem>>()
         verify { recentlyPartialPlayedRepository.saveAll(capture(savedSlot)) }
-        // playedSeconds = max(progressMs) / 1000 = 45_000 / 1000 = 45s
-        assertThat(savedSlot.captured[0].playedSeconds).isEqualTo(45_000L / 1_000L)
+        // Both track-old observations are converted independently; completedEntry is deleted (completed), not converted
+        val trackOldItems = savedSlot.captured.filter { it.trackId == "track-old" }
+        assertThat(trackOldItems).hasSize(2)
+        assertThat(trackOldItems.map { it.playedSeconds }).containsExactlyInAnyOrder(30L, 45L)
     }
 
     @Test
@@ -443,15 +445,15 @@ class RecentlyPlayedAdapterTests {
         every { recentlyPartialPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
         every { recentlyPartialPlayedRepository.saveAll(any()) } just runs
 
-        // Session 1 of track-a: played from t-10m to t-9m, then skipped
+        // First play of track-a: one observation below threshold, one above
         val session1First = currentlyPlayingItem("track-a", progressMs = 5_000L, observedAt = now - 10.minutes)
         val session1Second = currentlyPlayingItem("track-a", progressMs = 30_000L, observedAt = now - 9.minutes)
         // Different track played in between
         val differentTrack = currentlyPlayingItem("track-b", progressMs = 30_000L, observedAt = now - 7.minutes)
-        // Session 2 of track-a: played from beginning again at t-6m
+        // Second play of track-a from beginning
         val session2First = currentlyPlayingItem("track-a", progressMs = 5_000L, observedAt = now - 6.minutes)
         val session2Second = currentlyPlayingItem("track-a", progressMs = 30_000L, observedAt = now - 5.minutes)
-        // track-latest is the protected session
+        // track-latest is the protected item
         val latestTrack = currentlyPlayingItem("track-latest", progressMs = 10_000L, observedAt = now)
         every { currentlyPlayingRepository.findByUserId(userId) } returns listOf(
             session1First, session1Second, differentTrack, session2First, session2Second, latestTrack,
@@ -461,12 +463,12 @@ class RecentlyPlayedAdapterTests {
 
         val savedSlot = slot<List<RecentlyPartialPlayedItem>>()
         verify { recentlyPartialPlayedRepository.saveAll(capture(savedSlot)) }
-        // Both sessions of track-a should be saved (plus track-b session is the intermediate, track-latest is protected)
+        // Both above-threshold observations of track-a become their own partial play records
         val trackAItems = savedSlot.captured.filter { it.trackId == "track-a" }
         assertThat(trackAItems).hasSize(2)
         assertThat(trackAItems.map { it.playedAt }).containsExactlyInAnyOrder(
-            now - 10.minutes,
-            now - 6.minutes,
+            now - 9.minutes,
+            now - 5.minutes,
         )
     }
 
@@ -485,7 +487,7 @@ class RecentlyPlayedAdapterTests {
         // track-a restarted immediately: progress drops back to 5s (no different track in between)
         val secondPlay1 = currentlyPlayingItem("track-a", progressMs = 5_000L, observedAt = now - 8.minutes)
         val secondPlay2 = currentlyPlayingItem("track-a", progressMs = 30_000L, observedAt = now - 7.minutes)
-        // track-latest is the protected session
+        // track-latest is the protected item
         val latestTrack = currentlyPlayingItem("track-latest", progressMs = 10_000L, observedAt = now)
         every { currentlyPlayingRepository.findByUserId(userId) } returns listOf(
             firstPlay1, firstPlay2, secondPlay1, secondPlay2, latestTrack,
@@ -498,13 +500,13 @@ class RecentlyPlayedAdapterTests {
         val trackAItems = savedSlot.captured.filter { it.trackId == "track-a" }
         assertThat(trackAItems).hasSize(2)
         assertThat(trackAItems.map { it.playedAt }).containsExactlyInAnyOrder(
-            now - 10.minutes,
-            now - 8.minutes,
+            now - 9.minutes,
+            now - 7.minutes,
         )
     }
 
     @Test
-    fun `update does not convert the most recently observed non-completed session`() {
+    fun `update does not convert the latest currently playing item`() {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
         every { spotifyPlayback.getRecentlyPlayed(userId, accessToken, null) } returns emptyList<RecentlyPlayedItem>().right()
@@ -591,7 +593,7 @@ class RecentlyPlayedAdapterTests {
     }
 
     @Test
-    fun `update does not delete protected track entries when it has a second session`() {
+    fun `update does not delete latest item trackId even when older items of same track are converted`() {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
         every { spotifyPlayback.getRecentlyPlayed(userId, accessToken, null) } returns emptyList<RecentlyPlayedItem>().right()
