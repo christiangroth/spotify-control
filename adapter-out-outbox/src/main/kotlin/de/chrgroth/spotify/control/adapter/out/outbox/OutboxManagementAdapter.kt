@@ -7,12 +7,14 @@ import de.chrgroth.outbox.OutboxPartitionStatus
 import de.chrgroth.outbox.OutboxRepository
 import de.chrgroth.spotify.control.domain.model.OutboxEventTypeCount
 import de.chrgroth.spotify.control.domain.model.OutboxPartitionStats
+import de.chrgroth.spotify.control.domain.model.OutboxTask
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
 import de.chrgroth.spotify.control.domain.port.out.OutboxManagementPort
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
 import org.bson.Document
 import org.eclipse.microprofile.config.inject.ConfigProperty
+import java.time.Instant
 
 @ApplicationScoped
 @Suppress("Unused")
@@ -35,6 +37,25 @@ class OutboxManagementAdapter(
                 eventTypeCounts = queryEventTypeCounts(partition.key),
             )
         }
+
+    override fun getTasksByPartition(partitionKey: String): List<OutboxTask> =
+        mongoClient.getDatabase(databaseName)
+            .getCollection(OUTBOX_COLLECTION)
+            .find(Filters.eq("partition", partitionKey))
+            .map { doc ->
+                OutboxTask(
+                    eventType = doc.getString("eventType") ?: "",
+                    deduplicationKey = doc.getString("deduplicationKey") ?: "",
+                    priority = doc.getString("priority") ?: "NORMAL",
+                    status = doc.getString("status") ?: "PENDING",
+                    attempts = doc.getInteger("attempts", 0),
+                    nextRetryAt = doc.getDate("nextRetryAt")?.toInstant(),
+                    createdAt = doc.getDate("createdAt")?.toInstant() ?: Instant.EPOCH,
+                    lastError = doc.getString("lastError"),
+                )
+            }
+            .toList()
+            .sortedWith(compareBy({ it.priorityOrder }, { it.nextRetryAt ?: Instant.MAX }))
 
     override fun activate(partitionKey: String): Boolean {
         val partition = DomainOutboxPartition.all.firstOrNull { it.key == partitionKey } ?: return false
