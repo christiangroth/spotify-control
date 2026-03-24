@@ -521,7 +521,7 @@ class RecentlyPlayedAdapterTests {
     }
 
     @Test
-    fun `update does not convert partial plays shorter than minimum progress`() {
+    fun `update does not convert partial plays shorter than minimum progress but still deletes them`() {
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { recentlyPlayedRepository.findMostRecentPlayedAt(userId) } returns null
         every { spotifyPlayback.getRecentlyPlayed(userId, accessToken, null) } returns emptyList<RecentlyPlayedItem>().right()
@@ -534,6 +534,7 @@ class RecentlyPlayedAdapterTests {
         adapter.fetchRecentlyPlayed(userId)
 
         verify(exactly = 0) { recentlyPartialPlayedRepository.saveAll(any()) }
+        verify { currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, setOf("track-old")) }
     }
 
     @Test
@@ -601,7 +602,7 @@ class RecentlyPlayedAdapterTests {
         every { recentlyPartialPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
         every { recentlyPartialPlayedRepository.saveAll(any()) } just runs
 
-        // Session 1 of track-a is eligible; session 2 of track-a is the latest non-completed (protected)
+        // session1 of track-a is eligible; different (track-b, below threshold) is not converted; session2 of track-a is the latest (protected)
         val session1 = currentlyPlayingItem("track-a", progressMs = 30_000L, observedAt = now - 6.minutes)
         val different = currentlyPlayingItem("track-b", progressMs = 10_000L, observedAt = now - 4.minutes)
         val session2 = currentlyPlayingItem("track-a", progressMs = 5_000L, observedAt = now)
@@ -609,9 +610,9 @@ class RecentlyPlayedAdapterTests {
 
         adapter.fetchRecentlyPlayed(userId)
 
-        // track-a must NOT be deleted (session 2 is protected)
-        // track-b also has no completed tracks to delete and is not converted (it's a session of track-b with progress < 25s... wait, 10s)
-        verify { currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, emptySet()) }
+        // track-a must NOT be deleted (session2 is the latest item, its trackId is protected)
+        // track-b IS deleted even though it's below the conversion threshold — it must not accumulate forever
+        verify { currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, setOf("track-b")) }
     }
 
     @Test

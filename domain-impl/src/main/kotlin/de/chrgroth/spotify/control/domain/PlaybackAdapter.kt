@@ -146,9 +146,10 @@ class PlaybackAdapter(
       0
     }
 
-    // Delete completed tracks and converted items, but don't delete the latest item's trackId
-    val convertedTrackIds = convertibleItems.map { it.trackId }.filter { it != latestItem?.trackId }.toSet()
-    currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, completedTrackIds + convertedTrackIds)
+    // Delete completed tracks and all processed items (converted or skipped below threshold),
+    // but don't delete the latest item's trackId as it may still be active
+    val allProcessedTrackIds = itemsToProcess.map { it.trackId }.filter { it != latestItem?.trackId }.toSet()
+    currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, completedTrackIds + allProcessedTrackIds)
     return newComputedCount
   }
 
