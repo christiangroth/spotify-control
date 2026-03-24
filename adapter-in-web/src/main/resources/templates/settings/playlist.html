@@ -48,6 +48,9 @@
                     </td>
                     <td>
                         {row.playlist.name}
+                        {#if row.typeLabel}
+                        <span class="badge text-bg-secondary ms-1" style="font-size:.7rem;vertical-align:middle;">{row.typeLabel}</span>
+                        {/if}
                     </td>
                     <td class="text-secondary small">{row.lastSyncTimeFormatted}</td>
                     <td>

@@ -17,7 +17,7 @@ class EnqueuePlaylistChecksStarter(
     private val outboxPort: OutboxPort,
 ) : Starter {
 
-    override val id = "EnqueuePlaylistChecksStarter-v1"
+    override val id = "EnqueuePlaylistChecksStarter-v2"
 
     override fun execute() {
         val users = userRepository.findAll()

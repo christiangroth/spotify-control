@@ -2,6 +2,10 @@ package de.chrgroth.spotify.control.domain
 
 import de.chrgroth.outbox.OutboxTaskResult
 import de.chrgroth.spotify.control.domain.model.AppPlaylistCheck
+import de.chrgroth.spotify.control.domain.model.PlaylistInfo
+import de.chrgroth.spotify.control.domain.model.PlaylistTrack
+import de.chrgroth.spotify.control.domain.model.PlaylistType
+import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.PlaylistCheckPort
 import de.chrgroth.spotify.control.domain.port.out.AppPlaylistCheckRepositoryPort
@@ -32,14 +36,30 @@ class PlaylistCheckAdapter(
             return OutboxTaskResult.Success
         }
 
-        val duplicateTrackCheck = timedCheck(CHECK_DUPLICATE_TRACKS, event.playlistId) {
-            runDuplicateTrackCheck(event.playlistId, playlist.tracks)
-        }
-        val previousDuplicateTrackCheck = playlistCheckRepository.findByCheckId(duplicateTrackCheck.checkId)
-        playlistCheckRepository.save(duplicateTrackCheck)
-        notifyIfChanged(previousDuplicateTrackCheck, duplicateTrackCheck)
+        val playlistInfos = playlistRepository.findByUserId(event.userId)
+        val currentPlaylistInfo = playlistInfos.find { it.spotifyPlaylistId == event.playlistId }
 
-        val status = if (duplicateTrackCheck.succeeded) "all passed" else "${duplicateTrackCheck.violations.size} violation(s)"
+        val duplicateTrackIdCheck = timedCheck(CHECK_DUPLICATE_TRACK_IDS, event.playlistId) {
+            runDuplicateTrackIdCheck(event.playlistId, playlist.tracks)
+        }
+        val previousDuplicateTrackIdCheck = playlistCheckRepository.findByCheckId(duplicateTrackIdCheck.checkId)
+        playlistCheckRepository.save(duplicateTrackIdCheck)
+        notifyIfChanged(previousDuplicateTrackIdCheck, duplicateTrackIdCheck)
+
+        val allChecks = mutableListOf(duplicateTrackIdCheck)
+
+        if (currentPlaylistInfo?.type == PlaylistType.YEAR) {
+            val yearSongsInAllCheck = timedCheck(CHECK_YEAR_SONGS_IN_ALL, event.playlistId) {
+                runYearSongsInAllCheck(event.userId, event.playlistId, playlistInfos, playlist.tracks)
+            }
+            val previousYearSongsInAllCheck = playlistCheckRepository.findByCheckId(yearSongsInAllCheck.checkId)
+            playlistCheckRepository.save(yearSongsInAllCheck)
+            notifyIfChanged(previousYearSongsInAllCheck, yearSongsInAllCheck)
+            allChecks.add(yearSongsInAllCheck)
+        }
+
+        val totalViolations = allChecks.sumOf { it.violations.size }
+        val status = if (totalViolations == 0) "all passed" else "$totalViolations violation(s)"
         logger.info { "Ran playlist checks for playlist ${event.playlistId} (user ${event.userId.value}): $status" }
         dashboardRefresh.notifyUserPlaylistChecks(event.userId)
         OutboxTaskResult.Success
@@ -69,9 +89,9 @@ class PlaylistCheckAdapter(
         return result
     }
 
-    private fun runDuplicateTrackCheck(
+    private fun runDuplicateTrackIdCheck(
         playlistId: String,
-        tracks: List<de.chrgroth.spotify.control.domain.model.PlaylistTrack>,
+        tracks: List<PlaylistTrack>,
     ): AppPlaylistCheck {
         val countByTrackId = tracks.groupingBy { it.trackId }.eachCount()
         val violations = tracks
@@ -82,7 +102,36 @@ class PlaylistCheckAdapter(
                 "$artistName – ${track.trackName}"
             }
         return AppPlaylistCheck(
-            checkId = "$playlistId:$CHECK_DUPLICATE_TRACKS",
+            checkId = "$playlistId:$CHECK_DUPLICATE_TRACK_IDS",
+            playlistId = playlistId,
+            lastCheck = Clock.System.now(),
+            succeeded = violations.isEmpty(),
+            violations = violations,
+        )
+    }
+
+    private fun runYearSongsInAllCheck(
+        userId: UserId,
+        playlistId: String,
+        playlistInfos: List<PlaylistInfo>,
+        tracks: List<PlaylistTrack>,
+    ): AppPlaylistCheck {
+        val allPlaylistInfo = playlistInfos.find { it.type == PlaylistType.ALL }
+        val allPlaylist = allPlaylistInfo?.let { playlistRepository.findByUserIdAndPlaylistId(userId, it.spotifyPlaylistId) }
+        val violations = if (allPlaylist == null) {
+            emptyList()
+        } else {
+            val allTrackIds = allPlaylist.tracks.map { it.trackId }.toSet()
+            tracks
+                .filter { it.trackId !in allTrackIds }
+                .distinctBy { it.trackId }
+                .map { track ->
+                    val artistName = track.artistNames.firstOrNull() ?: track.artistIds.firstOrNull() ?: "Unknown Artist"
+                    "$artistName – ${track.trackName}"
+                }
+        }
+        return AppPlaylistCheck(
+            checkId = "$playlistId:$CHECK_YEAR_SONGS_IN_ALL",
             playlistId = playlistId,
             lastCheck = Clock.System.now(),
             succeeded = violations.isEmpty(),
@@ -91,6 +140,7 @@ class PlaylistCheckAdapter(
     }
 
     companion object : KLogging() {
-        private const val CHECK_DUPLICATE_TRACKS = "duplicate-tracks"
+        private const val CHECK_DUPLICATE_TRACK_IDS = "duplicate-track-ids"
+        private const val CHECK_YEAR_SONGS_IN_ALL = "year-songs-in-all"
     }
 }

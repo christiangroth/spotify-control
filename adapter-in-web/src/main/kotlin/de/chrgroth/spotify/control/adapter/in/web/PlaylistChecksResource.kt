@@ -86,7 +86,12 @@ class PlaylistChecksResource {
 
             fun formatCheckName(checkType: String): String = checkType
                 .split("-")
-                .joinToString(" ") { it.replaceFirstChar(Char::uppercaseChar) }
+                .joinToString(" ") { word ->
+                    when (word.lowercase()) {
+                        "ids" -> "IDs"
+                        else -> word.replaceFirstChar(Char::uppercaseChar)
+                    }
+                }
         }
     }
 }
