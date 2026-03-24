@@ -119,16 +119,15 @@ class AppArtistRepositoryTests {
         val artistB = artist("paged-B-$suffix").copy(artistName = "B Artist $suffix")
         appArtistRepository.upsertAll(listOf(artistC, artistA, artistB))
 
-        val page1 = appArtistRepository.findByPlaybackProcessingStatusPaged(
-            de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus.UNDECIDED, 0, 2,
+        val totalUndecided = appArtistRepository.countByPlaybackProcessingStatus(
+            de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus.UNDECIDED,
         )
-        val page2 = appArtistRepository.findByPlaybackProcessingStatusPaged(
-            de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus.UNDECIDED, 2, 2,
+        val allResults = appArtistRepository.findByPlaybackProcessingStatusPaged(
+            de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus.UNDECIDED, 0, totalUndecided.toInt(),
         )
 
-        val allLoaded = page1 + page2
         val insertedIds = setOf(artistA.artistId, artistB.artistId, artistC.artistId)
-        val found = allLoaded.filter { it.artistId in insertedIds }
+        val found = allResults.filter { it.artistId in insertedIds }
         assertThat(found).hasSize(3)
         assertThat(found.map { it.artistName }).containsExactly(
             "A Artist $suffix",
