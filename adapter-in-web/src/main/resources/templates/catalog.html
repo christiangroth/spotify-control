@@ -49,7 +49,9 @@
 
         <div id="artist-list-container">
             {#fragment id="fragment_artist_list"}
-            {#if artists.empty}
+            {#if !filterActive}
+            <p style="color:#888;">Enter a filter to search for artists.</p>
+            {#else if artists.empty}
             <p style="color:#888;">No artists found.</p>
             {#else}
             <div class="table-responsive">
