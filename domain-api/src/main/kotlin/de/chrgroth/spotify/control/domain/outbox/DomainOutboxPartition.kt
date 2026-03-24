@@ -9,10 +9,12 @@ sealed interface DomainOutboxPartition : ApplicationOutboxPartition {
 
     data object ToSpotifyPlayback : DomainOutboxPartition {
         override val key = "to-spotify-playback"
+        override val pauseOnRateLimit = false
     }
 
     data object Domain : DomainOutboxPartition {
         override val key = "domain"
+        override val pauseOnRateLimit = false
     }
 
     companion object {

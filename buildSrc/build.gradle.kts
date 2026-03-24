@@ -13,5 +13,4 @@ dependencies {
   implementation(libs.kotlinGradleSerializationPlugin)
   implementation(libs.detekt)
   implementation(libs.kover)
-  implementation(libs.asm)
 }
