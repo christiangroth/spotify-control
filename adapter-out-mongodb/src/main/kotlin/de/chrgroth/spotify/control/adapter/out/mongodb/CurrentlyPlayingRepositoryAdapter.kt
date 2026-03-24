@@ -74,6 +74,26 @@ class CurrentlyPlayingRepositoryAdapter : CurrentlyPlayingRepositoryPort {
         }
     }
 
+    override fun findByUserAndTrack(userId: UserId, trackId: String): List<CurrentlyPlayingItem> =
+        mongoQueryMetrics.timed("spotify_currently_playing.findByUserAndTrack") {
+            currentlyPlayingDocumentRepository
+                .list("spotifyUserId = ?1 and trackId = ?2", userId.value, trackId)
+                .map { doc ->
+                    CurrentlyPlayingItem(
+                        spotifyUserId = UserId(doc.spotifyUserId),
+                        trackId = doc.trackId,
+                        trackName = doc.trackName,
+                        artistIds = doc.artistIds,
+                        artistNames = doc.artistNames,
+                        progressMs = doc.progressMs,
+                        durationMs = doc.durationMs,
+                        isPlaying = doc.isPlaying,
+                        observedAt = doc.observedAt.toKotlinInstant(),
+                        albumId = doc.albumId,
+                    )
+                }
+        }
+
     override fun findByUserId(userId: UserId): List<CurrentlyPlayingItem> =
         mongoQueryMetrics.timed("spotify_currently_playing.findByUserId") {
             currentlyPlayingDocumentRepository
