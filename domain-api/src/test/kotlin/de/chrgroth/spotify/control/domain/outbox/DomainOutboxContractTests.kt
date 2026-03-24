@@ -16,6 +16,7 @@ class DomainOutboxContractTests {
         DomainOutboxEvent.UpdateUserProfile(UserId("user-1")),
         DomainOutboxEvent.SyncPlaylistInfo(UserId("user-1")),
         DomainOutboxEvent.SyncPlaylistData(UserId("user-1"), "playlist-1"),
+        DomainOutboxEvent.SyncPlaylistData(UserId("user-1"), "playlist-1", "https://api.spotify.com/v1/playlists/playlist-1/tracks?offset=50&limit=50", "snapshot-abc"),
         DomainOutboxEvent.RebuildPlaybackData(UserId("user-1")),
         DomainOutboxEvent.AppendPlaybackData(UserId("user-1")),
         DomainOutboxEvent.SyncArtistDetails("artist-1", UserId("user-1")),
