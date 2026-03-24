@@ -1,3 +1,15 @@
+# 0.75.1 (2026.03.24)
+
+## Bugfixes / Chore
+* Playback Event Viewer now shows newest events at the top of the list.
+* Latest currently playing progress is shown first when viewing today's playback events.
+* Grafana dashboard provisioning now retries with exponential backoff (30s, 60s, 120s, 300s) when the Grafana Cloud instance is temporarily unavailable.
+* Both metrics and logs dashboards are provisioned on each release.
+
+
+
+---
+
 # 0.75.0 (2026.03.24)
 
 ## New Features
