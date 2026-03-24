@@ -111,44 +111,28 @@ class PlaybackAdapter(
     }
 
   private fun convertPartialPlays(userId: UserId, completedTrackIds: Set<String>): Int {
-    val allItems = currentlyPlayingRepository.findByUserId(userId)
-    val sortedItems = allItems.sortedBy { it.observedAt }
+    val sortedItems = currentlyPlayingRepository.findByUserId(userId).sortedBy { it.observedAt }
 
-    // Group items into contiguous play sessions per track.
-    // A new session for a track begins whenever a different track is observed between observations of the same track.
-    val sessions = buildSessions(sortedItems)
+    // The single latest item is protected — it may still be active
+    val latestItem = sortedItems.lastOrNull()
+    val itemsToProcess = if (latestItem != null) sortedItems.dropLast(1) else emptyList()
 
-    // The most recently observed non-completed session is protected — it may still be active
-    val latestNonCompletedSession = sessions
-      .filter { it.trackId !in completedTrackIds }
-      .maxByOrNull { session -> session.items.maxOf { it.observedAt } }
-
-    val convertibleSessions = sessions.filter { session ->
-      session.trackId !in completedTrackIds
-          && session !== latestNonCompletedSession
-          && session.items.maxOf { it.progressMs } > minimumProgressMs
+    val convertibleItems = itemsToProcess.filter { item ->
+      item.trackId !in completedTrackIds && item.progressMs > minimumProgressMs
     }
 
-    val newComputedCount = if (convertibleSessions.isNotEmpty()) {
-      val partialItems = convertibleSessions.map { session ->
-        val firstObservedAt = session.items.minOf { it.observedAt }
-        val lastObservedAtForSession = session.items.maxOf { it.observedAt }
-        val nextItem = sortedItems.firstOrNull { it.observedAt > lastObservedAtForSession && it.trackId != session.trackId }
-        val playedMs = if (nextItem != null) {
-          (nextItem.observedAt - firstObservedAt).inWholeMilliseconds
-        } else {
-          session.items.maxOf { it.progressMs }
-        }
-        val representative = session.items.maxBy { it.progressMs }
+    val newComputedCount = if (convertibleItems.isNotEmpty()) {
+      val partialItems = convertibleItems.map { item ->
+        val playedMs = minOf(item.progressMs, item.durationMs)
         RecentlyPartialPlayedItem(
           spotifyUserId = userId,
-          trackId = session.trackId,
-          trackName = representative.trackName,
-          artistIds = representative.artistIds,
-          artistNames = representative.artistNames,
-          playedAt = firstObservedAt,
+          trackId = item.trackId,
+          trackName = item.trackName,
+          artistIds = item.artistIds,
+          artistNames = item.artistNames,
+          playedAt = item.observedAt,
           playedSeconds = playedMs / MS_PER_SECOND,
-          albumId = representative.albumId,
+          albumId = item.albumId,
         )
       }
       val existingPlayedAts = recentlyPartialPlayedRepository.findExistingPlayedAts(userId, partialItems.map { it.playedAt }.toSet())
@@ -162,28 +146,12 @@ class PlaybackAdapter(
       0
     }
 
-    // Only delete track entries that are not held by a protected session
-    val protectedTrackIds = latestNonCompletedSession?.let { setOf(it.trackId) } ?: emptySet()
-    val convertedTrackIds = convertibleSessions.map { it.trackId }.filter { it !in protectedTrackIds }.toSet()
-    currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, completedTrackIds + convertedTrackIds)
+    // Delete completed tracks and all processed items (converted or skipped below threshold),
+    // but don't delete the latest item's trackId as it may still be active
+    val allProcessedTrackIds = itemsToProcess.map { it.trackId }.filter { it != latestItem?.trackId }.toSet()
+    currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, completedTrackIds + allProcessedTrackIds)
     return newComputedCount
   }
-
-  private fun buildSessions(sortedItems: List<CurrentlyPlayingItem>): List<PlaySession> {
-    val result = mutableListOf<PlaySession>()
-    var lastTrackId: String? = null
-    for (item in sortedItems) {
-      if (lastTrackId == item.trackId) {
-        result.last().items.add(item)
-      } else {
-        result.add(PlaySession(item.trackId, mutableListOf(item)))
-      }
-      lastTrackId = item.trackId
-    }
-    return result
-  }
-
-  private data class PlaySession(val trackId: String, val items: MutableList<CurrentlyPlayingItem>)
 
     // --- Playback Data ---
 
