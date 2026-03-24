@@ -1,3 +1,12 @@
+# 0.76.1 (2026.03.24)
+
+## Bugfixes / Chore
+* Fixed dashboard playback events histogram bars not showing correct heights.
+
+
+
+---
+
 # 0.76.0 (2026.03.24)
 
 ## New Features
