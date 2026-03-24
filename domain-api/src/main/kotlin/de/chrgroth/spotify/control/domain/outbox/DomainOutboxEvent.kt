@@ -6,7 +6,7 @@ import de.chrgroth.spotify.control.domain.model.UserId
 
 sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
     override val partition: DomainOutboxPartition
-    override val priority: OutboxEventPriority get() = OutboxEventPriority.NORMAL
+    override val priority: OutboxEventPriority get() = OutboxEventPriority.MEDIUM
     override val serializePayload: String
 
     data class FetchCurrentlyPlaying(val userId: UserId) : DomainOutboxEvent {

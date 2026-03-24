@@ -73,19 +73,4 @@ class DomainOutboxContractTests {
                 .isTrue()
         }
     }
-
-    @Test
-    fun `ToSpotify partition has no throttle interval`() {
-        assertThat(DomainOutboxPartition.ToSpotify.pauseOnRateLimit).isTrue()
-    }
-
-    @Test
-    fun `ToSpotifyPlayback partition does not pause on rate limit`() {
-        assertThat(DomainOutboxPartition.ToSpotifyPlayback.pauseOnRateLimit).isFalse()
-    }
-
-    @Test
-    fun `Domain partition does not pause on rate limit`() {
-        assertThat(DomainOutboxPartition.Domain.pauseOnRateLimit).isFalse()
-    }
 }

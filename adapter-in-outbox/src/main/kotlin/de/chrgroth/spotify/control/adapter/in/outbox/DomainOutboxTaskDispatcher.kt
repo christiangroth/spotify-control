@@ -58,7 +58,7 @@ class DomainOutboxTaskDispatcher(
             is Either.Left -> when (val error = result.value) {
                 is SpotifyRateLimitError -> {
                     logger.warn { "Rate limited on $taskDescription, retry after ${error.retryAfter.seconds}s" }
-                    DispatchResult.RateLimited(error.retryAfter)
+                    DispatchResult.Paused("Rate limited: $taskDescription", java.time.Instant.now().plus(error.retryAfter))
                 }
                 else -> {
                     logger.error { "Failed $taskDescription: ${error.code}" }
