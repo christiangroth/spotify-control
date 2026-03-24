@@ -6,7 +6,7 @@ import de.chrgroth.spotify.control.domain.port.`in`.HealthPort
 import de.chrgroth.spotify.control.domain.port.out.ConfigurationInfoPort
 import de.chrgroth.spotify.control.domain.port.out.CronjobInfoPort
 import de.chrgroth.spotify.control.domain.port.out.MongoStatsPort
-import de.chrgroth.spotify.control.domain.port.out.OutboxManagementPort
+import de.chrgroth.spotify.control.domain.port.out.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.OutgoingRequestStatsPort
 import de.chrgroth.spotify.control.domain.port.out.PlaybackActivityPort
 import jakarta.enterprise.context.ApplicationScoped
@@ -19,7 +19,7 @@ import kotlin.coroutines.CoroutineContext
 @ApplicationScoped
 @Suppress("Unused")
 class HealthAdapter(
-    private val outboxManagement: OutboxManagementPort,
+    private val outboxPort: OutboxPort,
     private val outgoingRequestStats: OutgoingRequestStatsPort,
     private val mongoStats: MongoStatsPort,
     private val cronjobInfo: CronjobInfoPort,
@@ -30,7 +30,7 @@ class HealthAdapter(
     override fun getStats(): HealthStats = runBlocking {
         val dispatcher = Dispatchers.IO + tcclContext()
         val outgoingRequestStatsAsync = async(dispatcher) { outgoingRequestStats.getRequestStats() }
-        val outboxPartitionsAsync = async(dispatcher) { outboxManagement.getPartitionStats() }
+        val outboxPartitionsAsync = async(dispatcher) { outboxPort.getPartitionStats() }
         val mongoCollectionStatsAsync = async(dispatcher) { mongoStats.getCollectionStats() }
         val mongoQueryStatsAsync = async(dispatcher) { mongoStats.getQueryStats() }
         val cronjobStatsAsync = async(dispatcher) { cronjobInfo.getCronjobStats() }
