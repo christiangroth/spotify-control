@@ -53,6 +53,12 @@ class CatalogAdapter(
 
     override fun findAllArtists(): List<AppArtist> = appArtistRepository.findAll()
 
+    override fun findArtistsByStatus(status: ArtistPlaybackProcessingStatus, offset: Int, limit: Int): List<AppArtist> =
+        appArtistRepository.findByPlaybackProcessingStatusPaged(status, offset, limit)
+
+    override fun countArtistsByStatus(status: ArtistPlaybackProcessingStatus): Long =
+        appArtistRepository.countByPlaybackProcessingStatus(status)
+
     override fun updateArtistPlaybackProcessingStatus(
         artistId: String,
         status: ArtistPlaybackProcessingStatus,

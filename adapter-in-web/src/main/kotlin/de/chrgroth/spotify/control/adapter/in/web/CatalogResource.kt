@@ -40,10 +40,12 @@ class CatalogResource {
     @Authenticated
     @Produces(MediaType.TEXT_HTML)
     fun catalog(@QueryParam("filter") filter: String?): TemplateInstance {
-        val artists = catalogBrowser.getArtists(filter)
+        val filterActive = !filter.isNullOrBlank()
+        val artists = if (filterActive) catalogBrowser.getArtists(filter) else emptyList<ArtistBrowseItem>()
         return catalogTemplate
             .data("artists", artists)
             .data("filter", filter ?: "")
+            .data("filterActive", filterActive)
             .data("albums", emptyList<AlbumBrowseItem>())
             .data("tracks", emptyList<TrackBrowseItem>())
     }
@@ -53,10 +55,12 @@ class CatalogResource {
     @Authenticated
     @Produces(MediaType.TEXT_HTML)
     fun artistList(@QueryParam("filter") filter: String?): TemplateInstance {
-        val artists = catalogBrowser.getArtists(filter)
+        val filterActive = !filter.isNullOrBlank()
+        val artists = if (filterActive) catalogBrowser.getArtists(filter) else emptyList<ArtistBrowseItem>()
         return catalogTemplate.getFragment("fragment_artist_list")
             .data("artists", artists)
             .data("filter", filter ?: "")
+            .data("filterActive", filterActive)
     }
 
     @GET

@@ -32,6 +32,9 @@ class CatalogBrowserAdapter(
     }
 
     override fun getArtists(filter: String?): List<ArtistBrowseItem> {
+        val filterLower = filter?.trim()?.lowercase()
+        if (filterLower.isNullOrBlank()) return emptyList()
+
         val artists = appArtistRepository.findAll()
         val allAlbums = appAlbumRepository.findAll()
         val allTracks = appTrackRepository.findAll()
@@ -39,11 +42,9 @@ class CatalogBrowserAdapter(
         val albumCountByArtistId = allAlbums.groupingBy { it.artistId?.value }.eachCount()
         val trackCountByArtistId = allTracks.groupingBy { it.artistId.value }.eachCount()
 
-        val filterLower = filter?.trim()?.lowercase()
         return artists
             .filter { artist ->
-                filterLower.isNullOrBlank() ||
-                    artist.artistName.lowercase().contains(filterLower)
+                artist.artistName.lowercase().contains(filterLower)
             }
             .sortedBy { it.artistName.lowercase() }
             .map { artist ->
