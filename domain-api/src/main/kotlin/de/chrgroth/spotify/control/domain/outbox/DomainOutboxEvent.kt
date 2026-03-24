@@ -58,19 +58,22 @@ sealed interface DomainOutboxEvent : OutboxEvent {
     /**
      * Syncs track data for a specific page of a playlist.
      * [nextUrl] is the Spotify API URL for the page to fetch; `null` means fetch the first page.
-     * The deduplication key includes [nextUrl] so that each page of the same playlist can be
-     * queued independently (sequential: each page event enqueues the next), while retries of
-     * the same page are still correctly deduplicated.
-     * payload: "${userId.value}:$playlistId" for the first page; "${userId.value}:$playlistId\n$nextUrl" for subsequent pages.
+     * [snapshotId] is the Spotify snapshot ID observed when the previous page was fetched; `null` for the first page.
+     * If the fetched page's snapshot ID differs from [snapshotId], the sync restarts from the first page.
+     * The deduplication key includes both [snapshotId] and [nextUrl] so that each page+snapshot combination
+     * can be queued independently while retries of the same page are still correctly deduplicated.
+     * payload: "${userId.value}:$playlistId" for the first page;
+     *          "${userId.value}:$playlistId\n$snapshotId\n$nextUrl" for subsequent pages.
+     * Legacy payload (no snapshotId): "${userId.value}:$playlistId\n$nextUrl" — parsed with snapshotId=null.
      */
-    data class SyncPlaylistData(val userId: UserId, val playlistId: String, val nextUrl: String? = null) : DomainOutboxEvent {
+    data class SyncPlaylistData(val userId: UserId, val playlistId: String, val nextUrl: String? = null, val snapshotId: String? = null) : DomainOutboxEvent {
         override val key = KEY
-        override fun deduplicationKey() = "$KEY:${userId.value}:$playlistId:${nextUrl ?: ""}"
+        override fun deduplicationKey() = "$KEY:${userId.value}:$playlistId:${snapshotId ?: ""}:${nextUrl ?: ""}"
         override val partition = DomainOutboxPartition.ToSpotify
-        override fun toPayload() = if (nextUrl == null) {
-            "${userId.value}:$playlistId"
-        } else {
-            "${userId.value}:$playlistId\n$nextUrl"
+        override fun toPayload() = when {
+            nextUrl == null -> "${userId.value}:$playlistId"
+            snapshotId != null -> "${userId.value}:$playlistId\n$snapshotId\n$nextUrl"
+            else -> "${userId.value}:$playlistId\n$nextUrl"
         }
 
         companion object {
@@ -80,11 +83,22 @@ sealed interface DomainOutboxEvent : OutboxEvent {
                 require(colonIndex > 0 && colonIndex < payload.length - 1) { "Invalid SyncPlaylistData payload: $payload" }
                 val userId = UserId(payload.substring(0, colonIndex))
                 val rest = payload.substring(colonIndex + 1)
-                val newlineIndex = rest.indexOf('\n')
-                return if (newlineIndex < 0) {
+                val firstNewline = rest.indexOf('\n')
+                return if (firstNewline < 0) {
                     SyncPlaylistData(userId, rest)
                 } else {
-                    SyncPlaylistData(userId, rest.substring(0, newlineIndex), rest.substring(newlineIndex + 1))
+                    val playlistId = rest.substring(0, firstNewline)
+                    val afterFirst = rest.substring(firstNewline + 1)
+                    val secondNewline = afterFirst.indexOf('\n')
+                    if (secondNewline < 0) {
+                        // Legacy format: no snapshotId
+                        SyncPlaylistData(userId, playlistId, afterFirst)
+                    } else {
+                        // New format: snapshotId\nnextUrl
+                        val snapshotId = afterFirst.substring(0, secondNewline).takeIf { it.isNotEmpty() }
+                        val nextUrl = afterFirst.substring(secondNewline + 1)
+                        SyncPlaylistData(userId, playlistId, nextUrl, snapshotId)
+                    }
                 }
             }
         }

@@ -11,7 +11,7 @@ import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 interface PlaylistPort {
     fun enqueueUpdates()
     fun syncPlaylists(userId: UserId): Either<DomainError, Unit>
-    fun syncPlaylistData(userId: UserId, playlistId: String, nextUrl: String? = null): Either<DomainError, Unit>
+    fun syncPlaylistData(userId: UserId, playlistId: String, nextUrl: String? = null, snapshotId: String? = null): Either<DomainError, Unit>
     fun updateSyncStatus(userId: UserId, playlistId: String, syncStatus: PlaylistSyncStatus): Either<DomainError, Unit>
     fun updatePlaylistType(userId: UserId, playlistId: String, type: PlaylistType): Either<DomainError, Unit>
     fun enqueueSyncPlaylistData(userId: UserId, playlistId: String): Either<DomainError, Unit>

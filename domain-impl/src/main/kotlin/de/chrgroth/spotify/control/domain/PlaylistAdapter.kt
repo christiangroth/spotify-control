@@ -86,7 +86,7 @@ class PlaylistAdapter(
         }
     }
 
-    override fun syncPlaylistData(userId: UserId, playlistId: String, nextUrl: String?): Either<DomainError, Unit> {
+    override fun syncPlaylistData(userId: UserId, playlistId: String, nextUrl: String?, snapshotId: String?): Either<DomainError, Unit> {
         userRepository.findById(userId) ?: run {
             logger.warn { "User not found for playlist data sync: ${userId.value}" }
             return Unit.right()
@@ -95,6 +95,11 @@ class PlaylistAdapter(
         val isFirstPage = nextUrl == null
         return spotifyPlaylist.getPlaylistTracksPage(userId, accessToken, playlistId, nextUrl).map { page ->
             logger.info { "Synced page of ${page.tracks.size} track(s) for playlist $playlistId (user ${userId.value})" }
+            if (snapshotId != null && page.snapshotId != snapshotId) {
+                logger.warn { "Snapshot changed for playlist $playlistId (expected $snapshotId, got ${page.snapshotId}), restarting sync from first page" }
+                outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, playlistId))
+                return@map
+            }
             if (isFirstPage) {
                 playlistRepository.save(userId, Playlist(playlistId, page.snapshotId, page.tracks))
             } else {
@@ -106,7 +111,7 @@ class PlaylistAdapter(
 
             if (page.nextUrl != null) {
                 logger.info { "Enqueueing next SyncPlaylistData page for playlist $playlistId (user ${userId.value})" }
-                outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, playlistId, page.nextUrl))
+                outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, playlistId, page.nextUrl, page.snapshotId))
             } else {
                 logger.info { "Completed all pages for playlist $playlistId (user ${userId.value})" }
                 playlistRepository.updateLastSyncTime(userId, playlistId, Clock.System.now())
@@ -228,7 +233,7 @@ class PlaylistAdapter(
     }
 
     override fun handle(event: DomainOutboxEvent.SyncPlaylistData): OutboxTaskResult = try {
-        when (val result = syncPlaylistData(event.userId, event.playlistId, event.nextUrl)) {
+        when (val result = syncPlaylistData(event.userId, event.playlistId, event.nextUrl, event.snapshotId)) {
             is Either.Right -> OutboxTaskResult.Success
             is Either.Left -> when (val error = result.value) {
                 is SpotifyRateLimitError -> {

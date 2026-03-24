@@ -522,7 +522,7 @@ class PlaylistAdapterTests {
 
         adapter.syncPlaylistData(userId, "p1")
 
-        verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, "p1", nextPageUrl)) }
+        verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, "p1", nextPageUrl, "snap-1")) }
         verify(exactly = 0) { outboxPort.enqueue(any<DomainOutboxEvent.RunPlaylistChecks>()) }
     }
 
@@ -561,6 +561,44 @@ class PlaylistAdapterTests {
         verify(exactly = 1) { playlistRepository.appendTracks(userId, "p1", page.tracks) }
         verify(exactly = 0) { playlistRepository.save(any(), any()) }
     }
+
+    @Test
+    fun `syncPlaylistData restarts from first page when snapshotId changes mid-paging`() {
+        val user = buildUser()
+        val nextPageUrl = "https://api.spotify.com/v1/playlists/p1/tracks?offset=50&limit=50"
+        val page = buildTracksPage(snapshotId = "snap-2")  // snapshot changed
+        every { userRepository.findById(userId) } returns user
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { spotifyPlaylist.getPlaylistTracksPage(userId, accessToken, "p1", nextPageUrl) } returns page.right()
+        every { outboxPort.enqueue(any()) } just runs
+
+        val result = adapter.syncPlaylistData(userId, "p1", nextPageUrl, "snap-1")
+
+        assertThat(result.isRight()).isTrue()
+        verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, "p1")) }
+        verify(exactly = 0) { playlistRepository.appendTracks(any(), any(), any()) }
+        verify(exactly = 0) { playlistRepository.save(any(), any()) }
+    }
+
+    @Test
+    fun `syncPlaylistData proceeds normally when snapshotId matches on subsequent page`() {
+        val user = buildUser()
+        val nextPageUrl = "https://api.spotify.com/v1/playlists/p1/tracks?offset=50&limit=50"
+        val page = buildTracksPage(snapshotId = "snap-1")
+        every { userRepository.findById(userId) } returns user
+        every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+        every { spotifyPlaylist.getPlaylistTracksPage(userId, accessToken, "p1", nextPageUrl) } returns page.right()
+        every { playlistRepository.appendTracks(userId, "p1", page.tracks) } just runs
+        every { outboxPort.enqueue(any()) } just runs
+        every { playlistRepository.updateLastSyncTime(userId, "p1", any()) } just runs
+
+        val result = adapter.syncPlaylistData(userId, "p1", nextPageUrl, "snap-1")
+
+        assertThat(result.isRight()).isTrue()
+        verify(exactly = 1) { playlistRepository.appendTracks(userId, "p1", page.tracks) }
+        verify(exactly = 0) { outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, "p1")) }
+    }
+
 
     @Test
     fun `syncPlaylistData returns Left when tracks fetch fails`() {
