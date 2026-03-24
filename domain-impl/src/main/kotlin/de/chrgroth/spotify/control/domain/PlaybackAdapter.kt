@@ -76,11 +76,6 @@ class PlaybackAdapter(
                     logger.info { "Updating currently playing item for user: ${userId.value}, track: ${item.trackId}" }
                     currentlyPlayingRepository.updateProgressByUserAndTrackAndObservedMinute(item)
                 } else {
-                    val existingForTrack = currentlyPlayingRepository.findByUserAndTrack(userId, item.trackId)
-                    if (existingForTrack.isNotEmpty() && existingForTrack.none { it.progressMs >= item.progressMs }) {
-                        logger.info { "Replacing stale currently playing entries for user: ${userId.value}, track: ${item.trackId} (progressMs increased from minute boundary)" }
-                        currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, setOf(item.trackId))
-                    }
                     logger.info { "Persisting currently playing item for user: ${userId.value}, track: ${item.trackId}" }
                     currentlyPlayingRepository.save(item)
                 }
