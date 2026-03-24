@@ -1,0 +1,77 @@
+{#include layout.html}
+    {#title}SpCtl – Outbox{/title}
+    {#content}
+    <div class="container-fluid py-4 px-3 px-md-4">
+
+        <h1 class="mb-4 fs-4 fw-semibold">Outbox</h1>
+
+        <div id="snippet-outbox-tasks">
+            {#fragment id="snippet_tasks"}
+            {#for partition in partitions}
+            <h2 class="mb-3 fs-6 fw-semibold text-uppercase" style="color:#888;letter-spacing:.05em;">{partition.key}</h2>
+            {#if partition.tasks.empty}
+            <p class="text-secondary small mb-4">No pending tasks.</p>
+            {#else}
+            <div class="table-responsive mb-4">
+                <table class="table table-sm mb-0" style="color:#e0e0e0;background-color:transparent;" data-testid="outbox-tasks-table-{partition.key}">
+                    <thead>
+                        <tr style="border-color:#333;color:#888;">
+                            <th style="border-color:#333;background-color:transparent;font-weight:500;">Event Type</th>
+                            <th style="border-color:#333;background-color:transparent;font-weight:500;">Priority</th>
+                            <th style="border-color:#333;background-color:transparent;font-weight:500;">Status</th>
+                            <th style="border-color:#333;background-color:transparent;font-weight:500;text-align:right;">Attempts</th>
+                            <th style="border-color:#333;background-color:transparent;font-weight:500;">Next Retry (UTC)</th>
+                            <th style="border-color:#333;background-color:transparent;font-weight:500;">Created (UTC)</th>
+                            <th style="border-color:#333;background-color:transparent;font-weight:500;">Deduplication Key</th>
+                            <th style="border-color:#333;background-color:transparent;font-weight:500;">Last Error</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {#for task in partition.tasks}
+                        <tr style="border-color:#333;">
+                            <td style="border-color:#333;background-color:transparent;">{task.eventType}</td>
+                            <td style="border-color:#333;background-color:transparent;">
+                                {#if task.isHighPriority}
+                                <span class="badge" style="background-color:#dc3545;">HIGH</span>
+                                {#else}
+                                <span class="badge" style="background-color:#555;">NORMAL</span>
+                                {/if}
+                            </td>
+                            <td style="border-color:#333;background-color:transparent;">
+                                {#if task.status == "PROCESSING"}
+                                <span class="badge" style="background-color:#0d6efd;">{task.status}</span>
+                                {#else if task.status == "FAILED"}
+                                <span class="badge" style="background-color:#dc3545;">{task.status}</span>
+                                {#else}
+                                <span class="badge" style="background-color:#555;">{task.status}</span>
+                                {/if}
+                            </td>
+                            <td style="border-color:#333;background-color:transparent;text-align:right;">{task.attempts}</td>
+                            <td style="border-color:#333;background-color:transparent;white-space:nowrap;">{task.nextRetryAtFormatted}</td>
+                            <td style="border-color:#333;background-color:transparent;white-space:nowrap;">{task.createdAtFormatted}</td>
+                            <td style="border-color:#333;background-color:transparent;font-size:0.8rem;color:#aaa;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{task.deduplicationKey}">{task.deduplicationKey}</td>
+                            <td style="border-color:#333;background-color:transparent;font-size:0.8rem;color:#e07070;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{#if task.lastError}{task.lastError}{#else}-{/if}</td>
+                        </tr>
+                        {/for}
+                    </tbody>
+                </table>
+            </div>
+            {/if}
+            {/for}
+            {/fragment}
+        </div>
+
+    </div>
+    {/content}
+    {#scripts}
+    <script>
+        (function () {
+            connectSse('/health/events', function (event) {
+                if (event.data === 'refresh-outbox-partitions') {
+                    fadeUpdate('snippet-outbox-tasks', '/outbox-viewer/snippets/tasks');
+                }
+            });
+        })();
+    </script>
+    {/scripts}
+{/include}
