@@ -44,7 +44,7 @@ class PlaybackEventViewerAdapter(
             )
         }
 
-        val allEvents = (recentlyPlayed + partialPlayed + currentlyPlayingEntries).sortedBy { it.timestamp }
+        val allEvents = (recentlyPlayed + partialPlayed + currentlyPlayingEntries).sortedByDescending { it.timestamp }
         return PlaybackEventViewerResult(date = date, isToday = isToday, events = allEvents)
     }
 
