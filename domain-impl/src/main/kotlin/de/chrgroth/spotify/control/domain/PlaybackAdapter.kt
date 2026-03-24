@@ -71,9 +71,14 @@ class PlaybackAdapter(
             if (item != null && item.isPlaying) {
                 playbackState.onPlaybackDetected()
             }
-            if (item != null && !currentlyPlayingRepository.existsByUserAndTrackAndObservedMinute(item)) {
-                logger.info { "Persisting currently playing item for user: ${userId.value}, track: ${item.trackId}" }
-                currentlyPlayingRepository.save(item)
+            if (item != null) {
+                if (currentlyPlayingRepository.existsByUserAndTrackAndObservedMinute(item)) {
+                    logger.info { "Updating currently playing item for user: ${userId.value}, track: ${item.trackId}" }
+                    currentlyPlayingRepository.updateProgressByUserAndTrackAndObservedMinute(item)
+                } else {
+                    logger.info { "Persisting currently playing item for user: ${userId.value}, track: ${item.trackId}" }
+                    currentlyPlayingRepository.save(item)
+                }
                 dashboardRefresh.notifyUserPlaybackData(userId)
             }
             Unit.right()

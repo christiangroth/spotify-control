@@ -1,5 +1,7 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
+import com.mongodb.client.model.Filters
+import com.mongodb.client.model.Updates
 import de.chrgroth.spotify.control.domain.model.CurrentlyPlayingItem
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.out.CurrentlyPlayingRepositoryPort
@@ -48,6 +50,27 @@ class CurrentlyPlayingRepositoryAdapter : CurrentlyPlayingRepositoryPort {
                 observedMinuteStart,
                 observedMinuteEnd,
             ) > 0
+        }
+    }
+
+    override fun updateProgressByUserAndTrackAndObservedMinute(item: CurrentlyPlayingItem) {
+        val observedMinuteStart = item.observedAt.toJavaInstant().truncatedTo(java.time.temporal.ChronoUnit.MINUTES)
+        val observedMinuteEnd = observedMinuteStart.plusSeconds(SECONDS_PER_MINUTE)
+        logger.info { "Updating currently playing progress for user ${item.spotifyUserId.value}, track ${item.trackId}, progressMs=${item.progressMs}" }
+        mongoQueryMetrics.timed("spotify_currently_playing.updateProgressByUserAndTrackAndObservedMinute") {
+            currentlyPlayingDocumentRepository.mongoCollection().updateOne(
+                Filters.and(
+                    Filters.eq("spotifyUserId", item.spotifyUserId.value),
+                    Filters.eq("trackId", item.trackId),
+                    Filters.gte("observedAt", observedMinuteStart),
+                    Filters.lt("observedAt", observedMinuteEnd),
+                ),
+                Updates.combine(
+                    Updates.set("progressMs", item.progressMs),
+                    Updates.set("isPlaying", item.isPlaying),
+                    Updates.set("observedAt", item.observedAt.toJavaInstant()),
+                ),
+            )
         }
     }
 
