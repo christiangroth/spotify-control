@@ -1,3 +1,12 @@
+# 0.76.3 (2026.03.24)
+
+## Bugfixes / Chore
+* Outbox viewer table now uses the same dark table design as playlist checks and playlist sync settings.
+
+
+
+---
+
 # 0.76.2 (2026.03.24)
 
 ## Bugfixes / Chore
