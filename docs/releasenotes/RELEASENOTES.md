@@ -1,3 +1,13 @@
+# 0.76.0 (2026.03.24)
+
+## New Features
+* Added outbox viewer page showing pending tasks per partition with live SSE updates.
+* Moved MongoDB Viewer link into the technical dropdown menu (above Atlas).
+
+
+
+---
+
 # 0.75.1 (2026.03.24)
 
 ## Bugfixes / Chore
