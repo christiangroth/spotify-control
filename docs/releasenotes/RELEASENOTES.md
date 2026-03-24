@@ -1,3 +1,13 @@
+# 0.74.1 (2026.03.24)
+
+## Bugfixes / Chore
+* Fixed partial playback duration sometimes showing impossibly large values (e.g. 42039 seconds) by capping the computed duration at the track's actual length.
+* Added one-time startup migration to cap any existing partial playback entries with duration exceeding the track's actual length.
+
+
+
+---
+
 # 0.74.0 (2026.03.21)
 
 ## New Features
