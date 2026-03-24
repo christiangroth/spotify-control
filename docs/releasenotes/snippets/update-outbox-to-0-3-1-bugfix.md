@@ -1,1 +1,1 @@
-* Updated quarkus-outbox dependency to version 0.4.0.
+* Updated quarkus-outbox dependency to version 0.7.2
