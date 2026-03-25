@@ -46,7 +46,7 @@ class SyncControllerTests {
     private fun album(id: String) = AppAlbum(id = AlbumId(id), lastSync = syncTime)
 
     private fun artist(id: String) = AppArtist(
-        artistId = id,
+        id = ArtistId(id),
         artistName = "Artist $id",
         playbackProcessingStatus = ArtistPlaybackProcessingStatus.UNDECIDED,
         lastSync = syncTime,

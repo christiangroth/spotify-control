@@ -1,5 +1,6 @@
 package de.chrgroth.spotify.control.domain
 
+import de.chrgroth.spotify.control.domain.model.ArtistId
 import de.chrgroth.spotify.control.domain.model.DashboardStats
 import de.chrgroth.spotify.control.domain.model.DayCount
 import de.chrgroth.spotify.control.domain.model.AppTrack
@@ -149,7 +150,9 @@ class DashboardAdapter(
         val allArtistIds = trackMap.values.flatMap { it.allArtistIds() }.toSet()
         return coroutineScope {
             val albumMapAsync = async(Dispatchers.IO) { appAlbumRepository.findByAlbumIds(albumIds).associateBy { it.id.value } }
-            val artistMapAsync = async(Dispatchers.IO) { appArtistRepository.findByArtistIds(allArtistIds).associateBy { it.artistId } }
+            val artistMapAsync = async(Dispatchers.IO) {
+                appArtistRepository.findByArtistIds(allArtistIds.map { ArtistId(it) }.toSet()).associateBy { it.id.value }
+            }
             val albumMap = albumMapAsync.await()
             val artistMap = artistMapAsync.await()
             recentPlaybackItems.map { playback ->
@@ -182,7 +185,9 @@ class DashboardAdapter(
         val statsArtistIds = statsTrackMap.values.flatMap { it.allArtistIds() }.toSet()
         return coroutineScope {
             val statsAlbumMapAsync = async(Dispatchers.IO) { appAlbumRepository.findByAlbumIds(statsAlbumIds).associateBy { it.id.value } }
-            val statsArtistMapAsync = async(Dispatchers.IO) { appArtistRepository.findByArtistIds(statsArtistIds).associateBy { it.artistId } }
+            val statsArtistMapAsync = async(Dispatchers.IO) {
+                appArtistRepository.findByArtistIds(statsArtistIds.map { ArtistId(it) }.toSet()).associateBy { it.id.value }
+            }
             val statsAlbumMap = statsAlbumMapAsync.await()
             val statsArtistMap = statsArtistMapAsync.await()
 

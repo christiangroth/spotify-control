@@ -1,6 +1,7 @@
 package de.chrgroth.spotify.control.adapter.`in`.starter
 
 import de.chrgroth.spotify.control.domain.model.AppArtist
+import de.chrgroth.spotify.control.domain.model.ArtistId
 import de.chrgroth.spotify.control.domain.model.User
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
@@ -59,7 +60,7 @@ class ReEnrichArtistNameBugfixStarterTests {
     fun `artist with imageLink and blank name - sync enqueued`() {
         every { appArtistRepository.findWithImageLinkAndBlankName() } returns listOf(
             AppArtist(
-                artistId = "a1",
+                id = ArtistId("a1"),
                 artistName = "",
                 imageLink = "https://img.example.com/1.jpg",
                 lastSync = Clock.System.now(),
@@ -74,7 +75,7 @@ class ReEnrichArtistNameBugfixStarterTests {
     @Test
     fun `artist with imageLink and blank name but no users - no events enqueued`() {
         every { appArtistRepository.findWithImageLinkAndBlankName() } returns listOf(
-            AppArtist(artistId = "a1", artistName = "", imageLink = "https://img.example.com/1.jpg", lastSync = Clock.System.now()),
+            AppArtist(id = ArtistId("a1"), artistName = "", imageLink = "https://img.example.com/1.jpg", lastSync = Clock.System.now()),
         )
         every { userRepository.findAll() } returns emptyList()
 
@@ -86,8 +87,8 @@ class ReEnrichArtistNameBugfixStarterTests {
     @Test
     fun `multiple artists with imageLink and blank name - all enqueued`() {
         every { appArtistRepository.findWithImageLinkAndBlankName() } returns listOf(
-            AppArtist(artistId = "a1", artistName = "", imageLink = "https://img.example.com/1.jpg", lastSync = Clock.System.now()),
-            AppArtist(artistId = "a3", artistName = "", imageLink = "https://img.example.com/3.jpg", lastSync = Clock.System.now()),
+            AppArtist(id = ArtistId("a1"), artistName = "", imageLink = "https://img.example.com/1.jpg", lastSync = Clock.System.now()),
+            AppArtist(id = ArtistId("a3"), artistName = "", imageLink = "https://img.example.com/3.jpg", lastSync = Clock.System.now()),
         )
 
         starter.execute()

@@ -1,6 +1,7 @@
 package de.chrgroth.spotify.control.domain
 
 import de.chrgroth.spotify.control.domain.model.AlbumId
+import de.chrgroth.spotify.control.domain.model.ArtistId
 import de.chrgroth.spotify.control.domain.model.TrackId
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
@@ -62,7 +63,7 @@ class SyncController(
      */
     fun syncArtists(artistIds: List<String>, userId: UserId) {
         if (artistIds.isEmpty()) return
-        val existingArtistIds = appArtistRepository.findByArtistIds(artistIds.toSet()).map { it.artistId }.toSet()
+        val existingArtistIds = appArtistRepository.findByArtistIds(artistIds.map { ArtistId(it) }.toSet()).map { it.id.value }.toSet()
         val newArtistIds = artistIds.filter { it !in existingArtistIds }.distinct()
         if (newArtistIds.isNotEmpty()) {
             logger.info { "Enqueueing SyncArtistDetails for ${newArtistIds.size} new artist(s)" }

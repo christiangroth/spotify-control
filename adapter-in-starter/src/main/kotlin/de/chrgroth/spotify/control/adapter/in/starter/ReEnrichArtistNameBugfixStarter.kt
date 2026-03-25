@@ -31,7 +31,7 @@ class ReEnrichArtistNameBugfixStarter(
         }
         logger.info { "Enqueuing re-sync for ${artists.size} artist(s) with imageLink but missing name" }
         artists.forEach { artist ->
-            outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails(artist.artistId, user.spotifyUserId))
+            outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails(artist.id.value, user.spotifyUserId))
         }
     }
 

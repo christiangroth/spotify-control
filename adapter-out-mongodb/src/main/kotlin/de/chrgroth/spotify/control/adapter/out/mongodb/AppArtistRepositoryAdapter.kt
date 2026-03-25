@@ -7,6 +7,7 @@ import com.mongodb.client.model.UpdateOneModel
 import com.mongodb.client.model.UpdateOptions
 import com.mongodb.client.model.Updates
 import de.chrgroth.spotify.control.domain.model.AppArtist
+import de.chrgroth.spotify.control.domain.model.ArtistId
 import de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus
 import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
@@ -31,7 +32,7 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
         mongoQueryMetrics.timed("app_artist.upsertAll") {
             val requests = items.map { item ->
                 UpdateOneModel<AppArtistDocument>(
-                    Filters.eq("_id", item.artistId),
+                    Filters.eq("_id", item.id.value),
                     Updates.combine(
                         Updates.set("artistName", item.artistName),
                         Updates.set("imageLink", item.imageLink),
@@ -82,11 +83,11 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
                 .countDocuments(Filters.eq("playbackProcessingStatus", status.name))
         }
 
-    override fun findByArtistIds(artistIds: Set<String>): List<AppArtist> {
+    override fun findByArtistIds(artistIds: Set<ArtistId>): List<AppArtist> {
         if (artistIds.isEmpty()) return emptyList()
         return mongoQueryMetrics.timed("app_artist.findByArtistIds") {
             appArtistDocumentRepository.mongoCollection()
-                .find(Filters.`in`("_id", artistIds))
+                .find(Filters.`in`("_id", artistIds.map { it.value }))
                 .toList()
                 .map { it.toDomain() }
         }
@@ -108,10 +109,10 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
                 .map { it.toDomain() }
         }
 
-    override fun updatePlaybackProcessingStatus(artistId: String, status: ArtistPlaybackProcessingStatus) {
+    override fun updatePlaybackProcessingStatus(artistId: ArtistId, status: ArtistPlaybackProcessingStatus) {
         mongoQueryMetrics.timed("app_artist.updatePlaybackProcessingStatus") {
             appArtistDocumentRepository.mongoCollection().updateOne(
-                Filters.eq("_id", artistId),
+                Filters.eq("_id", artistId.value),
                 Updates.set("playbackProcessingStatus", status.name),
             )
         }
@@ -125,7 +126,7 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
     }
 
     private fun AppArtistDocument.toDomain() = AppArtist(
-        artistId = id,
+        id = ArtistId(id),
         artistName = artistName,
         imageLink = imageLink,
         type = type,

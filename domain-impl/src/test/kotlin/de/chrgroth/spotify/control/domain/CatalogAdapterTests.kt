@@ -60,11 +60,11 @@ class CatalogAdapterTests {
 
     private val syncTimestamp = Instant.fromEpochSeconds(1)
     private val artist1 = AppArtist(
-        artistId = "artist-1", artistName = "Artist One",
+        id = ArtistId("artist-1"), artistName = "Artist One",
         playbackProcessingStatus = ArtistPlaybackProcessingStatus.UNDECIDED, lastSync = syncTimestamp,
     )
     private val artist2 = AppArtist(
-        artistId = "artist-2", artistName = "Artist Two",
+        id = ArtistId("artist-2"), artistName = "Artist Two",
         playbackProcessingStatus = ArtistPlaybackProcessingStatus.UNDECIDED, lastSync = syncTimestamp,
     )
     private val track1 = AppTrack(id = TrackId("track-1"), title = "Track One", artistId = ArtistId("artist-1"), lastSync = syncTimestamp)
@@ -100,7 +100,7 @@ class CatalogAdapterTests {
 
     @Test
     fun `resyncArtist returns error when artist not found`() {
-        every { appArtistRepository.findByArtistIds(setOf("artist-1")) } returns emptyList()
+        every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns emptyList()
 
         val result = adapter.resyncArtist("artist-1")
 
@@ -110,7 +110,7 @@ class CatalogAdapterTests {
 
     @Test
     fun `resyncArtist enqueues SyncArtistDetails and SyncAlbumDetails for artist and their albums`() {
-        every { appArtistRepository.findByArtistIds(setOf("artist-1")) } returns listOf(artist1)
+        every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns listOf(artist1)
         every { appTrackRepository.findByArtistId(ArtistId("artist-1")) } returns listOf(trackWithAlbum1)
         every { userRepository.findAll() } returns listOf(buildUser())
         every { outboxPort.enqueue(any()) } just runs
@@ -124,7 +124,7 @@ class CatalogAdapterTests {
 
     @Test
     fun `resyncArtist enqueues only SyncArtistDetails when artist has no tracks with albums`() {
-        every { appArtistRepository.findByArtistIds(setOf("artist-1")) } returns listOf(artist1)
+        every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns listOf(artist1)
         every { appTrackRepository.findByArtistId(ArtistId("artist-1")) } returns listOf(track1)
         every { userRepository.findAll() } returns listOf(buildUser())
         every { outboxPort.enqueue(any()) } just runs
@@ -138,7 +138,7 @@ class CatalogAdapterTests {
 
     @Test
     fun `resyncArtist does nothing when no users available`() {
-        every { appArtistRepository.findByArtistIds(setOf("artist-1")) } returns listOf(artist1)
+        every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns listOf(artist1)
         every { userRepository.findAll() } returns emptyList()
 
         val result = adapter.resyncArtist("artist-1")

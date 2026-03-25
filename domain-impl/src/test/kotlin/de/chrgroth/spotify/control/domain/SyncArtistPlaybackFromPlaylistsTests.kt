@@ -2,6 +2,7 @@ package de.chrgroth.spotify.control.domain
 
 import arrow.core.right
 import de.chrgroth.spotify.control.domain.model.AppArtist
+import de.chrgroth.spotify.control.domain.model.ArtistId
 import de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.CatalogPort
@@ -62,7 +63,7 @@ class SyncArtistPlaybackFromPlaylistsTests {
     private val userId = UserId("user-1")
 
     private fun artist(id: String, status: ArtistPlaybackProcessingStatus) =
-        AppArtist(artistId = id, artistName = "Artist $id", playbackProcessingStatus = status, lastSync = kotlin.time.Instant.fromEpochSeconds(1))
+        AppArtist(id = ArtistId(id), artistName = "Artist $id", playbackProcessingStatus = status, lastSync = kotlin.time.Instant.fromEpochSeconds(1))
 
     private fun setupActivePlaylistArtists(vararg artistIds: String) {
         every { playlistRepository.findArtistIdsInActivePlaylists() } returns artistIds.toSet()

@@ -49,11 +49,11 @@ class CatalogBrowserAdapter(
             .sortedBy { it.artistName.lowercase() }
             .map { artist ->
                 ArtistBrowseItem(
-                    artistId = artist.artistId,
+                    artistId = artist.id.value,
                     artistName = artist.artistName,
                     imageLink = artist.imageLink,
-                    albumCount = albumCountByArtistId[artist.artistId] ?: 0,
-                    trackCount = trackCountByArtistId[artist.artistId] ?: 0,
+                    albumCount = albumCountByArtistId[artist.id.value] ?: 0,
+                    trackCount = trackCountByArtistId[artist.id.value] ?: 0,
                 )
             }
     }

@@ -60,7 +60,7 @@ class CatalogAdapter(
         status: ArtistPlaybackProcessingStatus,
         userId: UserId,
     ): Either<DomainError, Unit> {
-        val existing = appArtistRepository.findByArtistIds(setOf(artistId)).firstOrNull()
+        val existing = appArtistRepository.findByArtistIds(setOf(ArtistId(artistId))).firstOrNull()
             ?: return ArtistSettingsError.ARTIST_NOT_FOUND.left()
 
         if (existing.playbackProcessingStatus == status) {
@@ -69,7 +69,7 @@ class CatalogAdapter(
         }
 
         logger.info { "Updating playback processing status for artist $artistId to $status" }
-        appArtistRepository.updatePlaybackProcessingStatus(artistId, status)
+        appArtistRepository.updatePlaybackProcessingStatus(ArtistId(artistId), status)
 
         when (status) {
             ArtistPlaybackProcessingStatus.INACTIVE -> {
@@ -95,7 +95,7 @@ class CatalogAdapter(
     // --- Catalog Sync ---
 
     override fun syncArtistDetails(artistId: String, userId: UserId): Either<DomainError, Unit> {
-        val existing = appArtistRepository.findByArtistIds(setOf(artistId)).firstOrNull()
+        val existing = appArtistRepository.findByArtistIds(setOf(ArtistId(artistId))).firstOrNull()
         if (existing != null) {
             logger.debug { "Artist $artistId already synced, skipping" }
             return Unit.right()
@@ -116,7 +116,7 @@ class CatalogAdapter(
     }
 
     override fun resyncCatalog(): Either<DomainError, Unit> {
-        val allArtistIds = appArtistRepository.findAll().map { it.artistId }
+        val allArtistIds = appArtistRepository.findAll().map { it.id.value }
         val allTracks = appTrackRepository.findAll()
         val allAlbumIds = allTracks.mapNotNull { it.albumId?.value }.distinct()
         val userId = userRepository.findAll().firstOrNull()?.spotifyUserId
@@ -129,7 +129,7 @@ class CatalogAdapter(
     }
 
     override fun resyncArtist(artistId: String): Either<DomainError, Unit> {
-        appArtistRepository.findByArtistIds(setOf(artistId)).firstOrNull()
+        appArtistRepository.findByArtistIds(setOf(ArtistId(artistId))).firstOrNull()
             ?: return ArtistSettingsError.ARTIST_NOT_FOUND.left()
         val userId = userRepository.findAll().firstOrNull()?.spotifyUserId ?: run {
             logger.warn { "No users available for artist resync, skipping $artistId" }

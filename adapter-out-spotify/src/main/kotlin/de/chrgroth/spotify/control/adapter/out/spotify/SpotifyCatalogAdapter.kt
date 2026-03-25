@@ -121,7 +121,7 @@ class SpotifyCatalogAdapter(
 
     private fun parseArtist(artist: SpotifyArtistResponse): AppArtist =
         AppArtist(
-            artistId = artist.id,
+            id = ArtistId(artist.id),
             artistName = artist.name,
             imageLink = artist.images.firstOrNull()?.url,
             type = artist.type,

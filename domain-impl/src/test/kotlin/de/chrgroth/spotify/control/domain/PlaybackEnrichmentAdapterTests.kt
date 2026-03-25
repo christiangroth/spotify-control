@@ -3,6 +3,7 @@ package de.chrgroth.spotify.control.domain
 import arrow.core.right
 import de.chrgroth.spotify.control.domain.model.AccessToken
 import de.chrgroth.spotify.control.domain.model.AppArtist
+import de.chrgroth.spotify.control.domain.model.ArtistId
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.out.AppAlbumRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
@@ -59,13 +60,13 @@ class PlaybackEnrichmentAdapterTests {
     fun `syncArtistDetails stores artist from Spotify response`() {
         val artistId = "artist-1"
         val spotifyArtist = AppArtist(
-            artistId = artistId,
+            id = ArtistId(artistId),
             artistName = "Real Artist Name",
             imageLink = "https://example.com/image.jpg",
             type = "artist",
             lastSync = kotlin.time.Instant.fromEpochSeconds(1),
         )
-        every { appArtistRepository.findByArtistIds(setOf(artistId)) } returns emptyList()
+        every { appArtistRepository.findByArtistIds(setOf(ArtistId(artistId))) } returns emptyList()
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { spotifyCatalog.getArtist(userId, accessToken, artistId) } returns spotifyArtist.right()
         every { appArtistRepository.upsertAll(listOf(spotifyArtist)) } just runs
@@ -79,11 +80,11 @@ class PlaybackEnrichmentAdapterTests {
     fun `syncArtistDetails skips update when artist already in catalog`() {
         val artistId = "artist-already-synced"
         val syncedArtist = AppArtist(
-            artistId = artistId,
+            id = ArtistId(artistId),
             artistName = "Known Artist",
             lastSync = kotlin.time.Clock.System.now(),
         )
-        every { appArtistRepository.findByArtistIds(setOf(artistId)) } returns listOf(syncedArtist)
+        every { appArtistRepository.findByArtistIds(setOf(ArtistId(artistId))) } returns listOf(syncedArtist)
 
         adapter.syncArtistDetails(artistId, userId)
 

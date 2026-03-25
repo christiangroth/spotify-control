@@ -7,7 +7,7 @@ import kotlin.time.Instant
  * All fields are populated by the Spotify API sync. Artists are never stored partially.
  */
 data class AppArtist(
-    val artistId: String,
+    val id: ArtistId,
     val artistName: String,
     val imageLink: String? = null,
     val type: String? = null,

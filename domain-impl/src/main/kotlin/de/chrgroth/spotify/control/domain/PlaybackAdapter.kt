@@ -176,7 +176,7 @@ class PlaybackAdapter(
         val partialPlayed = recentlyPartialPlayedRepository.findSince(userId, since)
 
         val inactiveArtistIds = appArtistRepository.findByPlaybackProcessingStatus(ArtistPlaybackProcessingStatus.INACTIVE)
-            .map { it.artistId }
+            .map { it.id.value }
             .toSet()
 
         val filteredRecentlyPlayed = recentlyPlayed.filter { it.artistIds.firstOrNull() !in inactiveArtistIds }
@@ -236,7 +236,7 @@ class PlaybackAdapter(
         ArtistPlaybackProcessingStatus.entries.forEach { currentStatus ->
             val artists = appArtistRepository.findByPlaybackProcessingStatus(currentStatus)
             artists.forEach { artist ->
-                val inActivePlaylist = artist.artistId in activePlaylistArtistIds
+                val inActivePlaylist = artist.id.value in activePlaylistArtistIds
                 val newStatus = when (currentStatus) {
                     ArtistPlaybackProcessingStatus.UNDECIDED ->
                         if (inActivePlaylist) ArtistPlaybackProcessingStatus.ACTIVE else ArtistPlaybackProcessingStatus.INACTIVE
@@ -246,8 +246,8 @@ class PlaybackAdapter(
                         if (inActivePlaylist) ArtistPlaybackProcessingStatus.ACTIVE else null
                 }
                 if (newStatus != null) {
-                    logger.info { "Sync from playlists: updating artist ${artist.artistId} from $currentStatus to $newStatus" }
-                    catalog.updateArtistPlaybackProcessingStatus(artist.artistId, newStatus, userId)
+                    logger.info { "Sync from playlists: updating artist ${artist.id.value} from $currentStatus to $newStatus" }
+                    catalog.updateArtistPlaybackProcessingStatus(artist.id.value, newStatus, userId)
                 }
             }
         }

@@ -43,7 +43,7 @@ class DashboardAdapterTests {
     private val syncTimestamp = Instant.fromEpochSeconds(0)
 
     private val artist1 = AppArtist(
-        artistId = "artist-1", artistName = "Artist One",
+        id = ArtistId("artist-1"), artistName = "Artist One",
         lastSync = syncTimestamp,
     )
 
@@ -75,7 +75,7 @@ class DashboardAdapterTests {
         // MongoDB aggregation filters out secondsPlayed = 0, so only track-1 with 180s is returned
         every { appPlaybackRepository.sumSecondsPlayedByTrackIdSince(userId, any()) } returns mapOf("track-1" to 180L)
         every { appTrackRepository.findByTrackIds(setOf(TrackId("track-1"))) } returns listOf(track1)
-        every { appArtistRepository.findByArtistIds(setOf("artist-1")) } returns listOf(artist1)
+        every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns listOf(artist1)
         every { appAlbumRepository.findByAlbumIds(any()) } returns emptyList()
 
         val stats = adapter.getStats(userId)
@@ -110,7 +110,7 @@ class DashboardAdapterTests {
         // MongoDB aggregation groups by trackId and sums seconds; zero-second item for track-1 is excluded
         every { appPlaybackRepository.sumSecondsPlayedByTrackIdSince(userId, any()) } returns mapOf("track-1" to 120L, "track-2" to 180L)
         every { appTrackRepository.findByTrackIds(setOf(TrackId("track-1"), TrackId("track-2"))) } returns listOf(track1, track2)
-        every { appArtistRepository.findByArtistIds(setOf("artist-1")) } returns listOf(artist1)
+        every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns listOf(artist1)
         every { appAlbumRepository.findByAlbumIds(any()) } returns emptyList()
 
         val stats = adapter.getStats(userId)
@@ -142,7 +142,7 @@ class DashboardAdapterTests {
         )
         every { appPlaybackRepository.findRecentlyPlayed(userId, any()) } returns listOf(playbackItem)
         every { appTrackRepository.findByTrackIds(setOf(TrackId("track-1"))) } returns listOf(track1)
-        every { appArtistRepository.findByArtistIds(setOf("artist-1")) } returns listOf(artist1)
+        every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns listOf(artist1)
 
         val stats = adapter.getStats(userId)
 
