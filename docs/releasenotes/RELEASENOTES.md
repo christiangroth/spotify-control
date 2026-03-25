@@ -1,3 +1,13 @@
+# 0.77.2 (2026.03.25)
+
+## Bugfixes / Chore
+* Playlist type ALL is now set automatically when activating a playlist named "All" (case-insensitive).
+* Playlist check violations now look up track and artist names from the catalog instead of storing them redundantly.
+
+
+
+---
+
 # 0.77.1 (2026.03.25)
 
 ## Bugfixes / Chore

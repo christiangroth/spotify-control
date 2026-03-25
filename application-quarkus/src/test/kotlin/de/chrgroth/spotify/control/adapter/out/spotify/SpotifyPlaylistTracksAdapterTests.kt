@@ -30,12 +30,9 @@ class SpotifyPlaylistTracksAdapterTests {
         assertThat(result).isInstanceOf(Either.Right::class.java)
         val playlist = (result as Either.Right).value
         assertThat(playlist.spotifyPlaylistId).isEqualTo("mock-playlist-1")
-        assertThat(playlist.snapshotId).isEqualTo("mock-snapshot-1")
         assertThat(playlist.tracks).hasSize(1)
         assertThat(playlist.tracks[0].trackId).isEqualTo("track-1")
-        assertThat(playlist.tracks[0].trackName).isEqualTo("Track One")
         assertThat(playlist.tracks[0].artistIds).containsExactly("artist-1")
-        assertThat(playlist.tracks[0].artistNames).containsExactly("Artist One")
         assertThat(playlist.tracks[0].albumId).isEqualTo("album-1")
     }
 

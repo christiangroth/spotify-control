@@ -9,6 +9,7 @@ import de.chrgroth.spotify.control.domain.model.Playlist
 import de.chrgroth.spotify.control.domain.model.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.PlaylistTrack
 import de.chrgroth.spotify.control.domain.model.PlaylistSyncStatus
+import de.chrgroth.spotify.control.domain.model.PlaylistType
 import de.chrgroth.spotify.control.domain.model.SpotifyPlaylistItem
 import de.chrgroth.spotify.control.domain.model.User
 import de.chrgroth.spotify.control.domain.model.UserId
@@ -32,6 +33,7 @@ import java.time.Duration
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.hours
 
+@Suppress("LargeClass")
 class PlaylistAdapterTests {
 
     private val userRepository: UserRepositoryPort = mockk()
@@ -64,11 +66,16 @@ class PlaylistAdapterTests {
         lastLoginAt = now,
     )
 
-    private fun buildPlaylistInfo(id: String, snapshotId: String = "snap-1", syncStatus: PlaylistSyncStatus = PlaylistSyncStatus.ACTIVE) = PlaylistInfo(
+    private fun buildPlaylistInfo(
+        id: String,
+        snapshotId: String = "snap-1",
+        syncStatus: PlaylistSyncStatus = PlaylistSyncStatus.ACTIVE,
+        name: String = "Playlist $id",
+    ) = PlaylistInfo(
         spotifyPlaylistId = id,
         snapshotId = snapshotId,
         lastSnapshotIdSyncTime = now - 1.hours,
-        name = "Playlist $id",
+        name = name,
         syncStatus = syncStatus,
     )
 
@@ -410,15 +417,12 @@ class PlaylistAdapterTests {
 
     private val singleTrack = PlaylistTrack(
         trackId = "track-1",
-        trackName = "Track One",
         artistIds = listOf("artist-1"),
-        artistNames = listOf("Artist One"),
         albumId = "album-1",
     )
 
-    private fun buildPlaylist(id: String, snapshotId: String = "snap-1") = Playlist(
+    private fun buildPlaylist(id: String) = Playlist(
         spotifyPlaylistId = id,
-        snapshotId = snapshotId,
         tracks = listOf(singleTrack),
     )
 
@@ -708,6 +712,40 @@ class PlaylistAdapterTests {
 
         assertThat(result.isRight()).isTrue()
         verify(exactly = 0) { playlistCheckRepository.deleteByPlaylistId(any()) }
+    }
+
+    @Test
+    fun `updateSyncStatus sets type ALL when activating playlist named All`() {
+        val user = buildUser()
+        every { userRepository.findById(userId) } returns user
+        every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE, name = "All"))
+        every { playlistRepository.saveAll(any(), any()) } just runs
+        every { outboxPort.enqueue(any()) } just runs
+        every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
+
+        val result = adapter.updateSyncStatus(userId, "p1", PlaylistSyncStatus.ACTIVE)
+
+        assertThat(result.isRight()).isTrue()
+        val savedSlot = slot<List<PlaylistInfo>>()
+        verify { playlistRepository.saveAll(userId, capture(savedSlot)) }
+        assertThat(savedSlot.captured.find { it.spotifyPlaylistId == "p1" }!!.type).isEqualTo(PlaylistType.ALL)
+    }
+
+    @Test
+    fun `updateSyncStatus sets type ALL when activating playlist named all case-insensitive`() {
+        val user = buildUser()
+        every { userRepository.findById(userId) } returns user
+        every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE, name = "ALL"))
+        every { playlistRepository.saveAll(any(), any()) } just runs
+        every { outboxPort.enqueue(any()) } just runs
+        every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
+
+        val result = adapter.updateSyncStatus(userId, "p1", PlaylistSyncStatus.ACTIVE)
+
+        assertThat(result.isRight()).isTrue()
+        val savedSlot = slot<List<PlaylistInfo>>()
+        verify { playlistRepository.saveAll(userId, capture(savedSlot)) }
+        assertThat(savedSlot.captured.find { it.spotifyPlaylistId == "p1" }!!.type).isEqualTo(PlaylistType.ALL)
     }
 
     // --- enqueueSyncPlaylistData tests ---

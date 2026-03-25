@@ -5,9 +5,11 @@ import arrow.core.right
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.check.PlaylistCheckRunner
 import de.chrgroth.spotify.control.domain.model.AppPlaylistCheck
+import de.chrgroth.spotify.control.domain.model.TrackId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.PlaylistCheckPort
 import de.chrgroth.spotify.control.domain.port.out.AppPlaylistCheckRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.PlaylistCheckNotificationPort
 import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
@@ -30,6 +32,7 @@ class PlaylistCheckAdapter(
     private val playlistCheckRepository: AppPlaylistCheckRepositoryPort,
     private val dashboardRefresh: DashboardRefreshPort,
     private val notification: PlaylistCheckNotificationPort,
+    private val appTrackRepository: AppTrackRepositoryPort,
     private val meterRegistry: MeterRegistry,
 ) : PlaylistCheckPort {
 

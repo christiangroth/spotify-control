@@ -120,15 +120,12 @@ class PlaylistRepositoryAdapter : PlaylistRepositoryPort {
 
     private fun PlaylistDocument.toDomain() = Playlist(
         spotifyPlaylistId = spotifyPlaylistId,
-        snapshotId = snapshotId,
         tracks = tracks.map { it.toDomain() },
     )
 
     private fun PlaylistTrackSubdocument.toDomain() = PlaylistTrack(
         trackId = trackId,
-        trackName = trackName,
         artistIds = artistIds,
-        artistNames = artistNames,
         albumId = albumId,
     )
 
@@ -136,15 +133,12 @@ class PlaylistRepositoryAdapter : PlaylistRepositoryPort {
         id = "${userId.value}:${this@toDocument.spotifyPlaylistId}"
         spotifyUserId = userId.value
         spotifyPlaylistId = this@toDocument.spotifyPlaylistId
-        snapshotId = this@toDocument.snapshotId
         tracks = this@toDocument.tracks.map { it.toSubdocument() }
     }
 
     private fun PlaylistTrack.toSubdocument() = PlaylistTrackSubdocument().apply {
         trackId = this@toSubdocument.trackId
-        trackName = this@toSubdocument.trackName
         artistIds = this@toSubdocument.artistIds
-        artistNames = this@toSubdocument.artistNames
         albumId = this@toSubdocument.albumId
     }
 

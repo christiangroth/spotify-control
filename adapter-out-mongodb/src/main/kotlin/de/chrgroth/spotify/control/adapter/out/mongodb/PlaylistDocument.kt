@@ -10,14 +10,11 @@ class PlaylistDocument {
     lateinit var id: String
     lateinit var spotifyUserId: String
     lateinit var spotifyPlaylistId: String
-    lateinit var snapshotId: String
     lateinit var tracks: List<PlaylistTrackSubdocument>
 }
 
 class PlaylistTrackSubdocument {
     lateinit var trackId: String
-    lateinit var trackName: String
     lateinit var artistIds: List<String>
-    lateinit var artistNames: List<String>
     lateinit var albumId: String
 }
