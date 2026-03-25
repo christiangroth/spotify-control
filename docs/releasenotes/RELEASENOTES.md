@@ -1,3 +1,12 @@
+# 0.78.1 (2026.03.25)
+
+## Bugfixes / Chore
+* Playlists now track the number of tracks they contain.
+
+
+
+---
+
 # 0.78.0 (2026.03.25)
 
 ## New Features
