@@ -19,6 +19,7 @@
                     <th style="width:3rem">#</th>
                     <th style="width:2.5rem">Sync</th>
                     <th>Name</th>
+                    <th style="width:5rem">Tracks</th>
                     <th style="width:14rem">Last Sync</th>
                     <th style="width:2.5rem"></th>
                 </tr>
@@ -52,6 +53,7 @@
                         <span class="badge text-bg-secondary ms-1" style="font-size:.7rem;vertical-align:middle;">{row.typeLabel}</span>
                         {/if}
                     </td>
+                    <td class="text-secondary small" style="font-variant-numeric: tabular-nums">{#if row.numberOfTracks}{row.numberOfTracks}{#else}–{/if}</td>
                     <td class="text-secondary small">{row.lastSyncTimeFormatted}</td>
                     <td>
                         {#if row.active}

@@ -59,10 +59,12 @@ class PlaylistSettingsResource {
     val user = userRepository.findById(userId)
     val sortedPlaylists = playlistRepository.findByUserId(userId).sortedBy { it.name }
     val padWidth = sortedPlaylists.size.toString().length
-    val rows = sortedPlaylists.mapIndexed { index, playlist ->
+    val trackCounts = playlistRepository.findTrackCountsByUserId(userId)
+    val rows = sortedPlaylists.mapIndexed { index, playlistInfo ->
       PlaylistRow(
         lineNumber = (index + 1).toString().padStart(padWidth, '0'),
-        playlist = playlist,
+        playlist = playlistInfo,
+        numberOfTracks = trackCounts[playlistInfo.spotifyPlaylistId],
       )
     }
     return playlistTemplate
@@ -70,7 +72,7 @@ class PlaylistSettingsResource {
       .data("rows", rows)
   }
 
-  data class PlaylistRow(val lineNumber: String, val playlist: PlaylistInfo) {
+  data class PlaylistRow(val lineNumber: String, val playlist: PlaylistInfo, val numberOfTracks: Int? = null) {
     val active: Boolean get() = playlist.syncStatus == PlaylistSyncStatus.ACTIVE
     val lastSyncTimeFormatted: String get() = (playlist.lastSyncTime ?: playlist.lastSnapshotIdSyncTime)
       .toJavaInstant()

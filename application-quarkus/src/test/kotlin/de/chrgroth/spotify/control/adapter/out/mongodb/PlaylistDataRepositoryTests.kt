@@ -66,6 +66,51 @@ class PlaylistDataRepositoryTests {
     }
 
     @Test
+    fun `numberOfTracks returns correct size after save`() {
+        val userId = UserId("test-${UUID.randomUUID()}")
+        val playlistId = "playlist-ntracks-${UUID.randomUUID()}"
+        val playlist = Playlist(
+            spotifyPlaylistId = playlistId,
+            tracks = listOf(
+                PlaylistTrack(trackId = "t1", artistIds = listOf("a1"), albumId = "al1"),
+                PlaylistTrack(trackId = "t2", artistIds = listOf("a2"), albumId = "al2"),
+            ),
+        )
+
+        playlistRepository.save(userId, playlist)
+
+        val found = playlistRepository.findByUserIdAndPlaylistId(userId, playlistId)
+        assertThat(found).isNotNull
+        assertThat(found!!.numberOfTracks).isEqualTo(2)
+    }
+
+    @Test
+    fun `numberOfTracks returns correct size after appendTracks`() {
+        val userId = UserId("test-${UUID.randomUUID()}")
+        val playlistId = "playlist-append-${UUID.randomUUID()}"
+        playlistRepository.save(
+            userId,
+            Playlist(
+                spotifyPlaylistId = playlistId,
+                tracks = listOf(PlaylistTrack(trackId = "t1", artistIds = listOf("a1"), albumId = "al1")),
+            ),
+        )
+
+        playlistRepository.appendTracks(
+            userId,
+            playlistId,
+            listOf(
+                PlaylistTrack(trackId = "t2", artistIds = listOf("a2"), albumId = "al2"),
+                PlaylistTrack(trackId = "t3", artistIds = listOf("a3"), albumId = "al3"),
+            ),
+        )
+
+        val found = playlistRepository.findByUserIdAndPlaylistId(userId, playlistId)
+        assertThat(found).isNotNull
+        assertThat(found!!.numberOfTracks).isEqualTo(3)
+    }
+
+    @Test
     fun `save overwrites previous playlist data`() {
         val userId = UserId("test-${UUID.randomUUID()}")
         playlistRepository.save(userId, buildPlaylist("playlist-1"))
