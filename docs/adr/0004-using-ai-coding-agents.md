@@ -47,3 +47,4 @@ Chosen option: "Use AI coding agents for isolated, well-defined tasks with manda
 * [role-architect.md](../coding-guidelines/role-architect.md)
 * [role-backend-developer.md](../coding-guidelines/role-backend-developer.md)
 * [role-frontend-developer.md](../coding-guidelines/role-frontend-developer.md)
+* [role-test-engineer.md](../coding-guidelines/role-test-engineer.md)

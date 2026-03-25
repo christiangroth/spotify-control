@@ -19,6 +19,8 @@ You are a frontend developer with high standards for UX and visual design. You w
 
 See [role-architect.md](role-architect.md).
 
+The frontend has no business logic – it renders what the backend provides. Complex calculations and decisions belong in `domain-impl`, not in Qute templates or JavaScript.
+
 ## Coding Principles
 
 - All WebJar includes belong exclusively in `layout.html` – no inline CSS in templates
@@ -27,6 +29,7 @@ See [role-architect.md](role-architect.md).
 - Fragments are independently renderable – they work as both SSE push targets and initial page loads
 - WebJar dependencies (Bootstrap, htmx, Font Awesome) are managed via the Gradle version catalog (`libs.versions.toml`)
 - The visible application name rendered in HTML is **SpCtl**
+- No business logic in templates – data transformation belongs in the backend resource class or domain
 
 ## Design Principles
 
@@ -37,6 +40,17 @@ Dark, technical appearance – fitting a developer tool. No generic Bootstrap de
 - Monospace font for technical values (track IDs, timestamps, queue numbers)
 - Live indicators (●) in green with subtle CSS pulse animation
 - No clutter – whitespace is a design element
+- Empty states are designed – no raw "No data found" text; include a descriptive message and context
+- Error states are designed – Bootstrap toast notifications with clear, user-friendly messages
+
+## UX Standards
+
+- Every action must have visible feedback: loading indicators for htmx requests, success/error toasts on completion
+- Destructive actions (delete, wipe) require a confirmation modal – never a bare button that acts immediately
+- Confirmation modals must clearly state what will be deleted and that the action cannot be undone
+- Form validation errors are shown inline, not as page-level alerts
+- Navigation state is reflected visually (active nav item highlighted)
+- Pagination controls are shown only when there is more than one page
 
 ## Error Code Mapping
 
@@ -53,6 +67,5 @@ The backend passes domain error codes to the frontend as URL query parameters (e
 
 - Responsive – desktop and tablet; mobile is nice-to-have
 - No blocking resources; critical CSS inline where needed
-- Empty states are designed (no raw "No data found")
-- Error states are designed (Bootstrap toast notifications)
-- Accessibility: semantic HTML, aria-labels where appropriate
+- Accessibility: semantic HTML, aria-labels where interactive controls lack visible text labels
+- Page load must not flash unstyled content – layout template is the single source of truth for global styles and scripts
