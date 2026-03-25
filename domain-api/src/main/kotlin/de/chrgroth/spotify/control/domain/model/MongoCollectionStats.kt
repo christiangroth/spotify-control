@@ -1,5 +1,7 @@
 package de.chrgroth.spotify.control.domain.model
 
+import de.chrgroth.spotify.control.domain.util.formatted
+
 data class MongoCollectionStats(
     val name: String,
     val documentCount: Long,

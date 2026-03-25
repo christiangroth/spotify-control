@@ -1,4 +1,4 @@
-package de.chrgroth.spotify.control.domain.model
+package de.chrgroth.spotify.control.domain.util
 
 import java.util.Locale
 

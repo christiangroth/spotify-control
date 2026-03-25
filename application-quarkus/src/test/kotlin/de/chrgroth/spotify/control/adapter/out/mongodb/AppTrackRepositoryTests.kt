@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test
 import java.util.UUID
 
 @QuarkusTest
-class AppTrackDataRepositoryTests {
+class AppTrackRepositoryTests {
 
     @Inject
     lateinit var appTrackRepository: AppTrackRepositoryPort

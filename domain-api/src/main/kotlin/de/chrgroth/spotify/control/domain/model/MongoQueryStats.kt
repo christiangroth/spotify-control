@@ -1,5 +1,7 @@
 package de.chrgroth.spotify.control.domain.model
 
+import de.chrgroth.spotify.control.domain.util.formatted
+
 /**
  * Stats for a tracked MongoDB query operation within a 24-hour sliding window.
  *

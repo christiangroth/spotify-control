@@ -1,7 +1,7 @@
 package de.chrgroth.spotify.control.domain
 
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
-import de.chrgroth.spotify.control.domain.port.`in`.OutboxViewerPartition
+import de.chrgroth.spotify.control.domain.model.OutboxViewerPartition
 import de.chrgroth.spotify.control.domain.port.`in`.OutboxViewerPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
 import jakarta.enterprise.context.ApplicationScoped
