@@ -9,5 +9,5 @@ interface PlaylistCheckRunner {
     val checkId: String
     val displayName: String
     fun isApplicable(playlistInfo: PlaylistInfo?): Boolean = true
-    fun run(userId: UserId, playlistId: String, playlist: Playlist, playlistInfos: List<PlaylistInfo>): AppPlaylistCheck
+    fun run(userId: UserId, playlistId: String, playlist: Playlist, currentPlaylistInfo: PlaylistInfo?, allPlaylistInfos: List<PlaylistInfo>): AppPlaylistCheck
 }

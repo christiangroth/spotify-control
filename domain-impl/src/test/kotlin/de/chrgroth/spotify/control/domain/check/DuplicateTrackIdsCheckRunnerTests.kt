@@ -52,7 +52,7 @@ class DuplicateTrackIdsCheckRunnerTests {
     fun `run returns no violations for unique tracks`() {
         val playlist = buildPlaylist(listOf(buildTrack("t1"), buildTrack("t2")))
 
-        val result = runner.run(userId, playlistId, playlist, emptyList())
+        val result = runner.run(userId, playlistId, playlist, null, emptyList())
 
         assertThat(result.succeeded).isTrue()
         assertThat(result.violations).isEmpty()
@@ -69,7 +69,7 @@ class DuplicateTrackIdsCheckRunnerTests {
             ),
         )
 
-        val result = runner.run(userId, playlistId, playlist, emptyList())
+        val result = runner.run(userId, playlistId, playlist, null, emptyList())
 
         assertThat(result.succeeded).isFalse()
         assertThat(result.violations).containsExactly("Artist A – Song A")
@@ -86,7 +86,7 @@ class DuplicateTrackIdsCheckRunnerTests {
             ),
         )
 
-        val result = runner.run(userId, playlistId, playlist, emptyList())
+        val result = runner.run(userId, playlistId, playlist, null, emptyList())
 
         assertThat(result.succeeded).isFalse()
         assertThat(result.violations).containsExactlyInAnyOrder("Artist A – Song A", "Artist B – Song B")
@@ -110,7 +110,7 @@ class DuplicateTrackIdsCheckRunnerTests {
         )
         val playlist = buildPlaylist(listOf(noNamesTrack, noNamesTrack, noArtistInfoTrack, noArtistInfoTrack))
 
-        val result = runner.run(userId, playlistId, playlist, emptyList())
+        val result = runner.run(userId, playlistId, playlist, null, emptyList())
 
         assertThat(result.violations).containsExactlyInAnyOrder("artist-id-1 – Song", "Unknown Artist – Song2")
     }

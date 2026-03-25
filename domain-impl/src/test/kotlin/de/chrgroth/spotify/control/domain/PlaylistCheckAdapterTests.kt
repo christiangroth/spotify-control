@@ -83,7 +83,7 @@ class PlaylistCheckAdapterTests {
         every { checkRunner.checkId } returns checkId
         every { checkRunner.displayName } returns "Test Check"
         every { checkRunner.isApplicable(any()) } returns true
-        every { checkRunner.run(any(), any(), any(), any()) } returns check
+        every { checkRunner.run(any(), any(), any(), any(), any()) } returns check
         every { checkRunners.iterator() } answers { mutableListOf(checkRunner).iterator() }
     }
 
