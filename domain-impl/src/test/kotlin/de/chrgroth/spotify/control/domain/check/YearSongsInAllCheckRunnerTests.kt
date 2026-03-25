@@ -1,38 +1,49 @@
 package de.chrgroth.spotify.control.domain.check
 
+import de.chrgroth.spotify.control.domain.model.AppTrack
+import de.chrgroth.spotify.control.domain.model.ArtistId
 import de.chrgroth.spotify.control.domain.model.Playlist
 import de.chrgroth.spotify.control.domain.model.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.PlaylistTrack
 import de.chrgroth.spotify.control.domain.model.PlaylistType
+import de.chrgroth.spotify.control.domain.model.TrackId
 import de.chrgroth.spotify.control.domain.model.UserId
+import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
 import io.mockk.every
 import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import kotlin.time.Clock
+import kotlin.time.Instant
 
 class YearSongsInAllCheckRunnerTests {
 
     private val playlistRepository: PlaylistRepositoryPort = mockk()
-    private val runner = YearSongsInAllCheckRunner(playlistRepository)
+    private val appTrackRepository: AppTrackRepositoryPort = mockk()
+    private val runner = YearSongsInAllCheckRunner(playlistRepository, appTrackRepository)
 
     private val userId = UserId("user-1")
     private val playlistId = "playlist-1"
     private val allPlaylistId = "playlist-all"
 
-    private fun buildTrack(trackId: String, artistName: String = "Artist", trackName: String = "Track $trackId") = PlaylistTrack(
+    private fun buildTrack(trackId: String) = PlaylistTrack(
         trackId = trackId,
-        trackName = trackName,
         artistIds = listOf("artist-1"),
-        artistNames = listOf(artistName),
         albumId = "album-1",
+    )
+
+    private fun buildAppTrack(trackId: String, title: String, artistName: String? = "Artist") = AppTrack(
+        id = TrackId(trackId),
+        title = title,
+        artistId = ArtistId("artist-1"),
+        artistName = artistName,
+        lastSync = Instant.fromEpochMilliseconds(0),
     )
 
     private fun buildPlaylist(spotifyPlaylistId: String = playlistId, tracks: List<PlaylistTrack>) = Playlist(
         spotifyPlaylistId = spotifyPlaylistId,
-        snapshotId = "snap-1",
         tracks = tracks,
     )
 
@@ -102,11 +113,7 @@ class YearSongsInAllCheckRunnerTests {
     @Test
     fun `run reports violations for tracks missing from all playlist`() {
         val playlist = buildPlaylist(
-            tracks = listOf(
-                buildTrack("t1", artistName = "Artist A", trackName = "Song A"),
-                buildTrack("t2", artistName = "Artist B", trackName = "Song B"),
-                buildTrack("t3", artistName = "Artist C", trackName = "Song C"),
-            ),
+            tracks = listOf(buildTrack("t1"), buildTrack("t2"), buildTrack("t3")),
         )
         val allPlaylist = buildPlaylist(spotifyPlaylistId = allPlaylistId, tracks = listOf(buildTrack("t1")))
         val currentPlaylistInfo = buildPlaylistInfo(type = PlaylistType.YEAR)
@@ -115,6 +122,10 @@ class YearSongsInAllCheckRunnerTests {
             buildPlaylistInfo(spotifyPlaylistId = allPlaylistId, type = PlaylistType.ALL),
         )
         every { playlistRepository.findByUserIdAndPlaylistId(userId, allPlaylistId) } returns allPlaylist
+        every { appTrackRepository.findByTrackIds(setOf(TrackId("t2"), TrackId("t3"))) } returns listOf(
+            buildAppTrack("t2", "Song B", "Artist B"),
+            buildAppTrack("t3", "Song C", "Artist C"),
+        )
 
         val result = runner.run(userId, playlistId, playlist, currentPlaylistInfo, playlistInfos)
 
@@ -125,11 +136,7 @@ class YearSongsInAllCheckRunnerTests {
     @Test
     fun `run deduplicates violations for duplicate missing tracks`() {
         val playlist = buildPlaylist(
-            tracks = listOf(
-                buildTrack("t1", artistName = "Artist A", trackName = "Song A"),
-                buildTrack("t2", artistName = "Artist B", trackName = "Song B"),
-                buildTrack("t2", artistName = "Artist B", trackName = "Song B"),
-            ),
+            tracks = listOf(buildTrack("t1"), buildTrack("t2"), buildTrack("t2")),
         )
         val allPlaylist = buildPlaylist(spotifyPlaylistId = allPlaylistId, tracks = listOf(buildTrack("t1")))
         val currentPlaylistInfo = buildPlaylistInfo(type = PlaylistType.YEAR)
@@ -138,10 +145,32 @@ class YearSongsInAllCheckRunnerTests {
             buildPlaylistInfo(spotifyPlaylistId = allPlaylistId, type = PlaylistType.ALL),
         )
         every { playlistRepository.findByUserIdAndPlaylistId(userId, allPlaylistId) } returns allPlaylist
+        every { appTrackRepository.findByTrackIds(setOf(TrackId("t2"))) } returns listOf(
+            buildAppTrack("t2", "Song B", "Artist B"),
+        )
 
         val result = runner.run(userId, playlistId, playlist, currentPlaylistInfo, playlistInfos)
 
         assertThat(result.succeeded).isFalse()
         assertThat(result.violations).containsExactly("Artist B – Song B")
+    }
+
+    @Test
+    fun `run falls back to unknown artist when artistName is null`() {
+        val playlist = buildPlaylist(tracks = listOf(buildTrack("t1"), buildTrack("t2")))
+        val allPlaylist = buildPlaylist(spotifyPlaylistId = allPlaylistId, tracks = listOf(buildTrack("t1")))
+        val currentPlaylistInfo = buildPlaylistInfo(type = PlaylistType.YEAR)
+        val playlistInfos = listOf(
+            currentPlaylistInfo,
+            buildPlaylistInfo(spotifyPlaylistId = allPlaylistId, type = PlaylistType.ALL),
+        )
+        every { playlistRepository.findByUserIdAndPlaylistId(userId, allPlaylistId) } returns allPlaylist
+        every { appTrackRepository.findByTrackIds(setOf(TrackId("t2"))) } returns listOf(
+            buildAppTrack("t2", "Song B", null),
+        )
+
+        val result = runner.run(userId, playlistId, playlist, currentPlaylistInfo, playlistInfos)
+
+        assertThat(result.violations).containsExactly("Unknown Artist – Song B")
     }
 }

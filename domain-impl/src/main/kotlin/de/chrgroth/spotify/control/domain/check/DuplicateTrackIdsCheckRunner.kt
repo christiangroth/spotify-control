@@ -7,15 +7,13 @@ import de.chrgroth.spotify.control.domain.model.TrackId
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
-import jakarta.inject.Inject
 import kotlin.time.Clock
 
 @ApplicationScoped
 @Suppress("Unused")
-class DuplicateTrackIdsCheckRunner : PlaylistCheckRunner {
-
-  @Inject
-  private lateinit var appTrackRepository: AppTrackRepositoryPort
+class DuplicateTrackIdsCheckRunner(
+    private val appTrackRepository: AppTrackRepositoryPort,
+) : PlaylistCheckRunner {
 
   override val checkId = "duplicate-track-ids"
   override val displayName = "Duplicate Track IDs"

@@ -4,7 +4,9 @@ import de.chrgroth.spotify.control.domain.model.AppPlaylistCheck
 import de.chrgroth.spotify.control.domain.model.Playlist
 import de.chrgroth.spotify.control.domain.model.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.PlaylistType
+import de.chrgroth.spotify.control.domain.model.TrackId
 import de.chrgroth.spotify.control.domain.model.UserId
+import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 import kotlin.time.Clock
@@ -13,6 +15,7 @@ import kotlin.time.Clock
 @Suppress("Unused")
 class YearSongsInAllCheckRunner(
     private val playlistRepository: PlaylistRepositoryPort,
+    private val appTrackRepository: AppTrackRepositoryPort,
 ) : PlaylistCheckRunner {
 
     override val checkId = "year-songs-in-all"
@@ -27,13 +30,20 @@ class YearSongsInAllCheckRunner(
             emptyList()
         } else {
             val allTrackIds = allPlaylist.tracks.map { it.trackId }.toSet()
-            playlist.tracks
+            val missingTrackIds = playlist.tracks
                 .filter { it.trackId !in allTrackIds }
                 .distinctBy { it.trackId }
-                .map { track ->
-                    val artistName = track.artistNames.firstOrNull() ?: track.artistIds.firstOrNull() ?: "Unknown Artist"
-                    "$artistName – ${track.trackName}"
-                }
+                .map { it.trackId }
+            val appTrackById = if (missingTrackIds.isNotEmpty()) {
+                appTrackRepository.findByTrackIds(missingTrackIds.map { TrackId(it) }.toSet()).associateBy { it.id.value }
+            } else {
+                emptyMap()
+            }
+            missingTrackIds.map { trackId ->
+                val appTrack = requireNotNull(appTrackById[trackId]) { "Track $trackId not found in catalog" }
+                val artistName = appTrack.artistName ?: "Unknown Artist"
+                "$artistName – ${appTrack.title}"
+            }
         }
         return AppPlaylistCheck(
             checkId = "$playlistId:$checkId",

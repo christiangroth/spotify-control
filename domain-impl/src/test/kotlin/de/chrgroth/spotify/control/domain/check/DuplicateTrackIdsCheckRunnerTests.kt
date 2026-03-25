@@ -1,33 +1,46 @@
 package de.chrgroth.spotify.control.domain.check
 
+import de.chrgroth.spotify.control.domain.model.AppTrack
+import de.chrgroth.spotify.control.domain.model.ArtistId
 import de.chrgroth.spotify.control.domain.model.Playlist
 import de.chrgroth.spotify.control.domain.model.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.PlaylistTrack
 import de.chrgroth.spotify.control.domain.model.PlaylistType
+import de.chrgroth.spotify.control.domain.model.TrackId
 import de.chrgroth.spotify.control.domain.model.UserId
+import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
+import io.mockk.every
+import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import kotlin.time.Clock
+import kotlin.time.Instant
 
 class DuplicateTrackIdsCheckRunnerTests {
 
-    private val runner = DuplicateTrackIdsCheckRunner()
+    private val appTrackRepository: AppTrackRepositoryPort = mockk()
+    private val runner = DuplicateTrackIdsCheckRunner(appTrackRepository)
 
     private val userId = UserId("user-1")
     private val playlistId = "playlist-1"
 
-    private fun buildTrack(trackId: String, artistName: String = "Artist", trackName: String = "Track $trackId") = PlaylistTrack(
+    private fun buildTrack(trackId: String) = PlaylistTrack(
         trackId = trackId,
-        trackName = trackName,
         artistIds = listOf("artist-1"),
-        artistNames = listOf(artistName),
         albumId = "album-1",
+    )
+
+    private fun buildAppTrack(trackId: String, title: String, artistName: String? = "Artist") = AppTrack(
+        id = TrackId(trackId),
+        title = title,
+        artistId = ArtistId("artist-1"),
+        artistName = artistName,
+        lastSync = Instant.fromEpochMilliseconds(0),
     )
 
     private fun buildPlaylist(tracks: List<PlaylistTrack>) = Playlist(
         spotifyPlaylistId = playlistId,
-        snapshotId = "snap-1",
         tracks = tracks,
     )
 
@@ -61,13 +74,8 @@ class DuplicateTrackIdsCheckRunnerTests {
 
     @Test
     fun `run detects duplicate track ids`() {
-        val playlist = buildPlaylist(
-            listOf(
-                buildTrack("t1", artistName = "Artist A", trackName = "Song A"),
-                buildTrack("t1", artistName = "Artist A", trackName = "Song A"),
-                buildTrack("t2"),
-            ),
-        )
+        val playlist = buildPlaylist(listOf(buildTrack("t1"), buildTrack("t1"), buildTrack("t2")))
+        every { appTrackRepository.findByTrackIds(setOf(TrackId("t1"))) } returns listOf(buildAppTrack("t1", "Song A", "Artist A"))
 
         val result = runner.run(userId, playlistId, playlist, null, emptyList())
 
@@ -79,11 +87,15 @@ class DuplicateTrackIdsCheckRunnerTests {
     fun `run reports all duplicate tracks`() {
         val playlist = buildPlaylist(
             listOf(
-                buildTrack("t1", artistName = "Artist A", trackName = "Song A"),
-                buildTrack("t1", artistName = "Artist A", trackName = "Song A"),
-                buildTrack("t2", artistName = "Artist B", trackName = "Song B"),
-                buildTrack("t2", artistName = "Artist B", trackName = "Song B"),
+                buildTrack("t1"),
+                buildTrack("t1"),
+                buildTrack("t2"),
+                buildTrack("t2"),
             ),
+        )
+        every { appTrackRepository.findByTrackIds(setOf(TrackId("t1"), TrackId("t2"))) } returns listOf(
+            buildAppTrack("t1", "Song A", "Artist A"),
+            buildAppTrack("t2", "Song B", "Artist B"),
         )
 
         val result = runner.run(userId, playlistId, playlist, null, emptyList())
@@ -93,25 +105,12 @@ class DuplicateTrackIdsCheckRunnerTests {
     }
 
     @Test
-    fun `run uses first artist name or falls back to artist id then unknown artist`() {
-        val noNamesTrack = PlaylistTrack(
-            trackId = "t1",
-            trackName = "Song",
-            artistIds = listOf("artist-id-1"),
-            artistNames = emptyList(),
-            albumId = "album-1",
-        )
-        val noArtistInfoTrack = PlaylistTrack(
-            trackId = "t2",
-            trackName = "Song2",
-            artistIds = emptyList(),
-            artistNames = emptyList(),
-            albumId = "album-1",
-        )
-        val playlist = buildPlaylist(listOf(noNamesTrack, noNamesTrack, noArtistInfoTrack, noArtistInfoTrack))
+    fun `run falls back to unknown artist when artistName is null`() {
+        val playlist = buildPlaylist(listOf(buildTrack("t1"), buildTrack("t1")))
+        every { appTrackRepository.findByTrackIds(setOf(TrackId("t1"))) } returns listOf(buildAppTrack("t1", "Song", null))
 
         val result = runner.run(userId, playlistId, playlist, null, emptyList())
 
-        assertThat(result.violations).containsExactlyInAnyOrder("artist-id-1 – Song", "Unknown Artist – Song2")
+        assertThat(result.violations).containsExactly("Unknown Artist – Song")
     }
 }
