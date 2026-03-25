@@ -1,20 +1,18 @@
 package de.chrgroth.spotify.control.domain.outbox
 
-import de.chrgroth.outbox.OutboxPartition
+import de.chrgroth.quarkus.outbox.domain.ApplicationOutboxPartition
 
-sealed interface DomainOutboxPartition : OutboxPartition {
+sealed interface DomainOutboxPartition : ApplicationOutboxPartition {
     data object ToSpotify : DomainOutboxPartition {
         override val key = "to-spotify"
     }
 
     data object ToSpotifyPlayback : DomainOutboxPartition {
         override val key = "to-spotify-playback"
-        override val pauseOnRateLimit = false
     }
 
     data object Domain : DomainOutboxPartition {
         override val key = "domain"
-        override val pauseOnRateLimit = false
     }
 
     companion object {

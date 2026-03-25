@@ -1,6 +1,8 @@
 package de.chrgroth.spotify.control.domain
 
-import de.chrgroth.outbox.OutboxTaskResult
+import arrow.core.Either
+import arrow.core.right
+import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.model.AppPlaylistCheck
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.PlaylistCheckPort
@@ -16,7 +18,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.time.Clock
 
 @ApplicationScoped
-@Suppress("Unused", "TooGenericExceptionCaught")
+@Suppress("Unused")
 class PlaylistCheckAdapter(
     private val playlistRepository: PlaylistRepositoryPort,
     private val playlistCheckRepository: AppPlaylistCheckRepositoryPort,
@@ -25,11 +27,11 @@ class PlaylistCheckAdapter(
     private val meterRegistry: MeterRegistry,
 ) : PlaylistCheckPort {
 
-    override fun handle(event: DomainOutboxEvent.RunPlaylistChecks): OutboxTaskResult = try {
+    override fun handle(event: DomainOutboxEvent.RunPlaylistChecks): Either<DomainError, Unit> {
         val playlist = playlistRepository.findByUserIdAndPlaylistId(event.userId, event.playlistId)
         if (playlist == null) {
             logger.warn { "Playlist ${event.playlistId} not found for user ${event.userId.value}, skipping checks" }
-            return OutboxTaskResult.Success
+            return Unit.right()
         }
 
         val duplicateTrackCheck = timedCheck(CHECK_DUPLICATE_TRACKS, event.playlistId) {
@@ -42,10 +44,7 @@ class PlaylistCheckAdapter(
         val status = if (duplicateTrackCheck.succeeded) "all passed" else "${duplicateTrackCheck.violations.size} violation(s)"
         logger.info { "Ran playlist checks for playlist ${event.playlistId} (user ${event.userId.value}): $status" }
         dashboardRefresh.notifyUserPlaylistChecks(event.userId)
-        OutboxTaskResult.Success
-    } catch (e: Exception) {
-        logger.error(e) { "Unexpected error in handle(RunPlaylistChecks) for playlist ${event.playlistId} (user ${event.userId.value})" }
-        OutboxTaskResult.Failed("Unexpected error in playlist checks: ${e.message}", e)
+        return Unit.right()
     }
 
     private fun notifyIfChanged(previous: AppPlaylistCheck?, current: AppPlaylistCheck) {

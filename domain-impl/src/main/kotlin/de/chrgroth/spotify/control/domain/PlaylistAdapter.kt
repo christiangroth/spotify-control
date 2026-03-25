@@ -3,7 +3,6 @@ package de.chrgroth.spotify.control.domain
 import arrow.core.Either
 import arrow.core.left
 import arrow.core.right
-import de.chrgroth.outbox.OutboxTaskResult
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.PlaylistSyncError
 import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
@@ -213,43 +212,11 @@ class PlaylistAdapter(
         }
     }
 
-    override fun handle(event: DomainOutboxEvent.SyncPlaylistInfo): OutboxTaskResult = try {
-        when (val result = syncPlaylists(event.userId)) {
-            is Either.Right -> OutboxTaskResult.Success
-            is Either.Left -> when (val error = result.value) {
-                is SpotifyRateLimitError -> {
-                    logger.warn { "Rate limited on SyncPlaylistInfo for user ${event.userId.value}, retry after ${error.retryAfter.seconds}s" }
-                    OutboxTaskResult.RateLimited(error.retryAfter)
-                }
-                else -> {
-                    logger.error { "Failed to sync playlists for user ${event.userId.value}: ${error.code}" }
-                    OutboxTaskResult.Failed("Failed to sync playlists: ${error.code}")
-                }
-            }
-        }
-    } catch (e: Exception) {
-        logger.error(e) { "Unexpected error in handle(SyncPlaylistInfo) for user ${event.userId.value}" }
-        OutboxTaskResult.Failed("Unexpected error in sync: ${e.message}", e)
-    }
+    override fun handle(event: DomainOutboxEvent.SyncPlaylistInfo): Either<DomainError, Unit> =
+        syncPlaylists(event.userId)
 
-    override fun handle(event: DomainOutboxEvent.SyncPlaylistData): OutboxTaskResult = try {
-        when (val result = syncPlaylistData(event.userId, event.playlistId, event.nextUrl, event.snapshotId)) {
-            is Either.Right -> OutboxTaskResult.Success
-            is Either.Left -> when (val error = result.value) {
-                is SpotifyRateLimitError -> {
-                    logger.warn { "Rate limited on SyncPlaylistData playlist ${event.playlistId} (user ${event.userId.value}), retry after ${error.retryAfter.seconds}s" }
-                    OutboxTaskResult.RateLimited(error.retryAfter)
-                }
-                else -> {
-                    logger.error { "Failed to sync playlist data for playlist ${event.playlistId} (user ${event.userId.value}): ${error.code}" }
-                    OutboxTaskResult.Failed("Failed to sync playlist data: ${error.code}")
-                }
-            }
-        }
-    } catch (e: Exception) {
-        logger.error(e) { "Unexpected error in handle(SyncPlaylistData) for playlist ${event.playlistId} (user ${event.userId.value})" }
-        OutboxTaskResult.Failed("Unexpected error in sync: ${e.message}", e)
-    }
+    override fun handle(event: DomainOutboxEvent.SyncPlaylistData): Either<DomainError, Unit> =
+        syncPlaylistData(event.userId, event.playlistId, event.nextUrl, event.snapshotId)
 
     companion object : KLogging() {
         private val YEAR_NAME_REGEX = Regex("\\d{4}")

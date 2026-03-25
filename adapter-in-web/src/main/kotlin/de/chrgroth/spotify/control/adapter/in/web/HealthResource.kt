@@ -8,12 +8,9 @@ import io.quarkus.security.Authenticated
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import jakarta.ws.rs.GET
-import jakarta.ws.rs.POST
 import jakarta.ws.rs.Path
-import jakarta.ws.rs.PathParam
 import jakarta.ws.rs.Produces
 import jakarta.ws.rs.core.MediaType
-import jakarta.ws.rs.core.Response
 
 @Path("/health")
 @ApplicationScoped
@@ -31,14 +28,6 @@ class HealthResource {
     @Authenticated
     @Produces(MediaType.TEXT_HTML)
     fun health(): TemplateInstance = healthTemplate.data("stats", health.getStats())
-
-    @POST
-    @Path("/outbox-partitions/{partitionKey}/activate")
-    @Authenticated
-    fun activateOutboxPartition(@PathParam("partitionKey") partitionKey: String): Response {
-        val found = health.activatePartition(partitionKey)
-        return if (found) Response.noContent().build() else Response.status(Response.Status.NOT_FOUND).build()
-    }
 
     @GET
     @Path("/snippets/predicates")
