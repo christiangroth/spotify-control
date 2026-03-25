@@ -161,9 +161,9 @@ class DashboardAdapter(
                 val album = track?.albumId?.let { albumMap[it.value] }
                 RecentlyPlayedItem(
                     spotifyUserId = playback.userId,
-                    trackId = playback.trackId,
+                    trackId = TrackId(playback.trackId),
                     trackName = track?.title ?: playback.trackId,
-                    artistIds = trackArtistIds,
+                    artistIds = trackArtistIds.map { ArtistId(it) },
                     artistNames = trackArtistIds.mapNotNull { artistMap[it]?.artistName },
                     playedAt = playback.playedAt,
                     albumName = album?.title ?: track?.albumName,

@@ -1,6 +1,9 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
+import de.chrgroth.spotify.control.domain.model.AlbumId
+import de.chrgroth.spotify.control.domain.model.ArtistId
 import de.chrgroth.spotify.control.domain.model.RecentlyPlayedItem
+import de.chrgroth.spotify.control.domain.model.TrackId
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.out.RecentlyPlayedRepositoryPort
 import io.quarkus.panache.common.Sort
@@ -53,12 +56,12 @@ class RecentlyPlayedRepositoryAdapter : RecentlyPlayedRepositoryPort {
             query.map { doc ->
                 RecentlyPlayedItem(
                     spotifyUserId = UserId(doc.spotifyUserId),
-                    trackId = doc.trackId,
+                    trackId = TrackId(doc.trackId),
                     trackName = doc.trackName,
-                    artistIds = doc.artistIds,
+                    artistIds = doc.artistIds.map { ArtistId(it) },
                     artistNames = doc.artistNames,
                     playedAt = doc.playedAt.toKotlinInstant(),
-                    albumId = doc.albumId,
+                    albumId = doc.albumId?.let { AlbumId(it) },
                     durationSeconds = doc.durationSeconds,
                 )
             }
@@ -69,12 +72,12 @@ class RecentlyPlayedRepositoryAdapter : RecentlyPlayedRepositoryPort {
         val documents = items.map { item ->
             SpotifyRecentlyPlayedDocument().apply {
                 spotifyUserId = item.spotifyUserId.value
-                trackId = item.trackId
+                trackId = item.trackId.value
                 trackName = item.trackName
-                artistIds = item.artistIds
+                artistIds = item.artistIds.map { it.value }
                 artistNames = item.artistNames
                 playedAt = item.playedAt.toJavaInstant()
-                albumId = item.albumId
+                albumId = item.albumId?.value
                 durationSeconds = item.durationSeconds ?: 0L
             }
         }

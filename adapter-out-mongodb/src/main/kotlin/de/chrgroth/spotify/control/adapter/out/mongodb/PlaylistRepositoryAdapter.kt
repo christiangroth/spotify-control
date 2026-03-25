@@ -1,11 +1,14 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
 import com.mongodb.client.model.Updates
+import de.chrgroth.spotify.control.domain.model.AlbumId
+import de.chrgroth.spotify.control.domain.model.ArtistId
 import de.chrgroth.spotify.control.domain.model.Playlist
 import de.chrgroth.spotify.control.domain.model.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.PlaylistTrack
 import de.chrgroth.spotify.control.domain.model.PlaylistType
+import de.chrgroth.spotify.control.domain.model.TrackId
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
@@ -131,9 +134,9 @@ class PlaylistRepositoryAdapter : PlaylistRepositoryPort {
     )
 
     private fun PlaylistTrackSubdocument.toDomain() = PlaylistTrack(
-        trackId = trackId,
-        artistIds = artistIds,
-        albumId = albumId,
+        trackId = TrackId(trackId),
+        artistIds = artistIds.map { ArtistId(it) },
+        albumId = AlbumId(albumId),
     )
 
     private fun Playlist.toDocument(userId: UserId) = PlaylistDocument().apply {
@@ -144,9 +147,9 @@ class PlaylistRepositoryAdapter : PlaylistRepositoryPort {
     }
 
     private fun PlaylistTrack.toSubdocument() = PlaylistTrackSubdocument().apply {
-        trackId = this@toSubdocument.trackId
-        artistIds = this@toSubdocument.artistIds
-        albumId = this@toSubdocument.albumId
+        trackId = this@toSubdocument.trackId.value
+        artistIds = this@toSubdocument.artistIds.map { it.value }
+        albumId = this@toSubdocument.albumId.value
     }
 
     override fun setAllSyncInactive() {

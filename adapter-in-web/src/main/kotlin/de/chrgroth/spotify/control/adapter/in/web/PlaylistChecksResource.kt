@@ -67,7 +67,7 @@ class PlaylistChecksResource {
             .map { check ->
                 PlaylistCheckRow(
                     check = check,
-                    playlistName = playlistNameById[check.playlistId] ?: check.playlistId,
+                    playlistName = playlistNameById[check.playlistId.value] ?: check.playlistId.value,
                 )
             }
             .groupBy { it.check.checkId.substringAfterLast(":") }

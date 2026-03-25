@@ -8,10 +8,13 @@ import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyUserPlaylist
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.PlaylistSyncError
 import de.chrgroth.spotify.control.domain.model.AccessToken
+import de.chrgroth.spotify.control.domain.model.AlbumId
+import de.chrgroth.spotify.control.domain.model.ArtistId
 import de.chrgroth.spotify.control.domain.model.Playlist
 import de.chrgroth.spotify.control.domain.model.PlaylistTrack
 import de.chrgroth.spotify.control.domain.model.PlaylistTracksPage
 import de.chrgroth.spotify.control.domain.model.SpotifyPlaylistItem
+import de.chrgroth.spotify.control.domain.model.TrackId
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
 import de.chrgroth.spotify.control.domain.port.out.SpotifyPlaylistPort
@@ -98,9 +101,9 @@ class SpotifyPlaylistAdapter(
           }
           tracks.add(
             PlaylistTrack(
-              trackId = track.id,
-              artistIds = track.artists.map { it.id },
-              albumId = albumId,
+              trackId = TrackId(track.id),
+              artistIds = track.artists.map { ArtistId(it.id) },
+              albumId = AlbumId(albumId),
             ),
           )
         }
@@ -145,9 +148,9 @@ class SpotifyPlaylistAdapter(
                 }
                 tracks.add(
                     PlaylistTrack(
-                        trackId = track.id,
-                        artistIds = track.artists.map { it.id },
-                        albumId = albumId,
+                        trackId = TrackId(track.id),
+                        artistIds = track.artists.map { ArtistId(it.id) },
+                        albumId = AlbumId(albumId),
                     ),
                 )
             }

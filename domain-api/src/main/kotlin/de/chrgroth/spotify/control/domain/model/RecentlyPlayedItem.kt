@@ -12,12 +12,12 @@ private const val SECONDS_PER_MINUTE = 60L
 
 data class RecentlyPlayedItem(
     val spotifyUserId: UserId,
-    val trackId: String,
+    val trackId: TrackId,
     val trackName: String,
-    val artistIds: List<String>,
+    val artistIds: List<ArtistId>,
     val artistNames: List<String>,
     val playedAt: Instant,
-    val albumId: String? = null,
+    val albumId: AlbumId? = null,
     val albumName: String? = null,
     val imageUrl: String? = null,
     val durationSeconds: Long? = null,

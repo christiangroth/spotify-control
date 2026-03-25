@@ -4,11 +4,11 @@ import kotlin.time.Instant
 
 data class RecentlyPartialPlayedItem(
     val spotifyUserId: UserId,
-    val trackId: String,
+    val trackId: TrackId,
     val trackName: String,
-    val artistIds: List<String>,
+    val artistIds: List<ArtistId>,
     val artistNames: List<String>,
     val playedAt: Instant,
     val playedSeconds: Long,
-    val albumId: String? = null,
+    val albumId: AlbumId? = null,
 )

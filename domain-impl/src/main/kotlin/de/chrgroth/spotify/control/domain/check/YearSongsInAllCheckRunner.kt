@@ -2,6 +2,7 @@ package de.chrgroth.spotify.control.domain.check
 
 import de.chrgroth.spotify.control.domain.model.AppPlaylistCheck
 import de.chrgroth.spotify.control.domain.model.Playlist
+import de.chrgroth.spotify.control.domain.model.PlaylistId
 import de.chrgroth.spotify.control.domain.model.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.PlaylistType
 import de.chrgroth.spotify.control.domain.model.TrackId
@@ -35,19 +36,19 @@ class YearSongsInAllCheckRunner(
                 .distinctBy { it.trackId }
                 .map { it.trackId }
             val appTrackById = if (missingTrackIds.isNotEmpty()) {
-                appTrackRepository.findByTrackIds(missingTrackIds.map { TrackId(it) }.toSet()).associateBy { it.id.value }
+                appTrackRepository.findByTrackIds(missingTrackIds.toSet()).associateBy { it.id.value }
             } else {
                 emptyMap()
             }
             missingTrackIds.map { trackId ->
-                val appTrack = requireNotNull(appTrackById[trackId]) { "Track $trackId not found in catalog" }
+                val appTrack = requireNotNull(appTrackById[trackId.value]) { "Track ${trackId.value} not found in catalog" }
                 val artistName = appTrack.artistName ?: "Unknown Artist"
                 "$artistName – ${appTrack.title}"
             }
         }
         return AppPlaylistCheck(
             checkId = "$playlistId:$checkId",
-            playlistId = playlistId,
+            playlistId = PlaylistId(playlistId),
             lastCheck = Clock.System.now(),
             succeeded = violations.isEmpty(),
             violations = violations,

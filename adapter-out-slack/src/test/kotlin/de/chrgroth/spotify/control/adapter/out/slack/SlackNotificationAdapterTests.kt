@@ -117,7 +117,7 @@ class SlackNotificationAdapterTests {
         violations: List<String> = emptyList(),
     ) = de.chrgroth.spotify.control.domain.model.AppPlaylistCheck(
         checkId = checkId,
-        playlistId = playlistId,
+        playlistId = de.chrgroth.spotify.control.domain.model.PlaylistId(playlistId),
         lastCheck = kotlin.time.Clock.System.now(),
         succeeded = succeeded,
         violations = violations,

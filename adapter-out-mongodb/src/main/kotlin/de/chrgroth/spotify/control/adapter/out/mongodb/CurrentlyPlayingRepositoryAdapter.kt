@@ -2,7 +2,10 @@ package de.chrgroth.spotify.control.adapter.out.mongodb
 
 import com.mongodb.client.model.Filters
 import com.mongodb.client.model.Updates
+import de.chrgroth.spotify.control.domain.model.AlbumId
+import de.chrgroth.spotify.control.domain.model.ArtistId
 import de.chrgroth.spotify.control.domain.model.CurrentlyPlayingItem
+import de.chrgroth.spotify.control.domain.model.TrackId
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.out.CurrentlyPlayingRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
@@ -23,17 +26,17 @@ class CurrentlyPlayingRepositoryAdapter : CurrentlyPlayingRepositoryPort {
     override fun save(item: CurrentlyPlayingItem) {
         val document = SpotifyCurrentlyPlayingDocument().apply {
             spotifyUserId = item.spotifyUserId.value
-            trackId = item.trackId
+            trackId = item.trackId.value
             trackName = item.trackName
-            artistIds = item.artistIds
+            artistIds = item.artistIds.map { it.value }
             artistNames = item.artistNames
             progressMs = item.progressMs
             durationMs = item.durationMs
             isPlaying = item.isPlaying
             observedAt = item.observedAt.toJavaInstant()
-            albumId = item.albumId
+            albumId = item.albumId?.value
         }
-        logger.info { "Saving currently playing document for user ${item.spotifyUserId.value}, track ${item.trackId}" }
+        logger.info { "Saving currently playing document for user ${item.spotifyUserId.value}, track ${item.trackId.value}" }
         mongoQueryMetrics.timed("spotify_currently_playing.save") {
             currentlyPlayingDocumentRepository.persist(document)
         }
@@ -46,7 +49,7 @@ class CurrentlyPlayingRepositoryAdapter : CurrentlyPlayingRepositoryPort {
             currentlyPlayingDocumentRepository.count(
                 "spotifyUserId = ?1 and trackId = ?2 and observedAt >= ?3 and observedAt < ?4",
                 item.spotifyUserId.value,
-                item.trackId,
+                item.trackId.value,
                 observedMinuteStart,
                 observedMinuteEnd,
             ) > 0
@@ -56,12 +59,12 @@ class CurrentlyPlayingRepositoryAdapter : CurrentlyPlayingRepositoryPort {
     override fun updateProgressByUserAndTrackAndObservedMinute(item: CurrentlyPlayingItem) {
         val observedMinuteStart = item.observedAt.toJavaInstant().truncatedTo(java.time.temporal.ChronoUnit.MINUTES)
         val observedMinuteEnd = observedMinuteStart.plusSeconds(SECONDS_PER_MINUTE)
-        logger.info { "Updating currently playing progress for user ${item.spotifyUserId.value}, track ${item.trackId}, progressMs=${item.progressMs}" }
+        logger.info { "Updating currently playing progress for user ${item.spotifyUserId.value}, track ${item.trackId.value}, progressMs=${item.progressMs}" }
         mongoQueryMetrics.timed("spotify_currently_playing.updateProgressByUserAndTrackAndObservedMinute") {
             currentlyPlayingDocumentRepository.mongoCollection().updateOne(
                 Filters.and(
                     Filters.eq("spotifyUserId", item.spotifyUserId.value),
-                    Filters.eq("trackId", item.trackId),
+                    Filters.eq("trackId", item.trackId.value),
                     Filters.gte("observedAt", observedMinuteStart),
                     Filters.lt("observedAt", observedMinuteEnd),
                 ),
@@ -81,15 +84,15 @@ class CurrentlyPlayingRepositoryAdapter : CurrentlyPlayingRepositoryPort {
                 .map { doc ->
                     CurrentlyPlayingItem(
                         spotifyUserId = UserId(doc.spotifyUserId),
-                        trackId = doc.trackId,
+                        trackId = TrackId(doc.trackId),
                         trackName = doc.trackName,
-                        artistIds = doc.artistIds,
+                        artistIds = doc.artistIds.map { ArtistId(it) },
                         artistNames = doc.artistNames,
                         progressMs = doc.progressMs,
                         durationMs = doc.durationMs,
                         isPlaying = doc.isPlaying,
                         observedAt = doc.observedAt.toKotlinInstant(),
-                        albumId = doc.albumId,
+                        albumId = doc.albumId?.let { AlbumId(it) },
                     )
                 }
         }

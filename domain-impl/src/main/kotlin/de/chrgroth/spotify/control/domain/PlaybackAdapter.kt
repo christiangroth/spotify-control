@@ -10,6 +10,7 @@ import de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus
 import de.chrgroth.spotify.control.domain.model.CurrentlyPlayingItem
 import de.chrgroth.spotify.control.domain.model.RecentlyPartialPlayedItem
 import de.chrgroth.spotify.control.domain.model.RecentlyPlayedItem
+import de.chrgroth.spotify.control.domain.model.TrackId
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.CatalogPort
@@ -113,7 +114,7 @@ class PlaybackAdapter(
       }
     }
 
-  private fun convertPartialPlays(userId: UserId, completedTrackIds: Set<String>): Int {
+  private fun convertPartialPlays(userId: UserId, completedTrackIds: Set<TrackId>): Int {
     val sortedItems = currentlyPlayingRepository.findByUserId(userId).sortedBy { it.observedAt }
 
     // The single latest item is protected — it may still be active
@@ -152,7 +153,7 @@ class PlaybackAdapter(
     // Delete completed tracks and all processed items (converted or skipped below threshold),
     // but don't delete the latest item's trackId as it may still be active
     val allProcessedTrackIds = itemsToProcess.map { it.trackId }.filter { it != latestItem?.trackId }.toSet()
-    currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, completedTrackIds + allProcessedTrackIds)
+    currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, (completedTrackIds + allProcessedTrackIds).map { it.value }.toSet())
     return newComputedCount
   }
 
@@ -179,8 +180,8 @@ class PlaybackAdapter(
             .map { it.id.value }
             .toSet()
 
-        val filteredRecentlyPlayed = recentlyPlayed.filter { it.artistIds.firstOrNull() !in inactiveArtistIds }
-        val filteredPartialPlayed = partialPlayed.filter { it.artistIds.firstOrNull() !in inactiveArtistIds }
+        val filteredRecentlyPlayed = recentlyPlayed.filter { it.artistIds.firstOrNull()?.value !in inactiveArtistIds }
+        val filteredPartialPlayed = partialPlayed.filter { it.artistIds.firstOrNull()?.value !in inactiveArtistIds }
 
         val allPlaybackItems = buildPlaybackItems(filteredRecentlyPlayed, filteredPartialPlayed)
         if (allPlaybackItems.isEmpty()) {
@@ -202,8 +203,8 @@ class PlaybackAdapter(
         appPlaybackRepository.saveAll(newPlaybackItems)
 
         val catalogRequests = (
-            filteredRecentlyPlayed.map { CatalogSyncRequest(it.trackId, it.albumId, it.artistIds) } +
-                filteredPartialPlayed.map { CatalogSyncRequest(it.trackId, it.albumId, it.artistIds) }
+            filteredRecentlyPlayed.map { CatalogSyncRequest(it.trackId.value, it.albumId?.value, it.artistIds.map { a -> a.value }) } +
+                filteredPartialPlayed.map { CatalogSyncRequest(it.trackId.value, it.albumId?.value, it.artistIds.map { a -> a.value }) }
         ).distinctBy { it.trackId }
         syncController.syncForTracks(catalogRequests, userId)
     }
@@ -215,14 +216,14 @@ class PlaybackAdapter(
         AppPlaybackItem(
             userId = item.spotifyUserId,
             playedAt = item.playedAt,
-            trackId = item.trackId,
+            trackId = item.trackId.value,
             secondsPlayed = item.durationSeconds ?: 0L,
         )
     } + partialPlayed.map { item ->
         AppPlaybackItem(
             userId = item.spotifyUserId,
             playedAt = item.playedAt,
-            trackId = item.trackId,
+            trackId = item.trackId.value,
             secondsPlayed = item.playedSeconds,
         )
     }
