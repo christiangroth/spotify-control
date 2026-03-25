@@ -71,7 +71,6 @@ class SpotifyPlaylistAdapter(
   override fun getPlaylistTracks(userId: UserId, accessToken: AccessToken, playlistId: String): Either<DomainError, Playlist> {
     return try {
       val tracks = mutableListOf<PlaylistTrack>()
-      var snapshotId: String? = null
       var nextUrl: String? = "$apiBaseUrl/v1/playlists/$playlistId/items?limit=50"
       while (nextUrl != null) {
         throttler.throttle(DomainOutboxPartition.ToSpotify.key)
@@ -86,9 +85,6 @@ class SpotifyPlaylistAdapter(
         val errorResult = response.checkRateLimitOrError(logger, PlaylistSyncError.PLAYLIST_TRACKS_FETCH_FAILED)
         if (errorResult != null) return errorResult
         val tracksResponse = spotifyJson.decodeFromString<SpotifyPlaylistTracksResponse>(response.body())
-        if (snapshotId == null) {
-          snapshotId = tracksResponse.snapshotId
-        }
         tracksResponse.items.forEach { item ->
           val track = item.item ?: return@forEach
           if (track.type != "track") {
@@ -103,9 +99,7 @@ class SpotifyPlaylistAdapter(
           tracks.add(
             PlaylistTrack(
               trackId = track.id,
-              trackName = track.name,
               artistIds = track.artists.map { it.id },
-              artistNames = track.artists.map { it.name },
               albumId = albumId,
             ),
           )
@@ -114,7 +108,6 @@ class SpotifyPlaylistAdapter(
       }
       Playlist(
         spotifyPlaylistId = playlistId,
-        snapshotId = snapshotId ?: "",
         tracks = tracks,
       ).right()
     } catch (e: Exception) {
@@ -153,9 +146,7 @@ class SpotifyPlaylistAdapter(
                 tracks.add(
                     PlaylistTrack(
                         trackId = track.id,
-                        trackName = track.name,
                         artistIds = track.artists.map { it.id },
-                        artistNames = track.artists.map { it.name },
                         albumId = albumId,
                     ),
                 )

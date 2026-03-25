@@ -100,7 +100,7 @@ class PlaylistAdapter(
                 return@map
             }
             if (isFirstPage) {
-                playlistRepository.save(userId, Playlist(playlistId, page.snapshotId, page.tracks))
+                playlistRepository.save(userId, Playlist(playlistId, page.tracks))
             } else {
                 playlistRepository.appendTracks(userId, playlistId, page.tracks)
             }
@@ -134,6 +134,7 @@ class PlaylistAdapter(
                 val newType = when {
                     syncStatus == PlaylistSyncStatus.PASSIVE -> null
                     it.type != null -> it.type
+                    it.name.equals("all", ignoreCase = true) -> PlaylistType.ALL
                     it.name.matches(YEAR_NAME_REGEX) -> PlaylistType.YEAR
                     else -> PlaylistType.UNKNOWN
                 }

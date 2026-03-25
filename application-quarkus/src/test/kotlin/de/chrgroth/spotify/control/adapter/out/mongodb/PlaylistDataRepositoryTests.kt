@@ -21,15 +21,12 @@ class PlaylistDataRepositoryTests {
     @Inject
     lateinit var playlistRepository: PlaylistRepositoryPort
 
-    private fun buildPlaylist(playlistId: String, snapshotId: String = "snap-1") = Playlist(
+    private fun buildPlaylist(playlistId: String) = Playlist(
         spotifyPlaylistId = playlistId,
-        snapshotId = snapshotId,
         tracks = listOf(
             PlaylistTrack(
                 trackId = "track-1",
-                trackName = "Track One",
                 artistIds = listOf("artist-1"),
-                artistNames = listOf("Artist One"),
                 albumId = "album-1",
             ),
         ),
@@ -63,24 +60,21 @@ class PlaylistDataRepositoryTests {
         val found = playlistRepository.findByUserIdAndPlaylistId(userId, "playlist-1")
         assertThat(found).isNotNull
         assertThat(found!!.spotifyPlaylistId).isEqualTo("playlist-1")
-        assertThat(found.snapshotId).isEqualTo("snap-1")
         assertThat(found.tracks).hasSize(1)
         assertThat(found.tracks[0].trackId).isEqualTo("track-1")
-        assertThat(found.tracks[0].trackName).isEqualTo("Track One")
         assertThat(found.tracks[0].artistIds).containsExactly("artist-1")
-        assertThat(found.tracks[0].artistNames).containsExactly("Artist One")
     }
 
     @Test
     fun `save overwrites previous playlist data`() {
         val userId = UserId("test-${UUID.randomUUID()}")
-        playlistRepository.save(userId, buildPlaylist("playlist-1", "snap-1"))
+        playlistRepository.save(userId, buildPlaylist("playlist-1"))
 
-        playlistRepository.save(userId, buildPlaylist("playlist-1", "snap-2"))
+        playlistRepository.save(userId, buildPlaylist("playlist-1"))
 
         val found = playlistRepository.findByUserIdAndPlaylistId(userId, "playlist-1")
         assertThat(found).isNotNull
-        assertThat(found!!.snapshotId).isEqualTo("snap-2")
+        assertThat(found!!.tracks).hasSize(1)
     }
 
     @Test
@@ -107,13 +101,10 @@ class PlaylistDataRepositoryTests {
             userId,
             Playlist(
                 spotifyPlaylistId = playlistId,
-                snapshotId = "snap-1",
                 tracks = listOf(
                     PlaylistTrack(
                         trackId = "track-x",
-                        trackName = "Track X",
                         artistIds = listOf(artistId),
-                        artistNames = listOf("Artist X"),
                         albumId = "album-x",
                     ),
                 ),
@@ -136,13 +127,10 @@ class PlaylistDataRepositoryTests {
             userId,
             Playlist(
                 spotifyPlaylistId = playlistId,
-                snapshotId = "snap-1",
                 tracks = listOf(
                     PlaylistTrack(
                         trackId = "track-y",
-                        trackName = "Track Y",
                         artistIds = listOf(artistId),
-                        artistNames = listOf("Artist Y"),
                         albumId = "album-y",
                     ),
                 ),
@@ -168,8 +156,7 @@ class PlaylistDataRepositoryTests {
             userId1,
             Playlist(
                 spotifyPlaylistId = playlistId1,
-                snapshotId = "snap-1",
-                tracks = listOf(PlaylistTrack("t1", "T1", listOf(artistId1), listOf("A1"), "album-t1")),
+                tracks = listOf(PlaylistTrack("t1", listOf(artistId1), "album-t1")),
             ),
         )
         playlistRepository.saveAll(userId2, listOf(buildPlaylistInfo(playlistId2, PlaylistSyncStatus.ACTIVE)))
@@ -177,8 +164,7 @@ class PlaylistDataRepositoryTests {
             userId2,
             Playlist(
                 spotifyPlaylistId = playlistId2,
-                snapshotId = "snap-1",
-                tracks = listOf(PlaylistTrack("t2", "T2", listOf(artistId2), listOf("A2"), "album-t2")),
+                tracks = listOf(PlaylistTrack("t2", listOf(artistId2), "album-t2")),
             ),
         )
 
