@@ -52,6 +52,13 @@ class PlaylistRepositoryAdapter : PlaylistRepositoryPort {
             playlistDocumentRepository.findById("${userId.value}:$playlistId")?.toDomain()
         }
 
+    override fun findTrackCountsByUserId(userId: UserId): Map<String, Int> =
+        mongoQueryMetrics.timed("spotify_playlist.findTrackCountsByUserId") {
+            playlistDocumentRepository
+                .list("spotifyUserId = ?1", userId.value)
+                .associate { it.spotifyPlaylistId to it.tracks.size }
+        }
+
     override fun save(userId: UserId, playlist: Playlist) {
         logger.info { "Saving playlist document for playlist ${playlist.spotifyPlaylistId} (user ${userId.value}) with ${playlist.tracks.size} track(s)" }
         val document = playlist.toDocument(userId)
