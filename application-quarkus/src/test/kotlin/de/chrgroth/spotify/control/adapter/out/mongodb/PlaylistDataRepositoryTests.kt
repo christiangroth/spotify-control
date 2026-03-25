@@ -1,5 +1,6 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
+import com.mongodb.client.MongoClient
 import de.chrgroth.spotify.control.domain.model.Playlist
 import de.chrgroth.spotify.control.domain.model.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.PlaylistSyncStatus
@@ -12,6 +13,7 @@ import kotlin.time.Clock
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Instant
 import org.assertj.core.api.Assertions.assertThat
+import org.bson.Document
 import org.junit.jupiter.api.Test
 import java.util.UUID
 
@@ -20,6 +22,9 @@ class PlaylistDataRepositoryTests {
 
     @Inject
     lateinit var playlistRepository: PlaylistRepositoryPort
+
+    @Inject
+    lateinit var mongoClient: MongoClient
 
     private fun buildPlaylist(playlistId: String) = Playlist(
         spotifyPlaylistId = playlistId,
@@ -43,6 +48,12 @@ class PlaylistDataRepositoryTests {
         )
     }
 
+    private fun findPlaylistDocument(userId: UserId, playlistId: String): Document? =
+        mongoClient.getDatabase("spotify-control")
+            .getCollection("spotify_playlist")
+            .find(Document("_id", "${userId.value}:$playlistId"))
+            .firstOrNull()
+
     @Test
     fun `findByUserIdAndPlaylistId returns null when no playlist exists`() {
         val userId = UserId("no-playlist-${UUID.randomUUID()}")
@@ -63,6 +74,51 @@ class PlaylistDataRepositoryTests {
         assertThat(found.tracks).hasSize(1)
         assertThat(found.tracks[0].trackId).isEqualTo("track-1")
         assertThat(found.tracks[0].artistIds).containsExactly("artist-1")
+    }
+
+    @Test
+    fun `save stores numberOfTracks equal to tracks size`() {
+        val userId = UserId("test-${UUID.randomUUID()}")
+        val playlistId = "playlist-ntracks-${UUID.randomUUID()}"
+        val playlist = Playlist(
+            spotifyPlaylistId = playlistId,
+            tracks = listOf(
+                PlaylistTrack(trackId = "t1", artistIds = listOf("a1"), albumId = "al1"),
+                PlaylistTrack(trackId = "t2", artistIds = listOf("a2"), albumId = "al2"),
+            ),
+        )
+
+        playlistRepository.save(userId, playlist)
+
+        val doc = findPlaylistDocument(userId, playlistId)
+        assertThat(doc).isNotNull
+        assertThat(doc!!.getInteger("numberOfTracks")).isEqualTo(2)
+    }
+
+    @Test
+    fun `appendTracks updates numberOfTracks after appending`() {
+        val userId = UserId("test-${UUID.randomUUID()}")
+        val playlistId = "playlist-append-${UUID.randomUUID()}"
+        playlistRepository.save(
+            userId,
+            Playlist(
+                spotifyPlaylistId = playlistId,
+                tracks = listOf(PlaylistTrack(trackId = "t1", artistIds = listOf("a1"), albumId = "al1")),
+            ),
+        )
+
+        playlistRepository.appendTracks(
+            userId,
+            playlistId,
+            listOf(
+                PlaylistTrack(trackId = "t2", artistIds = listOf("a2"), albumId = "al2"),
+                PlaylistTrack(trackId = "t3", artistIds = listOf("a3"), albumId = "al3"),
+            ),
+        )
+
+        val doc = findPlaylistDocument(userId, playlistId)
+        assertThat(doc).isNotNull
+        assertThat(doc!!.getInteger("numberOfTracks")).isEqualTo(3)
     }
 
     @Test

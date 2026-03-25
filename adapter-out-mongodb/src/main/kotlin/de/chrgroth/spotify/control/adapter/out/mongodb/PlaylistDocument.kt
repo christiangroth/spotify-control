@@ -11,6 +11,7 @@ class PlaylistDocument {
     lateinit var spotifyUserId: String
     lateinit var spotifyPlaylistId: String
     lateinit var tracks: List<PlaylistTrackSubdocument>
+    var numberOfTracks: Int = 0
 }
 
 class PlaylistTrackSubdocument {
