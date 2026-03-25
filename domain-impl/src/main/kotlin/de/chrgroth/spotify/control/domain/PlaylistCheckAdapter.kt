@@ -3,30 +3,33 @@ package de.chrgroth.spotify.control.domain
 import arrow.core.Either
 import arrow.core.right
 import de.chrgroth.spotify.control.domain.error.DomainError
+import de.chrgroth.spotify.control.domain.check.PlaylistCheckRunner
 import de.chrgroth.spotify.control.domain.model.AppPlaylistCheck
-import de.chrgroth.spotify.control.domain.model.TrackId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.PlaylistCheckPort
 import de.chrgroth.spotify.control.domain.port.out.AppPlaylistCheckRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.PlaylistCheckNotificationPort
 import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Timer
 import jakarta.enterprise.context.ApplicationScoped
+import jakarta.enterprise.inject.Instance
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.runBlocking
 import mu.KLogging
 import java.util.concurrent.TimeUnit
-import kotlin.time.Clock
 
 @ApplicationScoped
 @Suppress("Unused")
 class PlaylistCheckAdapter(
+    private val checkRunners: Instance<PlaylistCheckRunner>,
     private val playlistRepository: PlaylistRepositoryPort,
     private val playlistCheckRepository: AppPlaylistCheckRepositoryPort,
     private val dashboardRefresh: DashboardRefreshPort,
     private val notification: PlaylistCheckNotificationPort,
-    private val appTrackRepository: AppTrackRepositoryPort,
     private val meterRegistry: MeterRegistry,
 ) : PlaylistCheckPort {
 
@@ -37,18 +40,37 @@ class PlaylistCheckAdapter(
             return Unit.right()
         }
 
-        val duplicateTrackCheck = timedCheck(CHECK_DUPLICATE_TRACKS, event.playlistId) {
-            runDuplicateTrackCheck(event.playlistId, playlist.tracks)
-        }
-        val previousDuplicateTrackCheck = playlistCheckRepository.findByCheckId(duplicateTrackCheck.checkId)
-        playlistCheckRepository.save(duplicateTrackCheck)
-        notifyIfChanged(previousDuplicateTrackCheck, duplicateTrackCheck)
+        val allPlaylistInfos = playlistRepository.findByUserId(event.userId)
+        val currentPlaylistInfo = allPlaylistInfos.find { it.spotifyPlaylistId == event.playlistId }
 
-        val status = if (duplicateTrackCheck.succeeded) "all passed" else "${duplicateTrackCheck.violations.size} violation(s)"
+        val applicableRunners = checkRunners.filter { it.isApplicable(currentPlaylistInfo) }
+        val results = runBlocking {
+            applicableRunners
+                .map { runner ->
+                    async(Dispatchers.IO) {
+                        timedCheck(runner.checkId, event.playlistId) {
+                            runner.run(event.userId, event.playlistId, playlist, currentPlaylistInfo, allPlaylistInfos)
+                        }
+                    }
+                }
+                .awaitAll()
+        }
+
+        results.forEach { check ->
+            val previous = playlistCheckRepository.findByCheckId(check.checkId)
+            playlistCheckRepository.save(check)
+            notifyIfChanged(previous, check)
+        }
+
+        val totalViolations = results.sumOf { it.violations.size }
+        val status = if (totalViolations == 0) "all passed" else "$totalViolations violation(s)"
         logger.info { "Ran playlist checks for playlist ${event.playlistId} (user ${event.userId.value}): $status" }
         dashboardRefresh.notifyUserPlaylistChecks(event.userId)
         return Unit.right()
     }
+
+    override fun getDisplayNames(): Map<String, String> =
+        checkRunners.associate { it.checkId to it.displayName }
 
     private fun notifyIfChanged(previous: AppPlaylistCheck?, current: AppPlaylistCheck) {
         if (previous == null) return
@@ -71,35 +93,5 @@ class PlaylistCheckAdapter(
         return result
     }
 
-    private fun runDuplicateTrackCheck(
-        playlistId: String,
-        tracks: List<de.chrgroth.spotify.control.domain.model.PlaylistTrack>,
-    ): AppPlaylistCheck {
-        val countByTrackId = tracks.groupingBy { it.trackId }.eachCount()
-        val duplicateTrackIds = tracks
-            .distinctBy { it.trackId }
-            .filter { (countByTrackId[it.trackId] ?: 0) > 1 }
-            .map { it.trackId }
-        val appTrackById = if (duplicateTrackIds.isNotEmpty()) {
-            appTrackRepository.findByTrackIds(duplicateTrackIds.map { TrackId(it) }.toSet()).associateBy { it.id.value }
-        } else {
-            emptyMap()
-        }
-        val violations = duplicateTrackIds.map { trackId ->
-            val appTrack = requireNotNull(appTrackById[trackId]) { "Track $trackId not found in catalog" }
-            val artistName = appTrack.artistName ?: "Unknown Artist"
-            "$artistName – ${appTrack.title}"
-        }
-        return AppPlaylistCheck(
-            checkId = "$playlistId:$CHECK_DUPLICATE_TRACKS",
-            playlistId = playlistId,
-            lastCheck = Clock.System.now(),
-            succeeded = violations.isEmpty(),
-            violations = violations,
-        )
-    }
-
-    companion object : KLogging() {
-        private const val CHECK_DUPLICATE_TRACKS = "duplicate-tracks"
-    }
+    companion object : KLogging()
 }

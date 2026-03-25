@@ -76,7 +76,7 @@ class PlaylistSettingsResource {
       .toJavaInstant()
       .atZone(ZoneId.systemDefault())
       .format(GERMAN_DATE_TIME_FORMATTER)
-    val typeLabel: String? get() = playlist.type?.name
+    val typeLabel: String? get() = playlist.type?.name?.lowercase()
 
     companion object {
       private val GERMAN_DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm", Locale.GERMAN)

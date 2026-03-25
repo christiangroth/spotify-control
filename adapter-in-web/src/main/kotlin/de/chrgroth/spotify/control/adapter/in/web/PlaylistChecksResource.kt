@@ -2,6 +2,7 @@ package de.chrgroth.spotify.control.adapter.`in`.web
 
 import de.chrgroth.spotify.control.domain.model.AppPlaylistCheck
 import de.chrgroth.spotify.control.domain.model.UserId
+import de.chrgroth.spotify.control.domain.port.`in`.PlaylistCheckPort
 import de.chrgroth.spotify.control.domain.port.out.AppPlaylistCheckRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
@@ -45,6 +46,9 @@ class PlaylistChecksResource {
     @Inject
     private lateinit var playlistCheckRepository: AppPlaylistCheckRepositoryPort
 
+    @Inject
+    private lateinit var playlistCheckPort: PlaylistCheckPort
+
     @GET
     @Authenticated
     @Produces(MediaType.TEXT_HTML)
@@ -58,6 +62,7 @@ class PlaylistChecksResource {
             val checksAsync = async(Dispatchers.IO) { playlistCheckRepository.findAll() }
             Triple(userAsync.await(), playlistNamesAsync.await(), checksAsync.await())
         }
+        val displayNames = playlistCheckPort.getDisplayNames()
         val groups = checks
             .map { check ->
                 PlaylistCheckRow(
@@ -66,7 +71,10 @@ class PlaylistChecksResource {
                 )
             }
             .groupBy { it.check.checkId.substringAfterLast(":") }
-            .map { (checkType, rows) -> PlaylistCheckGroup(PlaylistCheckRow.formatCheckName(checkType), rows.sortedBy { it.playlistName }) }
+            .map { (checkType, rows) ->
+                val name = displayNames[checkType] ?: checkType
+                PlaylistCheckGroup(name, rows.sortedBy { it.playlistName })
+            }
             .sortedBy { it.checkName }
         return playlistChecksTemplate
             .data("displayName", user?.displayName ?: userId.value)
@@ -83,10 +91,6 @@ class PlaylistChecksResource {
 
         companion object {
             private val DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm", Locale.GERMAN)
-
-            fun formatCheckName(checkType: String): String = checkType
-                .split("-")
-                .joinToString(" ") { it.replaceFirstChar(Char::uppercaseChar) }
         }
     }
 }
