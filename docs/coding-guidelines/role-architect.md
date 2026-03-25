@@ -37,7 +37,7 @@ domain-impl         ← business logic implementing the inbound port interfaces
 
 The domain (`domain-api` + `domain-impl`) must remain free of infrastructure concerns:
 
-- **No Quarkus/CDI annotations** on domain objects or port interfaces (`@ApplicationScoped`, `@Inject`, etc. belong in adapters)
+- **No Quarkus/CDI annotations** on domain model classes or port interfaces – `@ApplicationScoped` belongs on the implementing class (which lives in `domain-impl` or an adapter module), not on the interface or data class itself
 - **No MongoDB types** (`Document`, `BsonValue`, codec references) in domain model classes
 - **No Spotify SDK/HTTP types** in domain objects
 - **No serialization annotations** (Jackson `@JsonProperty`, BSON codecs) in domain model classes – mapping belongs in adapters
