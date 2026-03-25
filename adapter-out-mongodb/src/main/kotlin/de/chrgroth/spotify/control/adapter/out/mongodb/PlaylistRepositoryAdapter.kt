@@ -67,7 +67,6 @@ class PlaylistRepositoryAdapter : PlaylistRepositoryPort {
             val existing = playlistDocumentRepository.findById(docId)
             if (existing != null) {
                 existing.tracks = existing.tracks + tracks.map { it.toSubdocument() }
-                existing.numberOfTracks = existing.tracks.size
                 playlistDocumentRepository.persistOrUpdate(existing)
             } else {
                 logger.warn { "Playlist document not found for appending tracks: $playlistId (user ${userId.value})" }
@@ -135,7 +134,6 @@ class PlaylistRepositoryAdapter : PlaylistRepositoryPort {
         spotifyUserId = userId.value
         spotifyPlaylistId = this@toDocument.spotifyPlaylistId
         tracks = this@toDocument.tracks.map { it.toSubdocument() }
-        numberOfTracks = this@toDocument.tracks.size
     }
 
     private fun PlaylistTrack.toSubdocument() = PlaylistTrackSubdocument().apply {

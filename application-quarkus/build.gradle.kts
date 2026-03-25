@@ -37,7 +37,6 @@ dependencies {
   testImplementation("io.quarkus:quarkus-junit5-mockito")
   testImplementation("io.quarkus:quarkus-test-security")
   testImplementation("io.rest-assured:rest-assured")
-  testImplementation("io.quarkus:quarkus-mongodb-client")
 }
 
 tasks.withType<Test> {
