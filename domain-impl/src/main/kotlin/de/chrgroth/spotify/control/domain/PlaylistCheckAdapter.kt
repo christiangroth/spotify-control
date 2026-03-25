@@ -39,8 +39,8 @@ class PlaylistCheckAdapter(
             return OutboxTaskResult.Success
         }
 
-        val playlistInfos = playlistRepository.findByUserId(event.userId)
-        val currentPlaylistInfo = playlistInfos.find { it.spotifyPlaylistId == event.playlistId }
+        val allPlaylistInfos = playlistRepository.findByUserId(event.userId)
+        val currentPlaylistInfo = allPlaylistInfos.find { it.spotifyPlaylistId == event.playlistId }
 
         val applicableRunners = checkRunners.filter { it.isApplicable(currentPlaylistInfo) }
         val results = runBlocking {
@@ -48,7 +48,7 @@ class PlaylistCheckAdapter(
                 .map { runner ->
                     async(Dispatchers.IO) {
                         timedCheck(runner.checkId, event.playlistId) {
-                            runner.run(event.userId, event.playlistId, playlist, playlistInfos)
+                            runner.run(event.userId, event.playlistId, playlist, currentPlaylistInfo, allPlaylistInfos)
                         }
                     }
                 }

@@ -11,7 +11,7 @@ class WipePlaylistChecksStarter(
     private val playlistCheckRepository: AppPlaylistCheckRepositoryPort,
 ) : Starter {
 
-    override val id = "WipePlaylistChecksStarter-v1"
+    override val id = "WipePlaylistChecksStarter-v2"
 
     override fun execute() {
         logger.info { "Wiping all playlist check documents" }

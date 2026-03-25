@@ -56,9 +56,10 @@ class YearSongsInAllCheckRunnerTests {
     @Test
     fun `run passes when no all playlist exists`() {
         val playlist = buildPlaylist(tracks = listOf(buildTrack("t1")))
-        val playlistInfos = listOf(buildPlaylistInfo(type = PlaylistType.YEAR))
+        val currentPlaylistInfo = buildPlaylistInfo(type = PlaylistType.YEAR)
+        val playlistInfos = listOf(currentPlaylistInfo)
 
-        val result = runner.run(userId, playlistId, playlist, playlistInfos)
+        val result = runner.run(userId, playlistId, playlist, currentPlaylistInfo, playlistInfos)
 
         assertThat(result.succeeded).isTrue()
         assertThat(result.violations).isEmpty()
@@ -68,13 +69,14 @@ class YearSongsInAllCheckRunnerTests {
     @Test
     fun `run passes when all playlist is not yet synced`() {
         val playlist = buildPlaylist(tracks = listOf(buildTrack("t1")))
+        val currentPlaylistInfo = buildPlaylistInfo(type = PlaylistType.YEAR)
         val playlistInfos = listOf(
-            buildPlaylistInfo(type = PlaylistType.YEAR),
+            currentPlaylistInfo,
             buildPlaylistInfo(spotifyPlaylistId = allPlaylistId, type = PlaylistType.ALL),
         )
         every { playlistRepository.findByUserIdAndPlaylistId(userId, allPlaylistId) } returns null
 
-        val result = runner.run(userId, playlistId, playlist, playlistInfos)
+        val result = runner.run(userId, playlistId, playlist, currentPlaylistInfo, playlistInfos)
 
         assertThat(result.succeeded).isTrue()
         assertThat(result.violations).isEmpty()
@@ -84,13 +86,14 @@ class YearSongsInAllCheckRunnerTests {
     fun `run passes when all tracks are in all playlist`() {
         val playlist = buildPlaylist(tracks = listOf(buildTrack("t1"), buildTrack("t2")))
         val allPlaylist = buildPlaylist(spotifyPlaylistId = allPlaylistId, tracks = listOf(buildTrack("t1"), buildTrack("t2"), buildTrack("t3")))
+        val currentPlaylistInfo = buildPlaylistInfo(type = PlaylistType.YEAR)
         val playlistInfos = listOf(
-            buildPlaylistInfo(type = PlaylistType.YEAR),
+            currentPlaylistInfo,
             buildPlaylistInfo(spotifyPlaylistId = allPlaylistId, type = PlaylistType.ALL),
         )
         every { playlistRepository.findByUserIdAndPlaylistId(userId, allPlaylistId) } returns allPlaylist
 
-        val result = runner.run(userId, playlistId, playlist, playlistInfos)
+        val result = runner.run(userId, playlistId, playlist, currentPlaylistInfo, playlistInfos)
 
         assertThat(result.succeeded).isTrue()
         assertThat(result.violations).isEmpty()
@@ -106,13 +109,14 @@ class YearSongsInAllCheckRunnerTests {
             ),
         )
         val allPlaylist = buildPlaylist(spotifyPlaylistId = allPlaylistId, tracks = listOf(buildTrack("t1")))
+        val currentPlaylistInfo = buildPlaylistInfo(type = PlaylistType.YEAR)
         val playlistInfos = listOf(
-            buildPlaylistInfo(type = PlaylistType.YEAR),
+            currentPlaylistInfo,
             buildPlaylistInfo(spotifyPlaylistId = allPlaylistId, type = PlaylistType.ALL),
         )
         every { playlistRepository.findByUserIdAndPlaylistId(userId, allPlaylistId) } returns allPlaylist
 
-        val result = runner.run(userId, playlistId, playlist, playlistInfos)
+        val result = runner.run(userId, playlistId, playlist, currentPlaylistInfo, playlistInfos)
 
         assertThat(result.succeeded).isFalse()
         assertThat(result.violations).containsExactlyInAnyOrder("Artist B – Song B", "Artist C – Song C")
@@ -128,13 +132,14 @@ class YearSongsInAllCheckRunnerTests {
             ),
         )
         val allPlaylist = buildPlaylist(spotifyPlaylistId = allPlaylistId, tracks = listOf(buildTrack("t1")))
+        val currentPlaylistInfo = buildPlaylistInfo(type = PlaylistType.YEAR)
         val playlistInfos = listOf(
-            buildPlaylistInfo(type = PlaylistType.YEAR),
+            currentPlaylistInfo,
             buildPlaylistInfo(spotifyPlaylistId = allPlaylistId, type = PlaylistType.ALL),
         )
         every { playlistRepository.findByUserIdAndPlaylistId(userId, allPlaylistId) } returns allPlaylist
 
-        val result = runner.run(userId, playlistId, playlist, playlistInfos)
+        val result = runner.run(userId, playlistId, playlist, currentPlaylistInfo, playlistInfos)
 
         assertThat(result.succeeded).isFalse()
         assertThat(result.violations).containsExactly("Artist B – Song B")

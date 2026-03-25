@@ -20,8 +20,8 @@ class YearSongsInAllCheckRunner(
 
     override fun isApplicable(playlistInfo: PlaylistInfo?): Boolean = playlistInfo?.type == PlaylistType.YEAR
 
-    override fun run(userId: UserId, playlistId: String, playlist: Playlist, playlistInfos: List<PlaylistInfo>): AppPlaylistCheck {
-        val allPlaylistInfo = playlistInfos.find { it.type == PlaylistType.ALL }
+    override fun run(userId: UserId, playlistId: String, playlist: Playlist, currentPlaylistInfo: PlaylistInfo?, allPlaylistInfos: List<PlaylistInfo>): AppPlaylistCheck {
+        val allPlaylistInfo = allPlaylistInfos.find { it.type == PlaylistType.ALL }
         val allPlaylist = allPlaylistInfo?.let { playlistRepository.findByUserIdAndPlaylistId(userId, it.spotifyPlaylistId) }
         val violations = if (allPlaylist == null) {
             emptyList()

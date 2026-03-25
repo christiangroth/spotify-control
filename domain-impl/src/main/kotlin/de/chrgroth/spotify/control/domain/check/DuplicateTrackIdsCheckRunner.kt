@@ -14,7 +14,7 @@ class DuplicateTrackIdsCheckRunner : PlaylistCheckRunner {
     override val checkId = "duplicate-track-ids"
     override val displayName = "Duplicate Track IDs"
 
-    override fun run(userId: UserId, playlistId: String, playlist: Playlist, playlistInfos: List<PlaylistInfo>): AppPlaylistCheck {
+    override fun run(userId: UserId, playlistId: String, playlist: Playlist, currentPlaylistInfo: PlaylistInfo?, allPlaylistInfos: List<PlaylistInfo>): AppPlaylistCheck {
         val countByTrackId = playlist.tracks.groupingBy { it.trackId }.eachCount()
         val violations = playlist.tracks
             .distinctBy { it.trackId }
