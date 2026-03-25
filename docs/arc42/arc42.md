@@ -467,11 +467,25 @@ SLACK_WEBHOOK_URL
 
 ## Quality Requirements Overview
 
-*work in progress*
+| ID  | Quality Goal              | Priority | Description |
+|-----|--------------------------|----------|-------------|
+| Q1  | Domain Purity            | High     | The domain (`domain-api`, `domain-impl`) has zero compile-time dependencies on infrastructure frameworks (Quarkus, MongoDB, Spotify SDK). Domain model classes are plain Kotlin data classes. |
+| Q2  | Boundary Correctness     | High     | All communication between domain and adapters goes through port interfaces. No adapter type leaks into domain objects. No business logic lives in adapter classes. |
+| Q3  | Outbox Reliability       | High     | All Spotify API calls are dispatched through the persistent outbox. Rate-limit handling and at-least-once delivery are guaranteed by the outbox implementation. |
+| Q4  | Functional Test Confidence | Medium | The test suite covers the inbound port boundary (domain logic), outbound adapter round-trips (MongoDB), and inbound HTTP contracts. Line coverage is a by-product, not a goal. |
+| Q5  | Maintainability          | Medium   | Any developer familiar with hexagonal architecture can understand and safely change the system. Module naming, port contracts, and architecture decision records provide the context. |
+| Q6  | Operational Stability    | Medium   | The application handles Spotify rate limits, token expiry, and partial data gracefully without requiring manual intervention. |
 
 ## Quality Scenarios
 
-*work in progress*
+| ID  | Scenario | Expected Behaviour |
+|-----|----------|--------------------|
+| Q1-S1 | A developer adds a MongoDB `Document` field to a domain model class | The build fails – domain model classes must not carry infrastructure types |
+| Q2-S1 | A developer adds a direct Spotify HTTP call inside `domain-impl` | The build fails – `adapter-out-spotify` is not in the compile classpath of `domain-impl` |
+| Q3-S1 | The `to-spotify` outbox partition is paused due to a 429 response | The partition stops dispatching; a Slack notification is sent; tasks resume automatically when the partition is reactivated |
+| Q4-S1 | A developer changes the payload structure of `SyncPlaylistData` | The contract test fails before the change can be merged |
+| Q4-S2 | A developer adds a new business rule to `PlaylistAdapter` | A domain logic test (Layer 1) is added that calls through `PlaylistPort` and verifies the rule using mocked outbound ports |
+| Q5-S1 | A developer needs to replace MongoDB with a different database | Only `adapter-out-mongodb` needs to change; domain and all other adapters are unaffected |
 
 # Risks and Technical Debts
 
