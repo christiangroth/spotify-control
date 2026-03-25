@@ -1,3 +1,84 @@
+# 0.77.0 (2026.03.24)
+
+## New Features
+* Catalog browser no longer loads all artists on page open; artists are only fetched when a filter is entered.
+* Playback settings now loads the first 50 artists per category on page open and fetches additional artists automatically when scrolling to the bottom of each list.
+
+
+
+---
+
+# 0.76.3 (2026.03.24)
+
+## Bugfixes / Chore
+* Outbox viewer table now uses the same dark table design as playlist checks and playlist sync settings.
+
+
+
+---
+
+# 0.76.2 (2026.03.24)
+
+## Bugfixes / Chore
+* Outbox viewer now displays text with correct contrast on dark background.
+* Outbox viewer columns reordered to: Event Priority, Status, Type, Attempts, Next Retry (UTC), Created (UTC), Deduplication Key, Last Error.
+* Outbox viewer deduplication key and last error columns now allow multiline values.
+
+
+
+---
+
+# 0.76.1 (2026.03.24)
+
+## Bugfixes / Chore
+* Fixed dashboard playback events histogram bars not showing correct heights.
+
+
+
+---
+
+# 0.76.0 (2026.03.24)
+
+## New Features
+* Added outbox viewer page showing pending tasks per partition with live SSE updates.
+* Moved MongoDB Viewer link into the technical dropdown menu (above Atlas).
+
+
+
+---
+
+# 0.75.1 (2026.03.24)
+
+## Bugfixes / Chore
+* Playback Event Viewer now shows newest events at the top of the list.
+* Latest currently playing progress is shown first when viewing today's playback events.
+* Grafana dashboard provisioning now retries with exponential backoff (30s, 60s, 120s, 300s) when the Grafana Cloud instance is temporarily unavailable.
+* Both metrics and logs dashboards are provisioned on each release.
+
+
+
+---
+
+# 0.75.0 (2026.03.24)
+
+## New Features
+* Playlist sync now processes one page of tracks at a time, enqueuing catalog sync events per page.
+* If a playlist has multiple pages, each page is dispatched as a separate outbox event, preventing long-running tasks and allowing rate limiting to recover gracefully without restarting the full playlist sync.
+
+
+
+---
+
+# 0.74.1 (2026.03.24)
+
+## Bugfixes / Chore
+* Fixed partial playback duration sometimes showing impossibly large values (e.g. 42039 seconds) by capping the computed duration at the track's actual length.
+* Added one-time startup migration to cap any existing partial playback entries with duration exceeding the track's actual length.
+
+
+
+---
+
 # 0.74.0 (2026.03.21)
 
 ## New Features

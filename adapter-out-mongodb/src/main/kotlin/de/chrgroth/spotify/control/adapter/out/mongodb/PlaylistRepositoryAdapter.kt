@@ -60,6 +60,20 @@ class PlaylistRepositoryAdapter : PlaylistRepositoryPort {
         }
     }
 
+    override fun appendTracks(userId: UserId, playlistId: String, tracks: List<PlaylistTrack>) {
+        val docId = "${userId.value}:$playlistId"
+        logger.info { "Appending ${tracks.size} track(s) to playlist document $playlistId (user ${userId.value})" }
+        mongoQueryMetrics.timed("spotify_playlist.appendTracks") {
+            val existing = playlistDocumentRepository.findById(docId)
+            if (existing != null) {
+                existing.tracks = existing.tracks + tracks.map { it.toSubdocument() }
+                playlistDocumentRepository.persistOrUpdate(existing)
+            } else {
+                logger.warn { "Playlist document not found for appending tracks: $playlistId (user ${userId.value})" }
+            }
+        }
+    }
+
     override fun updateLastSyncTime(userId: UserId, playlistId: String, time: kotlin.time.Instant) {
         val id = "${userId.value}:$playlistId"
         mongoQueryMetrics.timed("spotify_playlist_metadata.updateLastSyncTime") {

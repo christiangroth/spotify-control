@@ -1,7 +1,7 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
 import de.chrgroth.spotify.control.domain.error.ArtistSettingsError
-import mu.KLogging
+import de.chrgroth.spotify.control.domain.model.AppArtist
 import de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.CatalogPort
@@ -21,8 +21,10 @@ import jakarta.ws.rs.PUT
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.PathParam
 import jakarta.ws.rs.Produces
+import jakarta.ws.rs.QueryParam
 import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
+import mu.KLogging
 
 @Path("/settings/playback")
 @ApplicationScoped
@@ -51,12 +53,53 @@ class PlaybackSettingsResource {
   fun playback(): TemplateInstance {
     val userId = UserId(securityIdentity.principal.name)
     val user = userRepository.findById(userId)
-    val allArtists = catalog.findAllArtists().sortedBy { it.artistName }
+    val limit = PAGE_SIZE
+    val undecidedArtists = catalog.findArtistsByStatus(ArtistPlaybackProcessingStatus.UNDECIDED, 0, limit)
+    val activeArtists = catalog.findArtistsByStatus(ArtistPlaybackProcessingStatus.ACTIVE, 0, limit)
+    val inactiveArtists = catalog.findArtistsByStatus(ArtistPlaybackProcessingStatus.INACTIVE, 0, limit)
+    val undecidedTotal = catalog.countArtistsByStatus(ArtistPlaybackProcessingStatus.UNDECIDED)
+    val activeTotal = catalog.countArtistsByStatus(ArtistPlaybackProcessingStatus.ACTIVE)
+    val inactiveTotal = catalog.countArtistsByStatus(ArtistPlaybackProcessingStatus.INACTIVE)
     return playbackTemplate
       .data("displayName", user?.displayName ?: userId.value)
-      .data("undecidedArtists", allArtists.filter { it.playbackProcessingStatus == ArtistPlaybackProcessingStatus.UNDECIDED })
-      .data("activeArtists", allArtists.filter { it.playbackProcessingStatus == ArtistPlaybackProcessingStatus.ACTIVE })
-      .data("inactiveArtists", allArtists.filter { it.playbackProcessingStatus == ArtistPlaybackProcessingStatus.INACTIVE })
+      .data("undecidedArtists", undecidedArtists)
+      .data("activeArtists", activeArtists)
+      .data("inactiveArtists", inactiveArtists)
+      .data("undecidedTotal", undecidedTotal)
+      .data("activeTotal", activeTotal)
+      .data("inactiveTotal", inactiveTotal)
+      .data("pageSize", limit)
+      .data("artists", emptyList<AppArtist>())
+      .data("status", "")
+      .data("hasMore", false)
+      .data("nextOffset", 0)
+  }
+
+  @GET
+  @Path("/artists")
+  @Authenticated
+  @Produces(MediaType.TEXT_HTML)
+  fun artistsByStatus(
+    @QueryParam("status") statusStr: String,
+    @QueryParam("offset") offset: Int = 0,
+  ): TemplateInstance {
+    val status = ArtistPlaybackProcessingStatus.entries.find { it.name == statusStr }
+    if (status == null) {
+      logger.warn { "Unknown artist status requested: $statusStr" }
+      return playbackTemplate.getFragment("fragment_artist_items")
+        .data("artists", emptyList<AppArtist>())
+        .data("status", "")
+        .data("hasMore", false)
+        .data("nextOffset", 0)
+    }
+    val limit = PAGE_SIZE
+    val artists = catalog.findArtistsByStatus(status, offset, limit)
+    val hasMore = artists.size == limit
+    return playbackTemplate.getFragment("fragment_artist_items")
+      .data("artists", artists)
+      .data("status", statusStr)
+      .data("hasMore", hasMore)
+      .data("nextOffset", offset + limit)
   }
 
   @POST
@@ -158,5 +201,7 @@ class PlaybackSettingsResource {
 
   data class ArtistStatusRequest(val status: String = "")
 
-  companion object : KLogging()
+  companion object : KLogging() {
+    private const val PAGE_SIZE = 50
+  }
 }

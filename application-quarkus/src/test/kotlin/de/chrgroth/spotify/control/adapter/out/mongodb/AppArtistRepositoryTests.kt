@@ -110,4 +110,61 @@ class AppArtistRepositoryTests {
 
         assertThat(after).isEqualTo(before + 2)
     }
+
+    @Test
+    fun `findByPlaybackProcessingStatusPaged returns artists sorted by name within given offset and limit`() {
+        val suffix = UUID.randomUUID().toString().take(8)
+        val artistC = artist("paged-C-$suffix").copy(artistName = "C Artist $suffix")
+        val artistA = artist("paged-A-$suffix").copy(artistName = "A Artist $suffix")
+        val artistB = artist("paged-B-$suffix").copy(artistName = "B Artist $suffix")
+        appArtistRepository.upsertAll(listOf(artistC, artistA, artistB))
+
+        val totalUndecided = appArtistRepository.countByPlaybackProcessingStatus(
+            de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus.UNDECIDED,
+        )
+        val allResults = appArtistRepository.findByPlaybackProcessingStatusPaged(
+            de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus.UNDECIDED, 0, totalUndecided.toInt(),
+        )
+
+        val insertedIds = setOf(artistA.artistId, artistB.artistId, artistC.artistId)
+        val found = allResults.filter { it.artistId in insertedIds }
+        assertThat(found).hasSize(3)
+        assertThat(found.map { it.artistName }).containsExactly(
+            "A Artist $suffix",
+            "B Artist $suffix",
+            "C Artist $suffix",
+        )
+    }
+
+    @Test
+    fun `findByPlaybackProcessingStatusPaged returns empty list when offset exceeds available items`() {
+        val result = appArtistRepository.findByPlaybackProcessingStatusPaged(
+            de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus.UNDECIDED, 100000, 50,
+        )
+        assertThat(result).isEmpty()
+    }
+
+    @Test
+    fun `countByPlaybackProcessingStatus returns correct count for status`() {
+        val suffix = UUID.randomUUID().toString().take(8)
+        val artist1 = artist("cnt-$suffix-1")
+        val artist2 = artist("cnt-$suffix-2")
+        appArtistRepository.upsertAll(listOf(artist1, artist2))
+
+        val before = appArtistRepository.countByPlaybackProcessingStatus(
+            de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus.UNDECIDED,
+        )
+        appArtistRepository.updatePlaybackProcessingStatus(
+            artist1.artistId,
+            de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus.ACTIVE,
+        )
+        val afterUpdate = appArtistRepository.countByPlaybackProcessingStatus(
+            de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus.UNDECIDED,
+        )
+
+        assertThat(afterUpdate).isEqualTo(before - 1)
+        assertThat(appArtistRepository.countByPlaybackProcessingStatus(
+            de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus.ACTIVE,
+        )).isGreaterThanOrEqualTo(1)
+    }
 }

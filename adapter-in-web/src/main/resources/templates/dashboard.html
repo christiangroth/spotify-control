@@ -96,10 +96,11 @@
                     <div style="overflow-x:auto;">
                         <div class="d-flex align-items-end" style="height:80px;gap:2px;" data-testid="histogram">
                             {#for entry in stats.playbackEventsPerDay}
-                            <div style="height:{entry.heightPercent}%;min-height:2px;flex:1;min-width:6px;background-color:var(--spotify-green);border-radius:2px 2px 0 0;cursor:default;"
-                                 title="{entry.countFormatted} events"
+                            <a href="/playback-event-viewer?date={entry.date}" style="flex:1;min-width:6px;height:100%;display:flex;align-items:flex-end;text-decoration:none;" title="{entry.countFormatted} events on {entry.date}">
+                            <div style="height:{entry.heightPercent}%;min-height:2px;width:100%;background-color:var(--spotify-green);border-radius:2px 2px 0 0;cursor:pointer;"
                                  onmouseover="this.style.opacity='0.7'"
                                  onmouseout="this.style.opacity='1'"></div>
+                            </a>
                             {/for}
                         </div>
                         <div class="d-none d-lg-flex" style="gap:2px;margin-top:3px;">

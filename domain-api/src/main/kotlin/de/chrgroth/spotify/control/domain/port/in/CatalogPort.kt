@@ -9,6 +9,8 @@ import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 
 interface CatalogPort {
     fun findAllArtists(): List<AppArtist>
+    fun findArtistsByStatus(status: ArtistPlaybackProcessingStatus, offset: Int, limit: Int): List<AppArtist>
+    fun countArtistsByStatus(status: ArtistPlaybackProcessingStatus): Long
     fun updateArtistPlaybackProcessingStatus(
         artistId: String,
         status: ArtistPlaybackProcessingStatus,

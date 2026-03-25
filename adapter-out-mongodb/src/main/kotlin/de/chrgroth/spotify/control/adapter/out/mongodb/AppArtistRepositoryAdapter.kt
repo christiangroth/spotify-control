@@ -2,6 +2,7 @@ package de.chrgroth.spotify.control.adapter.out.mongodb
 
 import com.mongodb.client.model.BulkWriteOptions
 import com.mongodb.client.model.Filters
+import com.mongodb.client.model.Sorts
 import com.mongodb.client.model.UpdateOneModel
 import com.mongodb.client.model.UpdateOptions
 import com.mongodb.client.model.Updates
@@ -58,6 +59,27 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
     override fun findByPlaybackProcessingStatus(status: ArtistPlaybackProcessingStatus): List<AppArtist> =
         mongoQueryMetrics.timed("app_artist.findByPlaybackProcessingStatus") {
             appArtistDocumentRepository.list("playbackProcessingStatus = ?1", status).map { it.toDomain() }
+        }
+
+    override fun findByPlaybackProcessingStatusPaged(
+        status: ArtistPlaybackProcessingStatus,
+        offset: Int,
+        limit: Int,
+    ): List<AppArtist> =
+        mongoQueryMetrics.timed("app_artist.findByPlaybackProcessingStatusPaged") {
+            appArtistDocumentRepository.mongoCollection()
+                .find(Filters.eq("playbackProcessingStatus", status.name))
+                .sort(Sorts.ascending("artistName"))
+                .skip(offset)
+                .limit(limit)
+                .toList()
+                .map { it.toDomain() }
+        }
+
+    override fun countByPlaybackProcessingStatus(status: ArtistPlaybackProcessingStatus): Long =
+        mongoQueryMetrics.timed("app_artist.countByPlaybackProcessingStatus") {
+            appArtistDocumentRepository.mongoCollection()
+                .countDocuments(Filters.eq("playbackProcessingStatus", status.name))
         }
 
     override fun findByArtistIds(artistIds: Set<String>): List<AppArtist> {
