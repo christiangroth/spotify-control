@@ -2,10 +2,9 @@ package de.chrgroth.spotify.control.adapter.`in`.web
 
 import de.chrgroth.spotify.control.domain.model.PlaybackDetectedEvent
 import de.chrgroth.spotify.control.domain.model.UserId
+import de.chrgroth.spotify.control.domain.port.out.OutboxPartitionObserver
 import de.chrgroth.spotify.control.domain.port.out.OutboxTaskCountObserver
 import de.chrgroth.spotify.control.domain.port.out.OutgoingRequestStatsObserver
-import de.chrgroth.outbox.OutboxPartition
-import de.chrgroth.outbox.OutboxPartitionObserver
 import io.smallrye.mutiny.Multi
 import io.smallrye.mutiny.subscription.MultiEmitter
 import jakarta.enterprise.context.ApplicationScoped
@@ -28,9 +27,11 @@ class HealthSseAdapter : OutboxPartitionObserver, OutgoingRequestStatsObserver, 
         }
     }
 
-    override fun onPartitionPaused(partition: OutboxPartition) = notifyAllUsers("refresh-outbox-partitions")
+    @Suppress("UnusedParameter")
+    override fun onPartitionPaused(partitionKey: String, reason: String) = notifyAllUsers("refresh-outbox-partitions")
 
-    override fun onPartitionActivated(partition: OutboxPartition) = notifyAllUsers("refresh-outbox-partitions")
+    @Suppress("UnusedParameter")
+    override fun onPartitionActivated(partitionKey: String) = notifyAllUsers("refresh-outbox-partitions")
 
     override fun onRequestRecorded() = notifyAllUsers("refresh-outgoing-http-calls")
 

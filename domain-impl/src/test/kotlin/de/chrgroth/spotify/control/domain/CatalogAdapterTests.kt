@@ -1,6 +1,5 @@
 package de.chrgroth.spotify.control.domain
 
-import de.chrgroth.outbox.OutboxTaskResult
 import arrow.core.left
 import arrow.core.right
 import de.chrgroth.spotify.control.domain.error.SyncError
@@ -23,7 +22,6 @@ import de.chrgroth.spotify.control.domain.port.out.AppPlaybackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppPlaylistCheckRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.DashboardRefreshPort
-import de.chrgroth.spotify.control.domain.port.out.OutboxManagementPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
@@ -47,7 +45,6 @@ class CatalogAdapterTests {
     private val appPlaybackRepository: AppPlaybackRepositoryPort = mockk()
     private val userRepository: UserRepositoryPort = mockk()
     private val outboxPort: OutboxPort = mockk()
-    private val outboxManagement: OutboxManagementPort = mockk()
     private val playlistRepository: PlaylistRepositoryPort = mockk()
     private val playlistCheckRepository: AppPlaylistCheckRepositoryPort = mockk()
     private val dashboardRefresh: DashboardRefreshPort = mockk(relaxed = true)
@@ -57,7 +54,7 @@ class CatalogAdapterTests {
         spotifyAccessToken, spotifyCatalog,
         appArtistRepository, appTrackRepository, appAlbumRepository,
         appPlaybackRepository, userRepository, outboxPort,
-        outboxManagement, playlistRepository, playlistCheckRepository,
+        playlistRepository, playlistCheckRepository,
         dashboardRefresh, syncController,
     )
 
@@ -229,7 +226,7 @@ class CatalogAdapterTests {
 
         val result = adapter.handle(DomainOutboxEvent.ResyncCatalog())
 
-        assertThat(result).isEqualTo(OutboxTaskResult.Success)
+        assertThat(result.isRight()).isTrue()
     }
 
     @Test
@@ -240,7 +237,7 @@ class CatalogAdapterTests {
 
         val result = adapter.handle(DomainOutboxEvent.ResyncCatalog())
 
-        assertThat(result).isEqualTo(OutboxTaskResult.Success)
+        assertThat(result.isRight()).isTrue()
     }
 
     // --- SyncAlbumDetails tests ---
@@ -251,7 +248,7 @@ class CatalogAdapterTests {
 
         val result = adapter.handle(DomainOutboxEvent.SyncAlbumDetails("album-1"))
 
-        assertThat(result).isEqualTo(OutboxTaskResult.Success)
+        assertThat(result.isRight()).isTrue()
         verify(exactly = 0) { spotifyCatalog.getAlbum(any(), any(), any()) }
     }
 
@@ -266,7 +263,7 @@ class CatalogAdapterTests {
 
         val result = adapter.handle(DomainOutboxEvent.SyncAlbumDetails("album-1"))
 
-        assertThat(result).isEqualTo(OutboxTaskResult.Success)
+        assertThat(result.isRight()).isTrue()
         verify { spotifyCatalog.getAlbum(userId, accessToken, "album-1") }
         verify { appTrackRepository.upsertAll(listOf(trackWithAlbum1, trackWithAlbum2)) }
         verify { appAlbumRepository.upsertAll(listOf(album1)) }
@@ -307,7 +304,7 @@ class CatalogAdapterTests {
 
         val result = adapter.handle(DomainOutboxEvent.SyncAlbumDetails("album-1"))
 
-        assertThat(result).isInstanceOf(OutboxTaskResult.Failed::class.java)
+        assertThat(result.isLeft()).isTrue()
         verify(exactly = 0) { appTrackRepository.upsertAll(any()) }
     }
 
@@ -320,17 +317,16 @@ class CatalogAdapterTests {
 
         val result = adapter.handle(DomainOutboxEvent.SyncAlbumDetails("album-1"))
 
-        assertThat(result).isInstanceOf(OutboxTaskResult.RateLimited::class.java)
+        assertThat(result.isLeft()).isTrue()
     }
 
     // --- wipeCatalog tests ---
 
     @Test
-    fun `wipeCatalog deletes all catalog data, outbox events, deactivates playlists and deletes checks`() {
+    fun `wipeCatalog deletes all catalog data, deactivates playlists and deletes checks`() {
         every { appArtistRepository.deleteAll() } just runs
         every { appAlbumRepository.deleteAll() } just runs
         every { appTrackRepository.deleteAll() } just runs
-        every { outboxManagement.deleteByEventTypes(any()) } just runs
         every { playlistRepository.setAllSyncInactive() } just runs
         every { playlistCheckRepository.deleteAll() } just runs
 
@@ -340,20 +336,6 @@ class CatalogAdapterTests {
         verify { appArtistRepository.deleteAll() }
         verify { appAlbumRepository.deleteAll() }
         verify { appTrackRepository.deleteAll() }
-        verify {
-            outboxManagement.deleteByEventTypes(
-                match { keys ->
-                    keys.containsAll(
-                        listOf(
-                            DomainOutboxEvent.SyncArtistDetails.KEY,
-                            DomainOutboxEvent.SyncArtistDetails.LEGACY_KEY,
-                            DomainOutboxEvent.SyncAlbumDetails.KEY,
-                            DomainOutboxEvent.ResyncCatalog.KEY,
-                        ),
-                    )
-                },
-            )
-        }
         verify { playlistRepository.setAllSyncInactive() }
         verify { playlistCheckRepository.deleteAll() }
     }

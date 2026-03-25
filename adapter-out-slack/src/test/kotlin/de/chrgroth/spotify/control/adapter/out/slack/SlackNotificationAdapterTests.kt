@@ -1,23 +1,11 @@
 package de.chrgroth.spotify.control.adapter.out.slack
 
-import de.chrgroth.outbox.OutboxPartition
-import de.chrgroth.outbox.OutboxPartitionInfo
-import de.chrgroth.outbox.OutboxRepository
-import io.mockk.every
-import io.mockk.mockk
 import io.quarkus.runtime.ShutdownEvent
 import io.quarkus.runtime.StartupEvent
 import org.junit.jupiter.api.Test
 import java.util.Optional
 
 class SlackNotificationAdapterTests {
-
-    private val repository: OutboxRepository = mockk()
-
-    private val testPartition = object : OutboxPartition {
-        override val key = "test-partition"
-        override val pauseOnRateLimit = true
-    }
 
     private fun adapter(
         webhookUrl: Optional<String> = Optional.empty(),
@@ -30,7 +18,6 @@ class SlackNotificationAdapterTests {
         checkPassedEnabled: Boolean = false,
         violationsChangedEnabled: Boolean = false,
     ) = SlackNotificationAdapter(
-        repository = repository,
         version = "1.0.0-TEST",
         webhookUrl = webhookUrl,
         username = username,
@@ -75,35 +62,32 @@ class SlackNotificationAdapterTests {
 
     @Test
     fun `partition paused notification does not throw when disabled`() {
-        adapter().onPartitionPaused(testPartition)
+        adapter().onPartitionPaused("test-partition", "RATE_LIMITED")
     }
 
     @Test
     fun `partition paused notification does not throw when no webhook url configured`() {
-        every { repository.findPartition(testPartition) } returns partitionInfo("RATE_LIMITED")
-        adapter(partitionPausedEnabled = true).onPartitionPaused(testPartition)
+        adapter(partitionPausedEnabled = true).onPartitionPaused("test-partition", "RATE_LIMITED")
     }
 
     @Test
     fun `partition paused notification includes status reason`() {
-        every { repository.findPartition(testPartition) } returns partitionInfo("RATE_LIMITED")
-        adapter(partitionPausedEnabled = true).onPartitionPaused(testPartition)
+        adapter(partitionPausedEnabled = true).onPartitionPaused("test-partition", "RATE_LIMITED")
     }
 
     @Test
-    fun `partition paused notification handles null status reason`() {
-        every { repository.findPartition(testPartition) } returns null
-        adapter(partitionPausedEnabled = true).onPartitionPaused(testPartition)
+    fun `partition paused notification handles blank reason`() {
+        adapter(partitionPausedEnabled = true).onPartitionPaused("test-partition", "unknown")
     }
 
     @Test
     fun `partition resumed notification does not throw when disabled`() {
-        adapter().onPartitionActivated(testPartition)
+        adapter().onPartitionActivated("test-partition")
     }
 
     @Test
     fun `partition resumed notification does not throw when no webhook url configured`() {
-        adapter(partitionResumedEnabled = true).onPartitionActivated(testPartition)
+        adapter(partitionResumedEnabled = true).onPartitionActivated("test-partition")
     }
 
     @Test
@@ -138,7 +122,4 @@ class SlackNotificationAdapterTests {
         succeeded = succeeded,
         violations = violations,
     )
-
-    private fun partitionInfo(statusReason: String) =
-        OutboxPartitionInfo(key = testPartition.key, status = "PAUSED", statusReason = statusReason, pausedUntil = null)
 }

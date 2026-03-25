@@ -1,3 +1,12 @@
+# 0.77.1 (2026.03.25)
+
+## Bugfixes / Chore
+* Updated quarkus-outbox dependency to version 0.7.3
+
+
+
+---
+
 # 0.77.0 (2026.03.24)
 
 ## New Features

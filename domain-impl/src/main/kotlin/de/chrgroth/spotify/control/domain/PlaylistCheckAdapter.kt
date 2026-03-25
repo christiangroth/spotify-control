@@ -1,6 +1,8 @@
 package de.chrgroth.spotify.control.domain
 
-import de.chrgroth.outbox.OutboxTaskResult
+import arrow.core.Either
+import arrow.core.right
+import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.check.PlaylistCheckRunner
 import de.chrgroth.spotify.control.domain.model.AppPlaylistCheck
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
@@ -19,10 +21,9 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import mu.KLogging
 import java.util.concurrent.TimeUnit
-import kotlin.time.Clock
 
 @ApplicationScoped
-@Suppress("Unused", "TooGenericExceptionCaught")
+@Suppress("Unused")
 class PlaylistCheckAdapter(
     private val checkRunners: Instance<PlaylistCheckRunner>,
     private val playlistRepository: PlaylistRepositoryPort,
@@ -32,11 +33,11 @@ class PlaylistCheckAdapter(
     private val meterRegistry: MeterRegistry,
 ) : PlaylistCheckPort {
 
-    override fun handle(event: DomainOutboxEvent.RunPlaylistChecks): OutboxTaskResult = try {
+    override fun handle(event: DomainOutboxEvent.RunPlaylistChecks): Either<DomainError, Unit> {
         val playlist = playlistRepository.findByUserIdAndPlaylistId(event.userId, event.playlistId)
         if (playlist == null) {
             logger.warn { "Playlist ${event.playlistId} not found for user ${event.userId.value}, skipping checks" }
-            return OutboxTaskResult.Success
+            return Unit.right()
         }
 
         val playlistInfos = playlistRepository.findByUserId(event.userId)
@@ -65,10 +66,7 @@ class PlaylistCheckAdapter(
         val status = if (totalViolations == 0) "all passed" else "$totalViolations violation(s)"
         logger.info { "Ran playlist checks for playlist ${event.playlistId} (user ${event.userId.value}): $status" }
         dashboardRefresh.notifyUserPlaylistChecks(event.userId)
-        OutboxTaskResult.Success
-    } catch (e: Exception) {
-        logger.error(e) { "Unexpected error in handle(RunPlaylistChecks) for playlist ${event.playlistId} (user ${event.userId.value})" }
-        OutboxTaskResult.Failed("Unexpected error in playlist checks: ${e.message}", e)
+        return Unit.right()
     }
 
     override fun getDisplayNames(): Map<String, String> =

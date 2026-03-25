@@ -4,10 +4,8 @@ import arrow.core.Either
 import arrow.core.flatMap
 import arrow.core.left
 import arrow.core.right
-import de.chrgroth.outbox.OutboxTaskResult
 import de.chrgroth.spotify.control.domain.error.ArtistSettingsError
 import de.chrgroth.spotify.control.domain.error.DomainError
-import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
 import de.chrgroth.spotify.control.domain.model.AppArtist
 import de.chrgroth.spotify.control.domain.model.AccessToken
 import de.chrgroth.spotify.control.domain.model.AlbumId
@@ -22,7 +20,6 @@ import de.chrgroth.spotify.control.domain.port.out.AppPlaybackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppPlaylistCheckRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.DashboardRefreshPort
-import de.chrgroth.spotify.control.domain.port.out.OutboxManagementPort
 import de.chrgroth.spotify.control.domain.port.out.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
@@ -42,7 +39,6 @@ class CatalogAdapter(
     private val appPlaybackRepository: AppPlaybackRepositoryPort,
     private val userRepository: UserRepositoryPort,
     private val outboxPort: OutboxPort,
-    private val outboxManagement: OutboxManagementPort,
     private val playlistRepository: PlaylistRepositoryPort,
     private val playlistCheckRepository: AppPlaylistCheckRepositoryPort,
     private val dashboardRefresh: DashboardRefreshPort,
@@ -153,7 +149,6 @@ class CatalogAdapter(
         appArtistRepository.deleteAll()
         appAlbumRepository.deleteAll()
         appTrackRepository.deleteAll()
-        outboxManagement.deleteByEventTypes(CATALOG_OUTBOX_EVENT_KEYS)
         playlistRepository.setAllSyncInactive()
         playlistCheckRepository.deleteAll()
         logger.info { "Catalog wipe complete" }
@@ -194,42 +189,14 @@ class CatalogAdapter(
 
     // --- Outbox Handlers ---
 
-    override fun handle(event: DomainOutboxEvent.SyncArtistDetails): OutboxTaskResult =
-        handleOutboxTask("SyncArtistDetails[artist=${event.artistId},user=${event.userId.value}]") {
-            syncArtistDetails(event.artistId, event.userId)
-        }
+    override fun handle(event: DomainOutboxEvent.SyncArtistDetails): Either<DomainError, Unit> =
+        syncArtistDetails(event.artistId, event.userId)
 
-    override fun handle(event: DomainOutboxEvent.SyncAlbumDetails): OutboxTaskResult =
-        handleOutboxTask("SyncAlbumDetails[album=${event.albumId}]") { syncAlbumDetails(event.albumId) }
+    override fun handle(event: DomainOutboxEvent.SyncAlbumDetails): Either<DomainError, Unit> =
+        syncAlbumDetails(event.albumId).map { Unit }
 
-    override fun handle(event: DomainOutboxEvent.ResyncCatalog): OutboxTaskResult =
-        handleOutboxTask("ResyncCatalog") { resyncCatalog() }
+    override fun handle(event: DomainOutboxEvent.ResyncCatalog): Either<DomainError, Unit> =
+        resyncCatalog()
 
-    private fun handleOutboxTask(taskDescription: String, operation: () -> Either<DomainError, *>): OutboxTaskResult = try {
-        when (val result = operation()) {
-            is Either.Right -> OutboxTaskResult.Success
-            is Either.Left -> when (val error = result.value) {
-                is SpotifyRateLimitError -> {
-                    logger.warn { "Rate limited on $taskDescription, retry after ${error.retryAfter.seconds}s" }
-                    OutboxTaskResult.RateLimited(error.retryAfter)
-                }
-                else -> {
-                    logger.error { "Failed $taskDescription: ${error.code}" }
-                    OutboxTaskResult.Failed("Failed $taskDescription: ${error.code}")
-                }
-            }
-        }
-    } catch (e: Exception) {
-        logger.error(e) { "Unexpected error in $taskDescription" }
-        OutboxTaskResult.Failed("Unexpected error in $taskDescription: ${e.message}", e)
-    }
-
-    companion object : KLogging() {
-        private val CATALOG_OUTBOX_EVENT_KEYS = listOf(
-            DomainOutboxEvent.SyncArtistDetails.KEY,
-            DomainOutboxEvent.SyncArtistDetails.LEGACY_KEY,
-            DomainOutboxEvent.SyncAlbumDetails.KEY,
-            DomainOutboxEvent.ResyncCatalog.KEY,
-        )
-    }
+    companion object : KLogging()
 }

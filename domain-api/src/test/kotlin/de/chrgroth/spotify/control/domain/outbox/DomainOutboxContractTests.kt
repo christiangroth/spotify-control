@@ -26,7 +26,7 @@ class DomainOutboxContractTests {
     @Test
     fun `every DomainOutboxEvent returns a non-blank deduplication key`() {
         allEvents.forEach { event ->
-            assertThat(event.deduplicationKey())
+            assertThat(event.deduplicationKey)
                 .describedAs("deduplicationKey for ${event::class.simpleName}")
                 .isNotBlank()
         }
@@ -44,7 +44,7 @@ class DomainOutboxContractTests {
             DomainOutboxEvent.RebuildPlaybackData(UserId(userId)),
             DomainOutboxEvent.AppendPlaybackData(UserId(userId)),
         ).forEach { event ->
-            assertThat(event.deduplicationKey())
+            assertThat(event.deduplicationKey)
                 .describedAs("deduplicationKey for ${event::class.simpleName} should contain userId")
                 .contains(userId)
         }
@@ -53,7 +53,7 @@ class DomainOutboxContractTests {
     @Test
     fun `payload round-trip restores original event`() {
         allEvents.forEach { event ->
-            val restored = DomainOutboxEvent.fromKey(event.key, event.toPayload())
+            val restored = DomainOutboxEvent.fromKey(event.key, event.serializePayload)
             assertThat(restored)
                 .describedAs("round-trip for ${event::class.simpleName}")
                 .isEqualTo(event)
@@ -73,20 +73,5 @@ class DomainOutboxContractTests {
                 .describedAs("One of the domain ports should have method 'handle(${eventClass.simpleName})'")
                 .isTrue()
         }
-    }
-
-    @Test
-    fun `ToSpotify partition has no throttle interval`() {
-        assertThat(DomainOutboxPartition.ToSpotify.pauseOnRateLimit).isTrue()
-    }
-
-    @Test
-    fun `ToSpotifyPlayback partition does not pause on rate limit`() {
-        assertThat(DomainOutboxPartition.ToSpotifyPlayback.pauseOnRateLimit).isFalse()
-    }
-
-    @Test
-    fun `Domain partition does not pause on rate limit`() {
-        assertThat(DomainOutboxPartition.Domain.pauseOnRateLimit).isFalse()
     }
 }

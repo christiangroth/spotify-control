@@ -2,9 +2,7 @@ package de.chrgroth.spotify.control.domain
 
 import arrow.core.Either
 import arrow.core.right
-import de.chrgroth.outbox.OutboxTaskResult
 import de.chrgroth.spotify.control.domain.error.DomainError
-import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.UserProfilePort
@@ -16,7 +14,7 @@ import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
 
 @ApplicationScoped
-@Suppress("Unused", "TooGenericExceptionCaught")
+@Suppress("Unused")
 class UserProfileAdapter(
     private val userRepository: UserRepositoryPort,
     private val spotifyAccessToken: SpotifyAccessTokenPort,
@@ -46,24 +44,8 @@ class UserProfileAdapter(
         }
     }
 
-    override fun handle(event: DomainOutboxEvent.UpdateUserProfile): OutboxTaskResult = try {
-        when (val result = update(event.userId)) {
-            is Either.Right -> OutboxTaskResult.Success
-            is Either.Left -> when (val error = result.value) {
-                is SpotifyRateLimitError -> {
-                    logger.warn { "Rate limited on UpdateUserProfile for user ${event.userId.value}, retry after ${error.retryAfter.seconds}s" }
-                    OutboxTaskResult.RateLimited(error.retryAfter)
-                }
-                else -> {
-                    logger.error { "Failed to update user profile for ${event.userId.value}: ${error.code}" }
-                    OutboxTaskResult.Failed("Failed to update user profile: ${error.code}")
-                }
-            }
-        }
-    } catch (e: Exception) {
-        logger.error(e) { "Unexpected error in handle(UpdateUserProfile) for user ${event.userId.value}" }
-        OutboxTaskResult.Failed("Unexpected error in update: ${e.message}", e)
-    }
+    override fun handle(event: DomainOutboxEvent.UpdateUserProfile): Either<DomainError, Unit> =
+        update(event.userId)
 
     companion object : KLogging()
 }

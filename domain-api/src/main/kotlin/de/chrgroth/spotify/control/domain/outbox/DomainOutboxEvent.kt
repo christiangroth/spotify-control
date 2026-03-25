@@ -1,20 +1,20 @@
 package de.chrgroth.spotify.control.domain.outbox
 
+import de.chrgroth.quarkus.outbox.domain.ApplicationOutboxEvent
+import de.chrgroth.quarkus.outbox.domain.OutboxEventPriority
 import de.chrgroth.spotify.control.domain.model.UserId
-import de.chrgroth.outbox.OutboxEvent
-import de.chrgroth.outbox.OutboxTaskPriority
 
-sealed interface DomainOutboxEvent : OutboxEvent {
-    val partition: DomainOutboxPartition
-    val priority: OutboxTaskPriority get() = OutboxTaskPriority.NORMAL
-    fun toPayload(): String
+sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
+    override val partition: DomainOutboxPartition
+    override val priority: OutboxEventPriority get() = OutboxEventPriority.MEDIUM
+    override val serializePayload: String
 
     data class FetchCurrentlyPlaying(val userId: UserId) : DomainOutboxEvent {
         override val key = KEY
-        override fun deduplicationKey() = "$KEY:${userId.value}"
+        override val deduplicationKey = "$KEY:${userId.value}"
         override val partition = DomainOutboxPartition.ToSpotifyPlayback
-        override val priority = OutboxTaskPriority.HIGH
-        override fun toPayload() = userId.value
+        override val priority = OutboxEventPriority.HIGH
+        override val serializePayload = userId.value
 
         companion object {
             const val KEY = "FetchCurrentlyPlaying"
@@ -23,10 +23,10 @@ sealed interface DomainOutboxEvent : OutboxEvent {
 
     data class FetchRecentlyPlayed(val userId: UserId) : DomainOutboxEvent {
         override val key = KEY
-        override fun deduplicationKey() = "$KEY:${userId.value}"
+        override val deduplicationKey = "$KEY:${userId.value}"
         override val partition = DomainOutboxPartition.ToSpotifyPlayback
-        override val priority = OutboxTaskPriority.HIGH
-        override fun toPayload() = userId.value
+        override val priority = OutboxEventPriority.HIGH
+        override val serializePayload = userId.value
 
         companion object {
             const val KEY = "FetchRecentlyPlayed"
@@ -35,9 +35,9 @@ sealed interface DomainOutboxEvent : OutboxEvent {
 
     data class UpdateUserProfile(val userId: UserId) : DomainOutboxEvent {
         override val key = KEY
-        override fun deduplicationKey() = "$KEY:${userId.value}"
+        override val deduplicationKey = "$KEY:${userId.value}"
         override val partition = DomainOutboxPartition.ToSpotify
-        override fun toPayload() = userId.value
+        override val serializePayload = userId.value
 
         companion object {
             const val KEY = "UpdateUserProfile"
@@ -46,9 +46,9 @@ sealed interface DomainOutboxEvent : OutboxEvent {
 
     data class SyncPlaylistInfo(val userId: UserId) : DomainOutboxEvent {
         override val key = KEY
-        override fun deduplicationKey() = "$KEY:${userId.value}"
+        override val deduplicationKey = "$KEY:${userId.value}"
         override val partition = DomainOutboxPartition.ToSpotify
-        override fun toPayload() = userId.value
+        override val serializePayload = userId.value
 
         companion object {
             const val KEY = "SyncPlaylistInfo"
@@ -68,9 +68,9 @@ sealed interface DomainOutboxEvent : OutboxEvent {
      */
     data class SyncPlaylistData(val userId: UserId, val playlistId: String, val nextUrl: String? = null, val snapshotId: String? = null) : DomainOutboxEvent {
         override val key = KEY
-        override fun deduplicationKey() = "$KEY:${userId.value}:$playlistId:${snapshotId ?: ""}:${nextUrl ?: ""}"
+        override val deduplicationKey = "$KEY:${userId.value}:$playlistId:${snapshotId ?: ""}:${nextUrl ?: ""}"
         override val partition = DomainOutboxPartition.ToSpotify
-        override fun toPayload() = when {
+        override val serializePayload = when {
             nextUrl == null -> "${userId.value}:$playlistId"
             snapshotId != null -> "${userId.value}:$playlistId\n$snapshotId\n$nextUrl"
             else -> "${userId.value}:$playlistId\n$nextUrl"
@@ -106,9 +106,9 @@ sealed interface DomainOutboxEvent : OutboxEvent {
 
     data class RebuildPlaybackData(val userId: UserId) : DomainOutboxEvent {
         override val key = KEY
-        override fun deduplicationKey() = "$KEY:${userId.value}"
+        override val deduplicationKey = "$KEY:${userId.value}"
         override val partition = DomainOutboxPartition.Domain
-        override fun toPayload() = userId.value
+        override val serializePayload = userId.value
 
         companion object {
             const val KEY = "RebuildPlaybackData"
@@ -117,9 +117,9 @@ sealed interface DomainOutboxEvent : OutboxEvent {
 
     data class AppendPlaybackData(val userId: UserId) : DomainOutboxEvent {
         override val key = KEY
-        override fun deduplicationKey() = "$KEY:${userId.value}"
+        override val deduplicationKey = "$KEY:${userId.value}"
         override val partition = DomainOutboxPartition.Domain
-        override fun toPayload() = userId.value
+        override val serializePayload = userId.value
 
         companion object {
             const val KEY = "AppendPlaybackData"
@@ -133,9 +133,9 @@ sealed interface DomainOutboxEvent : OutboxEvent {
      */
     data class SyncArtistDetails(val artistId: String, val userId: UserId) : DomainOutboxEvent {
         override val key = KEY
-        override fun deduplicationKey() = "$KEY:$artistId"
+        override val deduplicationKey = "$KEY:$artistId"
         override val partition = DomainOutboxPartition.ToSpotify
-        override fun toPayload() = "$artistId:${userId.value}"
+        override val serializePayload = "$artistId:${userId.value}"
 
         companion object {
             const val KEY = "SyncArtistDetails"
@@ -158,9 +158,9 @@ sealed interface DomainOutboxEvent : OutboxEvent {
      */
     data class SyncAlbumDetails(val albumId: String) : DomainOutboxEvent {
         override val key = KEY
-        override fun deduplicationKey() = "$KEY:$albumId"
+        override val deduplicationKey = "$KEY:$albumId"
         override val partition = DomainOutboxPartition.ToSpotify
-        override fun toPayload() = albumId
+        override val serializePayload = albumId
 
         companion object {
             const val KEY = "SyncAlbumDetails"
@@ -175,9 +175,9 @@ sealed interface DomainOutboxEvent : OutboxEvent {
      */
     data class ResyncCatalog(val placeholder: String = "") : DomainOutboxEvent {
         override val key = KEY
-        override fun deduplicationKey() = KEY
+        override val deduplicationKey = KEY
         override val partition = DomainOutboxPartition.Domain
-        override fun toPayload() = ""
+        override val serializePayload = ""
 
         companion object {
             const val KEY = "ResyncCatalog"
@@ -190,9 +190,9 @@ sealed interface DomainOutboxEvent : OutboxEvent {
      */
     data class RunPlaylistChecks(val userId: UserId, val playlistId: String) : DomainOutboxEvent {
         override val key = KEY
-        override fun deduplicationKey() = "$KEY:${userId.value}:$playlistId"
+        override val deduplicationKey = "$KEY:${userId.value}:$playlistId"
         override val partition = DomainOutboxPartition.Domain
-        override fun toPayload() = "${userId.value}:$playlistId"
+        override val serializePayload = "${userId.value}:$playlistId"
 
         companion object {
             const val KEY = "RunPlaylistChecks"

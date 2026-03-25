@@ -1,6 +1,5 @@
 package de.chrgroth.spotify.control.domain
 
-import de.chrgroth.outbox.OutboxTaskResult
 import de.chrgroth.spotify.control.domain.check.PlaylistCheckRunner
 import de.chrgroth.spotify.control.domain.model.AppPlaylistCheck
 import de.chrgroth.spotify.control.domain.model.Playlist
@@ -94,7 +93,7 @@ class PlaylistCheckAdapterTests {
 
         val result = adapter.handle(event)
 
-        assertThat(result).isEqualTo(OutboxTaskResult.Success)
+        assertThat(result.isRight()).isTrue()
         verify(exactly = 0) { playlistCheckRepository.findByCheckId(any()) }
         verify(exactly = 0) { notification.notifyCheckPassed(any()) }
         verify(exactly = 0) { notification.notifyViolationsChanged(any()) }
@@ -113,7 +112,7 @@ class PlaylistCheckAdapterTests {
 
         val result = adapter.handle(event)
 
-        assertThat(result).isEqualTo(OutboxTaskResult.Success)
+        assertThat(result.isRight()).isTrue()
         verify(exactly = 1) { playlistCheckRepository.save(any()) }
         verify(exactly = 0) { notification.notifyCheckPassed(any()) }
         verify(exactly = 0) { notification.notifyViolationsChanged(any()) }
@@ -134,7 +133,7 @@ class PlaylistCheckAdapterTests {
 
         val result = adapter.handle(event)
 
-        assertThat(result).isEqualTo(OutboxTaskResult.Success)
+        assertThat(result.isRight()).isTrue()
         verify(exactly = 1) { notification.notifyCheckPassed(any()) }
         verify(exactly = 0) { notification.notifyViolationsChanged(any()) }
     }
@@ -154,7 +153,7 @@ class PlaylistCheckAdapterTests {
 
         val result = adapter.handle(event)
 
-        assertThat(result).isEqualTo(OutboxTaskResult.Success)
+        assertThat(result.isRight()).isTrue()
         verify(exactly = 0) { notification.notifyCheckPassed(any()) }
         verify(exactly = 1) { notification.notifyViolationsChanged(any()) }
     }
@@ -174,7 +173,7 @@ class PlaylistCheckAdapterTests {
 
         val result = adapter.handle(event)
 
-        assertThat(result).isEqualTo(OutboxTaskResult.Success)
+        assertThat(result.isRight()).isTrue()
         verify(exactly = 0) { notification.notifyCheckPassed(any()) }
         verify(exactly = 0) { notification.notifyViolationsChanged(any()) }
     }
@@ -193,18 +192,18 @@ class PlaylistCheckAdapterTests {
 
         val result = adapter.handle(event)
 
-        assertThat(result).isEqualTo(OutboxTaskResult.Success)
+        assertThat(result.isRight()).isTrue()
         verify(exactly = 0) { notification.notifyCheckPassed(any()) }
         verify(exactly = 0) { notification.notifyViolationsChanged(any()) }
     }
 
     @Test
-    fun `handle returns failed result on unexpected exception`() {
+    fun `handle propagates unexpected exception`() {
         every { playlistRepository.findByUserIdAndPlaylistId(userId, playlistId) } throws RuntimeException("DB error")
 
-        val result = adapter.handle(event)
-
-        assertThat(result).isInstanceOf(OutboxTaskResult.Failed::class.java)
+        org.assertj.core.api.Assertions.assertThatThrownBy { adapter.handle(event) }
+            .isInstanceOf(RuntimeException::class.java)
+            .hasMessage("DB error")
     }
 
     @Test
@@ -218,7 +217,7 @@ class PlaylistCheckAdapterTests {
 
         val result = adapter.handle(event)
 
-        assertThat(result).isEqualTo(OutboxTaskResult.Success)
+        assertThat(result.isRight()).isTrue()
         verify(exactly = 0) { playlistCheckRepository.save(any()) }
     }
 
