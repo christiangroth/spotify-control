@@ -1,5 +1,6 @@
 package de.chrgroth.spotify.control.domain.model
 
+import de.chrgroth.spotify.control.domain.util.formatted
 import java.time.Instant
 
 data class OutboxPartitionStats(

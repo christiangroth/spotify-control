@@ -1,5 +1,7 @@
 package de.chrgroth.spotify.control.domain.model
 
+import de.chrgroth.spotify.control.domain.util.formatted
+
 data class DashboardStats(
     val syncedPlaylists: Long,
     val totalPlaylists: Long,
