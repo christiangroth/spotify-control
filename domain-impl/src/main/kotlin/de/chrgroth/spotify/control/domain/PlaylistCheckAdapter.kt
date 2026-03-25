@@ -86,12 +86,9 @@ class PlaylistCheckAdapter(
             emptyMap()
         }
         val violations = duplicateTrackIds.map { trackId ->
-            val appTrack = appTrackById[trackId]
-            val artistName = appTrack?.artistName
-                ?: tracks.find { it.trackId == trackId }?.artistIds?.firstOrNull()
-                ?: "Unknown Artist"
-            val trackTitle = appTrack?.title ?: trackId
-            "$artistName – $trackTitle"
+            val appTrack = requireNotNull(appTrackById[trackId]) { "Track $trackId not found in catalog" }
+            val artistName = appTrack.artistName ?: "Unknown Artist"
+            "$artistName – ${appTrack.title}"
         }
         return AppPlaylistCheck(
             checkId = "$playlistId:$CHECK_DUPLICATE_TRACKS",

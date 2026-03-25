@@ -199,23 +199,18 @@ class PlaylistCheckAdapterTests {
     }
 
     @Test
-    fun `handle uses artist id as fallback when track not found in catalog`() {
+    fun `handle throws when duplicate track not found in catalog`() {
         val playlist = buildPlaylist(
             listOf(
-                buildTrack("t1", artistId = "artist-fallback"),
-                buildTrack("t1", artistId = "artist-fallback"),
+                buildTrack("t1"),
+                buildTrack("t1"),
             ),
         )
         every { playlistRepository.findByUserIdAndPlaylistId(userId, playlistId) } returns playlist
         every { appTrackRepository.findByTrackIds(setOf(TrackId("t1"))) } returns emptyList()
-        every { playlistCheckRepository.findByCheckId(checkId) } returns null
-        every { playlistCheckRepository.save(any()) } just runs
-        every { dashboardRefresh.notifyUserPlaylistChecks(userId) } just runs
 
-        adapter.handle(event)
-
-        val savedSlot = io.mockk.slot<AppPlaylistCheck>()
-        verify { playlistCheckRepository.save(capture(savedSlot)) }
-        assertThat(savedSlot.captured.violations).containsExactly("artist-fallback – t1")
+        org.assertj.core.api.Assertions.assertThatThrownBy { adapter.handle(event) }
+            .isInstanceOf(IllegalArgumentException::class.java)
+            .hasMessageContaining("t1")
     }
 }
