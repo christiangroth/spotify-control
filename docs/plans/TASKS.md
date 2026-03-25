@@ -4,8 +4,3 @@
 - Code and architecture review
 - Update coding guidelines
 - Dependency updates and other maintenance tasks
-
-# Future
-
-- continue with phase three
-- add adapter-out-slack
