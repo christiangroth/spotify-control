@@ -7,8 +7,7 @@ Stand: 2026.03.03
 *Ziel: Erste Insights aus den gesammelten Daten.*
 
 - Aggregations-Pipeline: Raw → Enriched → `aggregations_monthly`
-- Contract-Tests für Charts-Vertrag
-- MongoDB Charts: erste Dashboards (Top Artists, Plays pro Monat, Heatmap)
+- Charts: erste Dashboards (Top Artists, Plays pro Monat, Heatmap)
 - Charts-Embedding im Frontend
 - Dashboard: Stats-Widget für letzte 30 Tage
 
@@ -30,13 +29,3 @@ Stand: 2026.03.03
 - Slack: Incoming Webhook für Benachrichtigungen
 
 **Nach Phase 6 hält die App deine Playlists automatisch sauber.**
-
-## Phase 8: Slack Bot (optional)
-
-*Ziel: Playlist-Selection aus Slack.*
-
-- Echte Slack App mit Block Kit
-- `adapter-in-slack` mit Signatur-Validierung
-- Playlist-Selection via Slack Checkboxen
-
-**Nice-to-have. Nur angehen wenn Phase 1–7 stabil laufen.**
