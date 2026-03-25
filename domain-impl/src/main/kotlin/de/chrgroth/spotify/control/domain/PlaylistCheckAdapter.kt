@@ -4,9 +4,11 @@ import arrow.core.Either
 import arrow.core.right
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.model.AppPlaylistCheck
+import de.chrgroth.spotify.control.domain.model.TrackId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.PlaylistCheckPort
 import de.chrgroth.spotify.control.domain.port.out.AppPlaylistCheckRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.PlaylistCheckNotificationPort
 import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
@@ -24,6 +26,7 @@ class PlaylistCheckAdapter(
     private val playlistCheckRepository: AppPlaylistCheckRepositoryPort,
     private val dashboardRefresh: DashboardRefreshPort,
     private val notification: PlaylistCheckNotificationPort,
+    private val appTrackRepository: AppTrackRepositoryPort,
     private val meterRegistry: MeterRegistry,
 ) : PlaylistCheckPort {
 
@@ -73,13 +76,20 @@ class PlaylistCheckAdapter(
         tracks: List<de.chrgroth.spotify.control.domain.model.PlaylistTrack>,
     ): AppPlaylistCheck {
         val countByTrackId = tracks.groupingBy { it.trackId }.eachCount()
-        val violations = tracks
+        val duplicateTrackIds = tracks
             .distinctBy { it.trackId }
             .filter { (countByTrackId[it.trackId] ?: 0) > 1 }
-            .map { track ->
-                val artistName = track.artistNames.firstOrNull() ?: track.artistIds.firstOrNull() ?: "Unknown Artist"
-                "$artistName – ${track.trackName}"
-            }
+            .map { it.trackId }
+        val appTrackById = if (duplicateTrackIds.isNotEmpty()) {
+            appTrackRepository.findByTrackIds(duplicateTrackIds.map { TrackId(it) }.toSet()).associateBy { it.id.value }
+        } else {
+            emptyMap()
+        }
+        val violations = duplicateTrackIds.map { trackId ->
+            val appTrack = requireNotNull(appTrackById[trackId]) { "Track $trackId not found in catalog" }
+            val artistName = appTrack.artistName ?: "Unknown Artist"
+            "$artistName – ${appTrack.title}"
+        }
         return AppPlaylistCheck(
             checkId = "$playlistId:$CHECK_DUPLICATE_TRACKS",
             playlistId = playlistId,
