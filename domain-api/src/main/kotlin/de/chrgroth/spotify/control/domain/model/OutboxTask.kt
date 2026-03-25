@@ -1,8 +1,9 @@
 package de.chrgroth.spotify.control.domain.model
 
-import java.time.Instant
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import kotlin.time.Instant
+import kotlin.time.toJavaInstant
 
 data class OutboxTask(
     val eventType: String,
@@ -15,8 +16,8 @@ data class OutboxTask(
     val lastError: String?,
 ) {
     val priorityOrder: Int get() = if (priority == "HIGH") 0 else 1
-    val nextRetryAtFormatted: String get() = nextRetryAt?.let { FORMATTER.format(it) } ?: "-"
-    val createdAtFormatted: String get() = FORMATTER.format(createdAt)
+    val nextRetryAtFormatted: String get() = nextRetryAt?.let { FORMATTER.format(it.toJavaInstant()) } ?: "-"
+    val createdAtFormatted: String get() = FORMATTER.format(createdAt.toJavaInstant())
     val isHighPriority: Boolean get() = priority == "HIGH"
 
     companion object {

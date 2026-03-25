@@ -1,7 +1,7 @@
 package de.chrgroth.spotify.control.domain.model
 
 import de.chrgroth.spotify.control.domain.util.formatted
-import java.time.Instant
+import kotlin.time.Instant
 
 data class OutboxPartitionStats(
     val name: String,

@@ -1,5 +1,6 @@
 package de.chrgroth.spotify.control.adapter.out.scheduler
 
+import kotlin.time.toKotlinInstant
 import de.chrgroth.spotify.control.domain.model.CronjobStats
 import de.chrgroth.spotify.control.domain.port.out.CronjobInfoPort
 import io.quarkus.scheduler.Scheduled
@@ -29,7 +30,7 @@ class SchedulerInfoAdapter(
                     CronjobStats(
                         simpleName = clazz.simpleName,
                         cronSchedule = scheduled.cron.ifEmpty { "every ${scheduled.every}" },
-                        nextExecution = trigger.nextFireTime,
+                        nextExecution = trigger.nextFireTime?.toKotlinInstant(),
                         running = scheduler.isRunning && !scheduler.isPaused(trigger.id),
                     )
                 } catch (e: ReflectiveOperationException) {

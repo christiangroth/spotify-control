@@ -1,5 +1,6 @@
 package de.chrgroth.spotify.control.adapter.out.scheduler
 
+import kotlin.time.toKotlinInstant
 import de.chrgroth.spotify.control.domain.model.PlaybackDetectedEvent
 import de.chrgroth.spotify.control.domain.port.out.PlaybackActivityPort
 import jakarta.enterprise.context.ApplicationScoped
@@ -21,9 +22,9 @@ class PlaybackActivityAdapter : PlaybackActivityPort {
     override fun isPlaybackActive(): Boolean =
         Duration.between(lastPlaybackDetectedAtRef.get(), Instant.now()) < PLAYBACK_ACTIVE_THRESHOLD
 
-    override fun lastActivityTimestamp(): Instant? {
+    override fun lastActivityTimestamp(): kotlin.time.Instant? {
         val ts = lastPlaybackDetectedAtRef.get()
-        return if (ts == Instant.EPOCH) null else ts
+        return if (ts == Instant.EPOCH) null else ts.toKotlinInstant()
     }
 
     companion object {
