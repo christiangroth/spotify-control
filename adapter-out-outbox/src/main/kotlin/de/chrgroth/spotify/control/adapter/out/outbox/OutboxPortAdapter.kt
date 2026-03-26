@@ -4,9 +4,9 @@ import com.mongodb.client.MongoClient
 import com.mongodb.client.model.Filters
 import de.chrgroth.quarkus.outbox.domain.ApplicationOutboxClient
 import de.chrgroth.quarkus.outbox.domain.OutboxPartitionStatus
-import de.chrgroth.spotify.control.domain.model.OutboxEventTypeCount
-import de.chrgroth.spotify.control.domain.model.OutboxPartitionStats
-import de.chrgroth.spotify.control.domain.model.OutboxTask
+import de.chrgroth.spotify.control.domain.model.infra.OutboxEventTypeCount
+import de.chrgroth.spotify.control.domain.model.infra.OutboxPartitionStats
+import de.chrgroth.spotify.control.domain.model.infra.OutboxTask
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort

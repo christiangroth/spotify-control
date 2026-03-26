@@ -1,6 +1,6 @@
 package de.chrgroth.spotify.control.domain.port.out.infra
 
-import de.chrgroth.spotify.control.domain.model.MongoViewerFilter
+import de.chrgroth.spotify.control.domain.model.viewer.MongoViewerFilter
 
 interface MongoViewerRepositoryPort {
     fun listCollections(): List<String>

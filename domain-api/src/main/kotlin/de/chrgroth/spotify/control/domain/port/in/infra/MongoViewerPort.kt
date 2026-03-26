@@ -1,7 +1,7 @@
 package de.chrgroth.spotify.control.domain.port.`in`.infra
 
-import de.chrgroth.spotify.control.domain.model.MongoViewerFilter
-import de.chrgroth.spotify.control.domain.model.MongoViewerResult
+import de.chrgroth.spotify.control.domain.model.viewer.MongoViewerFilter
+import de.chrgroth.spotify.control.domain.model.viewer.MongoViewerResult
 
 interface MongoViewerPort {
     fun getViewer(

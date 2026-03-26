@@ -1,4 +1,4 @@
-package de.chrgroth.spotify.control.domain.model
+package de.chrgroth.spotify.control.domain.model.viewer
 
 data class MongoViewerFilter(
     val field: String,

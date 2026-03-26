@@ -1,4 +1,4 @@
-package de.chrgroth.spotify.control.domain.model
+package de.chrgroth.spotify.control.domain.model.infra
 
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter

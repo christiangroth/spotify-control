@@ -8,25 +8,6 @@ Subdomain-Trennung und konsistentem Naming über alle Module hinweg.
 
 ## domain-api
 
-### Infrastruktur-Modelle aus dem Domain-Model-Paket herausnehmen
-
-Folgende Klassen haben wenig mit dem eigentlichen Domänen-Modell zu tun und sind eher Präsentations-DTOs oder
-Infrastruktur-Stats. Sie liegen aktuell im `model/`-Paket und erhöhen dessen Größe unnötig.
-Langfristig sollte geprüft werden, ob diese im domain-api wirklich nötig sind oder ob die Ports
-primitive Rückgabetypen nutzen und die Aggregation in den Adaptern stattfindet.
-
-- [ ] `MongoViewerResult`, `MongoViewerField`, `MongoViewerFieldType`, `MongoViewerFilter`,
-  `MongoViewerFilterOperator` – primär Präsentations-Typen für die MongoDB-Viewer-UI; prüfen ob
-  diese in einen eigenständigen Bereich wie `model/viewer/` gehören
-- [ ] `OutboxTask`, `OutboxPartitionStats`, `OutboxEventTypeCount` – Outbox-Infrastruktur-Stats;
-  prüfen ob diese nicht direkt im Outbox-Adapter-Modul leben sollten
-- [ ] `HealthStats`, `MongoCollectionStats`, `MongoQueryStats`, `CronjobStats`, `ConfigEntry`,
-  `ConfigurationStats`, `OutgoingRequestStats`, `SpotifyRequestStats`, `PredicateStats` – reine
-  System-Health-/Monitoring-DTOs; prüfen ob sie in `model/infra/` zusammengefasst werden sollen
-- [ ] `PlaybackDetectedEvent` – eine leere Marker-Klasse, die als CDI-Event-Typ dient; CDI-Events
-  gehören zu Adapter-Concerns, nicht zu Domain-Modellen; prüfen ob diese aus dem domain-api entfernt
-  werden kann
-
 ### Präsentations-Logik aus Domain-Modellen heraushalten
 
 Domain-Klassen sollen pure Kotlin `data class`/`sealed class`/`enum` sein – ohne Formatierungshilfsmethoden,

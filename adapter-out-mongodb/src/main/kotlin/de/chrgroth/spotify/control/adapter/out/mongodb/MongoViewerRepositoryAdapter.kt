@@ -4,8 +4,8 @@ import com.mongodb.MongoException
 import com.mongodb.client.MongoClient
 import com.mongodb.client.model.Filters
 import com.mongodb.client.model.Sorts
-import de.chrgroth.spotify.control.domain.model.MongoViewerFilter
-import de.chrgroth.spotify.control.domain.model.MongoViewerFilterOperator
+import de.chrgroth.spotify.control.domain.model.viewer.MongoViewerFilter
+import de.chrgroth.spotify.control.domain.model.viewer.MongoViewerFilterOperator
 import de.chrgroth.spotify.control.domain.port.out.infra.MongoViewerRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging

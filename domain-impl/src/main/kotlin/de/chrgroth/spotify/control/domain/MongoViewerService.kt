@@ -1,10 +1,10 @@
 package de.chrgroth.spotify.control.domain
 
-import de.chrgroth.spotify.control.domain.model.MongoViewerField
-import de.chrgroth.spotify.control.domain.model.MongoViewerFieldType
-import de.chrgroth.spotify.control.domain.model.MongoViewerFilter
-import de.chrgroth.spotify.control.domain.model.MongoViewerFilterOperator
-import de.chrgroth.spotify.control.domain.model.MongoViewerResult
+import de.chrgroth.spotify.control.domain.model.viewer.MongoViewerField
+import de.chrgroth.spotify.control.domain.model.viewer.MongoViewerFieldType
+import de.chrgroth.spotify.control.domain.model.viewer.MongoViewerFilter
+import de.chrgroth.spotify.control.domain.model.viewer.MongoViewerFilterOperator
+import de.chrgroth.spotify.control.domain.model.viewer.MongoViewerResult
 import de.chrgroth.spotify.control.domain.port.`in`.infra.MongoViewerPort
 import de.chrgroth.spotify.control.domain.port.out.infra.MongoViewerRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped

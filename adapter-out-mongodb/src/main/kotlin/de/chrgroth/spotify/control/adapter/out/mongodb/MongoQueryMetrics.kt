@@ -1,6 +1,6 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
-import de.chrgroth.spotify.control.domain.model.MongoQueryStats
+import de.chrgroth.spotify.control.domain.model.infra.MongoQueryStats
 import io.micrometer.core.instrument.Counter
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Timer

@@ -1,7 +1,7 @@
 package de.chrgroth.spotify.control.domain
 
-import de.chrgroth.spotify.control.domain.model.HealthStats
-import de.chrgroth.spotify.control.domain.model.PredicateStats
+import de.chrgroth.spotify.control.domain.model.infra.HealthStats
+import de.chrgroth.spotify.control.domain.model.infra.PredicateStats
 import de.chrgroth.spotify.control.domain.port.`in`.infra.HealthPort
 import de.chrgroth.spotify.control.domain.port.out.infra.ConfigurationInfoPort
 import de.chrgroth.spotify.control.domain.port.out.infra.CronjobInfoPort
