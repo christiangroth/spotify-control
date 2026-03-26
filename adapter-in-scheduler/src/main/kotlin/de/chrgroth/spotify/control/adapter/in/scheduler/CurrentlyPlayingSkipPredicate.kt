@@ -5,9 +5,12 @@ import de.chrgroth.spotify.control.domain.port.out.playback.PlaybackActivityPort
 import io.quarkus.scheduler.Scheduled
 import io.quarkus.scheduler.ScheduledExecution
 import jakarta.enterprise.context.ApplicationScoped
-import java.time.Duration
-import java.time.Instant
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.time.Clock
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 
 @ApplicationScoped
 class CurrentlyPlayingSkipPredicate(
@@ -15,19 +18,19 @@ class CurrentlyPlayingSkipPredicate(
     private val playbackActivity: PlaybackActivityPort,
 ) : Scheduled.SkipPredicate {
 
-    private val lastExecutedAtRef = AtomicReference<Instant>(Instant.EPOCH)
+    private val lastExecutedAtRef = AtomicReference<Instant>(Instant.fromEpochMilliseconds(0))
 
     override fun test(execution: ScheduledExecution): Boolean {
         if (starterSkipPredicate.test(execution)) return true
         val effectiveInterval = if (playbackActivity.isPlaybackActive()) FAST_INTERVAL else SLOW_INTERVAL
-        val now = Instant.now()
+        val now = Clock.System.now()
         val lastExecutedAt = lastExecutedAtRef.get()
-        if (now.isBefore(lastExecutedAt.plus(effectiveInterval))) return true
+        if (now < lastExecutedAt + effectiveInterval) return true
         return !lastExecutedAtRef.compareAndSet(lastExecutedAt, now)
     }
 
     companion object {
-        private val FAST_INTERVAL: Duration = Duration.ofSeconds(20)
-        private val SLOW_INTERVAL: Duration = Duration.ofMinutes(5)
+        private val FAST_INTERVAL: Duration = 20.seconds
+        private val SLOW_INTERVAL: Duration = 5.minutes
     }
 }

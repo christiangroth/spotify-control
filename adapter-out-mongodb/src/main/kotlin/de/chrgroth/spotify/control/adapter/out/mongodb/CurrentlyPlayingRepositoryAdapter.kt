@@ -18,13 +18,13 @@ import mu.KLogging
 class CurrentlyPlayingRepositoryAdapter : CurrentlyPlayingRepositoryPort {
 
     @Inject
-    lateinit var currentlyPlayingDocumentRepository: SpotifyCurrentlyPlayingDocumentRepository
+    lateinit var currentlyPlayingDocumentRepository: CurrentlyPlayingDocumentRepository
 
     @Inject
     lateinit var mongoQueryMetrics: MongoQueryMetrics
 
     override fun save(item: CurrentlyPlayingItem) {
-        val document = SpotifyCurrentlyPlayingDocument().apply {
+        val document = CurrentlyPlayingDocument().apply {
             spotifyUserId = item.spotifyUserId.value
             trackId = item.trackId.value
             trackName = item.trackName

@@ -6,7 +6,7 @@ import org.bson.types.ObjectId
 import java.time.Instant
 
 @MongoEntity(collection = "spotify_currently_playing")
-class SpotifyCurrentlyPlayingDocument {
+class CurrentlyPlayingDocument {
 
   @BsonId
   var id: ObjectId = ObjectId()

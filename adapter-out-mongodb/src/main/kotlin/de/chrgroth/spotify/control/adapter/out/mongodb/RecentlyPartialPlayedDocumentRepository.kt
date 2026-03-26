@@ -5,4 +5,4 @@ import jakarta.enterprise.context.ApplicationScoped
 import org.bson.types.ObjectId
 
 @ApplicationScoped
-class SpotifyCurrentlyPlayingDocumentRepository : PanacheMongoRepositoryBase<SpotifyCurrentlyPlayingDocument, ObjectId>
+class RecentlyPartialPlayedDocumentRepository : PanacheMongoRepositoryBase<RecentlyPartialPlayedDocument, ObjectId>

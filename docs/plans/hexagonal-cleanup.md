@@ -20,39 +20,18 @@ Subdomain-Trennung und konsistentem Naming über alle Module hinweg.
 
 ## adapter-in-starter
 
-### Migrations-Starter aufräumen
+### Gut strukturiert – keine strukturellen Verletzungen
 
-Die meisten Starters sind einmalige Datenmigrations-Skripte, die nach erfolgreicher Ausführung
-dauerhaft im Codebase verbleiben und Startzeit kosten.
-
-- [ ] Audit aller Starter: welche sind einmalige Migrationen, die nie wieder ausgeführt werden?
-- [ ] Einmalige Migrationen (z. B. `MigrateEntityFieldsStarter`, `RenameCollectionsStarter`,
-  `DropCollectionsStarter`, `RemoveGenreFieldsStarter`, `DeleteCatalogDataStarter`,
-  `DeletePendingAlbumEnrichmentStarter`, `DeletePendingPerItemSyncTasksStarter`,
-  `DeletePendingSyncMissingTasksStarter`, `MigrateLastEnrichmentDateFieldStarter`,
-  `ReEnrichArtistNameBugfixStarter`, `RemoveNonOwnedPlaylistMetadataBugfixStarter`) nach
-  Verifikation entfernen
-- [ ] Starters, die dauerhaft relevant sind (z. B. `WipePlaylistDocumentsStarter`,
-  `WipePlaylistChecksStarter`), behalten – aber prüfen, ob sie statt Starter besser als explizite
-  Admin-Aktion über einen UI-Button ausgelöst werden sollten
+Alle einmaligen Migrations-Starter wurden entfernt. Dauerhaft relevante Starters
+(`WipePlaylistDocumentsStarter`, `WipePlaylistChecksStarter`) sind erhalten geblieben.
 
 ---
 
 ## adapter-out-mongodb
 
-### Naming der Spotify-Roh-Dokumente
+### Gut strukturiert – keine strukturellen Verletzungen
 
-Die Klassen `SpotifyCurrentlyPlayingDocument`, `SpotifyRecentlyPlayedDocument` und
-`SpotifyRecentlyPartialPlayedDocument` tragen das „Spotify"-Präfix, obwohl sie unsere eigene
-MongoDB-Repräsentation sind. Das Präfix suggeriert fälschlicherweise, es handele sich um Spotify
-API-Typen.
-
-- [ ] `SpotifyCurrentlyPlayingDocument` → `CurrentlyPlayingDocument`
-- [ ] `SpotifyCurrentlyPlayingDocumentRepository` → `CurrentlyPlayingDocumentRepository`
-- [ ] `SpotifyRecentlyPlayedDocument` → `RecentlyPlayedDocument`
-- [ ] `SpotifyRecentlyPlayedDocumentRepository` → `RecentlyPlayedDocumentRepository`
-- [ ] `SpotifyRecentlyPartialPlayedDocument` → `RecentlyPartialPlayedDocument`
-- [ ] `SpotifyRecentlyPartialPlayedDocumentRepository` → `RecentlyPartialPlayedDocumentRepository`
+Spotify-Präfix aus MongoDB-Dokumentnamen entfernt. Keine offenen Findings.
 
 ---
 
@@ -75,14 +54,9 @@ Keine offenen Findings.
 
 ## adapter-in-scheduler
 
-### `java.time.Instant`/`Duration` statt Kotlin-Typen
+### Gut strukturiert – keine strukturellen Verletzungen
 
-`CurrentlyPlayingSkipPredicate` verwendet `java.time.Instant` und `java.time.Duration` intern. Standard
-im Projekt ist `kotlin.time`.
-
-- [ ] `CurrentlyPlayingSkipPredicate`: `Instant.EPOCH`, `Instant.now()`, `Duration.ofSeconds()`,
-  `Duration.ofMinutes()` sowie `isBefore()` auf kotlin.time-Äquivalente umstellen (`Clock.System.now()`,
-  `Duration.seconds()`, `Duration.minutes()`)
+`CurrentlyPlayingSkipPredicate` auf `kotlin.time` migriert. Keine offenen Findings.
 
 ---
 
