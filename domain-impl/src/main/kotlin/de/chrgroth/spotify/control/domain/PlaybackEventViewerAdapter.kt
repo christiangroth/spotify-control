@@ -1,10 +1,10 @@
 package de.chrgroth.spotify.control.domain
 
-import de.chrgroth.spotify.control.domain.model.PlaybackEventEntry
-import de.chrgroth.spotify.control.domain.model.PlaybackEventViewerResult
-import de.chrgroth.spotify.control.domain.model.UserId
-import de.chrgroth.spotify.control.domain.port.`in`.PlaybackEventViewerPort
-import de.chrgroth.spotify.control.domain.port.out.PlaybackEventViewerRepositoryPort
+import de.chrgroth.spotify.control.domain.model.playback.PlaybackEventEntry
+import de.chrgroth.spotify.control.domain.model.playback.PlaybackEventViewerResult
+import de.chrgroth.spotify.control.domain.model.user.UserId
+import de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackEventViewerPort
+import de.chrgroth.spotify.control.domain.port.out.playback.PlaybackEventViewerRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 import kotlin.time.Clock
 import kotlinx.datetime.DatePeriod

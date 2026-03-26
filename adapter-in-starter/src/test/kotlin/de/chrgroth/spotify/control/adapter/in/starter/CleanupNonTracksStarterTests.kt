@@ -1,6 +1,6 @@
 package de.chrgroth.spotify.control.adapter.`in`.starter
 
-import de.chrgroth.spotify.control.domain.port.out.RecentlyPlayedRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.playback.RecentlyPlayedRepositoryPort
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

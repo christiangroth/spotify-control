@@ -1,8 +1,8 @@
 package de.chrgroth.spotify.control.domain
 
-import de.chrgroth.spotify.control.domain.model.RuntimeConfig
-import de.chrgroth.spotify.control.domain.port.`in`.RuntimeConfigPort
-import de.chrgroth.spotify.control.domain.port.out.SpotifyThrottlingPort
+import de.chrgroth.spotify.control.domain.model.user.RuntimeConfig
+import de.chrgroth.spotify.control.domain.port.`in`.user.RuntimeConfigPort
+import de.chrgroth.spotify.control.domain.port.out.infra.SpotifyThrottlingPort
 import jakarta.enterprise.context.ApplicationScoped
 
 @ApplicationScoped

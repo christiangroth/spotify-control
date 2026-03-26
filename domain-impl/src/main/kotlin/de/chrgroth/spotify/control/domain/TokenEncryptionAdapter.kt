@@ -5,7 +5,7 @@ import arrow.core.left
 import arrow.core.right
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.TokenError
-import de.chrgroth.spotify.control.domain.port.out.TokenEncryptionPort
+import de.chrgroth.spotify.control.domain.port.out.user.TokenEncryptionPort
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
 import org.eclipse.microprofile.config.inject.ConfigProperty

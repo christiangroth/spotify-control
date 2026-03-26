@@ -2,8 +2,8 @@ package de.chrgroth.spotify.control.domain
 
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
 import de.chrgroth.spotify.control.domain.model.OutboxViewerPartition
-import de.chrgroth.spotify.control.domain.port.`in`.OutboxViewerPort
-import de.chrgroth.spotify.control.domain.port.out.OutboxPort
+import de.chrgroth.spotify.control.domain.port.`in`.infra.OutboxViewerPort
+import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
 import jakarta.enterprise.context.ApplicationScoped
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async

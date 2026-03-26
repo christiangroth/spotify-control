@@ -1,7 +1,7 @@
 package de.chrgroth.spotify.control.adapter.out.scheduler
 
 import de.chrgroth.spotify.control.domain.model.CronjobStats
-import de.chrgroth.spotify.control.domain.port.out.CronjobInfoPort
+import de.chrgroth.spotify.control.domain.port.out.infra.CronjobInfoPort
 import io.quarkus.scheduler.Scheduled
 import io.quarkus.scheduler.Scheduler
 import jakarta.enterprise.context.ApplicationScoped

@@ -1,7 +1,7 @@
 package de.chrgroth.spotify.control.adapter.out.spotify
 
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
-import de.chrgroth.spotify.control.domain.port.out.SpotifyThrottlingPort
+import de.chrgroth.spotify.control.domain.port.out.infra.SpotifyThrottlingPort
 import jakarta.enterprise.context.ApplicationScoped
 import org.eclipse.microprofile.config.inject.ConfigProperty
 import java.util.concurrent.ConcurrentHashMap

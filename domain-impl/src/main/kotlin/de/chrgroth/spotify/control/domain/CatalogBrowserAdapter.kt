@@ -1,15 +1,15 @@
 package de.chrgroth.spotify.control.domain
 
-import de.chrgroth.spotify.control.domain.model.AlbumBrowseItem
-import de.chrgroth.spotify.control.domain.model.AlbumId
-import de.chrgroth.spotify.control.domain.model.ArtistBrowseItem
-import de.chrgroth.spotify.control.domain.model.ArtistId
-import de.chrgroth.spotify.control.domain.model.CatalogStats
-import de.chrgroth.spotify.control.domain.model.TrackBrowseItem
-import de.chrgroth.spotify.control.domain.port.`in`.CatalogBrowserPort
-import de.chrgroth.spotify.control.domain.port.out.AppAlbumRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
+import de.chrgroth.spotify.control.domain.model.catalog.AlbumBrowseItem
+import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
+import de.chrgroth.spotify.control.domain.model.catalog.ArtistBrowseItem
+import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
+import de.chrgroth.spotify.control.domain.model.catalog.CatalogStats
+import de.chrgroth.spotify.control.domain.model.catalog.TrackBrowseItem
+import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogBrowserPort
+import de.chrgroth.spotify.control.domain.port.out.catalog.AppAlbumRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 
 @ApplicationScoped

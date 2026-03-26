@@ -1,8 +1,8 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
-import de.chrgroth.spotify.control.domain.model.AppPlaylistCheck
-import de.chrgroth.spotify.control.domain.model.PlaylistId
-import de.chrgroth.spotify.control.domain.port.out.AppPlaylistCheckRepositoryPort
+import de.chrgroth.spotify.control.domain.model.playlist.AppPlaylistCheck
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistId
+import de.chrgroth.spotify.control.domain.port.out.playlist.AppPlaylistCheckRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import kotlin.time.toJavaInstant

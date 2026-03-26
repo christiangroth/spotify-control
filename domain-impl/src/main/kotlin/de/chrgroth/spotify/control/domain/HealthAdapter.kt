@@ -2,13 +2,13 @@ package de.chrgroth.spotify.control.domain
 
 import de.chrgroth.spotify.control.domain.model.HealthStats
 import de.chrgroth.spotify.control.domain.model.PredicateStats
-import de.chrgroth.spotify.control.domain.port.`in`.HealthPort
-import de.chrgroth.spotify.control.domain.port.out.ConfigurationInfoPort
-import de.chrgroth.spotify.control.domain.port.out.CronjobInfoPort
-import de.chrgroth.spotify.control.domain.port.out.MongoStatsPort
-import de.chrgroth.spotify.control.domain.port.out.OutboxPort
-import de.chrgroth.spotify.control.domain.port.out.OutgoingRequestStatsPort
-import de.chrgroth.spotify.control.domain.port.out.PlaybackActivityPort
+import de.chrgroth.spotify.control.domain.port.`in`.infra.HealthPort
+import de.chrgroth.spotify.control.domain.port.out.infra.ConfigurationInfoPort
+import de.chrgroth.spotify.control.domain.port.out.infra.CronjobInfoPort
+import de.chrgroth.spotify.control.domain.port.out.infra.MongoStatsPort
+import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
+import de.chrgroth.spotify.control.domain.port.out.infra.OutgoingRequestStatsPort
+import de.chrgroth.spotify.control.domain.port.out.playback.PlaybackActivityPort
 import jakarta.enterprise.context.ApplicationScoped
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ThreadContextElement

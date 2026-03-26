@@ -1,10 +1,10 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
 import de.chrgroth.spotify.control.adapter.`in`.web.HealthSseAdapter
-import de.chrgroth.spotify.control.domain.model.PlaybackDetectedEvent
-import de.chrgroth.spotify.control.domain.model.UserId
-import de.chrgroth.spotify.control.domain.port.out.OutboxTaskCountObserver
-import de.chrgroth.spotify.control.domain.port.out.OutgoingRequestStatsObserver
+import de.chrgroth.spotify.control.domain.model.playback.PlaybackDetectedEvent
+import de.chrgroth.spotify.control.domain.model.user.UserId
+import de.chrgroth.spotify.control.domain.port.out.infra.OutboxTaskCountObserver
+import de.chrgroth.spotify.control.domain.port.out.infra.OutgoingRequestStatsObserver
 import io.quarkus.test.junit.QuarkusTest
 import io.smallrye.mutiny.subscription.Cancellable
 import jakarta.enterprise.event.Event

@@ -4,26 +4,27 @@ import arrow.core.left
 import arrow.core.right
 import de.chrgroth.spotify.control.domain.error.PlaylistSyncError
 import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
-import de.chrgroth.spotify.control.domain.model.AccessToken
-import de.chrgroth.spotify.control.domain.model.Playlist
-import de.chrgroth.spotify.control.domain.model.PlaylistInfo
-import de.chrgroth.spotify.control.domain.model.AlbumId
-import de.chrgroth.spotify.control.domain.model.ArtistId
-import de.chrgroth.spotify.control.domain.model.PlaylistTrack
-import de.chrgroth.spotify.control.domain.model.TrackId
-import de.chrgroth.spotify.control.domain.model.PlaylistSyncStatus
-import de.chrgroth.spotify.control.domain.model.PlaylistType
-import de.chrgroth.spotify.control.domain.model.SpotifyPlaylistItem
-import de.chrgroth.spotify.control.domain.model.User
-import de.chrgroth.spotify.control.domain.model.UserId
+import de.chrgroth.spotify.control.domain.model.user.AccessToken
+import de.chrgroth.spotify.control.domain.model.playlist.Playlist
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistInfo
+import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
+import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistTrack
+import de.chrgroth.spotify.control.domain.model.catalog.TrackId
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSyncStatus
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistTracksPage
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistType
+import de.chrgroth.spotify.control.domain.model.playlist.SpotifyPlaylistItem
+import de.chrgroth.spotify.control.domain.model.user.User
+import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
-import de.chrgroth.spotify.control.domain.port.out.AppPlaylistCheckRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.DashboardRefreshPort
-import de.chrgroth.spotify.control.domain.port.out.OutboxPort
-import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
-import de.chrgroth.spotify.control.domain.port.out.SpotifyPlaylistPort
-import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.playlist.AppPlaylistCheckRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.infra.DashboardRefreshPort
+import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
+import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAccessTokenPort
+import de.chrgroth.spotify.control.domain.port.out.playlist.SpotifyPlaylistPort
+import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -430,7 +431,7 @@ class PlaylistAdapterTests {
     )
 
     private fun buildTracksPage(tracks: List<PlaylistTrack> = listOf(singleTrack), snapshotId: String = "snap-1", nextUrl: String? = null) =
-        de.chrgroth.spotify.control.domain.model.PlaylistTracksPage(
+        de.chrgroth.spotify.control.domain.model.playlist.PlaylistTracksPage(
             snapshotId = snapshotId,
             tracks = tracks,
             nextUrl = nextUrl,

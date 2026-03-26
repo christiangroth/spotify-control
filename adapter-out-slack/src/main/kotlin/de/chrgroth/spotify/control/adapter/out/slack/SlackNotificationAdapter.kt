@@ -1,8 +1,8 @@
 package de.chrgroth.spotify.control.adapter.out.slack
 
-import de.chrgroth.spotify.control.domain.model.AppPlaylistCheck
-import de.chrgroth.spotify.control.domain.port.out.OutboxPartitionObserver
-import de.chrgroth.spotify.control.domain.port.out.PlaylistCheckNotificationPort
+import de.chrgroth.spotify.control.domain.model.playlist.AppPlaylistCheck
+import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPartitionObserver
+import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistCheckNotificationPort
 import io.quarkus.runtime.ShutdownEvent
 import io.quarkus.runtime.StartupEvent
 import jakarta.enterprise.context.ApplicationScoped

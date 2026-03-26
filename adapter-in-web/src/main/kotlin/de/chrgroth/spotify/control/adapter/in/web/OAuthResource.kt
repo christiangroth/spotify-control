@@ -1,8 +1,8 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
 import de.chrgroth.spotify.control.domain.error.OAuthError
-import de.chrgroth.spotify.control.domain.port.`in`.LoginServicePort
-import de.chrgroth.spotify.control.domain.port.out.TokenEncryptionPort
+import de.chrgroth.spotify.control.domain.port.`in`.user.LoginServicePort
+import de.chrgroth.spotify.control.domain.port.out.user.TokenEncryptionPort
 import jakarta.annotation.security.PermitAll
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject

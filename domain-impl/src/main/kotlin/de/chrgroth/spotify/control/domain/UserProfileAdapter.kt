@@ -3,13 +3,13 @@ package de.chrgroth.spotify.control.domain
 import arrow.core.Either
 import arrow.core.right
 import de.chrgroth.spotify.control.domain.error.DomainError
-import de.chrgroth.spotify.control.domain.model.UserId
+import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
-import de.chrgroth.spotify.control.domain.port.`in`.UserProfilePort
-import de.chrgroth.spotify.control.domain.port.out.OutboxPort
-import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
-import de.chrgroth.spotify.control.domain.port.out.SpotifyAuthPort
-import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
+import de.chrgroth.spotify.control.domain.port.`in`.user.UserProfilePort
+import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
+import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAccessTokenPort
+import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAuthPort
+import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
 

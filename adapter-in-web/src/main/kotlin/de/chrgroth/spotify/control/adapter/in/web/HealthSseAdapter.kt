@@ -1,10 +1,10 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
-import de.chrgroth.spotify.control.domain.model.PlaybackDetectedEvent
-import de.chrgroth.spotify.control.domain.model.UserId
-import de.chrgroth.spotify.control.domain.port.out.OutboxPartitionObserver
-import de.chrgroth.spotify.control.domain.port.out.OutboxTaskCountObserver
-import de.chrgroth.spotify.control.domain.port.out.OutgoingRequestStatsObserver
+import de.chrgroth.spotify.control.domain.model.playback.PlaybackDetectedEvent
+import de.chrgroth.spotify.control.domain.model.user.UserId
+import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPartitionObserver
+import de.chrgroth.spotify.control.domain.port.out.infra.OutboxTaskCountObserver
+import de.chrgroth.spotify.control.domain.port.out.infra.OutgoingRequestStatsObserver
 import io.smallrye.mutiny.Multi
 import io.smallrye.mutiny.subscription.MultiEmitter
 import jakarta.enterprise.context.ApplicationScoped

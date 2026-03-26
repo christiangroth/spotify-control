@@ -1,7 +1,7 @@
 package de.chrgroth.spotify.control.adapter.`in`.starter
 
 import de.chrgroth.quarkus.starters.domain.Starter
-import de.chrgroth.spotify.control.domain.port.out.AppPlaylistCheckRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.playlist.AppPlaylistCheckRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
 

@@ -2,7 +2,7 @@ package de.chrgroth.spotify.control.adapter.out.mongodb
 
 import com.mongodb.MongoNamespace
 import com.mongodb.client.MongoClient
-import de.chrgroth.spotify.control.domain.port.out.DatabaseMigrationPort
+import de.chrgroth.spotify.control.domain.port.out.infra.DatabaseMigrationPort
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
 import org.eclipse.microprofile.config.inject.ConfigProperty

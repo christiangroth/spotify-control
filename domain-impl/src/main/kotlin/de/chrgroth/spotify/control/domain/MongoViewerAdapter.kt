@@ -5,8 +5,8 @@ import de.chrgroth.spotify.control.domain.model.MongoViewerFieldType
 import de.chrgroth.spotify.control.domain.model.MongoViewerFilter
 import de.chrgroth.spotify.control.domain.model.MongoViewerFilterOperator
 import de.chrgroth.spotify.control.domain.model.MongoViewerResult
-import de.chrgroth.spotify.control.domain.port.`in`.MongoViewerPort
-import de.chrgroth.spotify.control.domain.port.out.MongoViewerRepositoryPort
+import de.chrgroth.spotify.control.domain.port.`in`.infra.MongoViewerPort
+import de.chrgroth.spotify.control.domain.port.out.infra.MongoViewerRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 
 @ApplicationScoped

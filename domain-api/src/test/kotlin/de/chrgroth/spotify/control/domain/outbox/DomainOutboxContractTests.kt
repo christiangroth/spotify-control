@@ -1,10 +1,10 @@
 package de.chrgroth.spotify.control.domain.outbox
 
-import de.chrgroth.spotify.control.domain.model.UserId
-import de.chrgroth.spotify.control.domain.port.`in`.CatalogPort
-import de.chrgroth.spotify.control.domain.port.`in`.PlaybackPort
-import de.chrgroth.spotify.control.domain.port.`in`.PlaylistPort
-import de.chrgroth.spotify.control.domain.port.`in`.UserProfilePort
+import de.chrgroth.spotify.control.domain.model.user.UserId
+import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogPort
+import de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackPort
+import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistPort
+import de.chrgroth.spotify.control.domain.port.`in`.user.UserProfilePort
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 

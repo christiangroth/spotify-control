@@ -1,10 +1,10 @@
 package de.chrgroth.spotify.control.adapter.`in`.starter
 
 import arrow.core.Either
-import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
-import de.chrgroth.spotify.control.domain.port.out.SpotifyPlaylistPort
-import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAccessTokenPort
+import de.chrgroth.spotify.control.domain.port.out.playlist.SpotifyPlaylistPort
+import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
 import de.chrgroth.quarkus.starters.domain.Starter
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging

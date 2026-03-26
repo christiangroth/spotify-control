@@ -1,7 +1,7 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
-import de.chrgroth.spotify.control.domain.port.`in`.RuntimeConfigPort
-import de.chrgroth.spotify.control.domain.port.out.ConfigurationInfoPort
+import de.chrgroth.spotify.control.domain.port.`in`.user.RuntimeConfigPort
+import de.chrgroth.spotify.control.domain.port.out.infra.ConfigurationInfoPort
 import io.quarkus.qute.Location
 import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance

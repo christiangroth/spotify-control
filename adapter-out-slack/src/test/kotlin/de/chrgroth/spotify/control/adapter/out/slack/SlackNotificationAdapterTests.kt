@@ -115,9 +115,9 @@ class SlackNotificationAdapterTests {
         checkId: String = "playlist-1:duplicate-tracks",
         succeeded: Boolean = true,
         violations: List<String> = emptyList(),
-    ) = de.chrgroth.spotify.control.domain.model.AppPlaylistCheck(
+    ) = de.chrgroth.spotify.control.domain.model.playlist.AppPlaylistCheck(
         checkId = checkId,
-        playlistId = de.chrgroth.spotify.control.domain.model.PlaylistId(playlistId),
+        playlistId = de.chrgroth.spotify.control.domain.model.playlist.PlaylistId(playlistId),
         lastCheck = kotlin.time.Clock.System.now(),
         succeeded = succeeded,
         violations = violations,

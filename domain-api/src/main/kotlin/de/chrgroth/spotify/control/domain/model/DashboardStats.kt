@@ -1,5 +1,10 @@
 package de.chrgroth.spotify.control.domain.model
 
+import de.chrgroth.spotify.control.domain.model.catalog.CatalogStats
+import de.chrgroth.spotify.control.domain.model.playback.DayCount
+import de.chrgroth.spotify.control.domain.model.playback.ListeningStats
+import de.chrgroth.spotify.control.domain.model.playback.RecentlyPlayedItem
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistCheckStats
 import de.chrgroth.spotify.control.domain.util.formatted
 
 data class DashboardStats(
