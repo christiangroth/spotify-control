@@ -8,55 +8,6 @@ Subdomain-Trennung und konsistentem Naming über alle Module hinweg.
 
 ## domain-api
 
-### Subdomain-Struktur einführen
-
-Das `model/`-Paket enthält aktuell 54 Klassen ohne jede Untergliederung. Die vier Subdomains sind im Code
-vorhanden, aber durch den flachen Package-Baum unsichtbar. Gleiches gilt für `port/in` und `port/out`.
-
-- [x] `model/` aufteilen in `model/catalog/`, `model/playback/`, `model/playlist/`, `model/user/`
-  und alle Klassen in das passende Subpaket verschieben
-- [x] `port/in/` aufteilen in `port/in/catalog/`, `port/in/playback/`, `port/in/playlist/`, `port/in/user/`
-- [x] `port/out/` aufteilen in `port/out/catalog/`, `port/out/playback/`, `port/out/playlist/`,
-  `port/out/user/`, `port/out/infra/` (für die querschnittlichen Ports wie Outbox, Throttling, Stats)
-
-Zuordnung der Klassen zur jeweiligen Subdomain-Kandidaten:
-
-| Subdomain | Modelle |
-|---|---|
-| catalog | `AppArtist`, `AppAlbum`, `AppTrack` (in `AppTrackData.kt`!), `AlbumSyncResult`, `ArtistPlaybackProcessingStatus`, `AlbumId`, `ArtistId`, `TrackId`, `ArtistBrowseItem`, `AlbumBrowseItem`, `TrackBrowseItem`, `CatalogStats` |
-| playback | `AppPlaybackItem`, `RecentlyPlayedItem`, `RecentlyPartialPlayedItem`, `CurrentlyPlayingItem`, `RawPlaybackEvent`, `PlaybackEventEntry`, `PlaybackEventViewerResult`, `DayCount`, `TopEntry`, `ListeningStats` |
-| playlist | `Playlist`, `PlaylistTrack`, `PlaylistTracksPage`, `PlaylistInfo`, `PlaylistId`, `PlaylistType`, `PlaylistSyncStatus`, `AppPlaylistCheck`, `PlaylistCheckStats`, `SpotifyPlaylistItem` |
-| user | `User`, `UserId`, `SpotifyProfile`, `SpotifyProfileId`, `SpotifyTokens`, `SpotifyRefreshedTokens`, `AccessToken`, `RefreshToken` |
-
-### Dateiname ≠ Klassenname
-
-- [x] `AppTrackData.kt` umbenennen in `AppTrack.kt` (enthält die Klasse `AppTrack`)
-
-### Inkonsistente Verwendung von Wert-Objekten in Domänenklassen
-
-Kern-Entitäten verwenden `TrackId`, `AlbumId`, `ArtistId` als Wert-Objekte, aber viele angrenzende Klassen
-nutzen noch `String` und umgehen so die Typsicherheit.
-
-- [x] `AppArtist.artistId: String` → `AppArtist.id: ArtistId` (analog zu `AppAlbum.id: AlbumId` und `AppTrack.id: TrackId`)
-- [x] `RecentlyPlayedItem.trackId`, `.artistIds`, `.albumId` von `String`/`List<String>` auf `TrackId`, `List<ArtistId>`, `AlbumId?` umstellen
-- [x] `RecentlyPartialPlayedItem.trackId`, `.artistIds`, `.albumId` analog
-- [x] `CurrentlyPlayingItem.trackId`, `.artistIds`, `.albumId` analog
-- [x] `PlaylistTrack.trackId`, `.artistIds`, `.albumId` von `String`/`List<String>` auf Wert-Objekte umstellen
-- [x] `AppPlaylistCheck.playlistId: String` → `AppPlaylistCheck.playlistId: PlaylistId`
-- [x] `AppArtistRepositoryPort.findByArtistIds(artistIds: Set<String>)` → auf `Set<ArtistId>` umstellen
-- [x] `AppArtistRepositoryPort.updatePlaybackProcessingStatus(artistId: String, ...)` → auf `ArtistId` umstellen
-
-### Zeit-Typen vereinheitlichen
-
-Im domain-api werden `kotlin.time.Instant`, `java.time.Instant` und `kotlinx.datetime.LocalDate` gemischt.
-Standard soll `kotlin.time.Instant` und `kotlinx.datetime.LocalDate` sein (kein `java.time`).
-
-- [x] `OutboxTask` auf `kotlin.time.Instant` umstellen (aktuell `java.time.Instant`)
-- [x] `OutboxPartitionStats` auf `kotlin.time.Instant` umstellen
-- [x] `CronjobStats` auf `kotlin.time.Instant` umstellen
-- [x] `PredicateStats` auf `kotlin.time.Instant` umstellen
-- [x] `PlaybackActivityPort.lastActivityTimestamp()` auf `kotlin.time.Instant?` umstellen
-
 ### Infrastruktur-Modelle aus dem Domain-Model-Paket herausnehmen
 
 Folgende Klassen haben wenig mit dem eigentlichen Domänen-Modell zu tun und sind eher Präsentations-DTOs oder
@@ -81,44 +32,12 @@ primitive Rückgabetypen nutzen und die Aggregation in den Adaptern stattfindet.
 Domain-Klassen sollen pure Kotlin `data class`/`sealed class`/`enum` sein – ohne Formatierungshilfsmethoden,
 die eigentlich Template-Concerns sind.
 
-- [ ] `NumberFormatting.kt` (Extension-Funktionen `Long.formatted()`, `Int.formatted()`) gehört nicht ins
-  `model/`-Paket. Entweder in ein separates Utility-Paket (`util/`) oder die Formatierung wird
-  direkt in den Qute-Templates oder Adapter-Klassen erledigt.
 - [ ] Prüfen ob die `*Formatted`-Properties in Domain-Klassen wie `DashboardStats`, `HealthStats`,
   `CatalogStats` usw. wirklich Domain-Logik sind oder Presentation-Concerns – ggf. auslagern
-
-### `OutboxViewerPartition` aus der Port-Datei herauslösen
-
-- [ ] `OutboxViewerPartition` (aktuell inline in `OutboxViewerPort.kt` definiert) in eine eigene Datei
-  oder in das `model/`-Paket verschieben, damit Port-Dateien ausschließlich die Interface-Definition
-  enthalten
 
 ---
 
 ## domain-impl
-
-### Naming: `*Adapter` → `*Service`
-
-Der Begriff „Adapter" in der Hexagonal-Architektur bezeichnet die äußere Schicht (Inbound/Outbound
-Adapters). Domain-Service-Implementierungen, die die Inbound-Ports implementieren, sollten `*Service`
-oder ein gleichwertiges Suffix tragen. Die aktuelle Konvention `*Adapter` im `domain-impl` stiftet
-Verwirrung, weil sie denselben Begriff wie die echten Adapter-Module verwendet.
-
-- [x] `CatalogAdapter` → `CatalogService`
-- [x] `CatalogBrowserAdapter` → `CatalogBrowserService`
-- [x] `DashboardAdapter` → `DashboardService`
-- [x] `HealthAdapter` → `HealthService`
-- [x] `LoginServiceAdapter` → `LoginService` (das Suffix `Adapter` fällt weg, da der Klassenname
-  bereits konzeptuell ist)
-- [x] `MongoViewerAdapter` → `MongoViewerService`
-- [x] `OutboxViewerAdapter` → `OutboxViewerService`
-- [x] `PlaybackAdapter` → `PlaybackService`
-- [x] `PlaybackEventViewerAdapter` → `PlaybackEventViewerService`
-- [x] `PlaylistAdapter` → `PlaylistService`
-- [x] `PlaylistCheckAdapter` → `PlaylistCheckService`
-- [x] `RuntimeConfigAdapter` → `RuntimeConfigService`
-- [x] `UserProfileAdapter` → `UserProfileService`
-- [x] In allen Domain-Impl-Tests die Klassennamen entsprechend anpassen
 
 ### `SpotifyAccessTokenAdapter` verletzt Architektur-Regel
 
@@ -127,19 +46,8 @@ werden von Adapter-Modulen implementiert – nicht von `domain-impl`. Diese Klas
 Orchestration von Spotify-Auth, Token-Refresh und Verschlüsselung und gehört konzeptuell zu
 `adapter-out-spotify`.
 
-- [x] `SpotifyAccessTokenAdapter` nach `adapter-out-spotify` verschieben
 - [ ] Alle Domain-Service-Klassen, die `SpotifyAccessTokenPort` per Constructor-Injection empfangen,
   bleiben unverändert – nur die Implementierung wandert
-
-### `TokenEncryptionAdapter` verletzt Architektur-Regel und nutzt `@ConfigProperty`
-
-`TokenEncryptionAdapter` implementiert `TokenEncryptionPort` (port/out) und enthält `@ConfigProperty`.
-Quarkus/MicroProfile-Annotationen (außer `@ApplicationScoped`) gehören nicht in `domain-impl`.
-Zudem ist die Implementierung eine infrastrukturelle Utility-Klasse (JDK-Krypto + Config).
-
-- [x] `TokenEncryptionAdapter` nach `adapter-in-web` oder in ein neues kleines Adapter-Modul
-  `adapter-out-crypto` verschieben (je nachdem ob Verschlüsselung als eigenständige Boundary
-  sinnvoll ist)
 
 ### `@ConfigProperty` in Domain-Services entfernen
 
@@ -220,17 +128,6 @@ API-Typen.
 - [ ] `SpotifyRecentlyPlayedDocumentRepository` → `RecentlyPlayedDocumentRepository`
 - [ ] `SpotifyRecentlyPartialPlayedDocument` → `RecentlyPartialPlayedDocument`
 - [ ] `SpotifyRecentlyPartialPlayedDocumentRepository` → `RecentlyPartialPlayedDocumentRepository`
-
----
-
-## adapter-out-spotify
-
-### Gut strukturiert – keine strukturellen Verletzungen
-
-Das Modul hält sich an die Architektur-Regeln: Spotify-API-Modelle sind `internal` und nie im domain-api
-sichtbar. Keine kritischen Findings.
-
-- [x] `SpotifyAccessTokenAdapter` aus `domain-impl` hierher verschieben (siehe oben)
 
 ---
 
