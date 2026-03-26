@@ -131,6 +131,118 @@ API-Typen.
 
 ---
 
+## adapter-out-spotify
+
+### Gut strukturiert – keine strukturellen Verletzungen
+
+Das Modul hält sich an die Architektur-Regeln: Spotify-API-Modelle sind `internal` und nie im domain-api
+sichtbar. Keine kritischen Findings.
+
+- [ ] `SpotifyAccessTokenAdapter` aus `domain-impl` hierher verschieben (siehe oben)
+
+---
+
+## adapter-in-outbox
+
+### `java.time.Instant` statt Kotlin-Typen
+
+`DomainOutboxTaskDispatcher` verwendet `java.time.Instant.now().plus(error.retryAfter)` beim Bauen von
+`DispatchResult.Paused`. Dieser Java-Typ schleicht sich ein, weil die quarkus-outbox-API aktuell
+`java.time.Instant` erwartet. Sobald die Zeitvereinheitlichung in domain-api abgeschlossen ist und die
+quarkus-outbox-API `kotlin.time.Instant` unterstützt, sollte die Konversion entfallen.
+
+- [ ] `DomainOutboxTaskDispatcher`: `java.time.Instant.now().plus(error.retryAfter)` auf
+  `kotlin.time.Instant.now() + error.retryAfter` umstellen und ggf. über `.toJavaInstant()` an die
+  quarkus-outbox-API übergeben, sobald `SpotifyRateLimitError.retryAfter` auf `kotlin.time.Duration`
+  umgestellt ist
+
+---
+
+## adapter-in-scheduler
+
+### `java.time.Instant`/`Duration` statt Kotlin-Typen
+
+`CurrentlyPlayingSkipPredicate` verwendet `java.time.Instant` und `java.time.Duration` intern. Standard
+im Projekt ist `kotlin.time`.
+
+- [ ] `CurrentlyPlayingSkipPredicate`: `Instant.EPOCH`, `Instant.now()`, `Duration.ofSeconds()`,
+  `Duration.ofMinutes()` sowie `isBefore()` auf kotlin.time-Äquivalente umstellen (`Clock.System.now()`,
+  `Duration.seconds()`, `Duration.minutes()`)
+
+### `@JvmOverloads`-Konstruktor als Testbarkeits-Workaround
+
+`CurrentlyPlayingSkipPredicate` verwendet `@JvmOverloads constructor` mit optionalen Parametern
+(`ScheduledSkipPredicate`, `PlaybackActivityPort?`), um den Aufbau in Tests zu vereinfachen. CDI-Beans
+sollten genau einen Konstruktor haben; der Workaround macht die CDI-Wiring-Intention unklar.
+
+- [ ] Testaufbau überprüfen und `@JvmOverloads` durch einen sauberen Ansatz ersetzen – z. B. eigenen
+  Testkonstruktor oder explizites MockK-Subklassen-Mocking; CDI-Beans ohne optionale Konstruktorparameter
+  formulieren
+
+---
+
+## adapter-out-outbox
+
+### MongoDB-Zugriff direkt in `OutboxPortAdapter` – kritische Architekturverletzung
+
+`OutboxPortAdapter.getTasksByPartition()` enthält direkten MongoDB-Zugriff (`MongoClient`,
+`Filters.eq`, `.find()`, Dokument-Mapping). MongoDB-Zugriffe dürfen ausschließlich in
+`adapter-out-mongodb` stattfinden – diese Regel wird hier gebrochen.
+
+- [ ] Neuen Out-Port `OutboxTaskRepositoryPort` in `domain-api/port/out` definieren mit
+  `getTasksByPartition(partitionKey: String): List<OutboxTask>`
+- [ ] Implementierung als `OutboxTaskRepositoryAdapter` in `adapter-out-mongodb` anlegen und die
+  MongoDB-Abfrage (inkl. Dokument-Mapping) dorthin verschieben
+- [ ] `OutboxPortAdapter` verwendet das neue Port per Constructor-Injection statt `MongoClient`
+- [ ] `@ConfigProperty(name = "quarkus.mongodb.database")` und `MongoClient`-Abhängigkeit aus
+  `adapter-out-outbox` vollständig entfernen – das Modul darf kein MongoDB-SDK mehr importieren
+
+### `java.time.Instant` statt Kotlin-Typen
+
+`OutboxPortAdapter` nutzt `Instant.EPOCH` und `Instant.MAX` aus `java.time`.
+
+- [ ] Auf `kotlin.time.Instant` umstellen, sobald `OutboxTask` im Rahmen der domain-api
+  Zeitvereinheitlichung auf `kotlin.time.Instant` umgestellt wurde
+
+---
+
+## adapter-out-scheduler
+
+### `java.time.Instant`/`Duration` in `PlaybackActivityAdapter`
+
+`PlaybackActivityAdapter` verwendet `java.time.Instant` und `java.time.Duration` sowohl intern als auch
+über den Rückgabewert von `PlaybackActivityPort.lastActivityTimestamp(): Instant?`.
+
+- [ ] `PlaybackActivityAdapter` auf kotlin.time umstellen, sobald `PlaybackActivityPort.lastActivityTimestamp()`
+  im Zuge der domain-api Zeitvereinheitlichung auf `kotlin.time.Instant?` umgestellt wurde
+
+### `PlaybackDetectedEvent` als CDI-Marker-Klasse im domain-api-Model
+
+`CurrentlyPlayingScheduleState` feuert `Event<PlaybackDetectedEvent>`. `PlaybackDetectedEvent` ist eine
+leere Marker-Klasse in `domain-api/model`, obwohl CDI-Events ein Adapter-Concern sind und nichts im
+Domain-Modell zu suchen haben.
+
+- [ ] `PlaybackDetectedEvent` aus `domain-api/model` entfernen (verknüpft mit dem entsprechenden
+  Todo in der domain-api-Sektion)
+- [ ] `PlaybackDetectedEvent` direkt in `adapter-out-scheduler` definieren – die Klasse ist nur lokal
+  zwischen `CurrentlyPlayingScheduleState` und `PlaybackActivityAdapter` relevant; `PlaybackStatePort`
+  bleibt das einzige Interface-Bindeglied nach außen
+
+---
+
+## adapter-out-slack
+
+### Gut strukturiert – keine strukturellen Verletzungen
+
+`SlackNotificationAdapter` implementiert korrekt Out-Ports (`OutboxPartitionObserver`,
+`PlaylistCheckNotificationPort`). `@ConfigProperty` ist in Adapter-Modulen erwünscht und daher hier
+in Ordnung. Keine kritischen Findings.
+
+- [ ] `AppPlaylistCheck.playlistId: String` → bei Umstellung auf `PlaylistId`-Wert-Objekt
+  (bereits in domain-api-Sektion beschrieben) die entsprechenden Stellen hier anpassen
+
+---
+
 ## Übergreifende Maßnahmen
 
 ### Subdomain-Sichtbarkeit durch Package-Struktur
