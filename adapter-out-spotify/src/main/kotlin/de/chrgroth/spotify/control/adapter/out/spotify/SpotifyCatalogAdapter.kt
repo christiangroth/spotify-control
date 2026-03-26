@@ -31,7 +31,7 @@ import java.net.http.HttpResponse
 
 @ApplicationScoped
 @Suppress("Unused", "TooGenericExceptionCaught")
-class SpotifyCatalogAdapter(
+class SpotifyCatalogService(
     @param:ConfigProperty(name = "spotify.api.base-url")
     private val apiBaseUrl: String,
     private val httpMetrics: SpotifyHttpMetrics,

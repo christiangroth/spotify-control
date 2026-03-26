@@ -1,0 +1,14 @@
+package de.chrgroth.spotify.control.domain.model.catalog
+
+import de.chrgroth.spotify.control.domain.util.formatted
+
+data class AlbumBrowseItem(
+    val albumId: String,
+    val title: String?,
+    val imageLink: String?,
+    val releaseDate: String?,
+    val trackCount: Int,
+    val durationFormatted: String,
+) {
+    val trackCountFormatted: String get() = trackCount.formatted()
+}

@@ -42,7 +42,7 @@ class SyncArtistPlaybackFromPlaylistsTests {
     private val catalog: CatalogPort = mockk()
     private val playlistRepository: PlaylistRepositoryPort = mockk()
 
-    private val adapter = PlaybackAdapter(
+    private val adapter = PlaybackService(
         userRepository,
         spotifyAccessToken,
         spotifyPlayback,
