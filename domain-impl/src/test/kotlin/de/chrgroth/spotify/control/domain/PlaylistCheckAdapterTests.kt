@@ -5,7 +5,11 @@ import de.chrgroth.spotify.control.domain.model.AppPlaylistCheck
 import de.chrgroth.spotify.control.domain.model.Playlist
 import de.chrgroth.spotify.control.domain.model.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.PlaylistSyncStatus
+import de.chrgroth.spotify.control.domain.model.AlbumId
+import de.chrgroth.spotify.control.domain.model.ArtistId
+import de.chrgroth.spotify.control.domain.model.PlaylistId
 import de.chrgroth.spotify.control.domain.model.PlaylistTrack
+import de.chrgroth.spotify.control.domain.model.TrackId
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.out.AppPlaylistCheckRepositoryPort
@@ -49,9 +53,9 @@ class PlaylistCheckAdapterTests {
     private val fullCheckId = "$playlistId:$checkId"
 
     private fun buildTrack(trackId: String) = PlaylistTrack(
-        trackId = trackId,
-        artistIds = listOf("artist-1"),
-        albumId = "album-1",
+        trackId = TrackId(trackId),
+        artistIds = listOf(ArtistId("artist-1")),
+        albumId = AlbumId("album-1"),
     )
 
     private fun buildPlaylist(tracks: List<PlaylistTrack>) = Playlist(
@@ -70,7 +74,7 @@ class PlaylistCheckAdapterTests {
 
     private fun buildCheck(succeeded: Boolean, violations: List<String> = emptyList()) = AppPlaylistCheck(
         checkId = fullCheckId,
-        playlistId = playlistId,
+        playlistId = PlaylistId(playlistId),
         lastCheck = Clock.System.now(),
         succeeded = succeeded,
         violations = violations,

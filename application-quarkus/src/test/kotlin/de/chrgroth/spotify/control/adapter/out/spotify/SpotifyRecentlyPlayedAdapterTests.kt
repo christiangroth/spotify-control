@@ -2,6 +2,8 @@ package de.chrgroth.spotify.control.adapter.out.spotify
 
 import arrow.core.Either
 import de.chrgroth.spotify.control.domain.model.AccessToken
+import de.chrgroth.spotify.control.domain.model.ArtistId
+import de.chrgroth.spotify.control.domain.model.TrackId
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.port.out.SpotifyPlaybackPort
 import de.chrgroth.spotify.control.domain.port.out.OutgoingRequestStatsPort
@@ -31,9 +33,9 @@ class SpotifyRecentlyPlayedAdapterTests {
         assertThat(result).isInstanceOf(Either.Right::class.java)
         val items = (result as Either.Right).value
         assertThat(items).hasSize(1)
-        assertThat(items[0].trackId).isEqualTo("track-1")
+        assertThat(items[0].trackId).isEqualTo(TrackId("track-1"))
         assertThat(items[0].trackName).isEqualTo("Track One")
-        assertThat(items[0].artistIds).containsExactly("artist-1")
+        assertThat(items[0].artistIds).containsExactly(ArtistId("artist-1"))
         assertThat(items[0].artistNames).containsExactly("Artist One")
         assertThat(items[0].spotifyUserId).isEqualTo(UserId("test-user-a"))
         assertThat(items[0].durationSeconds).isEqualTo(210L)
@@ -47,7 +49,7 @@ class SpotifyRecentlyPlayedAdapterTests {
         assertThat(result).isInstanceOf(Either.Right::class.java)
         val items = (result as Either.Right).value
         assertThat(items).hasSize(1)
-        assertThat(items[0].trackId).isEqualTo("track-1")
+        assertThat(items[0].trackId).isEqualTo(TrackId("track-1"))
     }
 
     @Test
@@ -56,7 +58,7 @@ class SpotifyRecentlyPlayedAdapterTests {
 
         assertThat(result).isInstanceOf(Either.Right::class.java)
         val items = (result as Either.Right).value
-        assertThat(items.none { it.trackId == "episode-1" }).isTrue
+        assertThat(items.none { it.trackId == TrackId("episode-1") }).isTrue
     }
 
     @Test
@@ -65,7 +67,7 @@ class SpotifyRecentlyPlayedAdapterTests {
 
         assertThat(result).isInstanceOf(Either.Right::class.java)
         val items = (result as Either.Right).value
-        assertThat(items.none { it.trackId == "local-1" }).isTrue
+        assertThat(items.none { it.trackId == TrackId("local-1") }).isTrue
     }
 
     @Test

@@ -7,7 +7,10 @@ import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
 import de.chrgroth.spotify.control.domain.model.AccessToken
 import de.chrgroth.spotify.control.domain.model.Playlist
 import de.chrgroth.spotify.control.domain.model.PlaylistInfo
+import de.chrgroth.spotify.control.domain.model.AlbumId
+import de.chrgroth.spotify.control.domain.model.ArtistId
 import de.chrgroth.spotify.control.domain.model.PlaylistTrack
+import de.chrgroth.spotify.control.domain.model.TrackId
 import de.chrgroth.spotify.control.domain.model.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.PlaylistType
 import de.chrgroth.spotify.control.domain.model.SpotifyPlaylistItem
@@ -416,9 +419,9 @@ class PlaylistAdapterTests {
     // --- syncPlaylistData tests ---
 
     private val singleTrack = PlaylistTrack(
-        trackId = "track-1",
-        artistIds = listOf("artist-1"),
-        albumId = "album-1",
+        trackId = TrackId("track-1"),
+        artistIds = listOf(ArtistId("artist-1")),
+        albumId = AlbumId("album-1"),
     )
 
     private fun buildPlaylist(id: String) = Playlist(

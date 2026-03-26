@@ -1,5 +1,6 @@
 package de.chrgroth.spotify.control.domain.check
 
+import de.chrgroth.spotify.control.domain.model.AlbumId
 import de.chrgroth.spotify.control.domain.model.AppTrack
 import de.chrgroth.spotify.control.domain.model.ArtistId
 import de.chrgroth.spotify.control.domain.model.Playlist
@@ -26,9 +27,9 @@ class DuplicateTrackIdsCheckRunnerTests {
     private val playlistId = "playlist-1"
 
     private fun buildTrack(trackId: String) = PlaylistTrack(
-        trackId = trackId,
-        artistIds = listOf("artist-1"),
-        albumId = "album-1",
+        trackId = TrackId(trackId),
+        artistIds = listOf(ArtistId("artist-1")),
+        albumId = AlbumId("album-1"),
     )
 
     private fun buildAppTrack(trackId: String, title: String, artistName: String? = "Artist") = AppTrack(

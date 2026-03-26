@@ -4,10 +4,13 @@ import arrow.core.left
 import arrow.core.right
 import de.chrgroth.spotify.control.domain.error.PlaybackError
 import de.chrgroth.spotify.control.domain.model.AccessToken
+import de.chrgroth.spotify.control.domain.model.AlbumId
 import de.chrgroth.spotify.control.domain.model.AppPlaybackItem
+import de.chrgroth.spotify.control.domain.model.ArtistId
 import de.chrgroth.spotify.control.domain.model.CurrentlyPlayingItem
 import de.chrgroth.spotify.control.domain.model.RecentlyPartialPlayedItem
 import de.chrgroth.spotify.control.domain.model.RecentlyPlayedItem
+import de.chrgroth.spotify.control.domain.model.TrackId
 import de.chrgroth.spotify.control.domain.model.User
 import de.chrgroth.spotify.control.domain.model.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
@@ -88,12 +91,12 @@ class RecentlyPlayedAdapterTests {
 
     private fun item(index: Int, forUserId: UserId = userId, albumId: String? = null) = RecentlyPlayedItem(
         spotifyUserId = forUserId,
-        trackId = "track-$index",
+        trackId = TrackId("track-$index"),
         trackName = "Track $index",
-        artistIds = listOf("artist-id-$index"),
+        artistIds = listOf(ArtistId("artist-id-$index")),
         artistNames = listOf("Artist $index"),
         playedAt = now - index.hours,
-        albumId = albumId,
+        albumId = albumId?.let { AlbumId(it) },
     )
 
     private fun currentlyPlayingItem(
@@ -103,9 +106,9 @@ class RecentlyPlayedAdapterTests {
         durationMs: Long = 600_000L,
     ) = CurrentlyPlayingItem(
         spotifyUserId = userId,
-        trackId = trackId,
+        trackId = TrackId(trackId),
         trackName = "Track $trackId",
-        artistIds = listOf("artist-$trackId"),
+        artistIds = listOf(ArtistId("artist-$trackId")),
         artistNames = listOf("Artist $trackId"),
         progressMs = progressMs,
         durationMs = durationMs,
@@ -156,7 +159,7 @@ class RecentlyPlayedAdapterTests {
         val savedSlot = slot<List<RecentlyPlayedItem>>()
         verify { recentlyPlayedRepository.saveAll(capture(savedSlot)) }
         assertThat(savedSlot.captured).hasSize(2)
-        assertThat(savedSlot.captured.map { it.trackId }).containsExactlyInAnyOrder("track-1", "track-2")
+        assertThat(savedSlot.captured.map { it.trackId }).containsExactlyInAnyOrder(TrackId("track-1"), TrackId("track-2"))
     }
 
     @Test
@@ -219,7 +222,7 @@ class RecentlyPlayedAdapterTests {
         val savedSlot = slot<List<RecentlyPlayedItem>>()
         verify { recentlyPlayedRepository.saveAll(capture(savedSlot)) }
         assertThat(savedSlot.captured).hasSize(1)
-        assertThat(savedSlot.captured[0].trackId).isEqualTo("track-2")
+        assertThat(savedSlot.captured[0].trackId).isEqualTo(TrackId("track-2"))
     }
 
     @Test
@@ -296,7 +299,7 @@ class RecentlyPlayedAdapterTests {
         val savedSlot = slot<List<RecentlyPartialPlayedItem>>()
         verify { recentlyPartialPlayedRepository.saveAll(capture(savedSlot)) }
         assertThat(savedSlot.captured).hasSize(1)
-        assertThat(savedSlot.captured[0].trackId).isEqualTo("track-old")
+        assertThat(savedSlot.captured[0].trackId).isEqualTo(TrackId("track-old"))
     }
 
     @Test
@@ -431,7 +434,7 @@ class RecentlyPlayedAdapterTests {
         val savedSlot = slot<List<RecentlyPartialPlayedItem>>()
         verify { recentlyPartialPlayedRepository.saveAll(capture(savedSlot)) }
         // Both track-old observations are converted independently; completedEntry is deleted (completed), not converted
-        val trackOldItems = savedSlot.captured.filter { it.trackId == "track-old" }
+        val trackOldItems = savedSlot.captured.filter { it.trackId == TrackId("track-old") }
         assertThat(trackOldItems).hasSize(2)
         assertThat(trackOldItems.map { it.playedSeconds }).containsExactlyInAnyOrder(30L, 45L)
     }
@@ -464,7 +467,7 @@ class RecentlyPlayedAdapterTests {
         val savedSlot = slot<List<RecentlyPartialPlayedItem>>()
         verify { recentlyPartialPlayedRepository.saveAll(capture(savedSlot)) }
         // Both above-threshold observations of track-a become their own partial play records
-        val trackAItems = savedSlot.captured.filter { it.trackId == "track-a" }
+        val trackAItems = savedSlot.captured.filter { it.trackId == TrackId("track-a") }
         assertThat(trackAItems).hasSize(2)
         assertThat(trackAItems.map { it.playedAt }).containsExactlyInAnyOrder(
             now - 9.minutes,
@@ -497,7 +500,7 @@ class RecentlyPlayedAdapterTests {
 
         val savedSlot = slot<List<RecentlyPartialPlayedItem>>()
         verify { recentlyPartialPlayedRepository.saveAll(capture(savedSlot)) }
-        val trackAItems = savedSlot.captured.filter { it.trackId == "track-a" }
+        val trackAItems = savedSlot.captured.filter { it.trackId == TrackId("track-a") }
         assertThat(trackAItems).hasSize(2)
         assertThat(trackAItems.map { it.playedAt }).containsExactlyInAnyOrder(
             now - 9.minutes,
