@@ -1,4 +1,4 @@
-package de.chrgroth.spotify.control.domain
+package de.chrgroth.spotify.control.adapter.out.spotify
 
 import arrow.core.Either
 import arrow.core.raise.either
