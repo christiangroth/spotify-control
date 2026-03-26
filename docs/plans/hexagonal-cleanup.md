@@ -68,44 +68,29 @@ Keine offenen Findings.
 `Filters.eq`, `.find()`, Dokument-Mapping). MongoDB-Zugriffe dürfen ausschließlich in
 `adapter-out-mongodb` stattfinden – diese Regel wird hier gebrochen.
 
-- [ ] Neuen Out-Port `OutboxTaskRepositoryPort` in `domain-api/port/out` definieren mit
-  `getTasksByPartition(partitionKey: String): List<OutboxTask>`
-- [ ] Implementierung als `OutboxTaskRepositoryAdapter` in `adapter-out-mongodb` anlegen und die
-  MongoDB-Abfrage (inkl. Dokument-Mapping) dorthin verschieben
-- [ ] `OutboxPortAdapter` verwendet das neue Port per Constructor-Injection statt `MongoClient`
-- [ ] `@ConfigProperty(name = "quarkus.mongodb.database")` und `MongoClient`-Abhängigkeit aus
-  `adapter-out-outbox` vollständig entfernen – das Modul darf kein MongoDB-SDK mehr importieren
+`ApplicationOutboxClient.partitionInfos()` liefert nur aggregierte Partition-Statistiken (Event-Counts,
+Typ-Counts), jedoch keine einzelnen Task-Details. Die notwendige Funktionalität ist in der
+`quarkus-outbox`-Bibliothek nicht vorhanden.
 
-### `java.time.Instant` statt Kotlin-Typen
+- [ ] Feature Request in `christiangroth/quarkus-outbox` eröffnen: `ApplicationOutboxClient` um
+  `getTasksByPartition(partitionKey: String): List<OutboxTaskInfo>` erweitern, sodass der direkte
+  MongoDB-Zugriff in `OutboxPortAdapter` entfällt
+- [ ] Sobald die Bibliothek die API bereitstellt: `MongoClient`-Zugriff in `OutboxPortAdapter` durch
+  den neuen Client-Aufruf ersetzen und `MongoClient`-Abhängigkeit aus `adapter-out-outbox` entfernen
 
-`OutboxPortAdapter` nutzt `Instant.EPOCH` und `Instant.MAX` aus `java.time`.
+### Gut strukturiert – keine weiteren Findings
 
-- [ ] Auf `kotlin.time.Instant` umstellen, sobald `OutboxTask` im Rahmen der domain-api
-  Zeitvereinheitlichung auf `kotlin.time.Instant` umgestellt wurde
+`OutboxPortAdapter` verwendet `kotlin.time.Instant` an allen Stellen. Keine offenen Findings.
 
 ---
 
 ## adapter-out-scheduler
 
-### `java.time.Instant`/`Duration` in `PlaybackActivityAdapter`
+### Gut strukturiert – keine strukturellen Verletzungen
 
-`PlaybackActivityAdapter` verwendet `java.time.Instant` und `java.time.Duration` sowohl intern als auch
-über den Rückgabewert von `PlaybackActivityPort.lastActivityTimestamp(): Instant?`.
-
-- [ ] `PlaybackActivityAdapter` auf kotlin.time umstellen, sobald `PlaybackActivityPort.lastActivityTimestamp()`
-  im Zuge der domain-api Zeitvereinheitlichung auf `kotlin.time.Instant?` umgestellt wurde
-
-### `PlaybackDetectedEvent` als CDI-Marker-Klasse im domain-api-Model
-
-`CurrentlyPlayingScheduleState` feuert `Event<PlaybackDetectedEvent>`. `PlaybackDetectedEvent` ist eine
-leere Marker-Klasse in `domain-api/model`, obwohl CDI-Events ein Adapter-Concern sind und nichts im
-Domain-Modell zu suchen haben.
-
-- [ ] `PlaybackDetectedEvent` aus `domain-api/model` entfernen (verknüpft mit dem entsprechenden
-  Todo in der domain-api-Sektion)
-- [ ] `PlaybackDetectedEvent` direkt in `adapter-out-scheduler` definieren – die Klasse ist nur lokal
-  zwischen `CurrentlyPlayingScheduleState` und `PlaybackActivityAdapter` relevant; `PlaybackStatePort`
-  bleibt das einzige Interface-Bindeglied nach außen
+`PlaybackActivityAdapter` verwendet `kotlin.time` an allen Stellen.
+`PlaybackDetectedEvent` wurde aus `domain-api/model` entfernt und durch den Port
+`PlaybackDetectedObserver` in `domain-api/port/out/playback/` ersetzt. Keine offenen Findings.
 
 ---
 
