@@ -1,12 +1,12 @@
 package de.chrgroth.spotify.control.adapter.`in`.starter
 
-import de.chrgroth.spotify.control.domain.model.PlaylistInfo
-import de.chrgroth.spotify.control.domain.model.PlaylistSyncStatus
-import de.chrgroth.spotify.control.domain.model.PlaylistType
-import de.chrgroth.spotify.control.domain.model.User
-import de.chrgroth.spotify.control.domain.model.UserId
-import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistInfo
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSyncStatus
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistType
+import de.chrgroth.spotify.control.domain.model.user.User
+import de.chrgroth.spotify.control.domain.model.user.UserId
+import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk

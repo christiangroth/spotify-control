@@ -1,10 +1,13 @@
 package de.chrgroth.spotify.control.adapter.out.spotify
 
 import arrow.core.Either
-import de.chrgroth.spotify.control.domain.model.AccessToken
-import de.chrgroth.spotify.control.domain.model.UserId
-import de.chrgroth.spotify.control.domain.port.out.OutgoingRequestStatsPort
-import de.chrgroth.spotify.control.domain.port.out.SpotifyPlaylistPort
+import de.chrgroth.spotify.control.domain.model.user.AccessToken
+import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
+import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
+import de.chrgroth.spotify.control.domain.model.catalog.TrackId
+import de.chrgroth.spotify.control.domain.model.user.UserId
+import de.chrgroth.spotify.control.domain.port.out.infra.OutgoingRequestStatsPort
+import de.chrgroth.spotify.control.domain.port.out.playlist.SpotifyPlaylistPort
 import io.micrometer.core.instrument.MeterRegistry
 import io.quarkus.test.junit.QuarkusTest
 import jakarta.inject.Inject
@@ -31,9 +34,9 @@ class SpotifyPlaylistTracksAdapterTests {
         val playlist = (result as Either.Right).value
         assertThat(playlist.spotifyPlaylistId).isEqualTo("mock-playlist-1")
         assertThat(playlist.tracks).hasSize(1)
-        assertThat(playlist.tracks[0].trackId).isEqualTo("track-1")
-        assertThat(playlist.tracks[0].artistIds).containsExactly("artist-1")
-        assertThat(playlist.tracks[0].albumId).isEqualTo("album-1")
+        assertThat(playlist.tracks[0].trackId).isEqualTo(TrackId("track-1"))
+        assertThat(playlist.tracks[0].artistIds).containsExactly(ArtistId("artist-1"))
+        assertThat(playlist.tracks[0].albumId).isEqualTo(AlbumId("album-1"))
     }
 
     @Test
@@ -42,7 +45,7 @@ class SpotifyPlaylistTracksAdapterTests {
 
         assertThat(result).isInstanceOf(Either.Right::class.java)
         val playlist = (result as Either.Right).value
-        assertThat(playlist.tracks.none { it.trackId == "episode-1" }).isTrue
+        assertThat(playlist.tracks.none { it.trackId == TrackId("episode-1") }).isTrue
     }
 
     @Test

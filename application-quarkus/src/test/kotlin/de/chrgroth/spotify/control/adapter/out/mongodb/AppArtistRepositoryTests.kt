@@ -1,7 +1,8 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
-import de.chrgroth.spotify.control.domain.model.AppArtist
-import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
+import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
+import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
+import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
 import io.quarkus.test.junit.QuarkusTest
 import jakarta.inject.Inject
 import org.assertj.core.api.Assertions.assertThat
@@ -15,7 +16,7 @@ class AppArtistRepositoryTests {
     lateinit var appArtistRepository: AppArtistRepositoryPort
 
     private fun artist(suffix: String) = AppArtist(
-        artistId = "artist-$suffix-${UUID.randomUUID()}",
+        id = ArtistId("artist-$suffix-${UUID.randomUUID()}"),
         artistName = "Artist $suffix",
         lastSync = kotlin.time.Instant.fromEpochSeconds(1),
     )
@@ -25,10 +26,10 @@ class AppArtistRepositoryTests {
         val item = artist("new")
         appArtistRepository.upsertAll(listOf(item))
 
-        val result = appArtistRepository.findByArtistIds(setOf(item.artistId))
+        val result = appArtistRepository.findByArtistIds(setOf(item.id))
 
         assertThat(result).hasSize(1)
-        assertThat(result[0].artistId).isEqualTo(item.artistId)
+        assertThat(result[0].id).isEqualTo(item.id)
         assertThat(result[0].artistName).isEqualTo(item.artistName)
     }
 
@@ -40,7 +41,7 @@ class AppArtistRepositoryTests {
         val updated = original.copy(artistName = "Updated Name")
         appArtistRepository.upsertAll(listOf(updated))
 
-        val result = appArtistRepository.findByArtistIds(setOf(original.artistId))
+        val result = appArtistRepository.findByArtistIds(setOf(original.id))
 
         assertThat(result).hasSize(1)
         assertThat(result[0].artistName).isEqualTo("Updated Name")
@@ -48,7 +49,7 @@ class AppArtistRepositoryTests {
 
     @Test
     fun `findByArtistIds returns empty list for unknown artistIds`() {
-        val result = appArtistRepository.findByArtistIds(setOf("unknown-artist-${UUID.randomUUID()}"))
+        val result = appArtistRepository.findByArtistIds(setOf(ArtistId("unknown-artist-${UUID.randomUUID()}")))
         assertThat(result).isEmpty()
     }
 
@@ -65,10 +66,10 @@ class AppArtistRepositoryTests {
         val item3 = artist("batch3")
         appArtistRepository.upsertAll(listOf(item1, item2, item3))
 
-        val result = appArtistRepository.findByArtistIds(setOf(item1.artistId, item2.artistId, item3.artistId))
+        val result = appArtistRepository.findByArtistIds(setOf(item1.id, item2.id, item3.id))
 
         assertThat(result).hasSize(3)
-        assertThat(result.map { it.artistId }).containsExactlyInAnyOrder(item1.artistId, item2.artistId, item3.artistId)
+        assertThat(result.map { it.id }).containsExactlyInAnyOrder(item1.id, item2.id, item3.id)
     }
 
     @Test
@@ -79,7 +80,7 @@ class AppArtistRepositoryTests {
         )
         appArtistRepository.upsertAll(listOf(item))
 
-        val result = appArtistRepository.findByArtistIds(setOf(item.artistId))
+        val result = appArtistRepository.findByArtistIds(setOf(item.id))
         assertThat(result).hasSize(1)
         assertThat(result[0].artistName).isEqualTo(item.artistName)
         assertThat(result[0].imageLink).isEqualTo("https://example.com/image.jpg")
@@ -95,8 +96,8 @@ class AppArtistRepositoryTests {
         appArtistRepository.upsertAll(listOf(withImageAndBlankName, withImageAndName, withoutImage))
         val result = appArtistRepository.findWithImageLinkAndBlankName()
 
-        assertThat(result.map { it.artistId }).contains(withImageAndBlankName.artistId)
-        assertThat(result.map { it.artistId }).doesNotContain(withImageAndName.artistId, withoutImage.artistId)
+        assertThat(result.map { it.id }).contains(withImageAndBlankName.id)
+        assertThat(result.map { it.id }).doesNotContain(withImageAndName.id, withoutImage.id)
     }
 
     @Test
@@ -120,14 +121,14 @@ class AppArtistRepositoryTests {
         appArtistRepository.upsertAll(listOf(artistC, artistA, artistB))
 
         val totalUndecided = appArtistRepository.countByPlaybackProcessingStatus(
-            de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus.UNDECIDED,
+            de.chrgroth.spotify.control.domain.model.catalog.ArtistPlaybackProcessingStatus.UNDECIDED,
         )
         val allResults = appArtistRepository.findByPlaybackProcessingStatusPaged(
-            de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus.UNDECIDED, 0, totalUndecided.toInt(),
+            de.chrgroth.spotify.control.domain.model.catalog.ArtistPlaybackProcessingStatus.UNDECIDED, 0, totalUndecided.toInt(),
         )
 
-        val insertedIds = setOf(artistA.artistId, artistB.artistId, artistC.artistId)
-        val found = allResults.filter { it.artistId in insertedIds }
+        val insertedIds = setOf(artistA.id, artistB.id, artistC.id)
+        val found = allResults.filter { it.id in insertedIds }
         assertThat(found).hasSize(3)
         assertThat(found.map { it.artistName }).containsExactly(
             "A Artist $suffix",
@@ -139,7 +140,7 @@ class AppArtistRepositoryTests {
     @Test
     fun `findByPlaybackProcessingStatusPaged returns empty list when offset exceeds available items`() {
         val result = appArtistRepository.findByPlaybackProcessingStatusPaged(
-            de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus.UNDECIDED, 100000, 50,
+            de.chrgroth.spotify.control.domain.model.catalog.ArtistPlaybackProcessingStatus.UNDECIDED, 100000, 50,
         )
         assertThat(result).isEmpty()
     }
@@ -152,19 +153,19 @@ class AppArtistRepositoryTests {
         appArtistRepository.upsertAll(listOf(artist1, artist2))
 
         val before = appArtistRepository.countByPlaybackProcessingStatus(
-            de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus.UNDECIDED,
+            de.chrgroth.spotify.control.domain.model.catalog.ArtistPlaybackProcessingStatus.UNDECIDED,
         )
         appArtistRepository.updatePlaybackProcessingStatus(
-            artist1.artistId,
-            de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus.ACTIVE,
+            artist1.id,
+            de.chrgroth.spotify.control.domain.model.catalog.ArtistPlaybackProcessingStatus.ACTIVE,
         )
         val afterUpdate = appArtistRepository.countByPlaybackProcessingStatus(
-            de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus.UNDECIDED,
+            de.chrgroth.spotify.control.domain.model.catalog.ArtistPlaybackProcessingStatus.UNDECIDED,
         )
 
         assertThat(afterUpdate).isEqualTo(before - 1)
         assertThat(appArtistRepository.countByPlaybackProcessingStatus(
-            de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus.ACTIVE,
+            de.chrgroth.spotify.control.domain.model.catalog.ArtistPlaybackProcessingStatus.ACTIVE,
         )).isGreaterThanOrEqualTo(1)
     }
 }

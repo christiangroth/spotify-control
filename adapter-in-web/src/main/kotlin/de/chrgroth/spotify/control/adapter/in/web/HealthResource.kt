@@ -1,6 +1,6 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
-import de.chrgroth.spotify.control.domain.port.`in`.HealthPort
+import de.chrgroth.spotify.control.domain.port.`in`.infra.HealthPort
 import io.quarkus.qute.Location
 import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance

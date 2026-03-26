@@ -9,11 +9,11 @@ import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
-import de.chrgroth.spotify.control.domain.port.`in`.CatalogPort
-import de.chrgroth.spotify.control.domain.port.`in`.PlaybackPort
-import de.chrgroth.spotify.control.domain.port.`in`.PlaylistCheckPort
-import de.chrgroth.spotify.control.domain.port.`in`.PlaylistPort
-import de.chrgroth.spotify.control.domain.port.`in`.UserProfilePort
+import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogPort
+import de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackPort
+import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistCheckPort
+import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistPort
+import de.chrgroth.spotify.control.domain.port.`in`.user.UserProfilePort
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
 

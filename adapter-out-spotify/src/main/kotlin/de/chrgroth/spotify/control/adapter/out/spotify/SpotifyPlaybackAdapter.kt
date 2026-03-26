@@ -8,11 +8,14 @@ import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyRecentlyPlay
 import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyTrackResponse
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.PlaybackError
-import de.chrgroth.spotify.control.domain.model.AccessToken
-import de.chrgroth.spotify.control.domain.model.CurrentlyPlayingItem
-import de.chrgroth.spotify.control.domain.model.RecentlyPlayedItem
-import de.chrgroth.spotify.control.domain.model.UserId
-import de.chrgroth.spotify.control.domain.port.out.SpotifyPlaybackPort
+import de.chrgroth.spotify.control.domain.model.user.AccessToken
+import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
+import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
+import de.chrgroth.spotify.control.domain.model.playback.CurrentlyPlayingItem
+import de.chrgroth.spotify.control.domain.model.playback.RecentlyPlayedItem
+import de.chrgroth.spotify.control.domain.model.catalog.TrackId
+import de.chrgroth.spotify.control.domain.model.user.UserId
+import de.chrgroth.spotify.control.domain.port.out.playback.SpotifyPlaybackPort
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
 import org.eclipse.microprofile.config.inject.ConfigProperty
@@ -25,7 +28,7 @@ import kotlin.time.Instant
 
 @ApplicationScoped
 @Suppress("Unused", "TooGenericExceptionCaught")
-class SpotifyPlaybackAdapter(
+class SpotifyPlaybackService(
     @param:ConfigProperty(name = "spotify.api.base-url")
     private val apiBaseUrl: String,
     private val httpMetrics: SpotifyHttpMetrics,
@@ -68,15 +71,15 @@ class SpotifyPlaybackAdapter(
         }
         return CurrentlyPlayingItem(
           spotifyUserId = userId,
-          trackId = track.id,
+          trackId = TrackId(track.id),
           trackName = track.name,
-          artistIds = track.artists.map { it.id },
+          artistIds = track.artists.map { ArtistId(it.id) },
           artistNames = track.artists.map { it.name },
           progressMs = response.progressMs ?: 0L,
           durationMs = track.durationMs ?: 0L,
           isPlaying = response.isPlaying,
           observedAt = Clock.System.now(),
-          albumId = track.album?.id,
+          albumId = track.album?.id?.let { AlbumId(it) },
         )
     }
 
@@ -120,12 +123,12 @@ class SpotifyPlaybackAdapter(
         }
         return RecentlyPlayedItem(
             spotifyUserId = userId,
-            trackId = track.id,
+            trackId = TrackId(track.id),
             trackName = track.name,
-            artistIds = track.artists.map { it.id },
+            artistIds = track.artists.map { ArtistId(it.id) },
             artistNames = track.artists.map { it.name },
             playedAt = Instant.parse(playedAt),
-            albumId = track.album?.id,
+            albumId = track.album?.id?.let { AlbumId(it) },
             durationSeconds = track.durationMs?.let { it / MS_PER_SECOND },
         )
     }

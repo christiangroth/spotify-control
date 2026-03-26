@@ -7,6 +7,7 @@ import io.quarkus.scheduler.Trigger
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.time.Instant
+import kotlin.time.toKotlinInstant
 
 class SchedulerInfoAdapterTests {
 
@@ -32,7 +33,7 @@ class SchedulerInfoAdapterTests {
         assertThat(result).hasSize(1)
         assertThat(result[0].simpleName).isEqualTo("TestCronjob")
         assertThat(result[0].running).isTrue()
-        assertThat(result[0].nextExecution).isEqualTo(nextFireTime)
+        assertThat(result[0].nextExecution).isEqualTo(nextFireTime.toKotlinInstant())
     }
 
     @Test

@@ -1,10 +1,10 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
-import de.chrgroth.spotify.control.domain.model.AlbumId
-import de.chrgroth.spotify.control.domain.model.AppTrack
-import de.chrgroth.spotify.control.domain.model.ArtistId
-import de.chrgroth.spotify.control.domain.model.TrackId
-import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
+import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
+import de.chrgroth.spotify.control.domain.model.catalog.AppTrack
+import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
+import de.chrgroth.spotify.control.domain.model.catalog.TrackId
+import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
 import io.quarkus.test.junit.QuarkusTest
 import jakarta.inject.Inject
 import org.assertj.core.api.Assertions.assertThat

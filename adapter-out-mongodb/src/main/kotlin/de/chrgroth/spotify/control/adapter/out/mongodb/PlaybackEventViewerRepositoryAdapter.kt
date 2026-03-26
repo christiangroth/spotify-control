@@ -4,9 +4,9 @@ import com.mongodb.MongoException
 import com.mongodb.client.MongoClient
 import com.mongodb.client.model.Filters
 import com.mongodb.client.model.Sorts
-import de.chrgroth.spotify.control.domain.model.RawPlaybackEvent
-import de.chrgroth.spotify.control.domain.model.UserId
-import de.chrgroth.spotify.control.domain.port.out.PlaybackEventViewerRepositoryPort
+import de.chrgroth.spotify.control.domain.model.playback.RawPlaybackEvent
+import de.chrgroth.spotify.control.domain.model.user.UserId
+import de.chrgroth.spotify.control.domain.port.out.playback.PlaybackEventViewerRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 import kotlin.time.Instant
 import kotlin.time.toJavaInstant

@@ -9,11 +9,11 @@ import de.chrgroth.spotify.control.domain.model.OutboxPartitionStats
 import de.chrgroth.spotify.control.domain.model.OutboxTask
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
-import de.chrgroth.spotify.control.domain.port.out.OutboxPort
+import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
 import org.eclipse.microprofile.config.inject.ConfigProperty
-import java.time.Instant
+import kotlin.time.toKotlinInstant
 
 @ApplicationScoped
 @Suppress("Unused")
@@ -37,7 +37,7 @@ class OutboxPortAdapter(
         name = partition.key,
         status = info?.status?.name ?: OutboxPartitionStatus.ACTIVE.name,
         documentCount = info?.eventCount ?: 0L,
-        blockedUntil = info?.pausedUntil,
+        blockedUntil = info?.pausedUntil?.toKotlinInstant(),
         eventTypeCounts = info?.eventPerTypeCount
           ?.entries
           ?.map { (kClass, count) -> OutboxEventTypeCount(eventType = kClass.simpleName ?: "unknown", count = count) }
@@ -58,13 +58,13 @@ class OutboxPortAdapter(
           priority = doc.getString("priority") ?: "NORMAL",
           status = doc.getString("status") ?: "PENDING",
           attempts = doc.getInteger("attempts", 0),
-          nextRetryAt = doc.getDate("nextRetryAt")?.toInstant(),
-          createdAt = doc.getDate("createdAt")?.toInstant() ?: Instant.EPOCH,
+          nextRetryAt = doc.getDate("nextRetryAt")?.toInstant()?.toKotlinInstant(),
+          createdAt = doc.getDate("createdAt")?.toInstant()?.toKotlinInstant() ?: kotlin.time.Instant.fromEpochMilliseconds(0),
           lastError = doc.getString("lastError"),
         )
       }
       .toList()
-      .sortedWith(compareBy({ it.priorityOrder }, { it.nextRetryAt ?: Instant.MAX }))
+      .sortedWith(compareBy({ it.priorityOrder }, { it.nextRetryAt ?: kotlin.time.Instant.DISTANT_FUTURE }))
 
 
   companion object : KLogging() {

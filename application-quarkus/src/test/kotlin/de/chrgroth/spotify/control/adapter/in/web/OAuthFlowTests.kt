@@ -1,6 +1,6 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
-import de.chrgroth.spotify.control.domain.port.out.TokenEncryptionPort
+import de.chrgroth.spotify.control.domain.port.out.user.TokenEncryptionPort
 import io.quarkus.test.junit.QuarkusTest
 import io.restassured.RestAssured.given
 import jakarta.inject.Inject

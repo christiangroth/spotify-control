@@ -1,12 +1,12 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
 import de.chrgroth.spotify.control.domain.error.ArtistSettingsError
-import de.chrgroth.spotify.control.domain.model.AppArtist
-import de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus
-import de.chrgroth.spotify.control.domain.model.UserId
-import de.chrgroth.spotify.control.domain.port.`in`.CatalogPort
-import de.chrgroth.spotify.control.domain.port.`in`.PlaybackPort
-import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
+import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
+import de.chrgroth.spotify.control.domain.model.catalog.ArtistPlaybackProcessingStatus
+import de.chrgroth.spotify.control.domain.model.user.UserId
+import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogPort
+import de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackPort
+import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
 import io.quarkus.qute.Location
 import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance

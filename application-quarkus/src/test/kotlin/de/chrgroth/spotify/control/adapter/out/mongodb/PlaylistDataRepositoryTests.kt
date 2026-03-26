@@ -1,11 +1,14 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
-import de.chrgroth.spotify.control.domain.model.Playlist
-import de.chrgroth.spotify.control.domain.model.PlaylistInfo
-import de.chrgroth.spotify.control.domain.model.PlaylistSyncStatus
-import de.chrgroth.spotify.control.domain.model.PlaylistTrack
-import de.chrgroth.spotify.control.domain.model.UserId
-import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
+import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
+import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
+import de.chrgroth.spotify.control.domain.model.playlist.Playlist
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistInfo
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSyncStatus
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistTrack
+import de.chrgroth.spotify.control.domain.model.catalog.TrackId
+import de.chrgroth.spotify.control.domain.model.user.UserId
+import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
 import io.quarkus.test.junit.QuarkusTest
 import jakarta.inject.Inject
 import kotlin.time.Clock
@@ -25,9 +28,9 @@ class PlaylistDataRepositoryTests {
         spotifyPlaylistId = playlistId,
         tracks = listOf(
             PlaylistTrack(
-                trackId = "track-1",
-                artistIds = listOf("artist-1"),
-                albumId = "album-1",
+                trackId = TrackId("track-1"),
+                artistIds = listOf(ArtistId("artist-1")),
+                albumId = AlbumId("album-1"),
             ),
         ),
     )
@@ -61,8 +64,8 @@ class PlaylistDataRepositoryTests {
         assertThat(found).isNotNull
         assertThat(found!!.spotifyPlaylistId).isEqualTo("playlist-1")
         assertThat(found.tracks).hasSize(1)
-        assertThat(found.tracks[0].trackId).isEqualTo("track-1")
-        assertThat(found.tracks[0].artistIds).containsExactly("artist-1")
+        assertThat(found.tracks[0].trackId).isEqualTo(TrackId("track-1"))
+        assertThat(found.tracks[0].artistIds).containsExactly(ArtistId("artist-1"))
     }
 
     @Test
@@ -72,8 +75,8 @@ class PlaylistDataRepositoryTests {
         val playlist = Playlist(
             spotifyPlaylistId = playlistId,
             tracks = listOf(
-                PlaylistTrack(trackId = "t1", artistIds = listOf("a1"), albumId = "al1"),
-                PlaylistTrack(trackId = "t2", artistIds = listOf("a2"), albumId = "al2"),
+                PlaylistTrack(trackId = TrackId("t1"), artistIds = listOf(ArtistId("a1")), albumId = AlbumId("al1")),
+                PlaylistTrack(trackId = TrackId("t2"), artistIds = listOf(ArtistId("a2")), albumId = AlbumId("al2")),
             ),
         )
 
@@ -92,7 +95,7 @@ class PlaylistDataRepositoryTests {
             userId,
             Playlist(
                 spotifyPlaylistId = playlistId,
-                tracks = listOf(PlaylistTrack(trackId = "t1", artistIds = listOf("a1"), albumId = "al1")),
+                tracks = listOf(PlaylistTrack(trackId = TrackId("t1"), artistIds = listOf(ArtistId("a1")), albumId = AlbumId("al1"))),
             ),
         )
 
@@ -100,8 +103,8 @@ class PlaylistDataRepositoryTests {
             userId,
             playlistId,
             listOf(
-                PlaylistTrack(trackId = "t2", artistIds = listOf("a2"), albumId = "al2"),
-                PlaylistTrack(trackId = "t3", artistIds = listOf("a3"), albumId = "al3"),
+                PlaylistTrack(trackId = TrackId("t2"), artistIds = listOf(ArtistId("a2")), albumId = AlbumId("al2")),
+                PlaylistTrack(trackId = TrackId("t3"), artistIds = listOf(ArtistId("a3")), albumId = AlbumId("al3")),
             ),
         )
 
@@ -148,9 +151,9 @@ class PlaylistDataRepositoryTests {
                 spotifyPlaylistId = playlistId,
                 tracks = listOf(
                     PlaylistTrack(
-                        trackId = "track-x",
-                        artistIds = listOf(artistId),
-                        albumId = "album-x",
+                        trackId = TrackId("track-x"),
+                        artistIds = listOf(ArtistId(artistId)),
+                        albumId = AlbumId("album-x"),
                     ),
                 ),
             ),
@@ -174,9 +177,9 @@ class PlaylistDataRepositoryTests {
                 spotifyPlaylistId = playlistId,
                 tracks = listOf(
                     PlaylistTrack(
-                        trackId = "track-y",
-                        artistIds = listOf(artistId),
-                        albumId = "album-y",
+                        trackId = TrackId("track-y"),
+                        artistIds = listOf(ArtistId(artistId)),
+                        albumId = AlbumId("album-y"),
                     ),
                 ),
             ),
@@ -201,7 +204,7 @@ class PlaylistDataRepositoryTests {
             userId1,
             Playlist(
                 spotifyPlaylistId = playlistId1,
-                tracks = listOf(PlaylistTrack("t1", listOf(artistId1), "album-t1")),
+                tracks = listOf(PlaylistTrack(TrackId("t1"), listOf(ArtistId(artistId1)), AlbumId("album-t1"))),
             ),
         )
         playlistRepository.saveAll(userId2, listOf(buildPlaylistInfo(playlistId2, PlaylistSyncStatus.ACTIVE)))
@@ -209,7 +212,7 @@ class PlaylistDataRepositoryTests {
             userId2,
             Playlist(
                 spotifyPlaylistId = playlistId2,
-                tracks = listOf(PlaylistTrack("t2", listOf(artistId2), "album-t2")),
+                tracks = listOf(PlaylistTrack(TrackId("t2"), listOf(ArtistId(artistId2)), AlbumId("album-t2"))),
             ),
         )
 

@@ -1,15 +1,16 @@
 package de.chrgroth.spotify.control.domain.check
 
-import de.chrgroth.spotify.control.domain.model.AppTrack
-import de.chrgroth.spotify.control.domain.model.ArtistId
-import de.chrgroth.spotify.control.domain.model.Playlist
-import de.chrgroth.spotify.control.domain.model.PlaylistInfo
-import de.chrgroth.spotify.control.domain.model.PlaylistSyncStatus
-import de.chrgroth.spotify.control.domain.model.PlaylistTrack
-import de.chrgroth.spotify.control.domain.model.PlaylistType
-import de.chrgroth.spotify.control.domain.model.TrackId
-import de.chrgroth.spotify.control.domain.model.UserId
-import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
+import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
+import de.chrgroth.spotify.control.domain.model.catalog.AppTrack
+import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
+import de.chrgroth.spotify.control.domain.model.playlist.Playlist
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistInfo
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSyncStatus
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistTrack
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistType
+import de.chrgroth.spotify.control.domain.model.catalog.TrackId
+import de.chrgroth.spotify.control.domain.model.user.UserId
+import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
 import io.mockk.every
 import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
@@ -26,9 +27,9 @@ class DuplicateTrackIdsCheckRunnerTests {
     private val playlistId = "playlist-1"
 
     private fun buildTrack(trackId: String) = PlaylistTrack(
-        trackId = trackId,
-        artistIds = listOf("artist-1"),
-        albumId = "album-1",
+        trackId = TrackId(trackId),
+        artistIds = listOf(ArtistId("artist-1")),
+        albumId = AlbumId("album-1"),
     )
 
     private fun buildAppTrack(trackId: String, title: String, artistName: String? = "Artist") = AppTrack(

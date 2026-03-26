@@ -1,8 +1,10 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
-import de.chrgroth.spotify.control.domain.model.RecentlyPlayedItem
-import de.chrgroth.spotify.control.domain.model.UserId
-import de.chrgroth.spotify.control.domain.port.out.RecentlyPlayedRepositoryPort
+import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
+import de.chrgroth.spotify.control.domain.model.playback.RecentlyPlayedItem
+import de.chrgroth.spotify.control.domain.model.catalog.TrackId
+import de.chrgroth.spotify.control.domain.model.user.UserId
+import de.chrgroth.spotify.control.domain.port.out.playback.RecentlyPlayedRepositoryPort
 import io.quarkus.test.junit.QuarkusTest
 import jakarta.inject.Inject
 import kotlin.time.Clock
@@ -23,9 +25,9 @@ class RecentlyPlayedRepositoryTests {
 
     private fun item(index: Int) = RecentlyPlayedItem(
         spotifyUserId = userId,
-        trackId = "track-$index",
+        trackId = TrackId("track-$index"),
         trackName = "Track $index",
-        artistIds = listOf("artist-id-$index"),
+        artistIds = listOf(ArtistId("artist-id-$index")),
         artistNames = listOf("Artist $index"),
         playedAt = now - index.hours,
         durationSeconds = (index * 180).toLong(),
@@ -84,7 +86,7 @@ class RecentlyPlayedRepositoryTests {
 
     private fun nonTrackItem(index: Int) = RecentlyPlayedItem(
         spotifyUserId = userId,
-        trackId = "episode-$index",
+        trackId = TrackId("episode-$index"),
         trackName = "Episode $index",
         artistIds = emptyList(),
         artistNames = emptyList(),
@@ -126,9 +128,9 @@ class RecentlyPlayedRepositoryTests {
     fun `findSince returns zero durationSeconds when not set`() {
         val itemWithoutDuration = RecentlyPlayedItem(
             spotifyUserId = userId,
-            trackId = "track-noduration",
+            trackId = TrackId("track-noduration"),
             trackName = "Track No Duration",
-            artistIds = listOf("artist-id-1"),
+            artistIds = listOf(ArtistId("artist-id-1")),
             artistNames = listOf("Artist 1"),
             playedAt = now - 10.hours,
             durationSeconds = null,
@@ -137,7 +139,7 @@ class RecentlyPlayedRepositoryTests {
 
         val result = recentlyPlayedRepository.findSince(userId, null)
 
-        val found = result.first { it.trackId == "track-noduration" }
+        val found = result.first { it.trackId == TrackId("track-noduration") }
         assertThat(found.durationSeconds).isEqualTo(0L)
     }
 }

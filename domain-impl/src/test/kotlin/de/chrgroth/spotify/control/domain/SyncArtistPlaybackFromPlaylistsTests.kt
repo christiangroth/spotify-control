@@ -1,22 +1,23 @@
 package de.chrgroth.spotify.control.domain
 
 import arrow.core.right
-import de.chrgroth.spotify.control.domain.model.AppArtist
-import de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus
-import de.chrgroth.spotify.control.domain.model.UserId
-import de.chrgroth.spotify.control.domain.port.`in`.CatalogPort
-import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.AppPlaybackRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.CurrentlyPlayingRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.DashboardRefreshPort
-import de.chrgroth.spotify.control.domain.port.out.OutboxPort
-import de.chrgroth.spotify.control.domain.port.out.PlaybackStatePort
-import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.RecentlyPartialPlayedRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.RecentlyPlayedRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.SpotifyAccessTokenPort
-import de.chrgroth.spotify.control.domain.port.out.SpotifyPlaybackPort
-import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
+import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
+import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
+import de.chrgroth.spotify.control.domain.model.catalog.ArtistPlaybackProcessingStatus
+import de.chrgroth.spotify.control.domain.model.user.UserId
+import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogPort
+import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.playback.AppPlaybackRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.playback.CurrentlyPlayingRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.infra.DashboardRefreshPort
+import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
+import de.chrgroth.spotify.control.domain.port.out.playback.PlaybackStatePort
+import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.playback.RecentlyPartialPlayedRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.playback.RecentlyPlayedRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAccessTokenPort
+import de.chrgroth.spotify.control.domain.port.out.playback.SpotifyPlaybackPort
+import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -41,7 +42,7 @@ class SyncArtistPlaybackFromPlaylistsTests {
     private val catalog: CatalogPort = mockk()
     private val playlistRepository: PlaylistRepositoryPort = mockk()
 
-    private val adapter = PlaybackAdapter(
+    private val adapter = PlaybackService(
         userRepository,
         spotifyAccessToken,
         spotifyPlayback,
@@ -62,7 +63,7 @@ class SyncArtistPlaybackFromPlaylistsTests {
     private val userId = UserId("user-1")
 
     private fun artist(id: String, status: ArtistPlaybackProcessingStatus) =
-        AppArtist(artistId = id, artistName = "Artist $id", playbackProcessingStatus = status, lastSync = kotlin.time.Instant.fromEpochSeconds(1))
+        AppArtist(id = ArtistId(id), artistName = "Artist $id", playbackProcessingStatus = status, lastSync = kotlin.time.Instant.fromEpochSeconds(1))
 
     private fun setupActivePlaylistArtists(vararg artistIds: String) {
         every { playlistRepository.findArtistIdsInActivePlaylists() } returns artistIds.toSet()

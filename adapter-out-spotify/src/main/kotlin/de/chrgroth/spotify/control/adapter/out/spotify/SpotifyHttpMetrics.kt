@@ -1,8 +1,8 @@
 package de.chrgroth.spotify.control.adapter.out.spotify
 
 import de.chrgroth.spotify.control.domain.model.OutgoingRequestStats
-import de.chrgroth.spotify.control.domain.port.out.OutgoingRequestStatsObserver
-import de.chrgroth.spotify.control.domain.port.out.OutgoingRequestStatsPort
+import de.chrgroth.spotify.control.domain.port.out.infra.OutgoingRequestStatsObserver
+import de.chrgroth.spotify.control.domain.port.out.infra.OutgoingRequestStatsPort
 import io.micrometer.core.instrument.Gauge
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Timer

@@ -1,9 +1,9 @@
 package de.chrgroth.spotify.control.adapter.`in`.starter
 
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
-import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.OutboxPort
-import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
+import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
 import de.chrgroth.quarkus.starters.domain.Starter
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
@@ -31,7 +31,7 @@ class ReEnrichArtistNameBugfixStarter(
         }
         logger.info { "Enqueuing re-sync for ${artists.size} artist(s) with imageLink but missing name" }
         artists.forEach { artist ->
-            outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails(artist.artistId, user.spotifyUserId))
+            outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails(artist.id.value, user.spotifyUserId))
         }
     }
 

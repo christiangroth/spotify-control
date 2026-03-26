@@ -1,6 +1,6 @@
 package de.chrgroth.spotify.control.adapter.`in`.starter
 
-import de.chrgroth.spotify.control.domain.port.out.DatabaseMigrationPort
+import de.chrgroth.spotify.control.domain.port.out.infra.DatabaseMigrationPort
 import io.mockk.mockk
 import io.mockk.verify
 import io.mockk.verifyOrder

@@ -1,13 +1,14 @@
 package de.chrgroth.spotify.control.domain
 
-import de.chrgroth.spotify.control.domain.model.AlbumId
-import de.chrgroth.spotify.control.domain.model.TrackId
-import de.chrgroth.spotify.control.domain.model.UserId
+import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
+import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
+import de.chrgroth.spotify.control.domain.model.catalog.TrackId
+import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
-import de.chrgroth.spotify.control.domain.port.out.AppAlbumRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.OutboxPort
+import de.chrgroth.spotify.control.domain.port.out.catalog.AppAlbumRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
 
@@ -62,7 +63,7 @@ class SyncController(
      */
     fun syncArtists(artistIds: List<String>, userId: UserId) {
         if (artistIds.isEmpty()) return
-        val existingArtistIds = appArtistRepository.findByArtistIds(artistIds.toSet()).map { it.artistId }.toSet()
+        val existingArtistIds = appArtistRepository.findByArtistIds(artistIds.map { ArtistId(it) }.toSet()).map { it.id.value }.toSet()
         val newArtistIds = artistIds.filter { it !in existingArtistIds }.distinct()
         if (newArtistIds.isNotEmpty()) {
             logger.info { "Enqueueing SyncArtistDetails for ${newArtistIds.size} new artist(s)" }

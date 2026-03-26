@@ -1,6 +1,6 @@
 package de.chrgroth.spotify.control.adapter.`in`.starter
 
-import de.chrgroth.spotify.control.domain.port.out.DatabaseMigrationPort
+import de.chrgroth.spotify.control.domain.port.out.infra.DatabaseMigrationPort
 import de.chrgroth.quarkus.starters.domain.Starter
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging

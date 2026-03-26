@@ -9,17 +9,17 @@ import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyArtistRespon
 import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifySimplifiedTrackResponse
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.SyncError
-import de.chrgroth.spotify.control.domain.model.AccessToken
-import de.chrgroth.spotify.control.domain.model.AlbumId
-import de.chrgroth.spotify.control.domain.model.AlbumSyncResult
-import de.chrgroth.spotify.control.domain.model.AppAlbum
-import de.chrgroth.spotify.control.domain.model.AppArtist
-import de.chrgroth.spotify.control.domain.model.AppTrack
-import de.chrgroth.spotify.control.domain.model.ArtistId
-import de.chrgroth.spotify.control.domain.model.TrackId
-import de.chrgroth.spotify.control.domain.model.UserId
+import de.chrgroth.spotify.control.domain.model.user.AccessToken
+import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
+import de.chrgroth.spotify.control.domain.model.catalog.AlbumSyncResult
+import de.chrgroth.spotify.control.domain.model.catalog.AppAlbum
+import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
+import de.chrgroth.spotify.control.domain.model.catalog.AppTrack
+import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
+import de.chrgroth.spotify.control.domain.model.catalog.TrackId
+import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
-import de.chrgroth.spotify.control.domain.port.out.SpotifyCatalogPort
+import de.chrgroth.spotify.control.domain.port.out.catalog.SpotifyCatalogPort
 import jakarta.enterprise.context.ApplicationScoped
 import kotlin.time.Clock
 import mu.KLogging
@@ -31,7 +31,7 @@ import java.net.http.HttpResponse
 
 @ApplicationScoped
 @Suppress("Unused", "TooGenericExceptionCaught")
-class SpotifyCatalogAdapter(
+class SpotifyCatalogService(
     @param:ConfigProperty(name = "spotify.api.base-url")
     private val apiBaseUrl: String,
     private val httpMetrics: SpotifyHttpMetrics,
@@ -121,7 +121,7 @@ class SpotifyCatalogAdapter(
 
     private fun parseArtist(artist: SpotifyArtistResponse): AppArtist =
         AppArtist(
-            artistId = artist.id,
+            id = ArtistId(artist.id),
             artistName = artist.name,
             imageLink = artist.images.firstOrNull()?.url,
             type = artist.type,

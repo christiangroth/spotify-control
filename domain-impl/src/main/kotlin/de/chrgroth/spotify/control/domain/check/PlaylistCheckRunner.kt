@@ -1,9 +1,9 @@
 package de.chrgroth.spotify.control.domain.check
 
-import de.chrgroth.spotify.control.domain.model.AppPlaylistCheck
-import de.chrgroth.spotify.control.domain.model.Playlist
-import de.chrgroth.spotify.control.domain.model.PlaylistInfo
-import de.chrgroth.spotify.control.domain.model.UserId
+import de.chrgroth.spotify.control.domain.model.playlist.AppPlaylistCheck
+import de.chrgroth.spotify.control.domain.model.playlist.Playlist
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistInfo
+import de.chrgroth.spotify.control.domain.model.user.UserId
 
 interface PlaylistCheckRunner {
     val checkId: String

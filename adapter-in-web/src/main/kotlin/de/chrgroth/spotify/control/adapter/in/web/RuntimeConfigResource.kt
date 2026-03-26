@@ -1,6 +1,6 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
-import de.chrgroth.spotify.control.domain.port.`in`.RuntimeConfigPort
+import de.chrgroth.spotify.control.domain.port.`in`.user.RuntimeConfigPort
 import io.quarkus.security.Authenticated
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject

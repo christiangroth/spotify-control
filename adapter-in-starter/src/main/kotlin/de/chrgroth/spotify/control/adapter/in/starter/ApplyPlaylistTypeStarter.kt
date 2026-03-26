@@ -1,10 +1,10 @@
 package de.chrgroth.spotify.control.adapter.`in`.starter
 
 import de.chrgroth.quarkus.starters.domain.Starter
-import de.chrgroth.spotify.control.domain.model.PlaylistSyncStatus
-import de.chrgroth.spotify.control.domain.model.PlaylistType
-import de.chrgroth.spotify.control.domain.port.out.PlaylistRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.UserRepositoryPort
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSyncStatus
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistType
+import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
 

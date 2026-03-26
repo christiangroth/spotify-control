@@ -1,9 +1,9 @@
 package de.chrgroth.spotify.control.adapter.out.spotify
 
 import arrow.core.Either
-import de.chrgroth.spotify.control.domain.model.AccessToken
-import de.chrgroth.spotify.control.domain.model.RefreshToken
-import de.chrgroth.spotify.control.domain.port.out.SpotifyAuthPort
+import de.chrgroth.spotify.control.domain.model.user.AccessToken
+import de.chrgroth.spotify.control.domain.model.user.RefreshToken
+import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAuthPort
 import io.quarkus.test.junit.QuarkusTest
 import jakarta.inject.Inject
 import org.assertj.core.api.Assertions.assertThat

@@ -7,14 +7,17 @@ import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyPlaylistTrac
 import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyUserPlaylistsResponse
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.PlaylistSyncError
-import de.chrgroth.spotify.control.domain.model.AccessToken
-import de.chrgroth.spotify.control.domain.model.Playlist
-import de.chrgroth.spotify.control.domain.model.PlaylistTrack
-import de.chrgroth.spotify.control.domain.model.PlaylistTracksPage
-import de.chrgroth.spotify.control.domain.model.SpotifyPlaylistItem
-import de.chrgroth.spotify.control.domain.model.UserId
+import de.chrgroth.spotify.control.domain.model.user.AccessToken
+import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
+import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
+import de.chrgroth.spotify.control.domain.model.playlist.Playlist
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistTrack
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistTracksPage
+import de.chrgroth.spotify.control.domain.model.playlist.SpotifyPlaylistItem
+import de.chrgroth.spotify.control.domain.model.catalog.TrackId
+import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
-import de.chrgroth.spotify.control.domain.port.out.SpotifyPlaylistPort
+import de.chrgroth.spotify.control.domain.port.out.playlist.SpotifyPlaylistPort
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
 import org.eclipse.microprofile.config.inject.ConfigProperty
@@ -25,7 +28,7 @@ import java.net.http.HttpResponse
 
 @ApplicationScoped
 @Suppress("Unused", "TooGenericExceptionCaught")
-class SpotifyPlaylistAdapter(
+class SpotifyPlaylistService(
     @param:ConfigProperty(name = "spotify.api.base-url")
     private val apiBaseUrl: String,
     private val httpMetrics: SpotifyHttpMetrics,
@@ -98,9 +101,9 @@ class SpotifyPlaylistAdapter(
           }
           tracks.add(
             PlaylistTrack(
-              trackId = track.id,
-              artistIds = track.artists.map { it.id },
-              albumId = albumId,
+              trackId = TrackId(track.id),
+              artistIds = track.artists.map { ArtistId(it.id) },
+              albumId = AlbumId(albumId),
             ),
           )
         }
@@ -145,9 +148,9 @@ class SpotifyPlaylistAdapter(
                 }
                 tracks.add(
                     PlaylistTrack(
-                        trackId = track.id,
-                        artistIds = track.artists.map { it.id },
-                        albumId = albumId,
+                        trackId = TrackId(track.id),
+                        artistIds = track.artists.map { ArtistId(it.id) },
+                        albumId = AlbumId(albumId),
                     ),
                 )
             }

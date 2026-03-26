@@ -1,10 +1,10 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
-import de.chrgroth.spotify.control.domain.model.AlbumBrowseItem
-import de.chrgroth.spotify.control.domain.model.ArtistBrowseItem
-import de.chrgroth.spotify.control.domain.model.TrackBrowseItem
-import de.chrgroth.spotify.control.domain.port.`in`.CatalogBrowserPort
-import de.chrgroth.spotify.control.domain.port.`in`.CatalogPort
+import de.chrgroth.spotify.control.domain.model.catalog.AlbumBrowseItem
+import de.chrgroth.spotify.control.domain.model.catalog.ArtistBrowseItem
+import de.chrgroth.spotify.control.domain.model.catalog.TrackBrowseItem
+import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogBrowserPort
+import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogPort
 import io.quarkus.qute.Location
 import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance

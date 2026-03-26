@@ -1,18 +1,18 @@
 package de.chrgroth.spotify.control.domain
 
-import de.chrgroth.spotify.control.domain.model.AlbumId
-import de.chrgroth.spotify.control.domain.model.AppAlbum
-import de.chrgroth.spotify.control.domain.model.AppArtist
-import de.chrgroth.spotify.control.domain.model.AppTrack
-import de.chrgroth.spotify.control.domain.model.ArtistId
-import de.chrgroth.spotify.control.domain.model.ArtistPlaybackProcessingStatus
-import de.chrgroth.spotify.control.domain.model.TrackId
-import de.chrgroth.spotify.control.domain.model.UserId
+import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
+import de.chrgroth.spotify.control.domain.model.catalog.AppAlbum
+import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
+import de.chrgroth.spotify.control.domain.model.catalog.AppTrack
+import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
+import de.chrgroth.spotify.control.domain.model.catalog.ArtistPlaybackProcessingStatus
+import de.chrgroth.spotify.control.domain.model.catalog.TrackId
+import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
-import de.chrgroth.spotify.control.domain.port.out.AppAlbumRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.AppArtistRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.AppTrackRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.OutboxPort
+import de.chrgroth.spotify.control.domain.port.out.catalog.AppAlbumRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -46,7 +46,7 @@ class SyncControllerTests {
     private fun album(id: String) = AppAlbum(id = AlbumId(id), lastSync = syncTime)
 
     private fun artist(id: String) = AppArtist(
-        artistId = id,
+        id = ArtistId(id),
         artistName = "Artist $id",
         playbackProcessingStatus = ArtistPlaybackProcessingStatus.UNDECIDED,
         lastSync = syncTime,

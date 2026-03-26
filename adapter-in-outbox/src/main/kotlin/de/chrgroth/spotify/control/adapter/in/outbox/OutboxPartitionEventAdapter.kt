@@ -7,8 +7,8 @@ import de.chrgroth.quarkus.outbox.domain.event.OutboxTaskEnqueuedEvent
 import de.chrgroth.quarkus.outbox.domain.event.OutboxTaskFailedEvent
 import de.chrgroth.quarkus.outbox.domain.event.OutboxTaskRescheduledEvent
 import de.chrgroth.quarkus.outbox.domain.event.OutboxTaskRetryScheduledEvent
-import de.chrgroth.spotify.control.domain.port.out.OutboxPartitionObserver
-import de.chrgroth.spotify.control.domain.port.out.OutboxTaskCountObserver
+import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPartitionObserver
+import de.chrgroth.spotify.control.domain.port.out.infra.OutboxTaskCountObserver
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.enterprise.event.Observes
 import jakarta.enterprise.inject.Any
