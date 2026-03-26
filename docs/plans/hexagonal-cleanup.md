@@ -92,16 +92,6 @@ im Projekt ist `kotlin.time`.
   `Duration.ofMinutes()` sowie `isBefore()` auf kotlin.time-Äquivalente umstellen (`Clock.System.now()`,
   `Duration.seconds()`, `Duration.minutes()`)
 
-### `@JvmOverloads`-Konstruktor als Testbarkeits-Workaround
-
-`CurrentlyPlayingSkipPredicate` verwendet `@JvmOverloads constructor` mit optionalen Parametern
-(`ScheduledSkipPredicate`, `PlaybackActivityPort?`), um den Aufbau in Tests zu vereinfachen. CDI-Beans
-sollten genau einen Konstruktor haben; der Workaround macht die CDI-Wiring-Intention unklar.
-
-- [ ] Testaufbau überprüfen und `@JvmOverloads` durch einen sauberen Ansatz ersetzen – z. B. eigenen
-  Testkonstruktor oder explizites MockK-Subklassen-Mocking; CDI-Beans ohne optionale Konstruktorparameter
-  formulieren
-
 ---
 
 ## adapter-out-outbox
@@ -160,9 +150,6 @@ Domain-Modell zu suchen haben.
 `SlackNotificationAdapter` implementiert korrekt Out-Ports (`OutboxPartitionObserver`,
 `PlaylistCheckNotificationPort`). `@ConfigProperty` ist in Adapter-Modulen erwünscht und daher hier
 in Ordnung. Keine kritischen Findings.
-
-- [ ] `AppPlaylistCheck.playlistId: String` → bei Umstellung auf `PlaylistId`-Wert-Objekt
-  (bereits in domain-api-Sektion beschrieben) die entsprechenden Stellen hier anpassen
 
 ---
 

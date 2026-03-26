@@ -9,6 +9,7 @@ dependencies {
   implementation(project(":adapter-in-scheduler"))
   implementation(project(":adapter-in-starter"))
   implementation(project(":adapter-in-web"))
+  implementation(project(":adapter-out-config"))
   implementation(project(":adapter-out-mongodb"))
   implementation(project(":adapter-out-outbox"))
   implementation(project(":adapter-out-scheduler"))

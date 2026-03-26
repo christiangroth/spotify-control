@@ -1,4 +1,4 @@
-package de.chrgroth.spotify.control.adapter.out.scheduler
+package de.chrgroth.spotify.control.adapter.out.config
 
 import de.chrgroth.spotify.control.domain.model.infra.ConfigEntry
 import de.chrgroth.spotify.control.domain.model.infra.ConfigurationStats

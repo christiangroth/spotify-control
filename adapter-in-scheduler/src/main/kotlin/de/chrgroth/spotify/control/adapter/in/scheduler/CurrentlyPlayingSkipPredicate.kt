@@ -10,16 +10,16 @@ import java.time.Instant
 import java.util.concurrent.atomic.AtomicReference
 
 @ApplicationScoped
-class CurrentlyPlayingSkipPredicate @JvmOverloads constructor(
-    private val starterSkipPredicate: ScheduledSkipPredicate = ScheduledSkipPredicate(),
-    private val playbackActivity: PlaybackActivityPort? = null,
+class CurrentlyPlayingSkipPredicate(
+    private val starterSkipPredicate: ScheduledSkipPredicate,
+    private val playbackActivity: PlaybackActivityPort,
 ) : Scheduled.SkipPredicate {
 
     private val lastExecutedAtRef = AtomicReference<Instant>(Instant.EPOCH)
 
     override fun test(execution: ScheduledExecution): Boolean {
         if (starterSkipPredicate.test(execution)) return true
-        val effectiveInterval = if (playbackActivity?.isPlaybackActive() == true) FAST_INTERVAL else SLOW_INTERVAL
+        val effectiveInterval = if (playbackActivity.isPlaybackActive()) FAST_INTERVAL else SLOW_INTERVAL
         val now = Instant.now()
         val lastExecutedAt = lastExecutedAtRef.get()
         if (now.isBefore(lastExecutedAt.plus(effectiveInterval))) return true
