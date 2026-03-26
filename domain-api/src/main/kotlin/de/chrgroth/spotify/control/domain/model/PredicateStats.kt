@@ -1,6 +1,6 @@
 package de.chrgroth.spotify.control.domain.model
 
-import java.time.Instant
+import kotlin.time.Instant
 
 data class PredicateStats(
     val name: String,
