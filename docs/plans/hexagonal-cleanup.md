@@ -51,11 +51,11 @@ nutzen noch `String` und umgehen so die Typsicherheit.
 Im domain-api werden `kotlin.time.Instant`, `java.time.Instant` und `kotlinx.datetime.LocalDate` gemischt.
 Standard soll `kotlin.time.Instant` und `kotlinx.datetime.LocalDate` sein (kein `java.time`).
 
-- [ ] `OutboxTask` auf `kotlin.time.Instant` umstellen (aktuell `java.time.Instant`)
-- [ ] `OutboxPartitionStats` auf `kotlin.time.Instant` umstellen
-- [ ] `CronjobStats` auf `kotlin.time.Instant` umstellen
-- [ ] `PredicateStats` auf `kotlin.time.Instant` umstellen
-- [ ] `PlaybackActivityPort.lastActivityTimestamp()` auf `kotlin.time.Instant?` umstellen
+- [x] `OutboxTask` auf `kotlin.time.Instant` umstellen (aktuell `java.time.Instant`)
+- [x] `OutboxPartitionStats` auf `kotlin.time.Instant` umstellen
+- [x] `CronjobStats` auf `kotlin.time.Instant` umstellen
+- [x] `PredicateStats` auf `kotlin.time.Instant` umstellen
+- [x] `PlaybackActivityPort.lastActivityTimestamp()` auf `kotlin.time.Instant?` umstellen
 
 ### Infrastruktur-Modelle aus dem Domain-Model-Paket herausnehmen
 
@@ -127,7 +127,7 @@ werden von Adapter-Modulen implementiert – nicht von `domain-impl`. Diese Klas
 Orchestration von Spotify-Auth, Token-Refresh und Verschlüsselung und gehört konzeptuell zu
 `adapter-out-spotify`.
 
-- [ ] `SpotifyAccessTokenAdapter` nach `adapter-out-spotify` verschieben
+- [x] `SpotifyAccessTokenAdapter` nach `adapter-out-spotify` verschieben
 - [ ] Alle Domain-Service-Klassen, die `SpotifyAccessTokenPort` per Constructor-Injection empfangen,
   bleiben unverändert – nur die Implementierung wandert
 
@@ -137,7 +137,7 @@ Orchestration von Spotify-Auth, Token-Refresh und Verschlüsselung und gehört k
 Quarkus/MicroProfile-Annotationen (außer `@ApplicationScoped`) gehören nicht in `domain-impl`.
 Zudem ist die Implementierung eine infrastrukturelle Utility-Klasse (JDK-Krypto + Config).
 
-- [ ] `TokenEncryptionAdapter` nach `adapter-in-web` oder in ein neues kleines Adapter-Modul
+- [x] `TokenEncryptionAdapter` nach `adapter-in-web` oder in ein neues kleines Adapter-Modul
   `adapter-out-crypto` verschieben (je nachdem ob Verschlüsselung als eigenständige Boundary
   sinnvoll ist)
 
@@ -230,7 +230,7 @@ API-Typen.
 Das Modul hält sich an die Architektur-Regeln: Spotify-API-Modelle sind `internal` und nie im domain-api
 sichtbar. Keine kritischen Findings.
 
-- [ ] `SpotifyAccessTokenAdapter` aus `domain-impl` hierher verschieben (siehe oben)
+- [x] `SpotifyAccessTokenAdapter` aus `domain-impl` hierher verschieben (siehe oben)
 
 ---
 
