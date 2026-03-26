@@ -1,7 +1,5 @@
 package de.chrgroth.spotify.control.domain.model.infra
 
-import de.chrgroth.spotify.control.domain.util.formatted
-
 data class HealthStats(
     val outgoingRequestStats: List<OutgoingRequestStats>,
     val outboxPartitions: List<OutboxPartitionStats>,
@@ -15,6 +13,4 @@ data class HealthStats(
     val mongoCollectionSizeTotalKb: Long get() = mongoCollectionStats.sumOf { it.sizeKb }
     val outboxAllActive: Boolean get() = outboxPartitions.all { it.status == "ACTIVE" }
     val playbackActive: Boolean? get() = predicateStats.firstOrNull { it.name == "playbackActive" }?.active
-    val mongoCollectionDocumentTotalFormatted: String get() = mongoCollectionDocumentTotal.formatted()
-    val mongoCollectionSizeTotalKbFormatted: String get() = mongoCollectionSizeTotalKb.formatted()
 }

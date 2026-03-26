@@ -1,6 +1,5 @@
 package de.chrgroth.spotify.control.domain.model.playback
 
-import de.chrgroth.spotify.control.domain.util.formatted
 import kotlinx.datetime.LocalDate
 
 data class DayCount(
@@ -8,6 +7,4 @@ data class DayCount(
     val count: Long,
     val heightPercent: Int,
     val dateLabel: String,
-) {
-    val countFormatted: String get() = count.formatted()
-}
+)

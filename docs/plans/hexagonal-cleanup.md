@@ -8,14 +8,6 @@ Subdomain-Trennung und konsistentem Naming über alle Module hinweg.
 
 ## domain-api
 
-### Präsentations-Logik aus Domain-Modellen heraushalten
-
-Domain-Klassen sollen pure Kotlin `data class`/`sealed class`/`enum` sein – ohne Formatierungshilfsmethoden,
-die eigentlich Template-Concerns sind.
-
-- [ ] Prüfen ob die `*Formatted`-Properties in Domain-Klassen wie `DashboardStats`, `HealthStats`,
-  `CatalogStats` usw. wirklich Domain-Logik sind oder Presentation-Concerns – ggf. auslagern
-
 ---
 
 ## domain-impl

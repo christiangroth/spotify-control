@@ -47,8 +47,8 @@
                             </td>
                             <td style="border-color:#333;">{task.eventType}</td>
                             <td style="border-color:#333;text-align:right;">{task.attempts}</td>
-                            <td style="border-color:#333;white-space:nowrap;">{task.nextRetryAtFormatted}</td>
-                            <td style="border-color:#333;white-space:nowrap;">{task.createdAtFormatted}</td>
+                            <td style="border-color:#333;white-space:nowrap;">{#if task.nextRetryAt}{task.nextRetryAt.formatted}{#else}-{/if}</td>
+                            <td style="border-color:#333;white-space:nowrap;">{task.createdAt.formatted}</td>
                             <td style="border-color:#333;color:#aaa;font-size:0.8rem;" title="{task.deduplicationKey}">{task.deduplicationKey}</td>
                             <td style="border-color:#333;color:#e07070;font-size:0.8rem;">{#if task.lastError}{task.lastError}{#else}-{/if}</td>
                         </tr>

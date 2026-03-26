@@ -148,7 +148,6 @@ class DashboardServiceTests {
 
         assertThat(stats.recentlyPlayedTracks).hasSize(1)
         assertThat(stats.recentlyPlayedTracks[0].durationSeconds).isEqualTo(210L)
-        assertThat(stats.recentlyPlayedTracks[0].durationFormatted).isEqualTo("3:30")
     }
 
     @Test

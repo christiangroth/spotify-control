@@ -74,7 +74,7 @@ class CatalogBrowserService(
                     imageLink = album.imageLink,
                     releaseDate = album.releaseDate,
                     trackCount = albumTracks.size,
-                    durationFormatted = formatDurationHourMin(totalDurationMs),
+                    durationMs = totalDurationMs,
                 )
             }
     }
@@ -89,29 +89,8 @@ class CatalogBrowserService(
                     trackNumber = track.trackNumber,
                     discNumber = track.discNumber,
                     title = track.title,
-                    durationFormatted = formatDurationMinSec(track.durationMs ?: 0L),
+                    durationMs = track.durationMs ?: 0L,
                 )
             }
-    }
-
-    companion object {
-        private const val MS_PER_SECOND = 1000L
-        private const val SECONDS_PER_MINUTE = 60L
-        private const val SECONDS_PER_HOUR = 3600L
-
-        private fun formatDurationHourMin(durationMs: Long): String {
-            val totalSeconds = durationMs / MS_PER_SECOND
-            val hours = totalSeconds / SECONDS_PER_HOUR
-            val minutes = (totalSeconds % SECONDS_PER_HOUR) / SECONDS_PER_MINUTE
-            val seconds = totalSeconds % SECONDS_PER_MINUTE
-            return "%02d:%02d:%02d".format(hours, minutes, seconds)
-        }
-
-        private fun formatDurationMinSec(durationMs: Long): String {
-            val totalSeconds = durationMs / MS_PER_SECOND
-            val minutes = totalSeconds / SECONDS_PER_MINUTE
-            val seconds = totalSeconds % SECONDS_PER_MINUTE
-            return "%d:%02d".format(minutes, seconds)
-        }
     }
 }

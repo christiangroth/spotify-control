@@ -1,6 +1,5 @@
 package de.chrgroth.spotify.control.domain.model.infra
 
-import de.chrgroth.spotify.control.domain.util.formatted
 import kotlin.time.Instant
 
 data class OutboxPartitionStats(
@@ -9,6 +8,4 @@ data class OutboxPartitionStats(
     val documentCount: Long,
     val blockedUntil: Instant?,
     val eventTypeCounts: List<OutboxEventTypeCount> = emptyList(),
-) {
-    val documentCountFormatted: String get() = documentCount.formatted()
-}
+)

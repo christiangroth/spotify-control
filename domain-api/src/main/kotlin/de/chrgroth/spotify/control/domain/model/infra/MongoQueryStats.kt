@@ -1,7 +1,5 @@
 package de.chrgroth.spotify.control.domain.model.infra
 
-import de.chrgroth.spotify.control.domain.util.formatted
-
 /**
  * Stats for a tracked MongoDB query operation within a 24-hour sliding window.
  *
@@ -14,7 +12,4 @@ data class MongoQueryStats(
     val name: String,
     val executionCountLast24h: Long,
     val slowQueryCount: Long,
-) {
-    val executionCountLast24hFormatted: String get() = executionCountLast24h.formatted()
-    val slowQueryCountFormatted: String get() = slowQueryCount.formatted()
-}
+)

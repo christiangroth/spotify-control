@@ -14,7 +14,7 @@
                             <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
                                 <div class="card-body">
                                     <p class="card-subtitle mb-1" style="color:#888;font-size:.8rem;">Playlists synced</p>
-                                    <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.syncedPlaylistsFormatted} / {stats.totalPlaylistsFormatted}</p>
+                                    <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.syncedPlaylists.formatted} / {stats.totalPlaylists.formatted}</p>
                                 </div>
                             </div>
                             </a>
@@ -27,9 +27,9 @@
                                 <div class="card-body">
                                     <p class="card-subtitle mb-1" style="color:#888;font-size:.8rem;">Playlist checks</p>
                                     {#if stats.playlistCheckStats.allSucceeded}
-                                    <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);" data-testid="playlist-checks-count">{stats.playlistCheckStats.succeededChecksFormatted} / {stats.playlistCheckStats.totalChecksFormatted}</p>
+                                    <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);" data-testid="playlist-checks-count">{stats.playlistCheckStats.succeededChecks.formatted} / {stats.playlistCheckStats.totalChecks.formatted}</p>
                                     {#else}
-                                    <p class="card-text fs-3 fw-bold mb-0" style="color:#dc3545;" data-testid="playlist-checks-count">{stats.playlistCheckStats.succeededChecksFormatted} / {stats.playlistCheckStats.totalChecksFormatted}</p>
+                                    <p class="card-text fs-3 fw-bold mb-0" style="color:#dc3545;" data-testid="playlist-checks-count">{stats.playlistCheckStats.succeededChecks.formatted} / {stats.playlistCheckStats.totalChecks.formatted}</p>
                                     {/if}
                                 </div>
                             </div>
@@ -44,7 +44,7 @@
                                     <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
                                         <div class="card-body">
                                             <p class="card-subtitle mb-1" style="color:#888;font-size:.8rem;">Playback Events (Last 30 Days)</p>
-                                            <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.playbackEventsLast30DaysFormatted}</p>
+                                            <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.playbackEventsLast30Days.formatted}</p>
                                         </div>
                                     </div>
                                     </a>
@@ -54,7 +54,7 @@
                                     <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
                                         <div class="card-body">
                                             <p class="card-subtitle mb-1" style="color:#888;font-size:.8rem;">Total Playback Events</p>
-                                            <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.totalPlaybackEventsFormatted}</p>
+                                            <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.totalPlaybackEvents.formatted}</p>
                                         </div>
                                     </div>
                                     </a>
@@ -72,15 +72,15 @@
                                 <p class="card-subtitle mb-3" style="color:#888;font-size:.8rem;">Catalog</p>
                                 <div class="mb-3">
                                     <p class="card-subtitle mb-1" style="color:#888;font-size:.75rem;">Artists</p>
-                                    <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.catalogStats.artistCountFormatted}</p>
+                                    <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.catalogStats.artistCount.formatted}</p>
                                 </div>
                                 <div class="mb-3">
                                     <p class="card-subtitle mb-1" style="color:#888;font-size:.75rem;">Albums</p>
-                                    <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.catalogStats.albumCountFormatted}</p>
+                                    <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.catalogStats.albumCount.formatted}</p>
                                 </div>
                                 <div>
                                     <p class="card-subtitle mb-1" style="color:#888;font-size:.75rem;">Tracks</p>
-                                    <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.catalogStats.trackCountFormatted}</p>
+                                    <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.catalogStats.trackCount.formatted}</p>
                                 </div>
                             </div>
                         </div>
@@ -96,7 +96,7 @@
                     <div style="overflow-x:auto;">
                         <div class="d-flex align-items-end" style="height:80px;gap:2px;" data-testid="histogram">
                             {#for entry in stats.playbackEventsPerDay}
-                            <a href="/playback-event-viewer?date={entry.date}" style="flex:1;min-width:6px;height:100%;display:flex;align-items:flex-end;text-decoration:none;" title="{entry.countFormatted} events on {entry.date}">
+                            <a href="/playback-event-viewer?date={entry.date}" style="flex:1;min-width:6px;height:100%;display:flex;align-items:flex-end;text-decoration:none;" title="{entry.count.formatted} events on {entry.date}">
                             <div style="height:{entry.heightPercent}%;min-height:2px;width:100%;background-color:var(--spotify-green);border-radius:2px 2px 0 0;cursor:pointer;"
                                  onmouseover="this.style.opacity='0.7'"
                                  onmouseout="this.style.opacity='1'"></div>
@@ -138,7 +138,7 @@
                                     <div style="overflow:hidden;">
                                         <div class="fw-semibold text-truncate" style="color:#fff;font-size:.85rem;">{track.trackName}</div>
                                         <div class="text-truncate" style="color:#888;font-size:.75rem;">{#if track.albumName}{track.albumName}{#else}Unknown Album{/if} &bull; {#if track.artistNames.empty}Unknown Artist{#else}{track.artistNames.get(0)}{/if}</div>
-                                        <div style="color:#666;font-size:.72rem;">{track.playedAtFormatted}{#if track.durationFormatted} &bull; {track.durationFormatted}{/if}</div>
+                                        <div style="color:#666;font-size:.72rem;">{track.playedAt.formattedShort}{#if track.durationSeconds} &bull; {track.durationSeconds.formattedDuration}{/if}</div>
                                     </div>
                                 </li>
                                 {/for}
@@ -154,7 +154,7 @@
                         <div class="card-body">
                             <p class="card-subtitle mb-3" style="color:#888;font-size:.8rem;">Listening Stats (Last 30 Days)</p>
                             <p class="mb-3" style="color:#fff;font-size:.85rem;" data-testid="listened-minutes">
-                                <span style="color:var(--spotify-green);font-weight:600;">{stats.listeningStats.listenedMinutesLast30DaysFormatted}</span>
+                                <span style="color:var(--spotify-green);font-weight:600;">{stats.listeningStats.listenedMinutesLast30Days.formatted}</span>
                                 <span style="color:#888;"> minutes listened</span>
                             </p>
                             <div class="mb-3">
@@ -176,7 +176,7 @@
                                         {/if}
                                         <div style="overflow:hidden;flex:1;">
                                             <div class="text-truncate" style="color:#fff;font-size:.82rem;">{entry.name}</div>
-                                            <div style="color:#888;font-size:.75rem;white-space:nowrap;">{entry.totalMinutesFormatted} min</div>
+                                            <div style="color:#888;font-size:.75rem;white-space:nowrap;">{entry.totalMinutes.formatted} min</div>
                                         </div>
                                     </li>
                                     {/for}
@@ -200,7 +200,7 @@
                                         {/if}
                                         <div style="overflow:hidden;flex:1;">
                                             <div class="text-truncate" style="color:#fff;font-size:.82rem;">{entry.name}</div>
-                                            <div style="color:#888;font-size:.75rem;white-space:nowrap;">{entry.totalMinutesFormatted} min</div>
+                                            <div style="color:#888;font-size:.75rem;white-space:nowrap;">{entry.totalMinutes.formatted} min</div>
                                         </div>
                                     </li>
                                     {/for}
