@@ -54,6 +54,6 @@ enum class ArtistSettingsError(override val code: String) : DomainError {
     ;
 }
 
-data class SpotifyRateLimitError(val retryAfter: java.time.Duration) : DomainError {
+data class SpotifyRateLimitError(val retryAfter: kotlin.time.Duration) : DomainError {
     override val code: String = "SPOTIFY-429"
 }

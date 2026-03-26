@@ -67,17 +67,9 @@ sichtbar. Keine kritischen Findings.
 
 ## adapter-in-outbox
 
-### `java.time.Instant` statt Kotlin-Typen
+### Gut strukturiert – keine strukturellen Verletzungen
 
-`DomainOutboxTaskDispatcher` verwendet `java.time.Instant.now().plus(error.retryAfter)` beim Bauen von
-`DispatchResult.Paused`. Dieser Java-Typ schleicht sich ein, weil die quarkus-outbox-API aktuell
-`java.time.Instant` erwartet. Sobald die Zeitvereinheitlichung in domain-api abgeschlossen ist und die
-quarkus-outbox-API `kotlin.time.Instant` unterstützt, sollte die Konversion entfallen.
-
-- [ ] `DomainOutboxTaskDispatcher`: `java.time.Instant.now().plus(error.retryAfter)` auf
-  `kotlin.time.Instant.now() + error.retryAfter` umstellen und ggf. über `.toJavaInstant()` an die
-  quarkus-outbox-API übergeben, sobald `SpotifyRateLimitError.retryAfter` auf `kotlin.time.Duration`
-  umgestellt ist
+Keine offenen Findings.
 
 ---
 

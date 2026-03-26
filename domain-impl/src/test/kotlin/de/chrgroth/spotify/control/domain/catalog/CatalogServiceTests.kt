@@ -15,6 +15,8 @@ import de.chrgroth.spotify.control.domain.model.catalog.TrackId
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.model.user.User
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
+import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppAlbumRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
@@ -310,7 +312,7 @@ class CatalogServiceTests {
 
     @Test
     fun `handle SyncAlbumDetails returns rate limited when endpoint returns rate limit error`() {
-        val rateLimitError = de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError(java.time.Duration.ofSeconds(30))
+        val rateLimitError = SpotifyRateLimitError(30.seconds)
         every { userRepository.findAll() } returns listOf(buildUser())
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
         every { spotifyCatalog.getAlbum(userId, accessToken, "album-1") } returns rateLimitError.left()
