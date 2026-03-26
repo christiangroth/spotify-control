@@ -469,7 +469,7 @@ SLACK_WEBHOOK_URL
 
 | ID  | Quality Goal              | Priority | Description |
 |-----|--------------------------|----------|-------------|
-| Q1  | Domain Purity            | High     | The domain (`domain-api`, `domain-impl`) has zero compile-time dependencies on infrastructure frameworks (Quarkus, MongoDB, Spotify SDK). Domain model classes are plain Kotlin data classes. |
+| Q1  | Domain Purity            | High     | The domain (`domain-api`, `domain-impl`) has zero compile-time dependencies on infrastructure frameworks (Quarkus, MongoDB, Spotify SDK), with the exception of CDI and MicroProfile Config which are permitted in `domain-impl` service classes. Domain model classes are plain Kotlin data classes. |
 | Q2  | Boundary Correctness     | High     | All communication between domain and adapters goes through port interfaces. No adapter type leaks into domain objects. No business logic lives in adapter classes. |
 | Q3  | Outbox Reliability       | High     | All Spotify API calls are dispatched through the persistent outbox. Rate-limit handling and at-least-once delivery are guaranteed by the outbox implementation. |
 | Q4  | Functional Test Confidence | Medium | The test suite covers the inbound port boundary (domain logic), outbound adapter round-trips (MongoDB), and inbound HTTP contracts. Line coverage is a by-product, not a goal. |

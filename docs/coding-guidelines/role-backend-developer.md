@@ -25,7 +25,7 @@ The domain model lives exclusively in `domain-api`. Keep it clean:
 - **Sealed classes** for discriminated results and typed domain errors
 - **Value objects** for typed identifiers (`SpotifyTrackId`, `SpotifyArtistId`) to prevent accidental ID mix-ups
 - **Enums** for named states (e.g. `PlaybackProcessingStatus`) – never replace with boolean flags
-- **No framework annotations** in domain model classes (`@JsonProperty`, `@BsonProperty`, `@ApplicationScoped`, etc.)
+- **No framework annotations** in domain model classes (`@JsonProperty`, `@BsonProperty`, etc.) – CDI and MicroProfile Config annotations (`@ApplicationScoped`, `@ConfigProperty`) are allowed in `domain-impl` service classes but never on model classes or port interfaces
 - **No infrastructure types** in domain objects – mapping to/from MongoDB `Document` or Spotify API types happens in adapter extension functions, never in the domain model itself
 
 ### Domain Object Example

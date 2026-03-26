@@ -39,31 +39,6 @@ die eigentlich Template-Concerns sind.
 
 ## domain-impl
 
-### `SpotifyAccessTokenAdapter` verletzt Architektur-Regel
-
-`SpotifyAccessTokenAdapter` implementiert `SpotifyAccessTokenPort`, das in `port/out` liegt. Out-Ports
-werden von Adapter-Modulen implementiert – nicht von `domain-impl`. Diese Klasse ist technisch eine
-Orchestration von Spotify-Auth, Token-Refresh und Verschlüsselung und gehört konzeptuell zu
-`adapter-out-spotify`.
-
-- [ ] Alle Domain-Service-Klassen, die `SpotifyAccessTokenPort` per Constructor-Injection empfangen,
-  bleiben unverändert – nur die Implementierung wandert
-
-### `@ConfigProperty` in Domain-Services entfernen
-
-`@ConfigProperty` (MicroProfile Config) ist ein Framework-Annotation und gehört nicht in `domain-impl`.
-Configuration-Werte sollen über Constructor-Parameter übergeben werden, die vom CDI-Wiring
-in `application-quarkus` befüllt werden, oder die Konfiguration soll über einen Out-Port abstrahiert
-werden.
-
-- [ ] `PlaybackAdapter`: `@ConfigProperty(name = "app.playback.minimum-progress-seconds")` –
-  Konfigurationswert über CDI Producer in `application-quarkus` injizieren oder als normalen
-  Constructor-Parameter mit CDI-Qualifier übergeben
-- [ ] `DashboardAdapter`: `@ConfigProperty(name = "dashboard.recently-played.limit")` und
-  `@ConfigProperty(name = "dashboard.listening-stats.top-entries-limit")` – analog
-- [ ] `LoginServiceAdapter`/`LoginService`: `@ConfigProperty(name = "app.allowed-spotify-user-ids")` –
-  analog
-
 ### Subdomain-Struktur in Package-Hierarchie sichtbar machen
 
 - [ ] Klassen nach Subdomains in Unter-Pakete aufteilen: `catalog/`, `playback/`, `playlist/`, `user/`
@@ -137,8 +112,6 @@ API-Typen.
 
 Das Modul hält sich an die Architektur-Regeln: Spotify-API-Modelle sind `internal` und nie im domain-api
 sichtbar. Keine kritischen Findings.
-
-- [ ] `SpotifyAccessTokenAdapter` aus `domain-impl` hierher verschieben (siehe oben)
 
 ---
 
@@ -262,4 +235,4 @@ welcher Subdomain eine Klasse gehört.
   - `domain-api` darf keine externen Abhängigkeiten haben
   - `domain-impl` darf nur `domain-api` importieren (kein `adapter-*`)
   - `adapter-*` darf nur `domain-api` importieren (kein `domain-impl`, kein anderes `adapter-*`)
-  - Framework-Annotationen (außer `@ApplicationScoped`) dürfen nicht in `domain-impl`-Klassen erscheinen
+  - Framework-Annotationen (außer CDI- und Config-Annotationen wie `@ApplicationScoped`, `@ConfigProperty`) dürfen nicht in `domain-impl`-Klassen erscheinen

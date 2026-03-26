@@ -31,13 +31,13 @@ domain-impl         ← business logic implementing the inbound port interfaces
 - MongoDB queries only in `adapter-out-mongodb` – nowhere else
 - All Spotify operations go through the outbox – no direct API calls from domain or REST handlers
 - Adapter modules may depend on `domain-api`; they must never depend on `domain-impl` or on each other
-- Framework annotations (Quarkus, CDI, JAX-RS) belong in adapter modules – not in domain objects or port interfaces
+- CDI and MicroProfile Config annotations (`@ApplicationScoped`, `@ConfigProperty`, etc.) are permitted in `domain-impl` service classes – all other framework annotations (Quarkus, JAX-RS) belong in adapter modules only, not in domain objects or port interfaces
 
 ## Domain Purity Rules
 
 The domain (`domain-api` + `domain-impl`) must remain free of infrastructure concerns:
 
-- **No Quarkus/CDI annotations** on domain model classes or port interfaces – `@ApplicationScoped` belongs on the implementing class (which lives in `domain-impl` or an adapter module), not on the interface or data class itself
+- **CDI and MicroProfile Config annotations allowed in `domain-impl`** – `@ApplicationScoped`, `@ConfigProperty`, and similar CDI/Config annotations are permitted on service classes in `domain-impl`; they must not appear on domain model classes or port interfaces in `domain-api`
 - **No MongoDB types** (`Document`, `BsonValue`, codec references) in domain model classes
 - **No Spotify SDK/HTTP types** in domain objects
 - **No serialization annotations** (Jackson `@JsonProperty`, BSON codecs) in domain model classes – mapping belongs in adapters
