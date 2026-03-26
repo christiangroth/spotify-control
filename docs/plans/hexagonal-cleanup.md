@@ -16,22 +16,6 @@ Subdomain-Trennung und konsistentem Naming über alle Module hinweg.
 
 ## adapter-in-web
 
-### `ConfigurationInfoAdapter` falsch platziert
-
-`ConfigurationInfoAdapter` in `adapter-in-web` implementiert `ConfigurationInfoPort` (ein **Out-Port**).
-Out-Port-Implementierungen gehören in `adapter-out-*`, nicht in `adapter-in-*`.
-
-- [ ] `ConfigurationInfoAdapter` in ein eigenes Modul `adapter-out-config` verschieben, oder – falls
-  der Umfang zu gering ist – in `adapter-out-scheduler` integrieren (der bereits ähnliche
-  Infrastruktur-Stats liefert)
-
-### `PlaybackEventViewerResult` vs. Rückgabe im Port
-
-Der `PlaybackEventViewerPort` gibt `PlaybackEventViewerResult` zurück, das `PlaybackEventEntry` und
-`RawPlaybackEvent`-artige Daten enthält. `PlaybackEventEntry.type` ist ein roher `String` statt Enum.
-
-- [ ] `PlaybackEventEntry.type: String` durch ein typsicheres Enum ersetzen (z. B. `PlaybackEventType`)
-
 ---
 
 ## adapter-in-starter
