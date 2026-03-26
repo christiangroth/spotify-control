@@ -1,3 +1,14 @@
+# 0.78.2 (2026.03.26)
+
+## Bugfixes / Chore
+* Improved internal consistency of artist data model.
+* Updated architecture documentation to allow CDI and MicroProfile Config annotations in domain-impl service classes.
+* Reorganized domain service packages into subdomain hierarchy.
+
+
+
+---
+
 # 0.78.1 (2026.03.25)
 
 ## Bugfixes / Chore
