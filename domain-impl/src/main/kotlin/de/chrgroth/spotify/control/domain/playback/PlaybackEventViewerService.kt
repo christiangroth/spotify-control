@@ -1,6 +1,7 @@
 package de.chrgroth.spotify.control.domain.playback
 
 import de.chrgroth.spotify.control.domain.model.playback.PlaybackEventEntry
+import de.chrgroth.spotify.control.domain.model.playback.PlaybackEventType
 import de.chrgroth.spotify.control.domain.model.playback.PlaybackEventViewerResult
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackEventViewerPort
@@ -28,16 +29,16 @@ class PlaybackEventViewerService(
         val isToday = date == today
 
         val recentlyPlayed = repository.findRecentlyPlayed(userId, from, to)
-            .map { PlaybackEventEntry(TYPE_RECENTLY_PLAYED, it.timestamp, it.json, false) }
+            .map { PlaybackEventEntry(PlaybackEventType.RECENTLY_PLAYED, it.timestamp, it.json, false) }
 
         val partialPlayed = repository.findRecentlyPartialPlayed(userId, from, to)
-            .map { PlaybackEventEntry(TYPE_PARTIAL_PLAYED, it.timestamp, it.json, false) }
+            .map { PlaybackEventEntry(PlaybackEventType.RECENTLY_PARTIAL_PLAYED, it.timestamp, it.json, false) }
 
         val rawCurrentlyPlaying = repository.findCurrentlyPlaying(userId, from, to)
         val latestCurrentlyPlayingTimestamp = if (isToday) rawCurrentlyPlaying.maxByOrNull { it.timestamp }?.timestamp else null
         val currentlyPlayingEntries = rawCurrentlyPlaying.map {
             PlaybackEventEntry(
-                type = TYPE_CURRENTLY_PLAYING,
+                type = PlaybackEventType.CURRENTLY_PLAYING,
                 timestamp = it.timestamp,
                 json = it.json,
                 isWarning = it.timestamp != latestCurrentlyPlayingTimestamp,
@@ -46,11 +47,5 @@ class PlaybackEventViewerService(
 
         val allEvents = (recentlyPlayed + partialPlayed + currentlyPlayingEntries).sortedByDescending { it.timestamp }
         return PlaybackEventViewerResult(date = date, isToday = isToday, events = allEvents)
-    }
-
-    companion object {
-        private const val TYPE_RECENTLY_PLAYED = "recently_played"
-        private const val TYPE_PARTIAL_PLAYED = "recently_partial_played"
-        private const val TYPE_CURRENTLY_PLAYING = "currently_playing"
     }
 }

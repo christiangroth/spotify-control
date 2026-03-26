@@ -6,7 +6,7 @@ import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
 import mu.KLogger
 import java.net.http.HttpResponse
-import java.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 internal const val HTTP_OK = 200
 internal const val HTTP_RATE_LIMITED = 429
@@ -21,7 +21,7 @@ internal fun HttpResponse<String>.checkRateLimitOrError(
             .map { it.toLongOrNull() ?: DEFAULT_RETRY_AFTER_SECONDS }
             .orElse(DEFAULT_RETRY_AFTER_SECONDS)
         logger.warn { "Spotify rate limit exceeded on ${request().uri().path}, retry after ${retryAfterSeconds}s" }
-        return SpotifyRateLimitError(Duration.ofSeconds(retryAfterSeconds)).left()
+        return SpotifyRateLimitError(retryAfterSeconds.seconds).left()
     }
     if (statusCode() != HTTP_OK) {
         logger.error { "Spotify HTTP request to ${request().uri().path} failed with ${statusCode()} - ${body()}" }

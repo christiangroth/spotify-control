@@ -35,9 +35,9 @@ import io.mockk.slot
 import io.mockk.verify
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import java.time.Duration
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.seconds
 
 @Suppress("LargeClass")
 class PlaylistServiceTests {
@@ -304,7 +304,7 @@ class PlaylistServiceTests {
         val user = buildUser()
         every { userRepository.findById(userId) } returns user
         every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
-        every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns SpotifyRateLimitError(Duration.ofSeconds(30)).left()
+        every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns SpotifyRateLimitError(30.seconds).left()
 
         val result = adapter.syncPlaylists(userId)
 

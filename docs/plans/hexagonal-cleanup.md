@@ -16,59 +16,22 @@ Subdomain-Trennung und konsistentem Naming über alle Module hinweg.
 
 ## adapter-in-web
 
-### `ConfigurationInfoAdapter` falsch platziert
-
-`ConfigurationInfoAdapter` in `adapter-in-web` implementiert `ConfigurationInfoPort` (ein **Out-Port**).
-Out-Port-Implementierungen gehören in `adapter-out-*`, nicht in `adapter-in-*`.
-
-- [ ] `ConfigurationInfoAdapter` in ein eigenes Modul `adapter-out-config` verschieben, oder – falls
-  der Umfang zu gering ist – in `adapter-out-scheduler` integrieren (der bereits ähnliche
-  Infrastruktur-Stats liefert)
-
-### `PlaybackEventViewerResult` vs. Rückgabe im Port
-
-Der `PlaybackEventViewerPort` gibt `PlaybackEventViewerResult` zurück, das `PlaybackEventEntry` und
-`RawPlaybackEvent`-artige Daten enthält. `PlaybackEventEntry.type` ist ein roher `String` statt Enum.
-
-- [ ] `PlaybackEventEntry.type: String` durch ein typsicheres Enum ersetzen (z. B. `PlaybackEventType`)
-
 ---
 
 ## adapter-in-starter
 
-### Migrations-Starter aufräumen
+### Gut strukturiert – keine strukturellen Verletzungen
 
-Die meisten Starters sind einmalige Datenmigrations-Skripte, die nach erfolgreicher Ausführung
-dauerhaft im Codebase verbleiben und Startzeit kosten.
-
-- [ ] Audit aller Starter: welche sind einmalige Migrationen, die nie wieder ausgeführt werden?
-- [ ] Einmalige Migrationen (z. B. `MigrateEntityFieldsStarter`, `RenameCollectionsStarter`,
-  `DropCollectionsStarter`, `RemoveGenreFieldsStarter`, `DeleteCatalogDataStarter`,
-  `DeletePendingAlbumEnrichmentStarter`, `DeletePendingPerItemSyncTasksStarter`,
-  `DeletePendingSyncMissingTasksStarter`, `MigrateLastEnrichmentDateFieldStarter`,
-  `ReEnrichArtistNameBugfixStarter`, `RemoveNonOwnedPlaylistMetadataBugfixStarter`) nach
-  Verifikation entfernen
-- [ ] Starters, die dauerhaft relevant sind (z. B. `WipePlaylistDocumentsStarter`,
-  `WipePlaylistChecksStarter`), behalten – aber prüfen, ob sie statt Starter besser als explizite
-  Admin-Aktion über einen UI-Button ausgelöst werden sollten
+Alle einmaligen Migrations-Starter wurden entfernt. Dauerhaft relevante Starters
+(`WipePlaylistDocumentsStarter`, `WipePlaylistChecksStarter`) sind erhalten geblieben.
 
 ---
 
 ## adapter-out-mongodb
 
-### Naming der Spotify-Roh-Dokumente
+### Gut strukturiert – keine strukturellen Verletzungen
 
-Die Klassen `SpotifyCurrentlyPlayingDocument`, `SpotifyRecentlyPlayedDocument` und
-`SpotifyRecentlyPartialPlayedDocument` tragen das „Spotify"-Präfix, obwohl sie unsere eigene
-MongoDB-Repräsentation sind. Das Präfix suggeriert fälschlicherweise, es handele sich um Spotify
-API-Typen.
-
-- [ ] `SpotifyCurrentlyPlayingDocument` → `CurrentlyPlayingDocument`
-- [ ] `SpotifyCurrentlyPlayingDocumentRepository` → `CurrentlyPlayingDocumentRepository`
-- [ ] `SpotifyRecentlyPlayedDocument` → `RecentlyPlayedDocument`
-- [ ] `SpotifyRecentlyPlayedDocumentRepository` → `RecentlyPlayedDocumentRepository`
-- [ ] `SpotifyRecentlyPartialPlayedDocument` → `RecentlyPartialPlayedDocument`
-- [ ] `SpotifyRecentlyPartialPlayedDocumentRepository` → `RecentlyPartialPlayedDocumentRepository`
+Spotify-Präfix aus MongoDB-Dokumentnamen entfernt. Keine offenen Findings.
 
 ---
 
@@ -83,40 +46,17 @@ sichtbar. Keine kritischen Findings.
 
 ## adapter-in-outbox
 
-### `java.time.Instant` statt Kotlin-Typen
+### Gut strukturiert – keine strukturellen Verletzungen
 
-`DomainOutboxTaskDispatcher` verwendet `java.time.Instant.now().plus(error.retryAfter)` beim Bauen von
-`DispatchResult.Paused`. Dieser Java-Typ schleicht sich ein, weil die quarkus-outbox-API aktuell
-`java.time.Instant` erwartet. Sobald die Zeitvereinheitlichung in domain-api abgeschlossen ist und die
-quarkus-outbox-API `kotlin.time.Instant` unterstützt, sollte die Konversion entfallen.
-
-- [ ] `DomainOutboxTaskDispatcher`: `java.time.Instant.now().plus(error.retryAfter)` auf
-  `kotlin.time.Instant.now() + error.retryAfter` umstellen und ggf. über `.toJavaInstant()` an die
-  quarkus-outbox-API übergeben, sobald `SpotifyRateLimitError.retryAfter` auf `kotlin.time.Duration`
-  umgestellt ist
+Keine offenen Findings.
 
 ---
 
 ## adapter-in-scheduler
 
-### `java.time.Instant`/`Duration` statt Kotlin-Typen
+### Gut strukturiert – keine strukturellen Verletzungen
 
-`CurrentlyPlayingSkipPredicate` verwendet `java.time.Instant` und `java.time.Duration` intern. Standard
-im Projekt ist `kotlin.time`.
-
-- [ ] `CurrentlyPlayingSkipPredicate`: `Instant.EPOCH`, `Instant.now()`, `Duration.ofSeconds()`,
-  `Duration.ofMinutes()` sowie `isBefore()` auf kotlin.time-Äquivalente umstellen (`Clock.System.now()`,
-  `Duration.seconds()`, `Duration.minutes()`)
-
-### `@JvmOverloads`-Konstruktor als Testbarkeits-Workaround
-
-`CurrentlyPlayingSkipPredicate` verwendet `@JvmOverloads constructor` mit optionalen Parametern
-(`ScheduledSkipPredicate`, `PlaybackActivityPort?`), um den Aufbau in Tests zu vereinfachen. CDI-Beans
-sollten genau einen Konstruktor haben; der Workaround macht die CDI-Wiring-Intention unklar.
-
-- [ ] Testaufbau überprüfen und `@JvmOverloads` durch einen sauberen Ansatz ersetzen – z. B. eigenen
-  Testkonstruktor oder explizites MockK-Subklassen-Mocking; CDI-Beans ohne optionale Konstruktorparameter
-  formulieren
+`CurrentlyPlayingSkipPredicate` auf `kotlin.time` migriert. Keine offenen Findings.
 
 ---
 
@@ -128,44 +68,29 @@ sollten genau einen Konstruktor haben; der Workaround macht die CDI-Wiring-Inten
 `Filters.eq`, `.find()`, Dokument-Mapping). MongoDB-Zugriffe dürfen ausschließlich in
 `adapter-out-mongodb` stattfinden – diese Regel wird hier gebrochen.
 
-- [ ] Neuen Out-Port `OutboxTaskRepositoryPort` in `domain-api/port/out` definieren mit
-  `getTasksByPartition(partitionKey: String): List<OutboxTask>`
-- [ ] Implementierung als `OutboxTaskRepositoryAdapter` in `adapter-out-mongodb` anlegen und die
-  MongoDB-Abfrage (inkl. Dokument-Mapping) dorthin verschieben
-- [ ] `OutboxPortAdapter` verwendet das neue Port per Constructor-Injection statt `MongoClient`
-- [ ] `@ConfigProperty(name = "quarkus.mongodb.database")` und `MongoClient`-Abhängigkeit aus
-  `adapter-out-outbox` vollständig entfernen – das Modul darf kein MongoDB-SDK mehr importieren
+`ApplicationOutboxClient.partitionInfos()` liefert nur aggregierte Partition-Statistiken (Event-Counts,
+Typ-Counts), jedoch keine einzelnen Task-Details. Die notwendige Funktionalität ist in der
+`quarkus-outbox`-Bibliothek nicht vorhanden.
 
-### `java.time.Instant` statt Kotlin-Typen
+- [ ] Feature Request in `christiangroth/quarkus-outbox` eröffnen: `ApplicationOutboxClient` um
+  `getTasksByPartition(partitionKey: String): List<OutboxTaskInfo>` erweitern, sodass der direkte
+  MongoDB-Zugriff in `OutboxPortAdapter` entfällt
+- [ ] Sobald die Bibliothek die API bereitstellt: `MongoClient`-Zugriff in `OutboxPortAdapter` durch
+  den neuen Client-Aufruf ersetzen und `MongoClient`-Abhängigkeit aus `adapter-out-outbox` entfernen
 
-`OutboxPortAdapter` nutzt `Instant.EPOCH` und `Instant.MAX` aus `java.time`.
+### Gut strukturiert – keine weiteren Findings
 
-- [ ] Auf `kotlin.time.Instant` umstellen, sobald `OutboxTask` im Rahmen der domain-api
-  Zeitvereinheitlichung auf `kotlin.time.Instant` umgestellt wurde
+`OutboxPortAdapter` verwendet `kotlin.time.Instant` an allen Stellen. Keine offenen Findings.
 
 ---
 
 ## adapter-out-scheduler
 
-### `java.time.Instant`/`Duration` in `PlaybackActivityAdapter`
+### Gut strukturiert – keine strukturellen Verletzungen
 
-`PlaybackActivityAdapter` verwendet `java.time.Instant` und `java.time.Duration` sowohl intern als auch
-über den Rückgabewert von `PlaybackActivityPort.lastActivityTimestamp(): Instant?`.
-
-- [ ] `PlaybackActivityAdapter` auf kotlin.time umstellen, sobald `PlaybackActivityPort.lastActivityTimestamp()`
-  im Zuge der domain-api Zeitvereinheitlichung auf `kotlin.time.Instant?` umgestellt wurde
-
-### `PlaybackDetectedEvent` als CDI-Marker-Klasse im domain-api-Model
-
-`CurrentlyPlayingScheduleState` feuert `Event<PlaybackDetectedEvent>`. `PlaybackDetectedEvent` ist eine
-leere Marker-Klasse in `domain-api/model`, obwohl CDI-Events ein Adapter-Concern sind und nichts im
-Domain-Modell zu suchen haben.
-
-- [ ] `PlaybackDetectedEvent` aus `domain-api/model` entfernen (verknüpft mit dem entsprechenden
-  Todo in der domain-api-Sektion)
-- [ ] `PlaybackDetectedEvent` direkt in `adapter-out-scheduler` definieren – die Klasse ist nur lokal
-  zwischen `CurrentlyPlayingScheduleState` und `PlaybackActivityAdapter` relevant; `PlaybackStatePort`
-  bleibt das einzige Interface-Bindeglied nach außen
+`PlaybackActivityAdapter` verwendet `kotlin.time` an allen Stellen.
+`PlaybackDetectedEvent` wurde aus `domain-api/model` entfernt und durch den Port
+`PlaybackDetectedObserver` in `domain-api/port/out/playback/` ersetzt. Keine offenen Findings.
 
 ---
 
@@ -176,9 +101,6 @@ Domain-Modell zu suchen haben.
 `SlackNotificationAdapter` implementiert korrekt Out-Ports (`OutboxPartitionObserver`,
 `PlaylistCheckNotificationPort`). `@ConfigProperty` ist in Adapter-Modulen erwünscht und daher hier
 in Ordnung. Keine kritischen Findings.
-
-- [ ] `AppPlaylistCheck.playlistId: String` → bei Umstellung auf `PlaylistId`-Wert-Objekt
-  (bereits in domain-api-Sektion beschrieben) die entsprechenden Stellen hier anpassen
 
 ---
 

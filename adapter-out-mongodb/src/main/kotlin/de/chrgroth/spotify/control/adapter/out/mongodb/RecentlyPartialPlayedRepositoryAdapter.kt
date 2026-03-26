@@ -17,7 +17,7 @@ import mu.KLogging
 class RecentlyPartialPlayedRepositoryAdapter : RecentlyPartialPlayedRepositoryPort {
 
     @Inject
-    lateinit var recentlyPartialPlayedDocumentRepository: SpotifyRecentlyPartialPlayedDocumentRepository
+    lateinit var recentlyPartialPlayedDocumentRepository: RecentlyPartialPlayedDocumentRepository
 
     @Inject
     lateinit var mongoQueryMetrics: MongoQueryMetrics
@@ -61,7 +61,7 @@ class RecentlyPartialPlayedRepositoryAdapter : RecentlyPartialPlayedRepositoryPo
     override fun saveAll(items: List<RecentlyPartialPlayedItem>) {
         if (items.isEmpty()) return
         val documents = items.map { item ->
-            SpotifyRecentlyPartialPlayedDocument().apply {
+            RecentlyPartialPlayedDocument().apply {
                 spotifyUserId = item.spotifyUserId.value
                 trackId = item.trackId.value
                 trackName = item.trackName
