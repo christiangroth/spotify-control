@@ -1,7 +1,7 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
-import de.chrgroth.spotify.control.domain.model.MongoViewerFilter
-import de.chrgroth.spotify.control.domain.model.MongoViewerFilterOperator
+import de.chrgroth.spotify.control.domain.model.viewer.MongoViewerFilter
+import de.chrgroth.spotify.control.domain.model.viewer.MongoViewerFilterOperator
 import de.chrgroth.spotify.control.domain.port.`in`.infra.MongoViewerPort
 import io.quarkus.qute.Location
 import io.quarkus.qute.Template

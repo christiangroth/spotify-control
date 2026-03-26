@@ -1,19 +1,18 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
-import de.chrgroth.spotify.control.domain.model.playback.PlaybackDetectedEvent
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPartitionObserver
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxTaskCountObserver
 import de.chrgroth.spotify.control.domain.port.out.infra.OutgoingRequestStatsObserver
+import de.chrgroth.spotify.control.domain.port.out.playback.PlaybackDetectedObserver
 import io.smallrye.mutiny.Multi
 import io.smallrye.mutiny.subscription.MultiEmitter
 import jakarta.enterprise.context.ApplicationScoped
-import jakarta.enterprise.event.Observes
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 
 @ApplicationScoped
-class HealthSseAdapter : OutboxPartitionObserver, OutgoingRequestStatsObserver, OutboxTaskCountObserver {
+class HealthSseAdapter : OutboxPartitionObserver, OutgoingRequestStatsObserver, OutboxTaskCountObserver, PlaybackDetectedObserver {
 
     private val emittersByUser = ConcurrentHashMap<String, CopyOnWriteArrayList<MultiEmitter<in String>>>()
 
@@ -37,8 +36,7 @@ class HealthSseAdapter : OutboxPartitionObserver, OutgoingRequestStatsObserver, 
 
     override fun onOutboxTaskCountChanged() = notifyAllUsers("refresh-outbox-partitions")
 
-    @Suppress("UnusedParameter")
-    fun onPlaybackDetected(@Observes event: PlaybackDetectedEvent) = notifyAllUsers("refresh-playback-state")
+    override fun onPlaybackDetected() = notifyAllUsers("refresh-playback-state")
 
     private fun notifyAllUsers(event: String) = emittersByUser.keys.toList().forEach { emitToUser(it, event) }
 

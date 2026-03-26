@@ -1,7 +1,7 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
-import de.chrgroth.spotify.control.domain.model.ConfigEntry
-import de.chrgroth.spotify.control.domain.model.ConfigurationStats
+import de.chrgroth.spotify.control.domain.model.infra.ConfigEntry
+import de.chrgroth.spotify.control.domain.model.infra.ConfigurationStats
 import de.chrgroth.spotify.control.domain.port.out.infra.ConfigurationInfoPort
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging

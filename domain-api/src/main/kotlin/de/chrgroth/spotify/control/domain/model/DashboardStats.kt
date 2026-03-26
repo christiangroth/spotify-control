@@ -5,7 +5,6 @@ import de.chrgroth.spotify.control.domain.model.playback.DayCount
 import de.chrgroth.spotify.control.domain.model.playback.ListeningStats
 import de.chrgroth.spotify.control.domain.model.playback.RecentlyPlayedItem
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistCheckStats
-import de.chrgroth.spotify.control.domain.util.formatted
 
 data class DashboardStats(
     val syncedPlaylists: Long,
@@ -18,10 +17,6 @@ data class DashboardStats(
     val listeningStats: ListeningStats,
     val catalogStats: CatalogStats,
 ) {
-    val syncedPlaylistsFormatted: String get() = syncedPlaylists.formatted()
-    val totalPlaylistsFormatted: String get() = totalPlaylists.formatted()
-    val totalPlaybackEventsFormatted: String get() = totalPlaybackEvents.formatted()
-    val playbackEventsLast30DaysFormatted: String get() = playbackEventsLast30Days.formatted()
 
     companion object {
         val EMPTY = DashboardStats(

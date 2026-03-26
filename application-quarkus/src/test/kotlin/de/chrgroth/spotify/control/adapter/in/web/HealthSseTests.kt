@@ -1,13 +1,11 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
 import de.chrgroth.spotify.control.adapter.`in`.web.HealthSseAdapter
-import de.chrgroth.spotify.control.domain.model.playback.PlaybackDetectedEvent
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxTaskCountObserver
 import de.chrgroth.spotify.control.domain.port.out.infra.OutgoingRequestStatsObserver
 import io.quarkus.test.junit.QuarkusTest
 import io.smallrye.mutiny.subscription.Cancellable
-import jakarta.enterprise.event.Event
 import jakarta.inject.Inject
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -27,9 +25,6 @@ class HealthSseTests {
 
     @Inject
     lateinit var outboxTaskCountObserver: OutboxTaskCountObserver
-
-    @Inject
-    lateinit var playbackDetectedEvent: Event<PlaybackDetectedEvent>
 
     @Test
     fun `sse endpoint delivers refresh-outgoing-http-calls event when outgoing request is recorded`() {
@@ -103,7 +98,7 @@ class HealthSseTests {
                 { _: Throwable -> /* ignore errors */ },
             )
 
-        playbackDetectedEvent.fire(PlaybackDetectedEvent())
+        healthSseService.onPlaybackDetected()
 
         assertTrue(latch.await(5, TimeUnit.SECONDS), "SSE refresh event should be received within 5 seconds")
         assertEquals(listOf("refresh-playback-state"), received.toList())

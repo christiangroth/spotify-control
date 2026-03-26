@@ -2,8 +2,8 @@ package de.chrgroth.spotify.control.adapter.out.mongodb
 
 import com.mongodb.MongoException
 import com.mongodb.client.MongoClient
-import de.chrgroth.spotify.control.domain.model.MongoCollectionStats
-import de.chrgroth.spotify.control.domain.model.MongoQueryStats
+import de.chrgroth.spotify.control.domain.model.infra.MongoCollectionStats
+import de.chrgroth.spotify.control.domain.model.infra.MongoQueryStats
 import de.chrgroth.spotify.control.domain.port.out.infra.MongoStatsPort
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging

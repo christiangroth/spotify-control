@@ -82,8 +82,8 @@
                             <td style="border-color:#333;color:#fff;font-size:.9rem;">
                                 {artist.artistName}
                             </td>
-                            <td class="text-end" style="border-color:#333;color:#888;font-size:.85rem;">{artist.albumCountFormatted}</td>
-                            <td class="text-end" style="border-color:#333;color:#888;font-size:.85rem;">{artist.trackCountFormatted}</td>
+                            <td class="text-end" style="border-color:#333;color:#888;font-size:.85rem;">{artist.albumCount.formatted}</td>
+                            <td class="text-end" style="border-color:#333;color:#888;font-size:.85rem;">{artist.trackCount.formatted}</td>
                             <td style="border-color:#333;padding:8px;">
                                 <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="resyncArtist(this, '{artist.artistId}')" aria-label="Re-sync {artist.artistName}">Re-sync</button>
                             </td>
@@ -134,8 +134,8 @@
                         </td>
                         <td style="border-color:#2a2a2a;color:#fff;">{#if album.title}{album.title}{#else}(untitled){/if}</td>
                         <td style="border-color:#2a2a2a;color:#888;">{album.releaseDate}</td>
-                        <td class="text-end" style="border-color:#2a2a2a;color:#888;">{album.trackCountFormatted}</td>
-                        <td class="text-end" style="border-color:#2a2a2a;color:#888;">{album.durationFormatted}</td>
+                        <td class="text-end" style="border-color:#2a2a2a;color:#888;">{album.trackCount.formatted}</td>
+                        <td class="text-end" style="border-color:#2a2a2a;color:#888;">{album.durationMs.formattedAlbumDuration}</td>
                     </tr>
                     <tr id="tracks-row-{album.albumId}" style="display:none;border-color:#2a2a2a;">
                         <td colspan="5" style="border-color:#2a2a2a;padding:0;">
@@ -167,7 +167,7 @@
                 <tr style="border-color:#1a1a1a;">
                     <td style="border-color:#1a1a1a;color:#666;">{track.trackNumber}</td>
                     <td style="border-color:#1a1a1a;color:#ccc;">{track.title}</td>
-                    <td class="text-end" style="border-color:#1a1a1a;color:#666;">{track.durationFormatted}</td>
+                    <td class="text-end" style="border-color:#1a1a1a;color:#666;">{track.durationMs.formattedTrackDuration}</td>
                 </tr>
                 {/for}
             </tbody>

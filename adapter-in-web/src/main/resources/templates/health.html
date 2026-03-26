@@ -25,7 +25,7 @@
                                         {#for r in stats.outgoingRequestStats}
                                         <tr style="border-color:#333;">
                                             <td style="border-color:#333;color:#e0e0e0;background-color:transparent;">{r.endpoint}</td>
-                                            <td style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">{r.requestCountLast24hFormatted}</td>
+                                            <td style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">{r.requestCountLast24h.formatted}</td>
                                         </tr>
                                         {/for}
                                     </tbody>
@@ -65,7 +65,7 @@
                                                 {p.name}
                                             </td>
                                             <td class="outbox-blocked-until" style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">-</td>
-                                            <td style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;" data-testid="outbox-doc-count">{p.documentCountFormatted}</td>
+                                            <td style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;" data-testid="outbox-doc-count">{p.documentCount.formatted}</td>
                                         </tr>
                                         {#if p.documentCount > 0}
                                         <tr class="outbox-detail-row" data-partition="{p.name}" style="border-color:#333;">
@@ -75,7 +75,7 @@
                                                         {#for etc in p.eventTypeCounts}
                                                         <tr style="border-color:#2a2a2a;">
                                                             <td style="border-color:#2a2a2a;color:#bbb;background-color:transparent;">{etc.eventType}</td>
-                                                            <td style="border-color:#2a2a2a;color:#bbb;text-align:right;background-color:transparent;">{etc.countFormatted}</td>
+                                                            <td style="border-color:#2a2a2a;color:#bbb;text-align:right;background-color:transparent;">{etc.count.formatted}</td>
                                                         </tr>
                                                         {/for}
                                                     </tbody>
@@ -195,16 +195,16 @@
                                         {#for c in stats.mongoCollectionStats}
                                         <tr style="border-color:#333;">
                                             <td style="border-color:#333;color:#e0e0e0;background-color:transparent;">{c.name}</td>
-                                            <td style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">{c.documentCountFormatted}</td>
-                                            <td style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">{c.sizeKbFormatted} kb</td>
+                                            <td style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">{c.documentCount.formatted}</td>
+                                            <td style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">{c.sizeKb.formatted} kb</td>
                                         </tr>
                                         {/for}
                                     </tbody>
                                     <tfoot>
                                         <tr style="border-color:#333;border-top:2px solid #555;">
                                             <td style="border-color:#333;color:#888;background-color:transparent;">Total</td>
-                                            <td style="border-color:#333;color:#888;text-align:right;background-color:transparent;">{stats.mongoCollectionDocumentTotalFormatted}</td>
-                                            <td style="border-color:#333;color:#888;text-align:right;background-color:transparent;">{stats.mongoCollectionSizeTotalKbFormatted} kb</td>
+                                            <td style="border-color:#333;color:#888;text-align:right;background-color:transparent;">{stats.mongoCollectionDocumentTotal.formatted}</td>
+                                            <td style="border-color:#333;color:#888;text-align:right;background-color:transparent;">{stats.mongoCollectionSizeTotalKb.formatted} kb</td>
                                         </tr>
                                     </tfoot>
                                 </table>
@@ -232,11 +232,11 @@
                                             <td style="border-color:#333;color:#e0e0e0;background-color:transparent;">{q.name}</td>
                                             <td style="border-color:#333;background-color:transparent;text-align:right;">
                                                 {#if q.slowQueryCount > 0}
-                                                <span style="color:#f90;">{q.slowQueryCountFormatted}</span>
+                                                <span style="color:#f90;">{q.slowQueryCount.formatted}</span>
                                                 {#else}
-                                                <span style="color:#e0e0e0;">{q.slowQueryCountFormatted}</span>
+                                                <span style="color:#e0e0e0;">{q.slowQueryCount.formatted}</span>
                                                 {/if}
-                                                <span style="color:#e0e0e0;"> / {q.executionCountLast24hFormatted}</span>
+                                                <span style="color:#e0e0e0;"> / {q.executionCountLast24h.formatted}</span>
                                             </td>
                                         </tr>
                                         {/for}

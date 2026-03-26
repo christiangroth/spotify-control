@@ -5,5 +5,5 @@ data class TrackBrowseItem(
     val trackNumber: Int?,
     val discNumber: Int?,
     val title: String,
-    val durationFormatted: String,
+    val durationMs: Long,
 )
