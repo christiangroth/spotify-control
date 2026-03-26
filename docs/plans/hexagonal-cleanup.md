@@ -12,13 +12,6 @@ Subdomain-Trennung und konsistentem Naming über alle Module hinweg.
 
 ## domain-impl
 
-### Subdomain-Struktur in Package-Hierarchie sichtbar machen
-
-- [ ] Klassen nach Subdomains in Unter-Pakete aufteilen: `catalog/`, `playback/`, `playlist/`, `user/`
-- [ ] `SyncController` und `CatalogSyncRequest` gehören ins `catalog/`-Paket
-- [ ] `PlaylistCheckRunner` und die Check-Runner-Implementierungen sind bereits im `check/`-Subpaket –
-  dieses in `playlist/check/` verschieben
-
 ---
 
 ## adapter-in-web
@@ -196,9 +189,9 @@ in Ordnung. Keine kritischen Findings.
 Ziel: Eine Entwicklerin, die zum ersten Mal in den Code schaut, soll sofort erkennen können, zu
 welcher Subdomain eine Klasse gehört.
 
-- [ ] Konsistentes Package-Schema in allen Modulen etablieren:
-  - `domain-api`: `domain/model/{catalog,playback,playlist,user}/`, `domain/port/{in,out}/{catalog,playback,playlist,user,infra}/`
-  - `domain-impl`: `domain/{catalog,playback,playlist,user}/`
+- [x] Konsistentes Package-Schema in allen Modulen etablieren:
+  - `domain-api`: `domain/model/{catalog,playback,playlist,user,infra,viewer}/`, `domain/port/{in,out}/{catalog,playback,playlist,user,infra}/`
+  - `domain-impl`: `domain/{catalog,playback,playlist,user,infra}/` (inkl. `playlist/check/` für Check-Runner)
   - `adapter-*`: keine Subdomain-Aufteilung nötig (Module sind bereits klein genug)
 
 ### Architektur-Tests ergänzen
