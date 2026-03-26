@@ -13,10 +13,10 @@ Subdomain-Trennung und konsistentem Naming über alle Module hinweg.
 Das `model/`-Paket enthält aktuell 54 Klassen ohne jede Untergliederung. Die vier Subdomains sind im Code
 vorhanden, aber durch den flachen Package-Baum unsichtbar. Gleiches gilt für `port/in` und `port/out`.
 
-- [ ] `model/` aufteilen in `model/catalog/`, `model/playback/`, `model/playlist/`, `model/user/`
+- [x] `model/` aufteilen in `model/catalog/`, `model/playback/`, `model/playlist/`, `model/user/`
   und alle Klassen in das passende Subpaket verschieben
-- [ ] `port/in/` aufteilen in `port/in/catalog/`, `port/in/playback/`, `port/in/playlist/`, `port/in/user/`
-- [ ] `port/out/` aufteilen in `port/out/catalog/`, `port/out/playback/`, `port/out/playlist/`,
+- [x] `port/in/` aufteilen in `port/in/catalog/`, `port/in/playback/`, `port/in/playlist/`, `port/in/user/`
+- [x] `port/out/` aufteilen in `port/out/catalog/`, `port/out/playback/`, `port/out/playlist/`,
   `port/out/user/`, `port/out/infra/` (für die querschnittlichen Ports wie Outbox, Throttling, Stats)
 
 Zuordnung der Klassen zur jeweiligen Subdomain-Kandidaten:
@@ -30,21 +30,21 @@ Zuordnung der Klassen zur jeweiligen Subdomain-Kandidaten:
 
 ### Dateiname ≠ Klassenname
 
-- [ ] `AppTrackData.kt` umbenennen in `AppTrack.kt` (enthält die Klasse `AppTrack`)
+- [x] `AppTrackData.kt` umbenennen in `AppTrack.kt` (enthält die Klasse `AppTrack`)
 
 ### Inkonsistente Verwendung von Wert-Objekten in Domänenklassen
 
 Kern-Entitäten verwenden `TrackId`, `AlbumId`, `ArtistId` als Wert-Objekte, aber viele angrenzende Klassen
 nutzen noch `String` und umgehen so die Typsicherheit.
 
-- [ ] `AppArtist.artistId: String` → `AppArtist.id: ArtistId` (analog zu `AppAlbum.id: AlbumId` und `AppTrack.id: TrackId`)
-- [ ] `RecentlyPlayedItem.trackId`, `.artistIds`, `.albumId` von `String`/`List<String>` auf `TrackId`, `List<ArtistId>`, `AlbumId?` umstellen
-- [ ] `RecentlyPartialPlayedItem.trackId`, `.artistIds`, `.albumId` analog
-- [ ] `CurrentlyPlayingItem.trackId`, `.artistIds`, `.albumId` analog
-- [ ] `PlaylistTrack.trackId`, `.artistIds`, `.albumId` von `String`/`List<String>` auf Wert-Objekte umstellen
-- [ ] `AppPlaylistCheck.playlistId: String` → `AppPlaylistCheck.playlistId: PlaylistId`
-- [ ] `AppArtistRepositoryPort.findByArtistIds(artistIds: Set<String>)` → auf `Set<ArtistId>` umstellen
-- [ ] `AppArtistRepositoryPort.updatePlaybackProcessingStatus(artistId: String, ...)` → auf `ArtistId` umstellen
+- [x] `AppArtist.artistId: String` → `AppArtist.id: ArtistId` (analog zu `AppAlbum.id: AlbumId` und `AppTrack.id: TrackId`)
+- [x] `RecentlyPlayedItem.trackId`, `.artistIds`, `.albumId` von `String`/`List<String>` auf `TrackId`, `List<ArtistId>`, `AlbumId?` umstellen
+- [x] `RecentlyPartialPlayedItem.trackId`, `.artistIds`, `.albumId` analog
+- [x] `CurrentlyPlayingItem.trackId`, `.artistIds`, `.albumId` analog
+- [x] `PlaylistTrack.trackId`, `.artistIds`, `.albumId` von `String`/`List<String>` auf Wert-Objekte umstellen
+- [x] `AppPlaylistCheck.playlistId: String` → `AppPlaylistCheck.playlistId: PlaylistId`
+- [x] `AppArtistRepositoryPort.findByArtistIds(artistIds: Set<String>)` → auf `Set<ArtistId>` umstellen
+- [x] `AppArtistRepositoryPort.updatePlaybackProcessingStatus(artistId: String, ...)` → auf `ArtistId` umstellen
 
 ### Zeit-Typen vereinheitlichen
 
@@ -104,21 +104,21 @@ Adapters). Domain-Service-Implementierungen, die die Inbound-Ports implementiere
 oder ein gleichwertiges Suffix tragen. Die aktuelle Konvention `*Adapter` im `domain-impl` stiftet
 Verwirrung, weil sie denselben Begriff wie die echten Adapter-Module verwendet.
 
-- [ ] `CatalogAdapter` → `CatalogService`
-- [ ] `CatalogBrowserAdapter` → `CatalogBrowserService`
-- [ ] `DashboardAdapter` → `DashboardService`
-- [ ] `HealthAdapter` → `HealthService`
-- [ ] `LoginServiceAdapter` → `LoginService` (das Suffix `Adapter` fällt weg, da der Klassenname
+- [x] `CatalogAdapter` → `CatalogService`
+- [x] `CatalogBrowserAdapter` → `CatalogBrowserService`
+- [x] `DashboardAdapter` → `DashboardService`
+- [x] `HealthAdapter` → `HealthService`
+- [x] `LoginServiceAdapter` → `LoginService` (das Suffix `Adapter` fällt weg, da der Klassenname
   bereits konzeptuell ist)
-- [ ] `MongoViewerAdapter` → `MongoViewerService`
-- [ ] `OutboxViewerAdapter` → `OutboxViewerService`
-- [ ] `PlaybackAdapter` → `PlaybackService`
-- [ ] `PlaybackEventViewerAdapter` → `PlaybackEventViewerService`
-- [ ] `PlaylistAdapter` → `PlaylistService`
-- [ ] `PlaylistCheckAdapter` → `PlaylistCheckService`
-- [ ] `RuntimeConfigAdapter` → `RuntimeConfigService`
-- [ ] `UserProfileAdapter` → `UserProfileService`
-- [ ] In allen Domain-Impl-Tests die Klassennamen entsprechend anpassen
+- [x] `MongoViewerAdapter` → `MongoViewerService`
+- [x] `OutboxViewerAdapter` → `OutboxViewerService`
+- [x] `PlaybackAdapter` → `PlaybackService`
+- [x] `PlaybackEventViewerAdapter` → `PlaybackEventViewerService`
+- [x] `PlaylistAdapter` → `PlaylistService`
+- [x] `PlaylistCheckAdapter` → `PlaylistCheckService`
+- [x] `RuntimeConfigAdapter` → `RuntimeConfigService`
+- [x] `UserProfileAdapter` → `UserProfileService`
+- [x] In allen Domain-Impl-Tests die Klassennamen entsprechend anpassen
 
 ### `SpotifyAccessTokenAdapter` verletzt Architektur-Regel
 
