@@ -1,7 +1,5 @@
 package de.chrgroth.spotify.control.adapter.out.outbox
 
-import com.mongodb.client.MongoClient
-import com.mongodb.client.model.Filters
 import de.chrgroth.quarkus.outbox.domain.ApplicationOutboxClient
 import de.chrgroth.quarkus.outbox.domain.OutboxPartitionStatus
 import de.chrgroth.spotify.control.domain.model.infra.OutboxEventTypeCount
@@ -12,16 +10,12 @@ import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
-import org.eclipse.microprofile.config.inject.ConfigProperty
 import kotlin.time.toKotlinInstant
 
 @ApplicationScoped
 @Suppress("Unused")
 class OutboxPortAdapter(
   private val outbox: ApplicationOutboxClient,
-  private val mongoClient: MongoClient,
-  @param:ConfigProperty(name = "quarkus.mongodb.database")
-  private val databaseName: String,
 ) : OutboxPort {
 
   override fun enqueue(event: DomainOutboxEvent) {
@@ -40,34 +34,28 @@ class OutboxPortAdapter(
         blockedUntil = info?.pausedUntil?.toKotlinInstant(),
         eventTypeCounts = info?.eventPerTypeCount
           ?.entries
-          ?.map { (kClass, count) -> OutboxEventTypeCount(eventType = kClass.simpleName ?: "unknown", count = count) }
+          ?.map { (eventType, count) -> OutboxEventTypeCount(eventType = eventType, count = count) }
           ?.sortedByDescending { it.count }
           ?: emptyList(),
       )
     }
   }
 
-  override fun getTasksByPartition(partitionKey: String): List<OutboxTask> =
-    mongoClient.getDatabase(databaseName)
-      .getCollection(OUTBOX_COLLECTION)
-      .find(Filters.eq("partition", partitionKey))
-      .map { doc ->
-        OutboxTask(
-          eventType = doc.getString("eventType") ?: "",
-          deduplicationKey = doc.getString("deduplicationKey") ?: "",
-          priority = doc.getString("priority") ?: "NORMAL",
-          status = doc.getString("status") ?: "PENDING",
-          attempts = doc.getInteger("attempts", 0),
-          nextRetryAt = doc.getDate("nextRetryAt")?.toInstant()?.toKotlinInstant(),
-          createdAt = doc.getDate("createdAt")?.toInstant()?.toKotlinInstant() ?: kotlin.time.Instant.fromEpochMilliseconds(0),
-          lastError = doc.getString("lastError"),
-        )
-      }
-      .toList()
-      .sortedWith(compareBy({ it.priorityOrder }, { it.nextRetryAt ?: kotlin.time.Instant.DISTANT_FUTURE }))
-
-
-  companion object : KLogging() {
-    private const val OUTBOX_COLLECTION = "outbox"
+  override fun getTasksByPartition(partitionKey: String): List<OutboxTask> {
+    val partition = DomainOutboxPartition.all.first { it.key == partitionKey }
+    return outbox.eventsForPartition(partition).map { task ->
+      OutboxTask(
+        eventType = task.eventType,
+        deduplicationKey = task.deduplicationKey,
+        priority = task.priority.name,
+        status = task.status.name,
+        attempts = task.attempts,
+        nextRetryAt = task.nextRetryAt?.toKotlinInstant(),
+        createdAt = task.createdAt.toKotlinInstant(),
+        lastError = task.lastError,
+      )
+    }
   }
+
+  companion object : KLogging()
 }
