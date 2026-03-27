@@ -14,7 +14,7 @@ class CurrentlyPlayingSkipPredicateTests {
     private val playbackActivity: PlaybackActivityPort = mockk()
     private val execution: ScheduledExecution = mockk(relaxed = true)
 
-    private val predicate = CurrentlyPlayingSkipPredicate(starterSkipPredicate, playbackActivity)
+    private val predicate = CurrentlyPlayingSkipPredicate(playbackActivity, starterSkipPredicate)
 
     @Test
     fun `skips when ScheduledSkipPredicate returns true`() {
