@@ -5,6 +5,7 @@ import de.chrgroth.spotify.control.domain.port.out.playback.PlaybackActivityPort
 import io.quarkus.scheduler.Scheduled
 import io.quarkus.scheduler.ScheduledExecution
 import jakarta.enterprise.context.ApplicationScoped
+import jakarta.inject.Inject
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Clock
 import kotlin.time.Duration
@@ -13,10 +14,21 @@ import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
 @ApplicationScoped
-class CurrentlyPlayingSkipPredicate(
-    private val starterSkipPredicate: ScheduledSkipPredicate,
-    private val playbackActivity: PlaybackActivityPort,
-) : Scheduled.SkipPredicate {
+class CurrentlyPlayingSkipPredicate : Scheduled.SkipPredicate {
+
+    private val playbackActivity: PlaybackActivityPort
+    private val starterSkipPredicate: ScheduledSkipPredicate
+
+    @Inject
+    constructor(playbackActivity: PlaybackActivityPort) : this(playbackActivity, ScheduledSkipPredicate())
+
+    internal constructor(
+        playbackActivity: PlaybackActivityPort,
+        starterSkipPredicate: ScheduledSkipPredicate,
+    ) {
+        this.playbackActivity = playbackActivity
+        this.starterSkipPredicate = starterSkipPredicate
+    }
 
     private val lastExecutedAtRef = AtomicReference<Instant>(Instant.fromEpochMilliseconds(0))
 
