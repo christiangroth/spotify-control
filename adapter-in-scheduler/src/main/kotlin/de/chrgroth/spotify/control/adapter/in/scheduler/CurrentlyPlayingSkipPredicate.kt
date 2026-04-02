@@ -16,33 +16,33 @@ import kotlin.time.Instant
 @ApplicationScoped
 class CurrentlyPlayingSkipPredicate : Scheduled.SkipPredicate {
 
-    private val playbackActivity: PlaybackActivityPort
-    private val starterSkipPredicate: ScheduledSkipPredicate
+  private val playbackActivity: PlaybackActivityPort
+  private val starterSkipPredicate: ScheduledSkipPredicate
 
-    @Inject
-    constructor(playbackActivity: PlaybackActivityPort) : this(playbackActivity, ScheduledSkipPredicate())
+  @Inject
+  constructor(playbackActivity: PlaybackActivityPort) : this(playbackActivity, ScheduledSkipPredicate())
 
-    internal constructor(
-        playbackActivity: PlaybackActivityPort,
-        starterSkipPredicate: ScheduledSkipPredicate,
-    ) {
-        this.playbackActivity = playbackActivity
-        this.starterSkipPredicate = starterSkipPredicate
-    }
+  internal constructor(
+    playbackActivity: PlaybackActivityPort,
+    starterSkipPredicate: ScheduledSkipPredicate,
+  ) {
+    this.playbackActivity = playbackActivity
+    this.starterSkipPredicate = starterSkipPredicate
+  }
 
-    private val lastExecutedAtRef = AtomicReference<Instant>(Instant.fromEpochMilliseconds(0))
+  private val lastExecutedAtRef = AtomicReference<Instant>(Instant.fromEpochMilliseconds(0))
 
-    override fun test(execution: ScheduledExecution): Boolean {
-        if (starterSkipPredicate.test(execution)) return true
-        val effectiveInterval = if (playbackActivity.isPlaybackActive()) FAST_INTERVAL else SLOW_INTERVAL
-        val now = Clock.System.now()
-        val lastExecutedAt = lastExecutedAtRef.get()
-        if (now < lastExecutedAt + effectiveInterval) return true
-        return !lastExecutedAtRef.compareAndSet(lastExecutedAt, now)
-    }
+  override fun test(execution: ScheduledExecution): Boolean {
+    if (starterSkipPredicate.test(execution)) return true
+    val effectiveInterval = if (playbackActivity.isPlaybackActive()) FAST_INTERVAL else SLOW_INTERVAL
+    val now = Clock.System.now()
+    val lastExecutedAt = lastExecutedAtRef.get()
+    if (now < lastExecutedAt + effectiveInterval) return true
+    return !lastExecutedAtRef.compareAndSet(lastExecutedAt, now)
+  }
 
-    companion object {
-        private val FAST_INTERVAL: Duration = 20.seconds
-        private val SLOW_INTERVAL: Duration = 5.minutes
-    }
+  companion object {
+    private val FAST_INTERVAL: Duration = 20.seconds
+    private val SLOW_INTERVAL: Duration = 5.minutes
+  }
 }

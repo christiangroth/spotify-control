@@ -6,14 +6,13 @@ import de.chrgroth.spotify.control.domain.model.catalog.ArtistPlaybackProcessing
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogPort
 import de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackPort
-import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
+import de.chrgroth.spotify.control.domain.port.`in`.user.UserProfilePort
 import io.quarkus.qute.Location
 import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
 import io.quarkus.security.Authenticated
 import io.quarkus.security.identity.SecurityIdentity
 import jakarta.enterprise.context.ApplicationScoped
-import jakarta.inject.Inject
 import jakarta.ws.rs.Consumes
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.POST
@@ -29,46 +28,36 @@ import mu.KLogging
 @Path("/settings/playback")
 @ApplicationScoped
 @Suppress("Unused")
-class PlaybackSettingsResource {
-
-  @Inject
-  @Location("settings/playback.html")
-  private lateinit var playbackTemplate: Template
-
-  @Inject
-  private lateinit var securityIdentity: SecurityIdentity
-
-  @Inject
-  private lateinit var userRepository: UserRepositoryPort
-
-  @Inject
-  private lateinit var playback: PlaybackPort
-
-  @Inject
-  private lateinit var catalog: CatalogPort
+class PlaybackSettingsResource(
+  @param:Location("settings/playback.html")
+  private val playbackTemplate: Template,
+  private val securityIdentity: SecurityIdentity,
+  private val userProfile: UserProfilePort,
+  private val playback: PlaybackPort,
+  private val catalog: CatalogPort,
+) {
 
   @GET
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
   fun playback(): TemplateInstance {
     val userId = UserId(securityIdentity.principal.name)
-    val user = userRepository.findById(userId)
-    val limit = PAGE_SIZE
-    val undecidedArtists = catalog.findArtistsByStatus(ArtistPlaybackProcessingStatus.UNDECIDED, 0, limit)
-    val activeArtists = catalog.findArtistsByStatus(ArtistPlaybackProcessingStatus.ACTIVE, 0, limit)
-    val inactiveArtists = catalog.findArtistsByStatus(ArtistPlaybackProcessingStatus.INACTIVE, 0, limit)
+    val displayName = userProfile.getDisplayName(userId) ?: userId.value
+    val undecidedArtists = catalog.findArtistsByStatus(ArtistPlaybackProcessingStatus.UNDECIDED, 0, PAGE_SIZE)
+    val activeArtists = catalog.findArtistsByStatus(ArtistPlaybackProcessingStatus.ACTIVE, 0, PAGE_SIZE)
+    val inactiveArtists = catalog.findArtistsByStatus(ArtistPlaybackProcessingStatus.INACTIVE, 0, PAGE_SIZE)
     val undecidedTotal = catalog.countArtistsByStatus(ArtistPlaybackProcessingStatus.UNDECIDED)
     val activeTotal = catalog.countArtistsByStatus(ArtistPlaybackProcessingStatus.ACTIVE)
     val inactiveTotal = catalog.countArtistsByStatus(ArtistPlaybackProcessingStatus.INACTIVE)
     return playbackTemplate
-      .data("displayName", user?.displayName ?: userId.value)
+      .data("displayName", displayName)
       .data("undecidedArtists", undecidedArtists)
       .data("activeArtists", activeArtists)
       .data("inactiveArtists", inactiveArtists)
       .data("undecidedTotal", undecidedTotal)
       .data("activeTotal", activeTotal)
       .data("inactiveTotal", inactiveTotal)
-      .data("pageSize", limit)
+      .data("pageSize", PAGE_SIZE)
       .data("artists", emptyList<AppArtist>())
       .data("status", "")
       .data("hasMore", false)

@@ -10,7 +10,7 @@ package de.chrgroth.spotify.control.domain.model.catalog
  *   for this artist's tracks are deleted when the artist is set to this status.
  */
 enum class ArtistPlaybackProcessingStatus {
-    UNDECIDED,
-    ACTIVE,
-    INACTIVE,
+  UNDECIDED,
+  ACTIVE,
+  INACTIVE,
 }

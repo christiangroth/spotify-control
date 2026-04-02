@@ -7,15 +7,13 @@ import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistType
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistPort
-import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
+import de.chrgroth.spotify.control.domain.port.`in`.user.UserProfilePort
 import io.quarkus.qute.Location
 import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
 import io.quarkus.security.Authenticated
 import io.quarkus.security.identity.SecurityIdentity
 import jakarta.enterprise.context.ApplicationScoped
-import jakarta.inject.Inject
 import jakarta.ws.rs.Consumes
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.POST
@@ -25,41 +23,28 @@ import jakarta.ws.rs.PathParam
 import jakarta.ws.rs.Produces
 import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.Locale
-import kotlin.time.toJavaInstant
+import kotlin.time.Instant
 
 @Path("/settings/playlist")
 @ApplicationScoped
 @Suppress("Unused")
-class PlaylistSettingsResource {
-
-  @Inject
-  @Location("settings/playlist.html")
-  private lateinit var playlistTemplate: Template
-
-  @Inject
-  private lateinit var securityIdentity: SecurityIdentity
-
-  @Inject
-  private lateinit var userRepository: UserRepositoryPort
-
-  @Inject
-  private lateinit var playlistRepository: PlaylistRepositoryPort
-
-  @Inject
-  private lateinit var playlist: PlaylistPort
+class PlaylistSettingsResource(
+  @param:Location("settings/playlist.html")
+  private val playlistTemplate: Template,
+  private val securityIdentity: SecurityIdentity,
+  private val userProfile: UserProfilePort,
+  private val playlist: PlaylistPort,
+) {
 
   @GET
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
   fun playlist(): TemplateInstance {
     val userId = UserId(securityIdentity.principal.name)
-    val user = userRepository.findById(userId)
-    val sortedPlaylists = playlistRepository.findByUserId(userId).sortedBy { it.name }
+    val displayName = userProfile.getDisplayName(userId) ?: userId.value
+    val sortedPlaylists = playlist.getPlaylists(userId).sortedBy { it.name }
     val padWidth = sortedPlaylists.size.toString().length
-    val trackCounts = playlistRepository.findTrackCountsByUserId(userId)
+    val trackCounts = playlist.getTrackCounts(userId)
     val rows = sortedPlaylists.mapIndexed { index, playlistInfo ->
       PlaylistRow(
         lineNumber = (index + 1).toString().padStart(padWidth, '0'),
@@ -68,21 +53,14 @@ class PlaylistSettingsResource {
       )
     }
     return playlistTemplate
-      .data("displayName", user?.displayName ?: userId.value)
+      .data("displayName", displayName)
       .data("rows", rows)
   }
 
   data class PlaylistRow(val lineNumber: String, val playlist: PlaylistInfo, val numberOfTracks: Int? = null) {
     val active: Boolean get() = playlist.syncStatus == PlaylistSyncStatus.ACTIVE
-    val lastSyncTimeFormatted: String get() = (playlist.lastSyncTime ?: playlist.lastSnapshotIdSyncTime)
-      .toJavaInstant()
-      .atZone(ZoneId.systemDefault())
-      .format(GERMAN_DATE_TIME_FORMATTER)
+    val lastSyncTime: Instant get() = playlist.lastSyncTime ?: playlist.lastSnapshotIdSyncTime
     val typeLabel: String? get() = playlist.type?.name?.lowercase()
-
-    companion object {
-      private val GERMAN_DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm", Locale.GERMAN)
-    }
   }
 
   @PUT
@@ -101,7 +79,7 @@ class PlaylistSettingsResource {
         .build()
     return when (playlist.updateSyncStatus(userId, playlistId, syncStatus).isRight()) {
       true -> {
-        val updated = playlistRepository.findByUserId(userId).find { it.spotifyPlaylistId == playlistId }
+        val updated = playlist.getPlaylists(userId).find { it.spotifyPlaylistId == playlistId }
         Response.ok(mapOf("syncStatus" to syncStatus.name, "type" to updated?.type?.name)).build()
       }
       false -> {

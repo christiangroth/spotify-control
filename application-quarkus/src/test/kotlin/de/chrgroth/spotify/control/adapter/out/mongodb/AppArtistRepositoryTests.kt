@@ -12,160 +12,160 @@ import java.util.UUID
 @QuarkusTest
 class AppArtistRepositoryTests {
 
-    @Inject
-    lateinit var appArtistRepository: AppArtistRepositoryPort
+  @Inject
+  lateinit var appArtistRepository: AppArtistRepositoryPort
 
-    private fun artist(suffix: String) = AppArtist(
-        id = ArtistId("artist-$suffix-${UUID.randomUUID()}"),
-        artistName = "Artist $suffix",
-        lastSync = kotlin.time.Instant.fromEpochSeconds(1),
+  private fun artist(suffix: String) = AppArtist(
+    id = ArtistId("artist-$suffix-${UUID.randomUUID()}"),
+    artistName = "Artist $suffix",
+    lastSync = kotlin.time.Instant.fromEpochSeconds(1),
+  )
+
+  @Test
+  fun `upsertAll persists new items and findByArtistIds returns them`() {
+    val item = artist("new")
+    appArtistRepository.upsertAll(listOf(item))
+
+    val result = appArtistRepository.findByArtistIds(setOf(item.id))
+
+    assertThat(result).hasSize(1)
+    assertThat(result[0].id).isEqualTo(item.id)
+    assertThat(result[0].artistName).isEqualTo(item.artistName)
+  }
+
+  @Test
+  fun `upsertAll updates existing items when artistId matches`() {
+    val original = artist("update")
+    appArtistRepository.upsertAll(listOf(original))
+
+    val updated = original.copy(artistName = "Updated Name")
+    appArtistRepository.upsertAll(listOf(updated))
+
+    val result = appArtistRepository.findByArtistIds(setOf(original.id))
+
+    assertThat(result).hasSize(1)
+    assertThat(result[0].artistName).isEqualTo("Updated Name")
+  }
+
+  @Test
+  fun `findByArtistIds returns empty list for unknown artistIds`() {
+    val result = appArtistRepository.findByArtistIds(setOf(ArtistId("unknown-artist-${UUID.randomUUID()}")))
+    assertThat(result).isEmpty()
+  }
+
+  @Test
+  fun `findByArtistIds returns empty list for empty input`() {
+    val result = appArtistRepository.findByArtistIds(emptySet())
+    assertThat(result).isEmpty()
+  }
+
+  @Test
+  fun `findByArtistIds returns all matching items in a single batch`() {
+    val item1 = artist("batch1")
+    val item2 = artist("batch2")
+    val item3 = artist("batch3")
+    appArtistRepository.upsertAll(listOf(item1, item2, item3))
+
+    val result = appArtistRepository.findByArtistIds(setOf(item1.id, item2.id, item3.id))
+
+    assertThat(result).hasSize(3)
+    assertThat(result.map { it.id }).containsExactlyInAnyOrder(item1.id, item2.id, item3.id)
+  }
+
+  @Test
+  fun `upsertAll stores all sync fields`() {
+    val item = artist("sync").copy(
+      imageLink = "https://example.com/image.jpg",
+      type = "artist",
+    )
+    appArtistRepository.upsertAll(listOf(item))
+
+    val result = appArtistRepository.findByArtistIds(setOf(item.id))
+    assertThat(result).hasSize(1)
+    assertThat(result[0].artistName).isEqualTo(item.artistName)
+    assertThat(result[0].imageLink).isEqualTo("https://example.com/image.jpg")
+    assertThat(result[0].type).isEqualTo("artist")
+    assertThat(result[0].lastSync).isNotEqualTo(kotlin.time.Instant.DISTANT_PAST)
+  }
+
+  @Test
+  fun `findWithImageLinkAndBlankName returns only artists with imageLink and blank artistName`() {
+    val withImageAndBlankName = artist("blank-name").copy(artistName = "", imageLink = "https://img.example.com/1.jpg")
+    val withImageAndName = artist("has-name").copy(imageLink = "https://img.example.com/2.jpg")
+    val withoutImage = artist("no-image").copy(artistName = "")
+    appArtistRepository.upsertAll(listOf(withImageAndBlankName, withImageAndName, withoutImage))
+    val result = appArtistRepository.findWithImageLinkAndBlankName()
+
+    assertThat(result.map { it.id }).contains(withImageAndBlankName.id)
+    assertThat(result.map { it.id }).doesNotContain(withImageAndName.id, withoutImage.id)
+  }
+
+  @Test
+  fun `countAll returns total number of artists`() {
+    val before = appArtistRepository.countAll()
+    val artist1 = artist("count1")
+    val artist2 = artist("count2")
+    appArtistRepository.upsertAll(listOf(artist1, artist2))
+
+    val after = appArtistRepository.countAll()
+
+    assertThat(after).isEqualTo(before + 2)
+  }
+
+  @Test
+  fun `findByPlaybackProcessingStatusPaged returns artists sorted by name within given offset and limit`() {
+    val suffix = UUID.randomUUID().toString().take(8)
+    val artistC = artist("paged-C-$suffix").copy(artistName = "C Artist $suffix")
+    val artistA = artist("paged-A-$suffix").copy(artistName = "A Artist $suffix")
+    val artistB = artist("paged-B-$suffix").copy(artistName = "B Artist $suffix")
+    appArtistRepository.upsertAll(listOf(artistC, artistA, artistB))
+
+    val totalUndecided = appArtistRepository.countByPlaybackProcessingStatus(
+      de.chrgroth.spotify.control.domain.model.catalog.ArtistPlaybackProcessingStatus.UNDECIDED,
+    )
+    val allResults = appArtistRepository.findByPlaybackProcessingStatusPaged(
+      de.chrgroth.spotify.control.domain.model.catalog.ArtistPlaybackProcessingStatus.UNDECIDED, 0, totalUndecided.toInt(),
     )
 
-    @Test
-    fun `upsertAll persists new items and findByArtistIds returns them`() {
-        val item = artist("new")
-        appArtistRepository.upsertAll(listOf(item))
+    val insertedIds = setOf(artistA.id, artistB.id, artistC.id)
+    val found = allResults.filter { it.id in insertedIds }
+    assertThat(found).hasSize(3)
+    assertThat(found.map { it.artistName }).containsExactly(
+      "A Artist $suffix",
+      "B Artist $suffix",
+      "C Artist $suffix",
+    )
+  }
 
-        val result = appArtistRepository.findByArtistIds(setOf(item.id))
+  @Test
+  fun `findByPlaybackProcessingStatusPaged returns empty list when offset exceeds available items`() {
+    val result = appArtistRepository.findByPlaybackProcessingStatusPaged(
+      de.chrgroth.spotify.control.domain.model.catalog.ArtistPlaybackProcessingStatus.UNDECIDED, 100000, 50,
+    )
+    assertThat(result).isEmpty()
+  }
 
-        assertThat(result).hasSize(1)
-        assertThat(result[0].id).isEqualTo(item.id)
-        assertThat(result[0].artistName).isEqualTo(item.artistName)
-    }
+  @Test
+  fun `countByPlaybackProcessingStatus returns correct count for status`() {
+    val suffix = UUID.randomUUID().toString().take(8)
+    val artist1 = artist("cnt-$suffix-1")
+    val artist2 = artist("cnt-$suffix-2")
+    appArtistRepository.upsertAll(listOf(artist1, artist2))
 
-    @Test
-    fun `upsertAll updates existing items when artistId matches`() {
-        val original = artist("update")
-        appArtistRepository.upsertAll(listOf(original))
+    val before = appArtistRepository.countByPlaybackProcessingStatus(
+      de.chrgroth.spotify.control.domain.model.catalog.ArtistPlaybackProcessingStatus.UNDECIDED,
+    )
+    appArtistRepository.updatePlaybackProcessingStatus(
+      artist1.id,
+      de.chrgroth.spotify.control.domain.model.catalog.ArtistPlaybackProcessingStatus.ACTIVE,
+    )
+    val afterUpdate = appArtistRepository.countByPlaybackProcessingStatus(
+      de.chrgroth.spotify.control.domain.model.catalog.ArtistPlaybackProcessingStatus.UNDECIDED,
+    )
 
-        val updated = original.copy(artistName = "Updated Name")
-        appArtistRepository.upsertAll(listOf(updated))
-
-        val result = appArtistRepository.findByArtistIds(setOf(original.id))
-
-        assertThat(result).hasSize(1)
-        assertThat(result[0].artistName).isEqualTo("Updated Name")
-    }
-
-    @Test
-    fun `findByArtistIds returns empty list for unknown artistIds`() {
-        val result = appArtistRepository.findByArtistIds(setOf(ArtistId("unknown-artist-${UUID.randomUUID()}")))
-        assertThat(result).isEmpty()
-    }
-
-    @Test
-    fun `findByArtistIds returns empty list for empty input`() {
-        val result = appArtistRepository.findByArtistIds(emptySet())
-        assertThat(result).isEmpty()
-    }
-
-    @Test
-    fun `findByArtistIds returns all matching items in a single batch`() {
-        val item1 = artist("batch1")
-        val item2 = artist("batch2")
-        val item3 = artist("batch3")
-        appArtistRepository.upsertAll(listOf(item1, item2, item3))
-
-        val result = appArtistRepository.findByArtistIds(setOf(item1.id, item2.id, item3.id))
-
-        assertThat(result).hasSize(3)
-        assertThat(result.map { it.id }).containsExactlyInAnyOrder(item1.id, item2.id, item3.id)
-    }
-
-    @Test
-    fun `upsertAll stores all sync fields`() {
-        val item = artist("sync").copy(
-            imageLink = "https://example.com/image.jpg",
-            type = "artist",
-        )
-        appArtistRepository.upsertAll(listOf(item))
-
-        val result = appArtistRepository.findByArtistIds(setOf(item.id))
-        assertThat(result).hasSize(1)
-        assertThat(result[0].artistName).isEqualTo(item.artistName)
-        assertThat(result[0].imageLink).isEqualTo("https://example.com/image.jpg")
-        assertThat(result[0].type).isEqualTo("artist")
-        assertThat(result[0].lastSync).isNotEqualTo(kotlin.time.Instant.DISTANT_PAST)
-    }
-
-    @Test
-    fun `findWithImageLinkAndBlankName returns only artists with imageLink and blank artistName`() {
-        val withImageAndBlankName = artist("blank-name").copy(artistName = "", imageLink = "https://img.example.com/1.jpg")
-        val withImageAndName = artist("has-name").copy(imageLink = "https://img.example.com/2.jpg")
-        val withoutImage = artist("no-image").copy(artistName = "")
-        appArtistRepository.upsertAll(listOf(withImageAndBlankName, withImageAndName, withoutImage))
-        val result = appArtistRepository.findWithImageLinkAndBlankName()
-
-        assertThat(result.map { it.id }).contains(withImageAndBlankName.id)
-        assertThat(result.map { it.id }).doesNotContain(withImageAndName.id, withoutImage.id)
-    }
-
-    @Test
-    fun `countAll returns total number of artists`() {
-        val before = appArtistRepository.countAll()
-        val artist1 = artist("count1")
-        val artist2 = artist("count2")
-        appArtistRepository.upsertAll(listOf(artist1, artist2))
-
-        val after = appArtistRepository.countAll()
-
-        assertThat(after).isEqualTo(before + 2)
-    }
-
-    @Test
-    fun `findByPlaybackProcessingStatusPaged returns artists sorted by name within given offset and limit`() {
-        val suffix = UUID.randomUUID().toString().take(8)
-        val artistC = artist("paged-C-$suffix").copy(artistName = "C Artist $suffix")
-        val artistA = artist("paged-A-$suffix").copy(artistName = "A Artist $suffix")
-        val artistB = artist("paged-B-$suffix").copy(artistName = "B Artist $suffix")
-        appArtistRepository.upsertAll(listOf(artistC, artistA, artistB))
-
-        val totalUndecided = appArtistRepository.countByPlaybackProcessingStatus(
-            de.chrgroth.spotify.control.domain.model.catalog.ArtistPlaybackProcessingStatus.UNDECIDED,
-        )
-        val allResults = appArtistRepository.findByPlaybackProcessingStatusPaged(
-            de.chrgroth.spotify.control.domain.model.catalog.ArtistPlaybackProcessingStatus.UNDECIDED, 0, totalUndecided.toInt(),
-        )
-
-        val insertedIds = setOf(artistA.id, artistB.id, artistC.id)
-        val found = allResults.filter { it.id in insertedIds }
-        assertThat(found).hasSize(3)
-        assertThat(found.map { it.artistName }).containsExactly(
-            "A Artist $suffix",
-            "B Artist $suffix",
-            "C Artist $suffix",
-        )
-    }
-
-    @Test
-    fun `findByPlaybackProcessingStatusPaged returns empty list when offset exceeds available items`() {
-        val result = appArtistRepository.findByPlaybackProcessingStatusPaged(
-            de.chrgroth.spotify.control.domain.model.catalog.ArtistPlaybackProcessingStatus.UNDECIDED, 100000, 50,
-        )
-        assertThat(result).isEmpty()
-    }
-
-    @Test
-    fun `countByPlaybackProcessingStatus returns correct count for status`() {
-        val suffix = UUID.randomUUID().toString().take(8)
-        val artist1 = artist("cnt-$suffix-1")
-        val artist2 = artist("cnt-$suffix-2")
-        appArtistRepository.upsertAll(listOf(artist1, artist2))
-
-        val before = appArtistRepository.countByPlaybackProcessingStatus(
-            de.chrgroth.spotify.control.domain.model.catalog.ArtistPlaybackProcessingStatus.UNDECIDED,
-        )
-        appArtistRepository.updatePlaybackProcessingStatus(
-            artist1.id,
-            de.chrgroth.spotify.control.domain.model.catalog.ArtistPlaybackProcessingStatus.ACTIVE,
-        )
-        val afterUpdate = appArtistRepository.countByPlaybackProcessingStatus(
-            de.chrgroth.spotify.control.domain.model.catalog.ArtistPlaybackProcessingStatus.UNDECIDED,
-        )
-
-        assertThat(afterUpdate).isEqualTo(before - 1)
-        assertThat(appArtistRepository.countByPlaybackProcessingStatus(
-            de.chrgroth.spotify.control.domain.model.catalog.ArtistPlaybackProcessingStatus.ACTIVE,
-        )).isGreaterThanOrEqualTo(1)
-    }
+    assertThat(afterUpdate).isEqualTo(before - 1)
+    assertThat(appArtistRepository.countByPlaybackProcessingStatus(
+      de.chrgroth.spotify.control.domain.model.catalog.ArtistPlaybackProcessingStatus.ACTIVE,
+    )).isGreaterThanOrEqualTo(1)
+  }
 }

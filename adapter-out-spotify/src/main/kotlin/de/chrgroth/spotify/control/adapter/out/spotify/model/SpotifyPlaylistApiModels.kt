@@ -8,26 +8,26 @@ internal data class SpotifyOwner(val id: String)
 
 @Serializable
 internal data class SpotifyPlaylistResponse(
-    val id: String,
-    val name: String,
-    @SerialName("snapshot_id") val snapshotId: String,
-    val owner: SpotifyOwner,
+  val id: String,
+  val name: String,
+  @SerialName("snapshot_id") val snapshotId: String,
+  val owner: SpotifyOwner,
 )
 
 @Serializable
 internal data class SpotifyUserPlaylistsResponse(
-    val items: List<SpotifyPlaylistResponse> = emptyList(),
-    val next: String? = null,
+  val items: List<SpotifyPlaylistResponse> = emptyList(),
+  val next: String? = null,
 )
 
 @Serializable
 internal data class SpotifyPlaylistTrackObject(
-    val item: SpotifyTrackResponse? = null,
+  val item: SpotifyTrackResponse? = null,
 )
 
 @Serializable
 internal data class SpotifyPlaylistTracksResponse(
-    val items: List<SpotifyPlaylistTrackObject> = emptyList(),
-    val next: String? = null,
-    @SerialName("snapshot_id") val snapshotId: String? = null,
+  val items: List<SpotifyPlaylistTrackObject> = emptyList(),
+  val next: String? = null,
+  @SerialName("snapshot_id") val snapshotId: String? = null,
 )

@@ -17,92 +17,92 @@ import java.util.concurrent.TimeUnit
 @QuarkusTest
 class HealthSseTests {
 
-    @Inject
-    lateinit var healthSseService: HealthSseAdapter
+  @Inject
+  lateinit var healthSseService: HealthSseAdapter
 
-    @Inject
-    lateinit var outgoingRequestStatsObserver: OutgoingRequestStatsObserver
+  @Inject
+  lateinit var outgoingRequestStatsObserver: OutgoingRequestStatsObserver
 
-    @Inject
-    lateinit var outboxTaskCountObserver: OutboxTaskCountObserver
+  @Inject
+  lateinit var outboxTaskCountObserver: OutboxTaskCountObserver
 
-    @Test
-    fun `sse endpoint delivers refresh-outgoing-http-calls event when outgoing request is recorded`() {
-        val userId = UserId("test-user-health-sse-http")
-        val received = CopyOnWriteArrayList<String>()
-        val latch = CountDownLatch(1)
+  @Test
+  fun `sse endpoint delivers refresh-outgoing-http-calls event when outgoing request is recorded`() {
+    val userId = UserId("test-user-health-sse-http")
+    val received = CopyOnWriteArrayList<String>()
+    val latch = CountDownLatch(1)
 
-        val cancellable: Cancellable = healthSseService.stream(userId)
-            .subscribe().with(
-                { event: String -> received.add(event); latch.countDown() },
-                { _: Throwable -> /* ignore errors */ },
-            )
+    val cancellable: Cancellable = healthSseService.stream(userId)
+      .subscribe().with(
+        { event: String -> received.add(event); latch.countDown() },
+        { _: Throwable -> /* ignore errors */ },
+      )
 
-        outgoingRequestStatsObserver.onRequestRecorded()
+    outgoingRequestStatsObserver.onRequestRecorded()
 
-        assertTrue(latch.await(5, TimeUnit.SECONDS), "SSE refresh event should be received within 5 seconds")
-        assertEquals(listOf("refresh-outgoing-http-calls"), received.toList())
+    assertTrue(latch.await(5, TimeUnit.SECONDS), "SSE refresh event should be received within 5 seconds")
+    assertEquals(listOf("refresh-outgoing-http-calls"), received.toList())
 
-        cancellable.cancel()
-    }
+    cancellable.cancel()
+  }
 
-    @Test
-    fun `sse endpoint delivers refresh-outbox-partitions event when partition is activated`() {
-        val userId = UserId("test-user-health-sse-outbox")
-        val received = CopyOnWriteArrayList<String>()
-        val latch = CountDownLatch(1)
+  @Test
+  fun `sse endpoint delivers refresh-outbox-partitions event when partition is activated`() {
+    val userId = UserId("test-user-health-sse-outbox")
+    val received = CopyOnWriteArrayList<String>()
+    val latch = CountDownLatch(1)
 
-        val cancellable: Cancellable = healthSseService.stream(userId)
-            .subscribe().with(
-                { event: String -> received.add(event); latch.countDown() },
-                { _: Throwable -> /* ignore errors */ },
-            )
+    val cancellable: Cancellable = healthSseService.stream(userId)
+      .subscribe().with(
+        { event: String -> received.add(event); latch.countDown() },
+        { _: Throwable -> /* ignore errors */ },
+      )
 
-        healthSseService.onPartitionActivated("to-spotify")
+    healthSseService.onPartitionActivated("to-spotify")
 
-        assertTrue(latch.await(5, TimeUnit.SECONDS), "SSE refresh event should be received within 5 seconds")
-        assertEquals(listOf("refresh-outbox-partitions"), received.toList())
+    assertTrue(latch.await(5, TimeUnit.SECONDS), "SSE refresh event should be received within 5 seconds")
+    assertEquals(listOf("refresh-outbox-partitions"), received.toList())
 
-        cancellable.cancel()
-    }
+    cancellable.cancel()
+  }
 
-    @Test
-    fun `sse endpoint delivers refresh-outbox-partitions event when outbox task count changes`() {
-        val userId = UserId("test-user-health-sse-outbox-count")
-        val received = CopyOnWriteArrayList<String>()
-        val latch = CountDownLatch(1)
+  @Test
+  fun `sse endpoint delivers refresh-outbox-partitions event when outbox task count changes`() {
+    val userId = UserId("test-user-health-sse-outbox-count")
+    val received = CopyOnWriteArrayList<String>()
+    val latch = CountDownLatch(1)
 
-        val cancellable: Cancellable = healthSseService.stream(userId)
-            .subscribe().with(
-                { event: String -> received.add(event); latch.countDown() },
-                { _: Throwable -> /* ignore errors */ },
-            )
+    val cancellable: Cancellable = healthSseService.stream(userId)
+      .subscribe().with(
+        { event: String -> received.add(event); latch.countDown() },
+        { _: Throwable -> /* ignore errors */ },
+      )
 
-        outboxTaskCountObserver.onOutboxTaskCountChanged()
+    outboxTaskCountObserver.onOutboxTaskCountChanged()
 
-        assertTrue(latch.await(5, TimeUnit.SECONDS), "SSE refresh event should be received within 5 seconds")
-        assertEquals(listOf("refresh-outbox-partitions"), received.toList())
+    assertTrue(latch.await(5, TimeUnit.SECONDS), "SSE refresh event should be received within 5 seconds")
+    assertEquals(listOf("refresh-outbox-partitions"), received.toList())
 
-        cancellable.cancel()
-    }
+    cancellable.cancel()
+  }
 
-    @Test
-    fun `sse endpoint delivers refresh-playback-state event when playback is detected`() {
-        val userId = UserId("test-user-health-sse-playback")
-        val received = CopyOnWriteArrayList<String>()
-        val latch = CountDownLatch(1)
+  @Test
+  fun `sse endpoint delivers refresh-playback-state event when playback is detected`() {
+    val userId = UserId("test-user-health-sse-playback")
+    val received = CopyOnWriteArrayList<String>()
+    val latch = CountDownLatch(1)
 
-        val cancellable: Cancellable = healthSseService.stream(userId)
-            .subscribe().with(
-                { event: String -> received.add(event); latch.countDown() },
-                { _: Throwable -> /* ignore errors */ },
-            )
+    val cancellable: Cancellable = healthSseService.stream(userId)
+      .subscribe().with(
+        { event: String -> received.add(event); latch.countDown() },
+        { _: Throwable -> /* ignore errors */ },
+      )
 
-        healthSseService.onPlaybackDetected()
+    healthSseService.onPlaybackDetected()
 
-        assertTrue(latch.await(5, TimeUnit.SECONDS), "SSE refresh event should be received within 5 seconds")
-        assertEquals(listOf("refresh-playback-state"), received.toList())
+    assertTrue(latch.await(5, TimeUnit.SECONDS), "SSE refresh event should be received within 5 seconds")
+    assertEquals(listOf("refresh-playback-state"), received.toList())
 
-        cancellable.cancel()
-    }
+    cancellable.cancel()
+  }
 }

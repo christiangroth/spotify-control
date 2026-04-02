@@ -25,73 +25,73 @@ import java.util.concurrent.TimeUnit
 @ApplicationScoped
 @Suppress("Unused")
 class PlaylistCheckService(
-    private val checkRunners: Instance<PlaylistCheckRunner>,
-    private val playlistRepository: PlaylistRepositoryPort,
-    private val playlistCheckRepository: AppPlaylistCheckRepositoryPort,
-    private val dashboardRefresh: DashboardRefreshPort,
-    private val notification: PlaylistCheckNotificationPort,
-    private val meterRegistry: MeterRegistry,
+  private val checkRunners: Instance<PlaylistCheckRunner>,
+  private val playlistRepository: PlaylistRepositoryPort,
+  private val playlistCheckRepository: AppPlaylistCheckRepositoryPort,
+  private val dashboardRefresh: DashboardRefreshPort,
+  private val notification: PlaylistCheckNotificationPort,
+  private val meterRegistry: MeterRegistry,
 ) : PlaylistCheckPort {
 
-    override fun handle(event: DomainOutboxEvent.RunPlaylistChecks): Either<DomainError, Unit> {
-        val playlist = playlistRepository.findByUserIdAndPlaylistId(event.userId, event.playlistId)
-        if (playlist == null) {
-            logger.warn { "Playlist ${event.playlistId} not found for user ${event.userId.value}, skipping checks" }
-            return Unit.right()
-        }
-
-        val allPlaylistInfos = playlistRepository.findByUserId(event.userId)
-        val currentPlaylistInfo = allPlaylistInfos.find { it.spotifyPlaylistId == event.playlistId }
-
-        val applicableRunners = checkRunners.filter { it.isApplicable(currentPlaylistInfo) }
-        val results = runBlocking {
-            applicableRunners
-                .map { runner ->
-                    async(Dispatchers.IO) {
-                        timedCheck(runner.checkId, event.playlistId) {
-                            runner.run(event.userId, event.playlistId, playlist, currentPlaylistInfo, allPlaylistInfos)
-                        }
-                    }
-                }
-                .awaitAll()
-        }
-
-        results.forEach { check ->
-            val previous = playlistCheckRepository.findByCheckId(check.checkId)
-            playlistCheckRepository.save(check)
-            notifyIfChanged(previous, check)
-        }
-
-        val totalViolations = results.sumOf { it.violations.size }
-        val status = if (totalViolations == 0) "all passed" else "$totalViolations violation(s)"
-        logger.info { "Ran playlist checks for playlist ${event.playlistId} (user ${event.userId.value}): $status" }
-        dashboardRefresh.notifyUserPlaylistChecks(event.userId)
-        return Unit.right()
+  override fun handle(event: DomainOutboxEvent.RunPlaylistChecks): Either<DomainError, Unit> {
+    val playlist = playlistRepository.findByUserIdAndPlaylistId(event.userId, event.playlistId)
+    if (playlist == null) {
+      logger.warn { "Playlist ${event.playlistId} not found for user ${event.userId.value}, skipping checks" }
+      return Unit.right()
     }
 
-    override fun getDisplayNames(): Map<String, String> =
-        checkRunners.associate { it.checkId to it.displayName }
+    val allPlaylistInfos = playlistRepository.findByUserId(event.userId)
+    val currentPlaylistInfo = allPlaylistInfos.find { it.spotifyPlaylistId == event.playlistId }
 
-    private fun notifyIfChanged(previous: AppPlaylistCheck?, current: AppPlaylistCheck) {
-        if (previous == null) return
-        if (!previous.succeeded && current.succeeded) {
-            notification.notifyCheckPassed(current)
-        } else if (!previous.succeeded && !current.succeeded && previous.violations != current.violations) {
-            notification.notifyViolationsChanged(current)
+    val applicableRunners = checkRunners.filter { it.isApplicable(currentPlaylistInfo) }
+    val results = runBlocking {
+      applicableRunners
+        .map { runner ->
+          async(Dispatchers.IO) {
+            timedCheck(runner.checkId, event.playlistId) {
+              runner.run(event.userId, event.playlistId, playlist, currentPlaylistInfo, allPlaylistInfos)
+            }
+          }
         }
+        .awaitAll()
     }
 
-    private fun <T> timedCheck(checkId: String, playlistId: String, block: () -> T): T {
-        val startNs = System.nanoTime()
-        val result = block()
-        val durationNs = System.nanoTime() - startNs
-        Timer.builder("playlist.check")
-            .tag("checkId", checkId)
-            .tag("playlistId", playlistId)
-            .register(meterRegistry)
-            .record(durationNs, TimeUnit.NANOSECONDS)
-        return result
+    results.forEach { check ->
+      val previous = playlistCheckRepository.findByCheckId(check.checkId)
+      playlistCheckRepository.save(check)
+      notifyIfChanged(previous, check)
     }
 
-    companion object : KLogging()
+    val totalViolations = results.sumOf { it.violations.size }
+    val status = if (totalViolations == 0) "all passed" else "$totalViolations violation(s)"
+    logger.info { "Ran playlist checks for playlist ${event.playlistId} (user ${event.userId.value}): $status" }
+    dashboardRefresh.notifyUserPlaylistChecks(event.userId)
+    return Unit.right()
+  }
+
+  override fun getDisplayNames(): Map<String, String> =
+    checkRunners.associate { it.checkId to it.displayName }
+
+  private fun notifyIfChanged(previous: AppPlaylistCheck?, current: AppPlaylistCheck) {
+    if (previous == null) return
+    if (!previous.succeeded && current.succeeded) {
+      notification.notifyCheckPassed(current)
+    } else if (!previous.succeeded && !current.succeeded && previous.violations != current.violations) {
+      notification.notifyViolationsChanged(current)
+    }
+  }
+
+  private fun <T> timedCheck(checkId: String, playlistId: String, block: () -> T): T {
+    val startNs = System.nanoTime()
+    val result = block()
+    val durationNs = System.nanoTime() - startNs
+    Timer.builder("playlist.check")
+      .tag("checkId", checkId)
+      .tag("playlistId", playlistId)
+      .register(meterRegistry)
+      .record(durationNs, TimeUnit.NANOSECONDS)
+    return result
+  }
+
+  companion object : KLogging()
 }

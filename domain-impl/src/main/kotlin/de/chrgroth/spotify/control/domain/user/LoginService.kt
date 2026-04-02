@@ -20,49 +20,49 @@ import org.eclipse.microprofile.config.inject.ConfigProperty
 @ApplicationScoped
 @Suppress("Unused", "TooGenericExceptionCaught")
 class LoginService(
-    private val spotifyAuth: SpotifyAuthPort,
-    private val userRepository: UserRepositoryPort,
-    private val tokenEncryption: TokenEncryptionPort,
-    @ConfigProperty(name = "app.allowed-spotify-user-ids")
-    allowedUserIdStrings: List<String>,
+  private val spotifyAuth: SpotifyAuthPort,
+  private val userRepository: UserRepositoryPort,
+  private val tokenEncryption: TokenEncryptionPort,
+  @ConfigProperty(name = "app.allowed-spotify-user-ids")
+  allowedUserIdStrings: List<String>,
 ) : LoginServicePort {
 
-    private val allowedUserIds: Set<UserId> = allowedUserIdStrings.map { UserId(it) }.toSet()
+  private val allowedUserIds: Set<UserId> = allowedUserIdStrings.map { UserId(it) }.toSet()
 
-    override fun isAllowed(userId: UserId): Boolean =
-        userId in allowedUserIds
+  override fun isAllowed(userId: UserId): Boolean =
+    userId in allowedUserIds
 
-    override fun handleCallback(code: String): Either<DomainError, UserId> = try {
-        either {
-            val tokens = spotifyAuth.exchangeCode(code).bind()
-            val profile = spotifyAuth.getUserProfile(tokens.accessToken).bind()
-            val userId = UserId(profile.id.value)
+  override fun handleCallback(code: String): Either<DomainError, UserId> = try {
+    either {
+      val tokens = spotifyAuth.exchangeCode(code).bind()
+      val profile = spotifyAuth.getUserProfile(tokens.accessToken).bind()
+      val userId = UserId(profile.id.value)
 
-            if (!isAllowed(userId)) {
-                logger.warn { "Login denied for user: ${userId.value}" }
-                raise(AuthError.USER_NOT_ALLOWED)
-            }
+      if (!isAllowed(userId)) {
+        logger.warn { "Login denied for user: ${userId.value}" }
+        raise(AuthError.USER_NOT_ALLOWED)
+      }
 
-            val encryptedAccess = tokenEncryption.encrypt(tokens.accessToken.value).bind()
-            val encryptedRefresh = tokenEncryption.encrypt(tokens.refreshToken.value).bind()
-            val now = Clock.System.now()
-            userRepository.upsert(
-                User(
-                    spotifyUserId = userId,
-                    displayName = profile.displayName,
-                    encryptedAccessToken = encryptedAccess,
-                    encryptedRefreshToken = encryptedRefresh,
-                    tokenExpiresAt = now + tokens.expiresInSeconds.seconds,
-                    lastLoginAt = now,
-                )
-            )
+      val encryptedAccess = tokenEncryption.encrypt(tokens.accessToken.value).bind()
+      val encryptedRefresh = tokenEncryption.encrypt(tokens.refreshToken.value).bind()
+      val now = Clock.System.now()
+      userRepository.upsert(
+        User(
+          spotifyUserId = userId,
+          displayName = profile.displayName,
+          encryptedAccessToken = encryptedAccess,
+          encryptedRefreshToken = encryptedRefresh,
+          tokenExpiresAt = now + tokens.expiresInSeconds.seconds,
+          lastLoginAt = now,
+        )
+      )
 
-            userId
-        }
-    } catch (e: Exception) {
-        logger.error(e) { "Unexpected error during login callback" }
-        AuthError.UNEXPECTED.left()
+      userId
     }
+  } catch (e: Exception) {
+    logger.error(e) { "Unexpected error during login callback" }
+    AuthError.UNEXPECTED.left()
+  }
 
-    companion object : KLogging()
+  companion object : KLogging()
 }

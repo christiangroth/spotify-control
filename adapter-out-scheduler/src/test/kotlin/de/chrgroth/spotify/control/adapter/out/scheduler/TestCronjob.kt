@@ -5,12 +5,12 @@ import jakarta.enterprise.context.ApplicationScoped
 
 @ApplicationScoped
 internal class TestCronjob {
-    @Scheduled(every = "1h")
-    fun run() = Unit
+  @Scheduled(every = "1h")
+  fun run() = Unit
 }
 
 @ApplicationScoped
 internal class AnotherTestCronjob {
-    @Scheduled(every = "2h")
-    fun run() = Unit
+  @Scheduled(every = "2h")
+  fun run() = Unit
 }

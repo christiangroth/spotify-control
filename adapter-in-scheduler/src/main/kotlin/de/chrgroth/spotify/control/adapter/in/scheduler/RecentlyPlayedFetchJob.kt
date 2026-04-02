@@ -9,14 +9,14 @@ import mu.KLogging
 @ApplicationScoped
 @Suppress("Unused")
 class RecentlyPlayedFetchJob(
-    private val playback: PlaybackPort,
+  private val playback: PlaybackPort,
 ) {
 
-    @Scheduled(cron = "0 0/10 * * * ?", skipExecutionIf = ScheduledSkipPredicate::class)
-    fun run() {
-        logger.info { "Running scheduled recently played fetch" }
-        playback.enqueueFetchRecentlyPlayed()
-    }
+  @Scheduled(cron = "0 0/10 * * * ?", skipExecutionIf = ScheduledSkipPredicate::class)
+  fun run() {
+    logger.info { "Running scheduled recently played fetch" }
+    playback.enqueueFetchRecentlyPlayed()
+  }
 
-    companion object : KLogging()
+  companion object : KLogging()
 }

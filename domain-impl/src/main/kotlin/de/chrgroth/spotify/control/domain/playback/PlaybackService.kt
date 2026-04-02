@@ -36,85 +36,85 @@ import org.eclipse.microprofile.config.inject.ConfigProperty
 @ApplicationScoped
 @Suppress("Unused", "TooGenericExceptionCaught")
 class PlaybackService(
-    private val userRepository: UserRepositoryPort,
-    private val spotifyAccessToken: SpotifyAccessTokenPort,
-    private val spotifyPlayback: SpotifyPlaybackPort,
-    private val currentlyPlayingRepository: CurrentlyPlayingRepositoryPort,
-    private val recentlyPlayedRepository: RecentlyPlayedRepositoryPort,
-    private val recentlyPartialPlayedRepository: RecentlyPartialPlayedRepositoryPort,
-    private val appPlaybackRepository: AppPlaybackRepositoryPort,
-    private val appArtistRepository: AppArtistRepositoryPort,
-    private val syncController: SyncController,
-    private val outboxPort: OutboxPort,
-    private val dashboardRefresh: DashboardRefreshPort,
-    private val playbackState: PlaybackStatePort,
-    private val catalog: CatalogPort,
-    private val playlistRepository: PlaylistRepositoryPort,
-    @ConfigProperty(name = "app.playback.minimum-progress-seconds", defaultValue = "25")
-    minimumProgressSeconds: Long,
+  private val userRepository: UserRepositoryPort,
+  private val spotifyAccessToken: SpotifyAccessTokenPort,
+  private val spotifyPlayback: SpotifyPlaybackPort,
+  private val currentlyPlayingRepository: CurrentlyPlayingRepositoryPort,
+  private val recentlyPlayedRepository: RecentlyPlayedRepositoryPort,
+  private val recentlyPartialPlayedRepository: RecentlyPartialPlayedRepositoryPort,
+  private val appPlaybackRepository: AppPlaybackRepositoryPort,
+  private val appArtistRepository: AppArtistRepositoryPort,
+  private val syncController: SyncController,
+  private val outboxPort: OutboxPort,
+  private val dashboardRefresh: DashboardRefreshPort,
+  private val playbackState: PlaybackStatePort,
+  private val catalog: CatalogPort,
+  private val playlistRepository: PlaylistRepositoryPort,
+  @ConfigProperty(name = "app.playback.minimum-progress-seconds", defaultValue = "25")
+  minimumProgressSeconds: Long,
 ) : PlaybackPort {
 
-    private val minimumProgressMs = minimumProgressSeconds * MS_PER_SECOND
+  private val minimumProgressMs = minimumProgressSeconds * MS_PER_SECOND
 
-    // --- Currently Playing ---
+  // --- Currently Playing ---
 
-    override fun enqueueFetchCurrentlyPlaying() {
-        val users = userRepository.findAll()
-        logger.info { "Scheduling currently playing fetch for ${users.size} user(s)" }
-        users.forEach { user ->
-            outboxPort.enqueue(DomainOutboxEvent.FetchCurrentlyPlaying(user.spotifyUserId))
-        }
+  override fun enqueueFetchCurrentlyPlaying() {
+    val users = userRepository.findAll()
+    logger.info { "Scheduling currently playing fetch for ${users.size} user(s)" }
+    users.forEach { user ->
+      outboxPort.enqueue(DomainOutboxEvent.FetchCurrentlyPlaying(user.spotifyUserId))
     }
+  }
 
-    override fun fetchCurrentlyPlaying(userId: UserId): Either<DomainError, Unit> {
-        val accessToken = spotifyAccessToken.getValidAccessToken(userId)
-        return spotifyPlayback.getCurrentlyPlaying(userId, accessToken).flatMap { item ->
-            if (item != null && item.isPlaying) {
-                playbackState.onPlaybackDetected()
-            }
-            if (item != null) {
-                if (currentlyPlayingRepository.existsByUserAndTrackAndObservedMinute(item)) {
-                    logger.info { "Updating currently playing item for user: ${userId.value}, track: ${item.trackId}" }
-                    currentlyPlayingRepository.updateProgressByUserAndTrackAndObservedMinute(item)
-                } else {
-                    logger.info { "Persisting currently playing item for user: ${userId.value}, track: ${item.trackId}" }
-                    currentlyPlayingRepository.save(item)
-                }
-                dashboardRefresh.notifyUserPlaybackData(userId)
-            }
-            Unit.right()
-        }
-    }
-
-    // --- Recently Played ---
-
-    override fun enqueueFetchRecentlyPlayed() {
-      val users = userRepository.findAll()
-      logger.info { "Scheduling recently played fetch for ${users.size} user(s)" }
-      users.forEach { user ->
-        outboxPort.enqueue(DomainOutboxEvent.FetchRecentlyPlayed(user.spotifyUserId))
+  override fun fetchCurrentlyPlaying(userId: UserId): Either<DomainError, Unit> {
+    val accessToken = spotifyAccessToken.getValidAccessToken(userId)
+    return spotifyPlayback.getCurrentlyPlaying(userId, accessToken).flatMap { item ->
+      if (item != null && item.isPlaying) {
+        playbackState.onPlaybackDetected()
       }
-    }
-
-    override fun fetchRecentlyPlayed(userId: UserId): Either<DomainError, Unit> {
-      val accessToken = spotifyAccessToken.getValidAccessToken(userId)
-      val after = recentlyPlayedRepository.findMostRecentPlayedAt(userId)
-      return spotifyPlayback.getRecentlyPlayed(userId, accessToken, after).flatMap { tracks ->
-        val playedAts = tracks.map { it.playedAt }.toSet()
-        val existingPlayedAts = recentlyPlayedRepository.findExistingPlayedAts(userId, playedAts)
-        val newItems = tracks.filter { it.playedAt !in existingPlayedAts }
-        if (newItems.isNotEmpty()) {
-          logger.info { "Persisting ${newItems.size} new recently played items for user: ${userId.value}" }
-          recentlyPlayedRepository.saveAll(newItems)
+      if (item != null) {
+        if (currentlyPlayingRepository.existsByUserAndTrackAndObservedMinute(item)) {
+          logger.info { "Updating currently playing item for user: ${userId.value}, track: ${item.trackId}" }
+          currentlyPlayingRepository.updateProgressByUserAndTrackAndObservedMinute(item)
+        } else {
+          logger.info { "Persisting currently playing item for user: ${userId.value}, track: ${item.trackId}" }
+          currentlyPlayingRepository.save(item)
         }
-        val computedCount = convertPartialPlays(userId, tracks.map { it.trackId }.toSet())
-        if (newItems.isNotEmpty() || computedCount > 0) {
-          dashboardRefresh.notifyUserPlaybackData(userId)
-          outboxPort.enqueue(DomainOutboxEvent.AppendPlaybackData(userId))
-        }
-        Unit.right()
+        dashboardRefresh.notifyUserPlaybackData(userId)
       }
+      Unit.right()
     }
+  }
+
+  // --- Recently Played ---
+
+  override fun enqueueFetchRecentlyPlayed() {
+    val users = userRepository.findAll()
+    logger.info { "Scheduling recently played fetch for ${users.size} user(s)" }
+    users.forEach { user ->
+      outboxPort.enqueue(DomainOutboxEvent.FetchRecentlyPlayed(user.spotifyUserId))
+    }
+  }
+
+  override fun fetchRecentlyPlayed(userId: UserId): Either<DomainError, Unit> {
+    val accessToken = spotifyAccessToken.getValidAccessToken(userId)
+    val after = recentlyPlayedRepository.findMostRecentPlayedAt(userId)
+    return spotifyPlayback.getRecentlyPlayed(userId, accessToken, after).flatMap { tracks ->
+      val playedAts = tracks.map { it.playedAt }.toSet()
+      val existingPlayedAts = recentlyPlayedRepository.findExistingPlayedAts(userId, playedAts)
+      val newItems = tracks.filter { it.playedAt !in existingPlayedAts }
+      if (newItems.isNotEmpty()) {
+        logger.info { "Persisting ${newItems.size} new recently played items for user: ${userId.value}" }
+        recentlyPlayedRepository.saveAll(newItems)
+      }
+      val computedCount = convertPartialPlays(userId, tracks.map { it.trackId }.toSet())
+      if (newItems.isNotEmpty() || computedCount > 0) {
+        dashboardRefresh.notifyUserPlaybackData(userId)
+        outboxPort.enqueue(DomainOutboxEvent.AppendPlaybackData(userId))
+      }
+      Unit.right()
+    }
+  }
 
   private fun convertPartialPlays(userId: UserId, completedTrackIds: Set<TrackId>): Int {
     val sortedItems = currentlyPlayingRepository.findByUserId(userId).sortedBy { it.observedAt }
@@ -159,122 +159,122 @@ class PlaybackService(
     return newComputedCount
   }
 
-    // --- Playback Data ---
+  // --- Playback Data ---
 
-    override fun enqueueRebuildPlaybackData(userId: UserId) {
-        logger.info { "Enqueuing playback data rebuild for user: ${userId.value}" }
-        outboxPort.enqueue(DomainOutboxEvent.RebuildPlaybackData(userId))
+  override fun enqueueRebuildPlaybackData(userId: UserId) {
+    logger.info { "Enqueuing playback data rebuild for user: ${userId.value}" }
+    outboxPort.enqueue(DomainOutboxEvent.RebuildPlaybackData(userId))
+  }
+
+  override fun rebuildPlaybackData(userId: UserId) {
+    logger.info { "Rebuilding playback data for user: ${userId.value}" }
+    appPlaybackRepository.deleteAllByUserId(userId)
+    appendPlaybackData(userId)
+  }
+
+  override fun appendPlaybackData(userId: UserId) {
+    logger.info { "Appending playback data for user: ${userId.value}" }
+    val since = appPlaybackRepository.findMostRecentPlayedAt(userId)
+    val recentlyPlayed = recentlyPlayedRepository.findSince(userId, since)
+    val partialPlayed = recentlyPartialPlayedRepository.findSince(userId, since)
+
+    val inactiveArtistIds = appArtistRepository.findByPlaybackProcessingStatus(ArtistPlaybackProcessingStatus.INACTIVE)
+      .map { it.id.value }
+      .toSet()
+
+    val filteredRecentlyPlayed = recentlyPlayed.filter { it.artistIds.firstOrNull()?.value !in inactiveArtistIds }
+    val filteredPartialPlayed = partialPlayed.filter { it.artistIds.firstOrNull()?.value !in inactiveArtistIds }
+
+    val allPlaybackItems = buildPlaybackItems(filteredRecentlyPlayed, filteredPartialPlayed)
+    if (allPlaybackItems.isEmpty()) {
+      logger.info { "No new playback items to append for user: ${userId.value}" }
+      return
     }
 
-    override fun rebuildPlaybackData(userId: UserId) {
-        logger.info { "Rebuilding playback data for user: ${userId.value}" }
-        appPlaybackRepository.deleteAllByUserId(userId)
-        appendPlaybackData(userId)
+    val existingPlayedAts = appPlaybackRepository.findExistingPlayedAts(
+      userId = userId,
+      playedAts = allPlaybackItems.map { it.playedAt }.toSet(),
+    )
+    val newPlaybackItems = allPlaybackItems.filter { it.playedAt !in existingPlayedAts }
+    if (newPlaybackItems.isEmpty()) {
+      logger.info { "All playback items already exist for user: ${userId.value}" }
+      return
     }
 
-    override fun appendPlaybackData(userId: UserId) {
-        logger.info { "Appending playback data for user: ${userId.value}" }
-        val since = appPlaybackRepository.findMostRecentPlayedAt(userId)
-        val recentlyPlayed = recentlyPlayedRepository.findSince(userId, since)
-        val partialPlayed = recentlyPartialPlayedRepository.findSince(userId, since)
+    logger.info { "Persisting ${newPlaybackItems.size} new app_playback items for user: ${userId.value}" }
+    appPlaybackRepository.saveAll(newPlaybackItems)
 
-        val inactiveArtistIds = appArtistRepository.findByPlaybackProcessingStatus(ArtistPlaybackProcessingStatus.INACTIVE)
-            .map { it.id.value }
-            .toSet()
+    val catalogRequests = (
+      filteredRecentlyPlayed.map { CatalogSyncRequest(it.trackId.value, it.albumId?.value, it.artistIds.map { a -> a.value }) } +
+        filteredPartialPlayed.map { CatalogSyncRequest(it.trackId.value, it.albumId?.value, it.artistIds.map { a -> a.value }) }
+    ).distinctBy { it.trackId }
+    syncController.syncForTracks(catalogRequests, userId)
+  }
 
-        val filteredRecentlyPlayed = recentlyPlayed.filter { it.artistIds.firstOrNull()?.value !in inactiveArtistIds }
-        val filteredPartialPlayed = partialPlayed.filter { it.artistIds.firstOrNull()?.value !in inactiveArtistIds }
+  private fun buildPlaybackItems(
+    recentlyPlayed: List<RecentlyPlayedItem>,
+    partialPlayed: List<RecentlyPartialPlayedItem>,
+  ) = recentlyPlayed.map { item ->
+    AppPlaybackItem(
+      userId = item.spotifyUserId,
+      playedAt = item.playedAt,
+      trackId = item.trackId.value,
+      secondsPlayed = item.durationSeconds ?: 0L,
+    )
+  } + partialPlayed.map { item ->
+    AppPlaybackItem(
+      userId = item.spotifyUserId,
+      playedAt = item.playedAt,
+      trackId = item.trackId.value,
+      secondsPlayed = item.playedSeconds,
+    )
+  }
 
-        val allPlaybackItems = buildPlaybackItems(filteredRecentlyPlayed, filteredPartialPlayed)
-        if (allPlaybackItems.isEmpty()) {
-            logger.info { "No new playback items to append for user: ${userId.value}" }
-            return
+  // --- Artist Playback Sync ---
+
+  override fun syncArtistPlaybackFromPlaylists(userId: UserId) {
+    val activePlaylistArtistIds = playlistRepository.findArtistIdsInActivePlaylists()
+    logger.info { "Found ${activePlaylistArtistIds.size} artist(s) in active playlists" }
+
+    ArtistPlaybackProcessingStatus.entries.forEach { currentStatus ->
+      val artists = appArtistRepository.findByPlaybackProcessingStatus(currentStatus)
+      artists.forEach { artist ->
+        val inActivePlaylist = artist.id.value in activePlaylistArtistIds
+        val newStatus = when (currentStatus) {
+          ArtistPlaybackProcessingStatus.UNDECIDED ->
+            if (inActivePlaylist) ArtistPlaybackProcessingStatus.ACTIVE else ArtistPlaybackProcessingStatus.INACTIVE
+          ArtistPlaybackProcessingStatus.ACTIVE ->
+            if (!inActivePlaylist) ArtistPlaybackProcessingStatus.INACTIVE else null
+          ArtistPlaybackProcessingStatus.INACTIVE ->
+            if (inActivePlaylist) ArtistPlaybackProcessingStatus.ACTIVE else null
         }
-
-        val existingPlayedAts = appPlaybackRepository.findExistingPlayedAts(
-            userId = userId,
-            playedAts = allPlaybackItems.map { it.playedAt }.toSet(),
-        )
-        val newPlaybackItems = allPlaybackItems.filter { it.playedAt !in existingPlayedAts }
-        if (newPlaybackItems.isEmpty()) {
-            logger.info { "All playback items already exist for user: ${userId.value}" }
-            return
+        if (newStatus != null) {
+          logger.info { "Sync from playlists: updating artist ${artist.id.value} from $currentStatus to $newStatus" }
+          catalog.updateArtistPlaybackProcessingStatus(artist.id.value, newStatus, userId)
         }
-
-        logger.info { "Persisting ${newPlaybackItems.size} new app_playback items for user: ${userId.value}" }
-        appPlaybackRepository.saveAll(newPlaybackItems)
-
-        val catalogRequests = (
-            filteredRecentlyPlayed.map { CatalogSyncRequest(it.trackId.value, it.albumId?.value, it.artistIds.map { a -> a.value }) } +
-                filteredPartialPlayed.map { CatalogSyncRequest(it.trackId.value, it.albumId?.value, it.artistIds.map { a -> a.value }) }
-        ).distinctBy { it.trackId }
-        syncController.syncForTracks(catalogRequests, userId)
+      }
     }
+  }
 
-    private fun buildPlaybackItems(
-        recentlyPlayed: List<RecentlyPlayedItem>,
-        partialPlayed: List<RecentlyPartialPlayedItem>,
-    ) = recentlyPlayed.map { item ->
-        AppPlaybackItem(
-            userId = item.spotifyUserId,
-            playedAt = item.playedAt,
-            trackId = item.trackId.value,
-            secondsPlayed = item.durationSeconds ?: 0L,
-        )
-    } + partialPlayed.map { item ->
-        AppPlaybackItem(
-            userId = item.spotifyUserId,
-            playedAt = item.playedAt,
-            trackId = item.trackId.value,
-            secondsPlayed = item.playedSeconds,
-        )
-    }
+  // --- Outbox Handlers ---
 
-    // --- Artist Playback Sync ---
+  override fun handle(event: DomainOutboxEvent.FetchCurrentlyPlaying): Either<DomainError, Unit> =
+    fetchCurrentlyPlaying(event.userId)
 
-    override fun syncArtistPlaybackFromPlaylists(userId: UserId) {
-        val activePlaylistArtistIds = playlistRepository.findArtistIdsInActivePlaylists()
-        logger.info { "Found ${activePlaylistArtistIds.size} artist(s) in active playlists" }
+  override fun handle(event: DomainOutboxEvent.FetchRecentlyPlayed): Either<DomainError, Unit> =
+    fetchRecentlyPlayed(event.userId)
 
-        ArtistPlaybackProcessingStatus.entries.forEach { currentStatus ->
-            val artists = appArtistRepository.findByPlaybackProcessingStatus(currentStatus)
-            artists.forEach { artist ->
-                val inActivePlaylist = artist.id.value in activePlaylistArtistIds
-                val newStatus = when (currentStatus) {
-                    ArtistPlaybackProcessingStatus.UNDECIDED ->
-                        if (inActivePlaylist) ArtistPlaybackProcessingStatus.ACTIVE else ArtistPlaybackProcessingStatus.INACTIVE
-                    ArtistPlaybackProcessingStatus.ACTIVE ->
-                        if (!inActivePlaylist) ArtistPlaybackProcessingStatus.INACTIVE else null
-                    ArtistPlaybackProcessingStatus.INACTIVE ->
-                        if (inActivePlaylist) ArtistPlaybackProcessingStatus.ACTIVE else null
-                }
-                if (newStatus != null) {
-                    logger.info { "Sync from playlists: updating artist ${artist.id.value} from $currentStatus to $newStatus" }
-                    catalog.updateArtistPlaybackProcessingStatus(artist.id.value, newStatus, userId)
-                }
-            }
-        }
-    }
+  override fun handle(event: DomainOutboxEvent.RebuildPlaybackData): Either<DomainError, Unit> {
+    rebuildPlaybackData(event.userId)
+    return Unit.right()
+  }
 
-    // --- Outbox Handlers ---
+  override fun handle(event: DomainOutboxEvent.AppendPlaybackData): Either<DomainError, Unit> {
+    appendPlaybackData(event.userId)
+    return Unit.right()
+  }
 
-    override fun handle(event: DomainOutboxEvent.FetchCurrentlyPlaying): Either<DomainError, Unit> =
-        fetchCurrentlyPlaying(event.userId)
-
-    override fun handle(event: DomainOutboxEvent.FetchRecentlyPlayed): Either<DomainError, Unit> =
-        fetchRecentlyPlayed(event.userId)
-
-    override fun handle(event: DomainOutboxEvent.RebuildPlaybackData): Either<DomainError, Unit> {
-        rebuildPlaybackData(event.userId)
-        return Unit.right()
-    }
-
-    override fun handle(event: DomainOutboxEvent.AppendPlaybackData): Either<DomainError, Unit> {
-        appendPlaybackData(event.userId)
-        return Unit.right()
-    }
-
-    companion object : KLogging() {
-        private const val MS_PER_SECOND = 1_000L
-    }
+  companion object : KLogging() {
+    private const val MS_PER_SECOND = 1_000L
+  }
 }

@@ -18,63 +18,63 @@ import java.util.concurrent.TimeUnit
 
 @ApplicationScoped
 class SpotifyHttpMetrics(
-    private val meterRegistry: MeterRegistry,
-    @param:Any private val requestStatsObservers: Instance<OutgoingRequestStatsObserver>,
+  private val meterRegistry: MeterRegistry,
+  @param:Any private val requestStatsObservers: Instance<OutgoingRequestStatsObserver>,
 ) : OutgoingRequestStatsPort {
 
-    private val timers = ConcurrentHashMap<String, Timer>()
-    private val requestTimestamps = ConcurrentHashMap<String, ConcurrentLinkedDeque<Instant>>()
+  private val timers = ConcurrentHashMap<String, Timer>()
+  private val requestTimestamps = ConcurrentHashMap<String, ConcurrentLinkedDeque<Instant>>()
 
-    @PostConstruct
-    fun initialize() {
-        Gauge.builder("spotify.request.endpoints", requestTimestamps) { it.size.toDouble() }
-            .description("Number of tracked Spotify API endpoints with recorded requests")
-            .register(meterRegistry)
-    }
+  @PostConstruct
+  fun initialize() {
+    Gauge.builder("spotify.request.endpoints", requestTimestamps) { it.size.toDouble() }
+      .description("Number of tracked Spotify API endpoints with recorded requests")
+      .register(meterRegistry)
+  }
 
-    fun <T> timed(urlTemplate: String, block: () -> HttpResponse<T>): HttpResponse<T> {
-        val startMs = System.currentTimeMillis()
-        val response = block()
-        val durationMs = System.currentTimeMillis() - startMs
-        record(urlTemplate, response.statusCode(), durationMs)
-        return response
-    }
+  fun <T> timed(urlTemplate: String, block: () -> HttpResponse<T>): HttpResponse<T> {
+    val startMs = System.currentTimeMillis()
+    val response = block()
+    val durationMs = System.currentTimeMillis() - startMs
+    record(urlTemplate, response.statusCode(), durationMs)
+    return response
+  }
 
-    private fun record(urlTemplate: String, statusCode: Int, durationMs: Long) {
-        timers.getOrPut("${urlTemplate}_${statusCode}") {
-            Timer.builder("spotify.request")
-                .tag("url", urlTemplate)
-                .tag("status", statusCode.toString())
-                .register(meterRegistry)
-        }.record(durationMs, TimeUnit.MILLISECONDS)
+  private fun record(urlTemplate: String, statusCode: Int, durationMs: Long) {
+    timers.getOrPut("${urlTemplate}_${statusCode}") {
+      Timer.builder("spotify.request")
+        .tag("url", urlTemplate)
+        .tag("status", statusCode.toString())
+        .register(meterRegistry)
+    }.record(durationMs, TimeUnit.MILLISECONDS)
 
-        val deque = requestTimestamps.getOrPut(urlTemplate) { ConcurrentLinkedDeque() }
-        deque.add(Instant.now())
+    val deque = requestTimestamps.getOrPut(urlTemplate) { ConcurrentLinkedDeque() }
+    deque.add(Instant.now())
+    pruneOldEntries(deque)
+    requestStatsObservers.forEach { it.onRequestRecorded() }
+  }
+
+  override fun getRequestStats(): List<OutgoingRequestStats> {
+    val cutoff = Instant.now().minusSeconds(WINDOW_SECONDS)
+    return requestTimestamps.entries
+      .map { (endpoint, deque) ->
         pruneOldEntries(deque)
-        requestStatsObservers.forEach { it.onRequestRecorded() }
-    }
+        OutgoingRequestStats(
+          endpoint = endpoint.let { if (it.contains('/')) it.substring(it.indexOf('/')) else it },
+          requestCountLast24h = deque.count { it.isAfter(cutoff) }.toLong(),
+        )
+      }
+      .sortedBy { it.endpoint }
+  }
 
-    override fun getRequestStats(): List<OutgoingRequestStats> {
-        val cutoff = Instant.now().minusSeconds(WINDOW_SECONDS)
-        return requestTimestamps.entries
-            .map { (endpoint, deque) ->
-                pruneOldEntries(deque)
-                OutgoingRequestStats(
-                    endpoint = endpoint.let { if (it.contains('/')) it.substring(it.indexOf('/')) else it },
-                    requestCountLast24h = deque.count { it.isAfter(cutoff) }.toLong(),
-                )
-            }
-            .sortedBy { it.endpoint }
+  private fun pruneOldEntries(deque: ConcurrentLinkedDeque<Instant>) {
+    val cutoff = Instant.now().minusSeconds(WINDOW_SECONDS)
+    while (deque.peekFirst()?.isBefore(cutoff) == true) {
+      deque.pollFirst()
     }
+  }
 
-    private fun pruneOldEntries(deque: ConcurrentLinkedDeque<Instant>) {
-        val cutoff = Instant.now().minusSeconds(WINDOW_SECONDS)
-        while (deque.peekFirst()?.isBefore(cutoff) == true) {
-            deque.pollFirst()
-        }
-    }
-
-    companion object {
-        private const val WINDOW_SECONDS = 24L * 60L * 60L
-    }
+  companion object {
+    private const val WINDOW_SECONDS = 24L * 60L * 60L
+  }
 }

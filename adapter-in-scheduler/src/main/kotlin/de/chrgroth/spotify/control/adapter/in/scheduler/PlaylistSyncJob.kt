@@ -9,14 +9,14 @@ import mu.KLogging
 @ApplicationScoped
 @Suppress("Unused")
 class PlaylistSyncJob(
-    private val playlist: PlaylistPort,
+  private val playlist: PlaylistPort,
 ) {
 
-    @Scheduled(cron = "0 30 * * * ?", skipExecutionIf = ScheduledSkipPredicate::class)
-    fun run() {
-        logger.info { "Running scheduled playlist sync" }
-        playlist.enqueueUpdates()
-    }
+  @Scheduled(cron = "0 30 * * * ?", skipExecutionIf = ScheduledSkipPredicate::class)
+  fun run() {
+    logger.info { "Running scheduled playlist sync" }
+    playlist.enqueueUpdates()
+  }
 
-    companion object : KLogging()
+  companion object : KLogging()
 }

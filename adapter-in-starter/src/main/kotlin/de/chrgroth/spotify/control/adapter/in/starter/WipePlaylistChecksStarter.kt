@@ -8,16 +8,16 @@ import mu.KLogging
 @ApplicationScoped
 @Suppress("Unused")
 class WipePlaylistChecksStarter(
-    private val playlistCheckRepository: AppPlaylistCheckRepositoryPort,
+  private val playlistCheckRepository: AppPlaylistCheckRepositoryPort,
 ) : Starter {
 
-    override val id = "WipePlaylistChecksStarter-v2"
+  override val id = "WipePlaylistChecksStarter-v2"
 
-    override fun execute() {
-        logger.info { "Wiping all playlist check documents" }
-        playlistCheckRepository.deleteAll()
-        logger.info { "All playlist check documents wiped" }
-    }
+  override fun execute() {
+    logger.info { "Wiping all playlist check documents" }
+    playlistCheckRepository.deleteAll()
+    logger.info { "All playlist check documents wiped" }
+  }
 
-    companion object : KLogging()
+  companion object : KLogging()
 }

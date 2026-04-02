@@ -7,10 +7,10 @@ import java.time.Instant
 @MongoEntity(collection = "app_playlist_check")
 class AppPlaylistCheckDocument {
 
-    @BsonId
-    lateinit var checkId: String
-    lateinit var playlistId: String
-    lateinit var lastCheck: Instant
-    var succeeded: Boolean = false
-    lateinit var violations: List<String>
+  @BsonId
+  lateinit var checkId: String
+  lateinit var playlistId: String
+  lateinit var lastCheck: Instant
+  var succeeded: Boolean = false
+  lateinit var violations: List<String>
 }

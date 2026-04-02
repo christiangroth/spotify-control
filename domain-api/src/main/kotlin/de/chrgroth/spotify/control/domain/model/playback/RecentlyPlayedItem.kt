@@ -7,14 +7,14 @@ import de.chrgroth.spotify.control.domain.model.user.UserId
 import kotlin.time.Instant
 
 data class RecentlyPlayedItem(
-    val spotifyUserId: UserId,
-    val trackId: TrackId,
-    val trackName: String,
-    val artistIds: List<ArtistId>,
-    val artistNames: List<String>,
-    val playedAt: Instant,
-    val albumId: AlbumId? = null,
-    val albumName: String? = null,
-    val imageUrl: String? = null,
-    val durationSeconds: Long? = null,
+  val spotifyUserId: UserId,
+  val trackId: TrackId,
+  val trackName: String,
+  val artistIds: List<ArtistId>,
+  val artistNames: List<String>,
+  val playedAt: Instant,
+  val albumId: AlbumId? = null,
+  val albumName: String? = null,
+  val imageUrl: String? = null,
+  val durationSeconds: Long? = null,
 )

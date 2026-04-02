@@ -28,13 +28,13 @@ import kotlin.time.Instant
 
 @ApplicationScoped
 @Suppress("Unused", "TooGenericExceptionCaught")
-class SpotifyPlaybackService(
-    @param:ConfigProperty(name = "spotify.api.base-url")
-    private val apiBaseUrl: String,
-    private val httpMetrics: SpotifyHttpMetrics,
+class SpotifyPlaybackAdapter(
+  @param:ConfigProperty(name = "spotify.api.base-url")
+  private val apiBaseUrl: String,
+  private val httpMetrics: SpotifyHttpMetrics,
 ) : SpotifyPlaybackPort {
 
-    private val httpClient = HttpClient.newHttpClient()
+  private val httpClient = HttpClient.newHttpClient()
 
   override fun getCurrentlyPlaying(userId: UserId, accessToken: AccessToken): Either<DomainError, CurrentlyPlayingItem?> {
     return try {
@@ -59,83 +59,83 @@ class SpotifyPlaybackService(
     }
   }
 
-    private fun parseCurrentlyPlayingItem(userId: UserId, response: SpotifyCurrentlyPlayingResponse): CurrentlyPlayingItem? {
-        val track = response.item
-        if (track == null || track.type != "track") {
-          logger.info { "Ignoring non-track currently playing event of type '${track?.type}'" }
-          return null
-        }
-        if (track.isLocal) {
-          logger.info { "Ignoring local currently playing track '${track.name}'" }
-          return null
-        }
-        return CurrentlyPlayingItem(
-          spotifyUserId = userId,
-          trackId = TrackId(track.id),
-          trackName = track.name,
-          artistIds = track.artists.map { ArtistId(it.id) },
-          artistNames = track.artists.map { it.name },
-          progressMs = response.progressMs ?: 0L,
-          durationMs = track.durationMs ?: 0L,
-          isPlaying = response.isPlaying,
-          observedAt = Clock.System.now(),
-          albumId = track.album?.id?.let { AlbumId(it) },
-        )
+  private fun parseCurrentlyPlayingItem(userId: UserId, response: SpotifyCurrentlyPlayingResponse): CurrentlyPlayingItem? {
+    val track = response.item
+    if (track == null || track.type != "track") {
+      logger.info { "Ignoring non-track currently playing event of type '${track?.type}'" }
+      return null
     }
+    if (track.isLocal) {
+      logger.info { "Ignoring local currently playing track '${track.name}'" }
+      return null
+    }
+    return CurrentlyPlayingItem(
+      spotifyUserId = userId,
+      trackId = TrackId(track.id),
+      trackName = track.name,
+      artistIds = track.artists.map { ArtistId(it.id) },
+      artistNames = track.artists.map { it.name },
+      progressMs = response.progressMs ?: 0L,
+      durationMs = track.durationMs ?: 0L,
+      isPlaying = response.isPlaying,
+      observedAt = Clock.System.now(),
+      albumId = track.album?.id?.let { AlbumId(it) },
+    )
+  }
 
-    override fun getRecentlyPlayed(userId: UserId, accessToken: AccessToken, after: Instant?): Either<DomainError, List<RecentlyPlayedItem>> {
-        return try {
-            val allItems = mutableListOf<RecentlyPlayedItem>()
-            val afterParam = after?.let { "&after=${it.toEpochMilliseconds()}" } ?: ""
-            var nextUrl: String? = "$apiBaseUrl/v1/me/player/recently-played?limit=50$afterParam"
-            while (nextUrl != null) {
-                val request = HttpRequest.newBuilder()
-                    .uri(URI.create(nextUrl))
-                    .header("Authorization", "Bearer ${accessToken.value}")
-                    .GET()
-                    .build()
-                val response = httpMetrics.timed("/v1/me/player/recently-played") {
-                    httpClient.send(request, HttpResponse.BodyHandlers.ofString())
-                }
-                val errorResult = response.checkRateLimitOrError(logger, PlaybackError.RECENTLY_PLAYED_FETCH_FAILED)
-                if (errorResult != null) return errorResult
-                val recentlyPlayed = spotifyJson.decodeFromString<SpotifyRecentlyPlayedResponse>(response.body())
-                recentlyPlayed.items.mapNotNullTo(allItems) { item ->
-                    parseRecentlyPlayedItem(userId, item.track, item.playedAt)
-                }
-                nextUrl = recentlyPlayed.next
-            }
-            allItems.right()
-        } catch (e: Exception) {
-            logger.error(e) { "Unexpected error during recently played fetch" }
-            PlaybackError.RECENTLY_PLAYED_FETCH_FAILED.left()
+  override fun getRecentlyPlayed(userId: UserId, accessToken: AccessToken, after: Instant?): Either<DomainError, List<RecentlyPlayedItem>> {
+    return try {
+      val allItems = mutableListOf<RecentlyPlayedItem>()
+      val afterParam = after?.let { "&after=${it.toEpochMilliseconds()}" } ?: ""
+      var nextUrl: String? = "$apiBaseUrl/v1/me/player/recently-played?limit=50$afterParam"
+      while (nextUrl != null) {
+        val request = HttpRequest.newBuilder()
+          .uri(URI.create(nextUrl))
+          .header("Authorization", "Bearer ${accessToken.value}")
+          .GET()
+          .build()
+        val response = httpMetrics.timed("/v1/me/player/recently-played") {
+          httpClient.send(request, HttpResponse.BodyHandlers.ofString())
         }
+        val errorResult = response.checkRateLimitOrError(logger, PlaybackError.RECENTLY_PLAYED_FETCH_FAILED)
+        if (errorResult != null) return errorResult
+        val recentlyPlayed = spotifyJson.decodeFromString<SpotifyRecentlyPlayedResponse>(response.body())
+        recentlyPlayed.items.mapNotNullTo(allItems) { item ->
+          parseRecentlyPlayedItem(userId, item.track, item.playedAt)
+        }
+        nextUrl = recentlyPlayed.next
+      }
+      allItems.right()
+    } catch (e: Exception) {
+      logger.error(e) { "Unexpected error during recently played fetch" }
+      PlaybackError.RECENTLY_PLAYED_FETCH_FAILED.left()
     }
+  }
 
-    private fun parseRecentlyPlayedItem(userId: UserId, track: SpotifyTrackResponse, playedAt: String): RecentlyPlayedItem? {
-        if (track.type != "track") {
-            logger.info { "Ignoring non-track playback event of type '${track.type}'" }
-            return null
-        }
-        if (track.isLocal) {
-            logger.info { "Ignoring local track '${track.name}'" }
-            return null
-        }
-        return RecentlyPlayedItem(
-            spotifyUserId = userId,
-            trackId = TrackId(track.id),
-            trackName = track.name,
-            artistIds = track.artists.map { ArtistId(it.id) },
-            artistNames = track.artists.map { it.name },
-            playedAt = Instant.parse(playedAt),
-            albumId = track.album?.id?.let { AlbumId(it) },
-            durationSeconds = track.durationMs?.let { it / MS_PER_SECOND },
-        )
+  private fun parseRecentlyPlayedItem(userId: UserId, track: SpotifyTrackResponse, playedAt: String): RecentlyPlayedItem? {
+    if (track.type != "track") {
+      logger.info { "Ignoring non-track playback event of type '${track.type}'" }
+      return null
     }
+    if (track.isLocal) {
+      logger.info { "Ignoring local track '${track.name}'" }
+      return null
+    }
+    return RecentlyPlayedItem(
+      spotifyUserId = userId,
+      trackId = TrackId(track.id),
+      trackName = track.name,
+      artistIds = track.artists.map { ArtistId(it.id) },
+      artistNames = track.artists.map { it.name },
+      playedAt = Instant.parse(playedAt),
+      albumId = track.album?.id?.let { AlbumId(it) },
+      durationSeconds = track.durationMs?.let { it / MS_PER_SECOND },
+    )
+  }
 
-    companion object : KLogging() {
-        private const val HTTP_NO_CONTENT = 204
-        private const val MS_PER_SECOND = 1_000L
-    }
+  companion object : KLogging() {
+    private const val HTTP_NO_CONTENT = 204
+    private const val MS_PER_SECOND = 1_000L
+  }
 }
 

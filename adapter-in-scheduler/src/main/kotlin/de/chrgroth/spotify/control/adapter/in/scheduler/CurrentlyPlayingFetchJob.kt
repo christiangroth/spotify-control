@@ -7,11 +7,11 @@ import jakarta.enterprise.context.ApplicationScoped
 @ApplicationScoped
 @Suppress("Unused")
 class CurrentlyPlayingFetchJob(
-    private val playback: PlaybackPort,
+  private val playback: PlaybackPort,
 ) {
 
-    @Scheduled(every = "20s", skipExecutionIf = CurrentlyPlayingSkipPredicate::class)
-    fun run() {
-        playback.enqueueFetchCurrentlyPlaying()
-    }
+  @Scheduled(every = "20s", skipExecutionIf = CurrentlyPlayingSkipPredicate::class)
+  fun run() {
+    playback.enqueueFetchCurrentlyPlaying()
+  }
 }

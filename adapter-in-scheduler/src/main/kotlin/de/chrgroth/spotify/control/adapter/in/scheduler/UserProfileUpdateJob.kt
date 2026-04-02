@@ -9,14 +9,14 @@ import mu.KLogging
 @ApplicationScoped
 @Suppress("Unused")
 class UserProfileUpdateJob(
-    private val userProfile: UserProfilePort,
+  private val userProfile: UserProfilePort,
 ) {
 
-    @Scheduled(cron = "0 0 4 * * ?", skipExecutionIf = ScheduledSkipPredicate::class)
-    fun run() {
-        logger.info { "Running scheduled user profile update" }
-        userProfile.enqueueUpdates()
-    }
+  @Scheduled(cron = "0 0 4 * * ?", skipExecutionIf = ScheduledSkipPredicate::class)
+  fun run() {
+    logger.info { "Running scheduled user profile update" }
+    userProfile.enqueueUpdates()
+  }
 
-    companion object : KLogging()
+  companion object : KLogging()
 }
