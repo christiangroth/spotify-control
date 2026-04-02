@@ -12,23 +12,17 @@ import de.chrgroth.spotify.control.domain.model.catalog.TrackId
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
-import jakarta.inject.Inject
 import kotlin.time.toJavaInstant
 import kotlin.time.toKotlinInstant
 import mu.KLogging
 import org.bson.Document
 
 @ApplicationScoped
-class PlaylistRepositoryAdapter : PlaylistRepositoryPort {
-
-  @Inject
-  lateinit var playlistMetadataDocumentRepository: PlaylistMetadataDocumentRepository
-
-  @Inject
-  lateinit var playlistDocumentRepository: PlaylistDocumentRepository
-
-  @Inject
-  lateinit var mongoQueryMetrics: MongoQueryMetrics
+class PlaylistRepositoryAdapter(
+  private val playlistMetadataDocumentRepository: PlaylistMetadataDocumentRepository,
+  private val playlistDocumentRepository: PlaylistDocumentRepository,
+  private val mongoQueryMetrics: MongoQueryMetrics,
+) : PlaylistRepositoryPort {
 
   override fun findByUserId(userId: UserId): List<PlaylistInfo> =
     mongoQueryMetrics.timed("spotify_playlist_metadata.findByUserId") {
@@ -37,7 +31,7 @@ class PlaylistRepositoryAdapter : PlaylistRepositoryPort {
         .map { it.toDomain() }
     }
 
-  override fun saveAll(userId: UserId, playlists: List<PlaylistInfo>) {
+  override fun replaceAll(userId: UserId, playlists: List<PlaylistInfo>) {
     logger.info { "Saving ${playlists.size} playlist metadata document(s) for user ${userId.value}" }
     mongoQueryMetrics.timed("spotify_playlist_metadata.deleteByUserId") {
       playlistMetadataDocumentRepository.delete("spotifyUserId = ?1", userId.value)
@@ -157,11 +151,13 @@ class PlaylistRepositoryAdapter : PlaylistRepositoryPort {
     mongoQueryMetrics.timed("spotify_playlist_metadata.setAllSyncInactive") {
       playlistMetadataDocumentRepository.mongoCollection().updateMany(
         Document(),
-        Updates.set("syncStatus", PlaylistSyncStatus.PASSIVE.name),
+        Updates.set(SYNC_STATUS_FIELD, PlaylistSyncStatus.PASSIVE.name),
       )
     }
   }
 
-  companion object : KLogging()
+  companion object : KLogging() {
+    internal const val SYNC_STATUS_FIELD = "syncStatus"
+  }
 }
 

@@ -28,7 +28,7 @@ import kotlin.time.Instant
 
 @ApplicationScoped
 @Suppress("Unused", "TooGenericExceptionCaught")
-class SpotifyPlaybackService(
+class SpotifyPlaybackAdapter(
   @param:ConfigProperty(name = "spotify.api.base-url")
   private val apiBaseUrl: String,
   private val httpMetrics: SpotifyHttpMetrics,

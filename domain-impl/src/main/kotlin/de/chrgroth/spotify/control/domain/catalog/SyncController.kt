@@ -12,12 +12,6 @@ import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
 
-data class CatalogSyncRequest(
-  val trackId: String,
-  val albumId: String?,
-  val artistIds: List<String>,
-)
-
 @ApplicationScoped
 class SyncController(
   private val appTrackRepository: AppTrackRepositoryPort,

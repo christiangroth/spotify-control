@@ -228,6 +228,6 @@ class DashboardService(
     private const val STATS_DAYS = 30
     private const val SECONDS_PER_MINUTE = 60L
   }
-}
 
-private fun AppTrack.allArtistIds(): List<String> = listOf(artistId.value) + additionalArtistIds.map { it.value }
+  private fun AppTrack.allArtistIds(): List<String> = listOf(artistId.value) + additionalArtistIds.map { it.value }
+}

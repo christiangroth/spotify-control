@@ -45,7 +45,7 @@ class PlaylistRepositoryTests {
       buildPlaylistInfo("p2", PlaylistSyncStatus.PASSIVE),
     )
 
-    playlistRepository.saveAll(userId, playlists)
+    playlistRepository.replaceAll(userId, playlists)
 
     val found = playlistRepository.findByUserId(userId)
     assertThat(found).hasSize(2)
@@ -57,9 +57,9 @@ class PlaylistRepositoryTests {
   @Test
   fun `saveAll replaces previous playlists for the same user`() {
     val userId = UserId("test-${UUID.randomUUID()}")
-    playlistRepository.saveAll(userId, listOf(buildPlaylistInfo("p1"), buildPlaylistInfo("p2")))
+    playlistRepository.replaceAll(userId, listOf(buildPlaylistInfo("p1"), buildPlaylistInfo("p2")))
 
-    playlistRepository.saveAll(userId, listOf(buildPlaylistInfo("p3")))
+    playlistRepository.replaceAll(userId, listOf(buildPlaylistInfo("p3")))
 
     val found = playlistRepository.findByUserId(userId)
     assertThat(found).hasSize(1)
@@ -69,9 +69,9 @@ class PlaylistRepositoryTests {
   @Test
   fun `saveAll with empty list removes all playlists for user`() {
     val userId = UserId("test-${UUID.randomUUID()}")
-    playlistRepository.saveAll(userId, listOf(buildPlaylistInfo("p1")))
+    playlistRepository.replaceAll(userId, listOf(buildPlaylistInfo("p1")))
 
-    playlistRepository.saveAll(userId, emptyList())
+    playlistRepository.replaceAll(userId, emptyList())
 
     assertThat(playlistRepository.findByUserId(userId)).isEmpty()
   }
@@ -80,10 +80,10 @@ class PlaylistRepositoryTests {
   fun `saveAll does not affect playlists of other users`() {
     val userId1 = UserId("test-${UUID.randomUUID()}")
     val userId2 = UserId("test-${UUID.randomUUID()}")
-    playlistRepository.saveAll(userId1, listOf(buildPlaylistInfo("p1")))
-    playlistRepository.saveAll(userId2, listOf(buildPlaylistInfo("p2")))
+    playlistRepository.replaceAll(userId1, listOf(buildPlaylistInfo("p1")))
+    playlistRepository.replaceAll(userId2, listOf(buildPlaylistInfo("p2")))
 
-    playlistRepository.saveAll(userId1, listOf(buildPlaylistInfo("p3")))
+    playlistRepository.replaceAll(userId1, listOf(buildPlaylistInfo("p3")))
 
     assertThat(playlistRepository.findByUserId(userId1).map { it.spotifyPlaylistId }).containsExactly("p3")
     assertThat(playlistRepository.findByUserId(userId2).map { it.spotifyPlaylistId }).containsExactly("p2")
@@ -92,7 +92,7 @@ class PlaylistRepositoryTests {
   @Test
   fun `updateLastSyncTime sets lastSyncTime on existing playlist metadata`() {
     val userId = UserId("test-${UUID.randomUUID()}")
-    playlistRepository.saveAll(userId, listOf(buildPlaylistInfo("p1")))
+    playlistRepository.replaceAll(userId, listOf(buildPlaylistInfo("p1")))
     val syncTime = Clock.System.now().let { Instant.fromEpochMilliseconds(it.toEpochMilliseconds()) }
 
     playlistRepository.updateLastSyncTime(userId, "p1", syncTime)
@@ -117,7 +117,7 @@ class PlaylistRepositoryTests {
     val syncTime = Clock.System.now().let { Instant.fromEpochMilliseconds(it.toEpochMilliseconds()) }
     val playlist = buildPlaylistInfo("p1").copy(lastSyncTime = syncTime)
 
-    playlistRepository.saveAll(userId, listOf(playlist))
+    playlistRepository.replaceAll(userId, listOf(playlist))
 
     val found = playlistRepository.findByUserId(userId)
     assertThat(found).hasSize(1)

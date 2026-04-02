@@ -11,18 +11,14 @@ import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
-import jakarta.inject.Inject
 import kotlin.time.toKotlinInstant
 import mu.KLogging
 
 @ApplicationScoped
-class AppTrackRepositoryAdapter : AppTrackRepositoryPort {
-
-  @Inject
-  lateinit var appTrackDocumentRepository: AppTrackDocumentRepository
-
-  @Inject
-  lateinit var mongoQueryMetrics: MongoQueryMetrics
+class AppTrackRepositoryAdapter(
+  private val appTrackDocumentRepository: AppTrackDocumentRepository,
+  private val mongoQueryMetrics: MongoQueryMetrics,
+) : AppTrackRepositoryPort {
 
   override fun upsertAll(items: List<AppTrack>) {
     if (items.isEmpty()) return
@@ -107,5 +103,9 @@ class AppTrackRepositoryAdapter : AppTrackRepositoryPort {
     lastSync = lastSync?.toKotlinInstant() ?: kotlin.time.Instant.DISTANT_PAST,
   )
 
-  companion object : KLogging()
+  companion object : KLogging() {
+    internal const val ID_FIELD = "_id"
+    internal const val ARTIST_ID_FIELD = "artistId"
+    internal const val ALBUM_ID_FIELD = "albumId"
+  }
 }

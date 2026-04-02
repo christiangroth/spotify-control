@@ -8,20 +8,16 @@ import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.playback.RecentlyPlayedRepositoryPort
 import io.quarkus.panache.common.Sort
 import jakarta.enterprise.context.ApplicationScoped
-import jakarta.inject.Inject
 import kotlin.time.Instant
 import kotlin.time.toJavaInstant
 import kotlin.time.toKotlinInstant
 import mu.KLogging
 
 @ApplicationScoped
-class RecentlyPlayedRepositoryAdapter : RecentlyPlayedRepositoryPort {
-
-  @Inject
-  lateinit var recentlyPlayedDocumentRepository: RecentlyPlayedDocumentRepository
-
-  @Inject
-  lateinit var mongoQueryMetrics: MongoQueryMetrics
+class RecentlyPlayedRepositoryAdapter(
+  private val recentlyPlayedDocumentRepository: RecentlyPlayedDocumentRepository,
+  private val mongoQueryMetrics: MongoQueryMetrics,
+) : RecentlyPlayedRepositoryPort {
 
   override fun findExistingPlayedAts(spotifyUserId: UserId, playedAts: Set<Instant>): Set<Instant> {
     if (playedAts.isEmpty()) return emptySet()

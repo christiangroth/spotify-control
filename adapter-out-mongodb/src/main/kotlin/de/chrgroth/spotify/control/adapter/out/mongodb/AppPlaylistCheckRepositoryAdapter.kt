@@ -4,19 +4,15 @@ import de.chrgroth.spotify.control.domain.model.playlist.AppPlaylistCheck
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistId
 import de.chrgroth.spotify.control.domain.port.out.playlist.AppPlaylistCheckRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
-import jakarta.inject.Inject
 import kotlin.time.toJavaInstant
 import kotlin.time.toKotlinInstant
 import mu.KLogging
 
 @ApplicationScoped
-class AppPlaylistCheckRepositoryAdapter : AppPlaylistCheckRepositoryPort {
-
-  @Inject
-  lateinit var appPlaylistCheckDocumentRepository: AppPlaylistCheckDocumentRepository
-
-  @Inject
-  lateinit var mongoQueryMetrics: MongoQueryMetrics
+class AppPlaylistCheckRepositoryAdapter(
+  private val appPlaylistCheckDocumentRepository: AppPlaylistCheckDocumentRepository,
+  private val mongoQueryMetrics: MongoQueryMetrics,
+) : AppPlaylistCheckRepositoryPort {
 
   override fun save(check: AppPlaylistCheck) {
     logger.info { "Saving playlist check ${check.checkId} for playlist ${check.playlistId}" }

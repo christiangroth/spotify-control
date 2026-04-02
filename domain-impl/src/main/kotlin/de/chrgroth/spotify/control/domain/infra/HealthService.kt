@@ -51,6 +51,12 @@ class HealthService(
   }
 }
 
+/**
+ * Quarkus uses a custom classloader per-application. When coroutines switch threads via Dispatchers.IO
+ * the new thread's context classloader may still point to the system classloader, which causes CDI,
+ * JNDI, and other framework lookups to fail at runtime. [TcclContext] propagates the calling thread's
+ * context classloader into each coroutine thread so that all framework lookups continue to work.
+ */
 private class TcclContext(private val classLoader: ClassLoader) : ThreadContextElement<ClassLoader?> {
   companion object Key : CoroutineContext.Key<TcclContext>
   override val key: CoroutineContext.Key<*> = Key

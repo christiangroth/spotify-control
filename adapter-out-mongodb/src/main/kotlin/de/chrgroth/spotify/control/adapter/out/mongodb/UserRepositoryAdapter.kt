@@ -7,18 +7,14 @@ import de.chrgroth.spotify.control.domain.model.user.User
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
-import jakarta.inject.Inject
 import kotlin.time.toJavaInstant
 import kotlin.time.toKotlinInstant
 
 @ApplicationScoped
-class UserRepositoryAdapter : UserRepositoryPort {
-
-  @Inject
-  lateinit var userDocumentRepository: UserDocumentRepository
-
-  @Inject
-  lateinit var mongoQueryMetrics: MongoQueryMetrics
+class UserRepositoryAdapter(
+  private val userDocumentRepository: UserDocumentRepository,
+  private val mongoQueryMetrics: MongoQueryMetrics,
+) : UserRepositoryPort {
 
   override fun findById(spotifyUserId: UserId): User? =
     mongoQueryMetrics.timed("app_user.findById") {
@@ -34,14 +30,14 @@ class UserRepositoryAdapter : UserRepositoryPort {
     val now = java.time.Instant.now()
     mongoQueryMetrics.timed("app_user.upsert") {
       userDocumentRepository.mongoCollection().updateOne(
-        Filters.eq("_id", user.spotifyUserId.value),
+        Filters.eq(ID_FIELD, user.spotifyUserId.value),
         Updates.combine(
-          Updates.set("displayName", user.displayName),
-          Updates.set("encryptedAccessToken", user.encryptedAccessToken),
-          Updates.set("encryptedRefreshToken", user.encryptedRefreshToken),
-          Updates.set("tokenExpiresAt", user.tokenExpiresAt.toJavaInstant()),
-          Updates.set("lastLoginAt", user.lastLoginAt.toJavaInstant()),
-          Updates.setOnInsert("createdAt", now),
+          Updates.set(DISPLAY_NAME_FIELD, user.displayName),
+          Updates.set(ENCRYPTED_ACCESS_TOKEN_FIELD, user.encryptedAccessToken),
+          Updates.set(ENCRYPTED_REFRESH_TOKEN_FIELD, user.encryptedRefreshToken),
+          Updates.set(TOKEN_EXPIRES_AT_FIELD, user.tokenExpiresAt.toJavaInstant()),
+          Updates.set(LAST_LOGIN_AT_FIELD, user.lastLoginAt.toJavaInstant()),
+          Updates.setOnInsert(CREATED_AT_FIELD, now),
         ),
         UpdateOptions().upsert(true),
       )
@@ -56,4 +52,14 @@ class UserRepositoryAdapter : UserRepositoryPort {
     tokenExpiresAt = tokenExpiresAt.toKotlinInstant(),
     lastLoginAt = lastLoginAt.toKotlinInstant(),
   )
+
+  companion object {
+    internal const val ID_FIELD = "_id"
+    internal const val DISPLAY_NAME_FIELD = "displayName"
+    internal const val ENCRYPTED_ACCESS_TOKEN_FIELD = "encryptedAccessToken"
+    internal const val ENCRYPTED_REFRESH_TOKEN_FIELD = "encryptedRefreshToken"
+    internal const val TOKEN_EXPIRES_AT_FIELD = "tokenExpiresAt"
+    internal const val LAST_LOGIN_AT_FIELD = "lastLoginAt"
+    internal const val CREATED_AT_FIELD = "createdAt"
+  }
 }

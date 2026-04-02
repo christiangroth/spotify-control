@@ -16,14 +16,11 @@ private const val MASKED_ENV_KEYS_PROPERTY = "app.health.masked-env-keys"
 @ApplicationScoped
 @Suppress("Unused")
 class ConfigurationInfoAdapter(
-  @ConfigProperty(name = MASKED_CONFIG_KEYS_PROPERTY)
-  maskedConfigKeys: List<String>,
-  @ConfigProperty(name = MASKED_ENV_KEYS_PROPERTY)
-  maskedEnvKeys: List<String>,
+  @param:ConfigProperty(name = MASKED_CONFIG_KEYS_PROPERTY)
+  private val configKeyMasks: List<String>,
+  @param:ConfigProperty(name = MASKED_ENV_KEYS_PROPERTY)
+  private val envKeyMasks: List<String>,
 ) : ConfigurationInfoPort {
-
-  private val configKeyMasks = maskedConfigKeys
-  private val envKeyMasks = maskedEnvKeys
   private val cachedStats: ConfigurationStats by lazy { buildConfigurationStats() }
 
   override fun getConfigurationStats(): ConfigurationStats = cachedStats

@@ -39,6 +39,10 @@ class PlaylistService(
   private val syncController: SyncController,
 ) : PlaylistPort {
 
+  override fun getPlaylists(userId: UserId): List<PlaylistInfo> = playlistRepository.findByUserId(userId)
+
+  override fun getTrackCounts(userId: UserId): Map<String, Int> = playlistRepository.findTrackCountsByUserId(userId)
+
   override fun enqueueUpdates() {
     val users = userRepository.findAll()
     logger.info { "Scheduling playlist sync for ${users.size} user(s)" }
@@ -68,7 +72,7 @@ class PlaylistService(
         )
       }
       logger.info { "Synced ${updatedPlaylists.size} playlist(s) for user ${userId.value}" }
-      playlistRepository.saveAll(userId, updatedPlaylists)
+      playlistRepository.replaceAll(userId, updatedPlaylists)
       if (updatedPlaylists.size != existingById.size) {
         dashboardRefresh.notifyUserPlaylistMetadata(userId)
       }
@@ -146,7 +150,7 @@ class PlaylistService(
       }
     }
     logger.info { "Updated sync status for playlist $playlistId (user ${userId.value}) to $syncStatus" }
-    playlistRepository.saveAll(userId, updatedPlaylists)
+    playlistRepository.replaceAll(userId, updatedPlaylists)
     dashboardRefresh.notifyUserPlaylistMetadata(userId)
     if (syncStatus == PlaylistSyncStatus.PASSIVE) {
       logger.info { "Deleting checks for deactivated playlist $playlistId (user ${userId.value})" }
@@ -166,7 +170,7 @@ class PlaylistService(
       if (it.spotifyPlaylistId == playlistId) it.copy(type = type) else it
     }
     logger.info { "Updated type for playlist $playlistId (user ${userId.value}) to $type" }
-    playlistRepository.saveAll(userId, updatedPlaylists)
+    playlistRepository.replaceAll(userId, updatedPlaylists)
     dashboardRefresh.notifyUserPlaylistMetadata(userId)
     return Unit.right()
   }

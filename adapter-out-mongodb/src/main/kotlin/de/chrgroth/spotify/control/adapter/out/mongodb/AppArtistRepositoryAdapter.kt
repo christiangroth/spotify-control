@@ -11,18 +11,14 @@ import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistPlaybackProcessingStatus
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
-import jakarta.inject.Inject
 import kotlin.time.toKotlinInstant
 import mu.KLogging
 
 @ApplicationScoped
-class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
-
-  @Inject
-  lateinit var appArtistDocumentRepository: AppArtistDocumentRepository
-
-  @Inject
-  lateinit var mongoQueryMetrics: MongoQueryMetrics
+class AppArtistRepositoryAdapter(
+  private val appArtistDocumentRepository: AppArtistDocumentRepository,
+  private val mongoQueryMetrics: MongoQueryMetrics,
+) : AppArtistRepositoryPort {
 
   override fun upsertAll(items: List<AppArtist>) {
     if (items.isEmpty()) return
@@ -32,13 +28,13 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
     mongoQueryMetrics.timed("app_artist.upsertAll") {
       val requests = items.map { item ->
         UpdateOneModel<AppArtistDocument>(
-          Filters.eq("_id", item.id.value),
+          Filters.eq(ID_FIELD, item.id.value),
           Updates.combine(
-            Updates.set("artistName", item.artistName),
-            Updates.set("imageLink", item.imageLink),
-            Updates.set("type", item.type),
-            Updates.set("lastSync", now),
-            Updates.setOnInsert("playbackProcessingStatus", item.playbackProcessingStatus.name),
+            Updates.set(ARTIST_NAME_FIELD, item.artistName),
+            Updates.set(IMAGE_LINK_FIELD, item.imageLink),
+            Updates.set(TYPE_FIELD, item.type),
+            Updates.set(LAST_SYNC_FIELD, now),
+            Updates.setOnInsert(PLAYBACK_PROCESSING_STATUS_FIELD, item.playbackProcessingStatus.name),
           ),
           upsertOptions,
         )
@@ -69,7 +65,7 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
   ): List<AppArtist> =
     mongoQueryMetrics.timed("app_artist.findByPlaybackProcessingStatusPaged") {
       appArtistDocumentRepository.mongoCollection()
-        .find(Filters.eq("playbackProcessingStatus", status.name))
+        .find(Filters.eq(PLAYBACK_PROCESSING_STATUS_FIELD, status.name))
         .sort(Sorts.ascending("artistName"))
         .skip(offset)
         .limit(limit)
@@ -80,14 +76,14 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
   override fun countByPlaybackProcessingStatus(status: ArtistPlaybackProcessingStatus): Long =
     mongoQueryMetrics.timed("app_artist.countByPlaybackProcessingStatus") {
       appArtistDocumentRepository.mongoCollection()
-        .countDocuments(Filters.eq("playbackProcessingStatus", status.name))
+        .countDocuments(Filters.eq(PLAYBACK_PROCESSING_STATUS_FIELD, status.name))
     }
 
   override fun findByArtistIds(artistIds: Set<ArtistId>): List<AppArtist> {
     if (artistIds.isEmpty()) return emptyList()
     return mongoQueryMetrics.timed("app_artist.findByArtistIds") {
       appArtistDocumentRepository.mongoCollection()
-        .find(Filters.`in`("_id", artistIds.map { it.value }))
+        .find(Filters.`in`(ID_FIELD, artistIds.map { it.value }))
         .toList()
         .map { it.toDomain() }
     }
@@ -112,8 +108,8 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
   override fun updatePlaybackProcessingStatus(artistId: ArtistId, status: ArtistPlaybackProcessingStatus) {
     mongoQueryMetrics.timed("app_artist.updatePlaybackProcessingStatus") {
       appArtistDocumentRepository.mongoCollection().updateOne(
-        Filters.eq("_id", artistId.value),
-        Updates.set("playbackProcessingStatus", status.name),
+        Filters.eq(ID_FIELD, artistId.value),
+        Updates.set(PLAYBACK_PROCESSING_STATUS_FIELD, status.name),
       )
     }
   }
@@ -134,5 +130,12 @@ class AppArtistRepositoryAdapter : AppArtistRepositoryPort {
     playbackProcessingStatus = playbackProcessingStatus,
   )
 
-  companion object : KLogging()
+  companion object : KLogging() {
+    internal const val ID_FIELD = "_id"
+    internal const val ARTIST_NAME_FIELD = "artistName"
+    internal const val IMAGE_LINK_FIELD = "imageLink"
+    internal const val TYPE_FIELD = "type"
+    internal const val LAST_SYNC_FIELD = "lastSync"
+    internal const val PLAYBACK_PROCESSING_STATUS_FIELD = "playbackProcessingStatus"
+  }
 }

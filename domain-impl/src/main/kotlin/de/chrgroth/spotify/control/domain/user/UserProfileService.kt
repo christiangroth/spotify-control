@@ -22,6 +22,8 @@ class UserProfileService(
   private val outboxPort: OutboxPort,
 ) : UserProfilePort {
 
+  override fun getDisplayName(userId: UserId): String? = userRepository.findById(userId)?.displayName
+
   override fun enqueueUpdates() {
     val users = userRepository.findAll()
     logger.info { "Scheduling profile update for ${users.size} user(s)" }

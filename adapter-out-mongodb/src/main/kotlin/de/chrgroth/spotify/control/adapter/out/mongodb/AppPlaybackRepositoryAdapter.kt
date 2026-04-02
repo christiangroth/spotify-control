@@ -9,7 +9,6 @@ import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.playback.AppPlaybackRepositoryPort
 import io.quarkus.panache.common.Sort
 import jakarta.enterprise.context.ApplicationScoped
-import jakarta.inject.Inject
 import kotlin.time.Instant
 import kotlin.time.toJavaInstant
 import kotlin.time.toKotlinInstant
@@ -18,13 +17,10 @@ import mu.KLogging
 import org.bson.Document
 
 @ApplicationScoped
-class AppPlaybackRepositoryAdapter : AppPlaybackRepositoryPort {
-
-  @Inject
-  lateinit var appPlaybackDocumentRepository: AppPlaybackDocumentRepository
-
-  @Inject
-  lateinit var mongoQueryMetrics: MongoQueryMetrics
+class AppPlaybackRepositoryAdapter(
+  private val appPlaybackDocumentRepository: AppPlaybackDocumentRepository,
+  private val mongoQueryMetrics: MongoQueryMetrics,
+) : AppPlaybackRepositoryPort {
 
   override fun saveAll(items: List<AppPlaybackItem>) {
     if (items.isEmpty()) return
@@ -95,12 +91,12 @@ class AppPlaybackRepositoryAdapter : AppPlaybackRepositoryPort {
     val pipeline = listOf(
       Aggregates.match(
         Filters.and(
-          Filters.eq("spotifyUserId", userId.value),
-          Filters.gte("playedAt", since.toJavaInstant()),
+          Filters.eq(SPOTIFY_USER_ID_FIELD, userId.value),
+          Filters.gte(PLAYED_AT_FIELD, since.toJavaInstant()),
         ),
       ),
       Aggregates.group(
-        Document("\$dateToString", Document("format", "%Y-%m-%d").append("date", "\$playedAt")),
+        Document("\$dateToString", Document("format", "%Y-%m-%d").append("date", "\$$PLAYED_AT_FIELD")),
         Accumulators.sum("count", 1),
       ),
       Aggregates.sort(Sorts.ascending("_id")),
@@ -151,12 +147,12 @@ class AppPlaybackRepositoryAdapter : AppPlaybackRepositoryPort {
     val pipeline = listOf(
       Aggregates.match(
         Filters.and(
-          Filters.eq("spotifyUserId", userId.value),
-          Filters.gte("playedAt", since.toJavaInstant()),
-          Filters.gt("secondsPlayed", 0),
+          Filters.eq(SPOTIFY_USER_ID_FIELD, userId.value),
+          Filters.gte(PLAYED_AT_FIELD, since.toJavaInstant()),
+          Filters.gt(SECONDS_PLAYED_FIELD, 0),
         ),
       ),
-      Aggregates.group("\$trackId", Accumulators.sum("totalSeconds", "\$secondsPlayed")),
+      Aggregates.group("\$$TRACK_ID_FIELD", Accumulators.sum("totalSeconds", "\$$SECONDS_PLAYED_FIELD")),
     )
     return mongoQueryMetrics.timed("app_playback.sumSecondsPlayedByTrackIdSince") {
       appPlaybackDocumentRepository.mongoCollection()
@@ -172,10 +168,15 @@ class AppPlaybackRepositoryAdapter : AppPlaybackRepositoryPort {
   override fun findAllDistinctTrackIds(): Set<String> =
     mongoQueryMetrics.timed("app_playback.findAllDistinctTrackIds") {
       appPlaybackDocumentRepository.mongoCollection()
-        .distinct("trackId", String::class.java)
+        .distinct(TRACK_ID_FIELD, String::class.java)
         .toList()
         .toSet()
     }
 
-  companion object : KLogging()
+  companion object : KLogging() {
+    internal const val SPOTIFY_USER_ID_FIELD = "spotifyUserId"
+    internal const val PLAYED_AT_FIELD = "playedAt"
+    internal const val TRACK_ID_FIELD = "trackId"
+    internal const val SECONDS_PLAYED_FIELD = "secondsPlayed"
+  }
 }

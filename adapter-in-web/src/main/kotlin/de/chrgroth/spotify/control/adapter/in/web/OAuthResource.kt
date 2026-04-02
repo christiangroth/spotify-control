@@ -5,7 +5,6 @@ import de.chrgroth.spotify.control.domain.port.`in`.user.LoginServicePort
 import de.chrgroth.spotify.control.domain.port.out.user.TokenEncryptionPort
 import jakarta.annotation.security.PermitAll
 import jakarta.enterprise.context.ApplicationScoped
-import jakarta.inject.Inject
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.QueryParam
@@ -21,22 +20,16 @@ import java.util.concurrent.ConcurrentHashMap
 @Path("")
 @ApplicationScoped
 @Suppress("Unused")
-class OAuthResource {
-
-  @Inject
-  private lateinit var loginService: LoginServicePort
-
-  @Inject
-  private lateinit var tokenEncryption: TokenEncryptionPort
-
-  @ConfigProperty(name = "spotify.client-id")
-  private lateinit var clientId: String
-
-  @ConfigProperty(name = "app.oauth.redirect-uri")
-  private lateinit var redirectUri: String
-
-  @ConfigProperty(name = "spotify.accounts.base-url")
-  private lateinit var accountsBaseUrl: String
+class OAuthResource(
+  private val loginService: LoginServicePort,
+  private val tokenEncryption: TokenEncryptionPort,
+  @param:ConfigProperty(name = "spotify.client-id")
+  private val clientId: String,
+  @param:ConfigProperty(name = "app.oauth.redirect-uri")
+  private val redirectUri: String,
+  @param:ConfigProperty(name = "spotify.accounts.base-url")
+  private val accountsBaseUrl: String,
+) {
 
   private val stateStore = ConcurrentHashMap<String, Long>()
 

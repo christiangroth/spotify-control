@@ -136,14 +136,14 @@ class PlaylistServiceTests {
       buildSpotifyItem("p2", ownerId = "other-user"),
     ).right()
     every { playlistRepository.findByUserId(userId) } returns emptyList()
-    every { playlistRepository.saveAll(any(), any()) } just runs
+    every { playlistRepository.replaceAll(any(), any()) } just runs
     every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
 
     val result = adapter.syncPlaylists(userId)
 
     assertThat(result.isRight()).isTrue()
     val savedSlot = slot<List<PlaylistInfo>>()
-    verify { playlistRepository.saveAll(userId, capture(savedSlot)) }
+    verify { playlistRepository.replaceAll(userId, capture(savedSlot)) }
     assertThat(savedSlot.captured).hasSize(1)
     assertThat(savedSlot.captured[0].spotifyPlaylistId).isEqualTo("p1")
   }
@@ -155,14 +155,14 @@ class PlaylistServiceTests {
     every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
     every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(buildSpotifyItem("p1")).right()
     every { playlistRepository.findByUserId(userId) } returns emptyList()
-    every { playlistRepository.saveAll(any(), any()) } just runs
+    every { playlistRepository.replaceAll(any(), any()) } just runs
     every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
 
     val result = adapter.syncPlaylists(userId)
 
     assertThat(result.isRight()).isTrue()
     val savedSlot = slot<List<PlaylistInfo>>()
-    verify { playlistRepository.saveAll(userId, capture(savedSlot)) }
+    verify { playlistRepository.replaceAll(userId, capture(savedSlot)) }
     assertThat(savedSlot.captured).hasSize(1)
     assertThat(savedSlot.captured[0].spotifyPlaylistId).isEqualTo("p1")
     assertThat(savedSlot.captured[0].syncStatus).isEqualTo(PlaylistSyncStatus.PASSIVE)
@@ -175,12 +175,12 @@ class PlaylistServiceTests {
     every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
     every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(buildSpotifyItem("p1")).right()
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE))
-    every { playlistRepository.saveAll(any(), any()) } just runs
+    every { playlistRepository.replaceAll(any(), any()) } just runs
 
     adapter.syncPlaylists(userId)
 
     val savedSlot = slot<List<PlaylistInfo>>()
-    verify { playlistRepository.saveAll(userId, capture(savedSlot)) }
+    verify { playlistRepository.replaceAll(userId, capture(savedSlot)) }
     assertThat(savedSlot.captured[0].syncStatus).isEqualTo(PlaylistSyncStatus.PASSIVE)
   }
 
@@ -191,13 +191,13 @@ class PlaylistServiceTests {
     every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
     every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(buildSpotifyItem("p1")).right()
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.ACTIVE))
-    every { playlistRepository.saveAll(any(), any()) } just runs
+    every { playlistRepository.replaceAll(any(), any()) } just runs
     every { playlistRepository.findByUserIdAndPlaylistId(userId, "p1") } returns mockk()
 
     adapter.syncPlaylists(userId)
 
     val savedSlot = slot<List<PlaylistInfo>>()
-    verify { playlistRepository.saveAll(userId, capture(savedSlot)) }
+    verify { playlistRepository.replaceAll(userId, capture(savedSlot)) }
     assertThat(savedSlot.captured[0].syncStatus).isEqualTo(PlaylistSyncStatus.ACTIVE)
   }
 
@@ -208,13 +208,13 @@ class PlaylistServiceTests {
     every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
     every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(buildSpotifyItem("p1", snapshotId = "snap-1")).right()
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", snapshotId = "snap-1"))
-    every { playlistRepository.saveAll(any(), any()) } just runs
+    every { playlistRepository.replaceAll(any(), any()) } just runs
     every { playlistRepository.findByUserIdAndPlaylistId(userId, "p1") } returns mockk()
 
     adapter.syncPlaylists(userId)
 
     val savedSlot = slot<List<PlaylistInfo>>()
-    verify { playlistRepository.saveAll(userId, capture(savedSlot)) }
+    verify { playlistRepository.replaceAll(userId, capture(savedSlot)) }
     assertThat(savedSlot.captured[0].lastSnapshotIdSyncTime).isEqualTo(now - 1.hours)
   }
 
@@ -225,13 +225,13 @@ class PlaylistServiceTests {
     every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
     every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(buildSpotifyItem("p1", snapshotId = "snap-2")).right()
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", snapshotId = "snap-1"))
-    every { playlistRepository.saveAll(any(), any()) } just runs
+    every { playlistRepository.replaceAll(any(), any()) } just runs
     every { outboxPort.enqueue(any()) } just runs
 
     adapter.syncPlaylists(userId)
 
     val savedSlot = slot<List<PlaylistInfo>>()
-    verify { playlistRepository.saveAll(userId, capture(savedSlot)) }
+    verify { playlistRepository.replaceAll(userId, capture(savedSlot)) }
     assertThat(savedSlot.captured[0].lastSnapshotIdSyncTime).isGreaterThan(now - 1.hours)
   }
 
@@ -242,7 +242,7 @@ class PlaylistServiceTests {
     every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
     every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(buildSpotifyItem("p1"), buildSpotifyItem("p2")).right()
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1"))
-    every { playlistRepository.saveAll(any(), any()) } just runs
+    every { playlistRepository.replaceAll(any(), any()) } just runs
     every { playlistRepository.findByUserIdAndPlaylistId(userId, "p1") } returns mockk()
     every { outboxPort.enqueue(any()) } just runs
     every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
@@ -260,7 +260,7 @@ class PlaylistServiceTests {
     every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
     every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(buildSpotifyItem("p1")).right()
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1"), buildPlaylistInfo("p2"))
-    every { playlistRepository.saveAll(any(), any()) } just runs
+    every { playlistRepository.replaceAll(any(), any()) } just runs
     every { playlistRepository.findByUserIdAndPlaylistId(userId, "p1") } returns mockk()
     every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
 
@@ -277,7 +277,7 @@ class PlaylistServiceTests {
     every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
     every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(buildSpotifyItem("p1")).right()
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1"))
-    every { playlistRepository.saveAll(any(), any()) } just runs
+    every { playlistRepository.replaceAll(any(), any()) } just runs
     every { playlistRepository.findByUserIdAndPlaylistId(userId, "p1") } returns mockk()
 
     val result = adapter.syncPlaylists(userId)
@@ -296,7 +296,7 @@ class PlaylistServiceTests {
     val result = adapter.syncPlaylists(userId)
 
     assertThat(result.isLeft()).isTrue()
-    verify(exactly = 0) { playlistRepository.saveAll(any(), any()) }
+    verify(exactly = 0) { playlistRepository.replaceAll(any(), any()) }
   }
 
   @Test
@@ -344,7 +344,7 @@ class PlaylistServiceTests {
       buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.ACTIVE),
       buildPlaylistInfo("p2", syncStatus = PlaylistSyncStatus.ACTIVE),
     )
-    every { playlistRepository.saveAll(any(), any()) } just runs
+    every { playlistRepository.replaceAll(any(), any()) } just runs
     every { playlistRepository.findByUserIdAndPlaylistId(userId, "p1") } returns mockk()
     every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
     every { playlistCheckRepository.deleteByPlaylistId("p1") } just runs
@@ -353,7 +353,7 @@ class PlaylistServiceTests {
 
     assertThat(result.isRight()).isTrue()
     val savedSlot = slot<List<PlaylistInfo>>()
-    verify { playlistRepository.saveAll(userId, capture(savedSlot)) }
+    verify { playlistRepository.replaceAll(userId, capture(savedSlot)) }
     val updated = savedSlot.captured.associateBy { it.spotifyPlaylistId }
     assertThat(updated["p1"]!!.syncStatus).isEqualTo(PlaylistSyncStatus.PASSIVE)
     assertThat(updated["p2"]!!.syncStatus).isEqualTo(PlaylistSyncStatus.ACTIVE)
@@ -366,7 +366,7 @@ class PlaylistServiceTests {
     every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
     every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(buildSpotifyItem("p1", snapshotId = "snap-2")).right()
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", snapshotId = "snap-1"))
-    every { playlistRepository.saveAll(any(), any()) } just runs
+    every { playlistRepository.replaceAll(any(), any()) } just runs
     every { outboxPort.enqueue(any()) } just runs
 
     adapter.syncPlaylists(userId)
@@ -381,7 +381,7 @@ class PlaylistServiceTests {
     every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
     every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(buildSpotifyItem("p1")).right()
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1"))
-    every { playlistRepository.saveAll(any(), any()) } just runs
+    every { playlistRepository.replaceAll(any(), any()) } just runs
     every { playlistRepository.findByUserIdAndPlaylistId(userId, "p1") } returns null
     every { outboxPort.enqueue(any()) } just runs
 
@@ -397,7 +397,7 @@ class PlaylistServiceTests {
     every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
     every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(buildSpotifyItem("p1")).right()
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE))
-    every { playlistRepository.saveAll(any(), any()) } just runs
+    every { playlistRepository.replaceAll(any(), any()) } just runs
 
     adapter.syncPlaylists(userId)
 
@@ -411,7 +411,7 @@ class PlaylistServiceTests {
     every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
     every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(buildSpotifyItem("p1")).right()
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1"))
-    every { playlistRepository.saveAll(any(), any()) } just runs
+    every { playlistRepository.replaceAll(any(), any()) } just runs
     every { playlistRepository.findByUserIdAndPlaylistId(userId, "p1") } returns mockk()
 
     adapter.syncPlaylists(userId)
@@ -630,7 +630,7 @@ class PlaylistServiceTests {
     val user = buildUser()
     every { userRepository.findById(userId) } returns user
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE))
-    every { playlistRepository.saveAll(any(), any()) } just runs
+    every { playlistRepository.replaceAll(any(), any()) } just runs
     every { outboxPort.enqueue(any()) } just runs
     every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
 
@@ -645,7 +645,7 @@ class PlaylistServiceTests {
     val user = buildUser()
     every { userRepository.findById(userId) } returns user
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE))
-    every { playlistRepository.saveAll(any(), any()) } just runs
+    every { playlistRepository.replaceAll(any(), any()) } just runs
     every { outboxPort.enqueue(any()) } just runs
     every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
 
@@ -661,7 +661,7 @@ class PlaylistServiceTests {
     val user = buildUser()
     every { userRepository.findById(userId) } returns user
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.ACTIVE))
-    every { playlistRepository.saveAll(any(), any()) } just runs
+    every { playlistRepository.replaceAll(any(), any()) } just runs
     every { playlistRepository.findByUserIdAndPlaylistId(userId, "p1") } returns mockk()
     every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
     every { playlistCheckRepository.deleteByPlaylistId("p1") } just runs
@@ -677,7 +677,7 @@ class PlaylistServiceTests {
     val user = buildUser()
     every { userRepository.findById(userId) } returns user
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE))
-    every { playlistRepository.saveAll(any(), any()) } just runs
+    every { playlistRepository.replaceAll(any(), any()) } just runs
     every { playlistRepository.findByUserIdAndPlaylistId(userId, "p1") } returns mockk()
     every { outboxPort.enqueue(any()) } just runs
     every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
@@ -693,7 +693,7 @@ class PlaylistServiceTests {
     val user = buildUser()
     every { userRepository.findById(userId) } returns user
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.ACTIVE))
-    every { playlistRepository.saveAll(any(), any()) } just runs
+    every { playlistRepository.replaceAll(any(), any()) } just runs
     every { playlistRepository.findByUserIdAndPlaylistId(userId, "p1") } returns mockk()
     every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
     every { playlistCheckRepository.deleteByPlaylistId("p1") } just runs
@@ -709,7 +709,7 @@ class PlaylistServiceTests {
     val user = buildUser()
     every { userRepository.findById(userId) } returns user
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE))
-    every { playlistRepository.saveAll(any(), any()) } just runs
+    every { playlistRepository.replaceAll(any(), any()) } just runs
     every { playlistRepository.findByUserIdAndPlaylistId(userId, "p1") } returns mockk()
     every { outboxPort.enqueue(any()) } just runs
     every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
@@ -725,7 +725,7 @@ class PlaylistServiceTests {
     val user = buildUser()
     every { userRepository.findById(userId) } returns user
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE, name = "All"))
-    every { playlistRepository.saveAll(any(), any()) } just runs
+    every { playlistRepository.replaceAll(any(), any()) } just runs
     every { outboxPort.enqueue(any()) } just runs
     every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
 
@@ -733,7 +733,7 @@ class PlaylistServiceTests {
 
     assertThat(result.isRight()).isTrue()
     val savedSlot = slot<List<PlaylistInfo>>()
-    verify { playlistRepository.saveAll(userId, capture(savedSlot)) }
+    verify { playlistRepository.replaceAll(userId, capture(savedSlot)) }
     assertThat(savedSlot.captured.find { it.spotifyPlaylistId == "p1" }!!.type).isEqualTo(PlaylistType.ALL)
   }
 
@@ -742,7 +742,7 @@ class PlaylistServiceTests {
     val user = buildUser()
     every { userRepository.findById(userId) } returns user
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE, name = "ALL"))
-    every { playlistRepository.saveAll(any(), any()) } just runs
+    every { playlistRepository.replaceAll(any(), any()) } just runs
     every { outboxPort.enqueue(any()) } just runs
     every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
 
@@ -750,7 +750,7 @@ class PlaylistServiceTests {
 
     assertThat(result.isRight()).isTrue()
     val savedSlot = slot<List<PlaylistInfo>>()
-    verify { playlistRepository.saveAll(userId, capture(savedSlot)) }
+    verify { playlistRepository.replaceAll(userId, capture(savedSlot)) }
     assertThat(savedSlot.captured.find { it.spotifyPlaylistId == "p1" }!!.type).isEqualTo(PlaylistType.ALL)
   }
 

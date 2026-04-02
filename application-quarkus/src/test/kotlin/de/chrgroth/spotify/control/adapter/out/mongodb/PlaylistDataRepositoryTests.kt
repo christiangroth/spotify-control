@@ -144,7 +144,7 @@ class PlaylistDataRepositoryTests {
     val playlistId = "playlist-active-${UUID.randomUUID()}"
     val artistId = "artist-active-${UUID.randomUUID()}"
 
-    playlistRepository.saveAll(userId, listOf(buildPlaylistInfo(playlistId, PlaylistSyncStatus.ACTIVE)))
+    playlistRepository.replaceAll(userId, listOf(buildPlaylistInfo(playlistId, PlaylistSyncStatus.ACTIVE)))
     playlistRepository.save(
       userId,
       Playlist(
@@ -170,7 +170,7 @@ class PlaylistDataRepositoryTests {
     val playlistId = "playlist-passive-${UUID.randomUUID()}"
     val artistId = "artist-passive-${UUID.randomUUID()}"
 
-    playlistRepository.saveAll(userId, listOf(buildPlaylistInfo(playlistId, PlaylistSyncStatus.PASSIVE)))
+    playlistRepository.replaceAll(userId, listOf(buildPlaylistInfo(playlistId, PlaylistSyncStatus.PASSIVE)))
     playlistRepository.save(
       userId,
       Playlist(
@@ -199,7 +199,7 @@ class PlaylistDataRepositoryTests {
     val artistId1 = "artist-multi-1-${UUID.randomUUID()}"
     val artistId2 = "artist-multi-2-${UUID.randomUUID()}"
 
-    playlistRepository.saveAll(userId1, listOf(buildPlaylistInfo(playlistId1, PlaylistSyncStatus.ACTIVE)))
+    playlistRepository.replaceAll(userId1, listOf(buildPlaylistInfo(playlistId1, PlaylistSyncStatus.ACTIVE)))
     playlistRepository.save(
       userId1,
       Playlist(
@@ -207,7 +207,7 @@ class PlaylistDataRepositoryTests {
         tracks = listOf(PlaylistTrack(TrackId("t1"), listOf(ArtistId(artistId1)), AlbumId("album-t1"))),
       ),
     )
-    playlistRepository.saveAll(userId2, listOf(buildPlaylistInfo(playlistId2, PlaylistSyncStatus.ACTIVE)))
+    playlistRepository.replaceAll(userId2, listOf(buildPlaylistInfo(playlistId2, PlaylistSyncStatus.ACTIVE)))
     playlistRepository.save(
       userId2,
       Playlist(

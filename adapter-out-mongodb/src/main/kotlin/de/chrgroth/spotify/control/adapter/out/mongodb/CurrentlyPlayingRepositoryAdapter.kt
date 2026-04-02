@@ -9,19 +9,15 @@ import de.chrgroth.spotify.control.domain.model.catalog.TrackId
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.playback.CurrentlyPlayingRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
-import jakarta.inject.Inject
 import kotlin.time.toJavaInstant
 import kotlin.time.toKotlinInstant
 import mu.KLogging
 
 @ApplicationScoped
-class CurrentlyPlayingRepositoryAdapter : CurrentlyPlayingRepositoryPort {
-
-  @Inject
-  lateinit var currentlyPlayingDocumentRepository: CurrentlyPlayingDocumentRepository
-
-  @Inject
-  lateinit var mongoQueryMetrics: MongoQueryMetrics
+class CurrentlyPlayingRepositoryAdapter(
+  private val currentlyPlayingDocumentRepository: CurrentlyPlayingDocumentRepository,
+  private val mongoQueryMetrics: MongoQueryMetrics,
+) : CurrentlyPlayingRepositoryPort {
 
   override fun save(item: CurrentlyPlayingItem) {
     val document = CurrentlyPlayingDocument().apply {
@@ -63,15 +59,15 @@ class CurrentlyPlayingRepositoryAdapter : CurrentlyPlayingRepositoryPort {
     mongoQueryMetrics.timed("spotify_currently_playing.updateProgressByUserAndTrackAndObservedMinute") {
       currentlyPlayingDocumentRepository.mongoCollection().updateOne(
         Filters.and(
-          Filters.eq("spotifyUserId", item.spotifyUserId.value),
-          Filters.eq("trackId", item.trackId.value),
-          Filters.gte("observedAt", observedMinuteStart),
-          Filters.lt("observedAt", observedMinuteEnd),
+          Filters.eq(SPOTIFY_USER_ID_FIELD, item.spotifyUserId.value),
+          Filters.eq(TRACK_ID_FIELD, item.trackId.value),
+          Filters.gte(OBSERVED_AT_FIELD, observedMinuteStart),
+          Filters.lt(OBSERVED_AT_FIELD, observedMinuteEnd),
         ),
         Updates.combine(
-          Updates.set("progressMs", item.progressMs),
-          Updates.set("isPlaying", item.isPlaying),
-          Updates.set("observedAt", item.observedAt.toJavaInstant()),
+          Updates.set(PROGRESS_MS_FIELD, item.progressMs),
+          Updates.set(IS_PLAYING_FIELD, item.isPlaying),
+          Updates.set(OBSERVED_AT_FIELD, item.observedAt.toJavaInstant()),
         ),
       )
     }
@@ -109,6 +105,11 @@ class CurrentlyPlayingRepositoryAdapter : CurrentlyPlayingRepositoryPort {
   }
 
   companion object : KLogging() {
+    internal const val SPOTIFY_USER_ID_FIELD = "spotifyUserId"
+    internal const val TRACK_ID_FIELD = "trackId"
+    internal const val OBSERVED_AT_FIELD = "observedAt"
+    internal const val PROGRESS_MS_FIELD = "progressMs"
+    internal const val IS_PLAYING_FIELD = "isPlaying"
     private const val SECONDS_PER_MINUTE = 60L
   }
 }
