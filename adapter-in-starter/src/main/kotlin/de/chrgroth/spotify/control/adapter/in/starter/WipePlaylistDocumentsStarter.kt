@@ -10,21 +10,21 @@ import org.eclipse.microprofile.config.inject.ConfigProperty
 @ApplicationScoped
 @Suppress("Unused")
 class WipePlaylistDocumentsStarter(
-    private val mongoClient: MongoClient,
-    @param:ConfigProperty(name = "quarkus.mongodb.database")
-    private val databaseName: String,
+  private val mongoClient: MongoClient,
+  @param:ConfigProperty(name = "quarkus.mongodb.database")
+  private val databaseName: String,
 ) : Starter {
 
-    override val id = "WipePlaylistDocumentsStarter-v1"
+  override val id = "WipePlaylistDocumentsStarter-v1"
 
-    override fun execute() {
-        val result = mongoClient.getDatabase(databaseName)
-            .getCollection(PLAYLIST_COLLECTION)
-            .deleteMany(Document())
-        logger.info { "Deleted ${result.deletedCount} legacy playlist documents" }
-    }
+  override fun execute() {
+    val result = mongoClient.getDatabase(databaseName)
+      .getCollection(PLAYLIST_COLLECTION)
+      .deleteMany(Document())
+    logger.info { "Deleted ${result.deletedCount} legacy playlist documents" }
+  }
 
-    companion object : KLogging() {
-        private const val PLAYLIST_COLLECTION = "spotify_playlist"
-    }
+  companion object : KLogging() {
+    private const val PLAYLIST_COLLECTION = "spotify_playlist"
+  }
 }

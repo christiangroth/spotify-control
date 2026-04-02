@@ -14,33 +14,33 @@ import java.util.concurrent.CopyOnWriteArrayList
 @ApplicationScoped
 class HealthSseAdapter : OutboxPartitionObserver, OutgoingRequestStatsObserver, OutboxTaskCountObserver, PlaybackDetectedObserver {
 
-    private val emittersByUser = ConcurrentHashMap<String, CopyOnWriteArrayList<MultiEmitter<in String>>>()
+  private val emittersByUser = ConcurrentHashMap<String, CopyOnWriteArrayList<MultiEmitter<in String>>>()
 
-    fun stream(userId: UserId): Multi<String> = Multi.createFrom().emitter { emitter ->
-        emittersByUser.getOrPut(userId.value) { CopyOnWriteArrayList() }.add(emitter)
-        emitter.onTermination {
-            emittersByUser.computeIfPresent(userId.value) { _, list ->
-                list.remove(emitter)
-                list.takeIf { it.isNotEmpty() }
-            }
-        }
+  fun stream(userId: UserId): Multi<String> = Multi.createFrom().emitter { emitter ->
+    emittersByUser.getOrPut(userId.value) { CopyOnWriteArrayList() }.add(emitter)
+    emitter.onTermination {
+      emittersByUser.computeIfPresent(userId.value) { _, list ->
+        list.remove(emitter)
+        list.takeIf { it.isNotEmpty() }
+      }
     }
+  }
 
-    @Suppress("UnusedParameter")
-    override fun onPartitionPaused(partitionKey: String, reason: String) = notifyAllUsers("refresh-outbox-partitions")
+  @Suppress("UnusedParameter")
+  override fun onPartitionPaused(partitionKey: String, reason: String) = notifyAllUsers("refresh-outbox-partitions")
 
-    @Suppress("UnusedParameter")
-    override fun onPartitionActivated(partitionKey: String) = notifyAllUsers("refresh-outbox-partitions")
+  @Suppress("UnusedParameter")
+  override fun onPartitionActivated(partitionKey: String) = notifyAllUsers("refresh-outbox-partitions")
 
-    override fun onRequestRecorded() = notifyAllUsers("refresh-outgoing-http-calls")
+  override fun onRequestRecorded() = notifyAllUsers("refresh-outgoing-http-calls")
 
-    override fun onOutboxTaskCountChanged() = notifyAllUsers("refresh-outbox-partitions")
+  override fun onOutboxTaskCountChanged() = notifyAllUsers("refresh-outbox-partitions")
 
-    override fun onPlaybackDetected() = notifyAllUsers("refresh-playback-state")
+  override fun onPlaybackDetected() = notifyAllUsers("refresh-playback-state")
 
-    private fun notifyAllUsers(event: String) = emittersByUser.keys.toList().forEach { emitToUser(it, event) }
+  private fun notifyAllUsers(event: String) = emittersByUser.keys.toList().forEach { emitToUser(it, event) }
 
-    private fun emitToUser(userId: String, event: String) {
-        emittersByUser[userId]?.forEach { runCatching { it.emit(event) } }
-    }
+  private fun emitToUser(userId: String, event: String) {
+    emittersByUser[userId]?.forEach { runCatching { it.emit(event) } }
+  }
 }

@@ -114,6 +114,13 @@ data class Track(...) {
 
 ## Code Style
 
+Formatting is enforced via the `.editorconfig` at the project root. Key rules for Kotlin:
+
+- **Indentation:** 2 spaces (not 4), no tabs
+- **Line endings:** LF
+- **Max line length:** 180 characters
+- **Final newline:** always
+
 ```kotlin
 // Good: expressive, clearly named
 fun findTracksNeedingEnrichment(): List<PlaybackEventRaw> =

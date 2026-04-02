@@ -7,10 +7,10 @@ import jakarta.enterprise.inject.Instance
 
 @ApplicationScoped
 class CurrentlyPlayingScheduleState(
-    private val playbackDetectedObservers: Instance<PlaybackDetectedObserver>,
+  private val playbackDetectedObservers: Instance<PlaybackDetectedObserver>,
 ) : PlaybackStatePort {
 
-    override fun onPlaybackDetected() {
-        playbackDetectedObservers.forEach { it.onPlaybackDetected() }
-    }
+  override fun onPlaybackDetected() {
+    playbackDetectedObservers.forEach { it.onPlaybackDetected() }
+  }
 }

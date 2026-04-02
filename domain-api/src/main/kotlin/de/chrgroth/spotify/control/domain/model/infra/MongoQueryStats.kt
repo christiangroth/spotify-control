@@ -9,7 +9,7 @@ package de.chrgroth.spotify.control.domain.model.infra
  *   slow-query threshold (see `app.mongodb.slow-query-threshold-ms`)
  */
 data class MongoQueryStats(
-    val name: String,
-    val executionCountLast24h: Long,
-    val slowQueryCount: Long,
+  val name: String,
+  val executionCountLast24h: Long,
+  val slowQueryCount: Long,
 )

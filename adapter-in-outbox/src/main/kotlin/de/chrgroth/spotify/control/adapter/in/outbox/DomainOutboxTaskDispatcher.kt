@@ -22,56 +22,56 @@ import kotlin.time.toJavaInstant
 @ApplicationScoped
 @Suppress("Unused", "TooGenericExceptionCaught")
 class DomainOutboxTaskDispatcher(
-    private val playback: PlaybackPort,
-    private val catalog: CatalogPort,
-    private val playlist: PlaylistPort,
-    private val playlistCheck: PlaylistCheckPort,
-    private val userProfile: UserProfilePort,
+  private val playback: PlaybackPort,
+  private val catalog: CatalogPort,
+  private val playlist: PlaylistPort,
+  private val playlistCheck: PlaylistCheckPort,
+  private val userProfile: UserProfilePort,
 ) : ApplicationOutboxDispatcher {
 
-    override fun getAllPartitions(): List<ApplicationOutboxPartition> = DomainOutboxPartition.all
+  override fun getAllPartitions(): List<ApplicationOutboxPartition> = DomainOutboxPartition.all
 
-    override fun deserialize(partition: ApplicationOutboxPartition, eventType: String, payload: String): ApplicationOutboxEvent =
-        DomainOutboxEvent.fromKey(eventType, payload)
+  override fun deserialize(partition: ApplicationOutboxPartition, eventType: String, payload: String): ApplicationOutboxEvent =
+    DomainOutboxEvent.fromKey(eventType, payload)
 
-    override fun dispatch(event: ApplicationOutboxEvent): DispatchResult = dispatchEvent(event as DomainOutboxEvent)
+  override fun dispatch(event: ApplicationOutboxEvent): DispatchResult = dispatchEvent(event as DomainOutboxEvent)
 
-    @Suppress("CyclomaticComplexMethod")
-    private fun dispatchEvent(event: DomainOutboxEvent): DispatchResult =
-        handleDomainOperation(event.key) {
-            when (event) {
-                is DomainOutboxEvent.FetchCurrentlyPlaying -> playback.handle(event)
-                is DomainOutboxEvent.FetchRecentlyPlayed -> playback.handle(event)
-                is DomainOutboxEvent.UpdateUserProfile -> userProfile.handle(event)
-                is DomainOutboxEvent.SyncPlaylistInfo -> playlist.handle(event)
-                is DomainOutboxEvent.SyncPlaylistData -> playlist.handle(event)
-                is DomainOutboxEvent.RebuildPlaybackData -> playback.handle(event)
-                is DomainOutboxEvent.AppendPlaybackData -> playback.handle(event)
-                is DomainOutboxEvent.SyncArtistDetails -> catalog.handle(event)
-                is DomainOutboxEvent.SyncAlbumDetails -> catalog.handle(event)
-                is DomainOutboxEvent.ResyncCatalog -> catalog.handle(event)
-                is DomainOutboxEvent.RunPlaylistChecks -> playlistCheck.handle(event)
-            }
-        }
-
-    private fun handleDomainOperation(taskDescription: String, operation: () -> Either<DomainError, Unit>): DispatchResult = try {
-        when (val result = operation()) {
-            is Either.Right -> DispatchResult.Success
-            is Either.Left -> when (val error = result.value) {
-                is SpotifyRateLimitError -> {
-                    logger.warn { "Rate limited on $taskDescription, retry after ${error.retryAfter.inWholeSeconds}s" }
-                    DispatchResult.Paused("Rate limited: $taskDescription", (Clock.System.now() + error.retryAfter).toJavaInstant())
-                }
-                else -> {
-                    logger.error { "Failed $taskDescription: ${error.code}" }
-                    DispatchResult.Failed("Failed $taskDescription: ${error.code}")
-                }
-            }
-        }
-    } catch (e: Exception) {
-        logger.error(e) { "Unexpected error in $taskDescription" }
-        DispatchResult.Failed("Unexpected error in $taskDescription: ${e.message}", e)
+  @Suppress("CyclomaticComplexMethod")
+  private fun dispatchEvent(event: DomainOutboxEvent): DispatchResult =
+    handleDomainOperation(event.key) {
+      when (event) {
+        is DomainOutboxEvent.FetchCurrentlyPlaying -> playback.handle(event)
+        is DomainOutboxEvent.FetchRecentlyPlayed -> playback.handle(event)
+        is DomainOutboxEvent.UpdateUserProfile -> userProfile.handle(event)
+        is DomainOutboxEvent.SyncPlaylistInfo -> playlist.handle(event)
+        is DomainOutboxEvent.SyncPlaylistData -> playlist.handle(event)
+        is DomainOutboxEvent.RebuildPlaybackData -> playback.handle(event)
+        is DomainOutboxEvent.AppendPlaybackData -> playback.handle(event)
+        is DomainOutboxEvent.SyncArtistDetails -> catalog.handle(event)
+        is DomainOutboxEvent.SyncAlbumDetails -> catalog.handle(event)
+        is DomainOutboxEvent.ResyncCatalog -> catalog.handle(event)
+        is DomainOutboxEvent.RunPlaylistChecks -> playlistCheck.handle(event)
+      }
     }
 
-    companion object : KLogging()
+  private fun handleDomainOperation(taskDescription: String, operation: () -> Either<DomainError, Unit>): DispatchResult = try {
+    when (val result = operation()) {
+      is Either.Right -> DispatchResult.Success
+      is Either.Left -> when (val error = result.value) {
+        is SpotifyRateLimitError -> {
+          logger.warn { "Rate limited on $taskDescription, retry after ${error.retryAfter.inWholeSeconds}s" }
+          DispatchResult.Paused("Rate limited: $taskDescription", (Clock.System.now() + error.retryAfter).toJavaInstant())
+        }
+        else -> {
+          logger.error { "Failed $taskDescription: ${error.code}" }
+          DispatchResult.Failed("Failed $taskDescription: ${error.code}")
+        }
+      }
+    }
+  } catch (e: Exception) {
+    logger.error(e) { "Unexpected error in $taskDescription" }
+    DispatchResult.Failed("Unexpected error in $taskDescription: ${e.message}", e)
+  }
+
+  companion object : KLogging()
 }

@@ -11,21 +11,21 @@ import kotlin.time.Instant
 @ApplicationScoped
 class PlaybackActivityAdapter : PlaybackActivityPort, PlaybackDetectedObserver {
 
-    private val lastPlaybackDetectedAtRef = AtomicReference<Instant>(Instant.fromEpochMilliseconds(0))
+  private val lastPlaybackDetectedAtRef = AtomicReference<Instant>(Instant.fromEpochMilliseconds(0))
 
-    override fun onPlaybackDetected() {
-        lastPlaybackDetectedAtRef.set(Clock.System.now())
-    }
+  override fun onPlaybackDetected() {
+    lastPlaybackDetectedAtRef.set(Clock.System.now())
+  }
 
-    override fun isPlaybackActive(): Boolean =
-        (Clock.System.now() - lastPlaybackDetectedAtRef.get()) < PLAYBACK_ACTIVE_THRESHOLD
+  override fun isPlaybackActive(): Boolean =
+    (Clock.System.now() - lastPlaybackDetectedAtRef.get()) < PLAYBACK_ACTIVE_THRESHOLD
 
-    override fun lastActivityTimestamp(): Instant? {
-        val ts = lastPlaybackDetectedAtRef.get()
-        return if (ts == Instant.fromEpochMilliseconds(0)) null else ts
-    }
+  override fun lastActivityTimestamp(): Instant? {
+    val ts = lastPlaybackDetectedAtRef.get()
+    return if (ts == Instant.fromEpochMilliseconds(0)) null else ts
+  }
 
-    companion object {
-        private val PLAYBACK_ACTIVE_THRESHOLD = 5.minutes
-    }
+  companion object {
+    private val PLAYBACK_ACTIVE_THRESHOLD = 5.minutes
+  }
 }

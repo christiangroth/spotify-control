@@ -6,7 +6,7 @@ import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 
 interface UserProfilePort {
-    fun enqueueUpdates()
-    fun update(userId: UserId): Either<DomainError, Unit>
-    fun handle(event: DomainOutboxEvent.UpdateUserProfile): Either<DomainError, Unit>
+  fun enqueueUpdates()
+  fun update(userId: UserId): Either<DomainError, Unit>
+  fun handle(event: DomainOutboxEvent.UpdateUserProfile): Either<DomainError, Unit>
 }

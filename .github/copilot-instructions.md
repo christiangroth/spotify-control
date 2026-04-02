@@ -13,6 +13,17 @@
 ./gradlew :application-quarkus:quarkusDev
 ```
 
+## Formatting
+
+All code must follow the formatting rules in `.editorconfig`. The most important rules for Kotlin:
+
+- **2-space indentation** (not 4), no tabs
+- **LF line endings**
+- **Max line length:** 180 characters
+- **Insert final newline** in every file
+
+Always format new and edited files according to `.editorconfig` before committing.
+
 ## Documentation
 
 - **Architecture:** [docs/arc42/arc42.md](../docs/arc42/arc42.md)

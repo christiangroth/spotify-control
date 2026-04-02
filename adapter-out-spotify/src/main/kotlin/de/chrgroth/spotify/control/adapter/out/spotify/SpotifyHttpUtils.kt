@@ -13,19 +13,19 @@ internal const val HTTP_RATE_LIMITED = 429
 internal const val DEFAULT_RETRY_AFTER_SECONDS = 60L
 
 internal fun HttpResponse<String>.checkRateLimitOrError(
-    logger: KLogger,
-    fallbackError: DomainError,
+  logger: KLogger,
+  fallbackError: DomainError,
 ): Either<DomainError, Nothing>? {
-    if (statusCode() == HTTP_RATE_LIMITED) {
-        val retryAfterSeconds = headers().firstValue("Retry-After")
-            .map { it.toLongOrNull() ?: DEFAULT_RETRY_AFTER_SECONDS }
-            .orElse(DEFAULT_RETRY_AFTER_SECONDS)
-        logger.warn { "Spotify rate limit exceeded on ${request().uri().path}, retry after ${retryAfterSeconds}s" }
-        return SpotifyRateLimitError(retryAfterSeconds.seconds).left()
-    }
-    if (statusCode() != HTTP_OK) {
-        logger.error { "Spotify HTTP request to ${request().uri().path} failed with ${statusCode()} - ${body()}" }
-        return fallbackError.left()
-    }
-    return null
+  if (statusCode() == HTTP_RATE_LIMITED) {
+    val retryAfterSeconds = headers().firstValue("Retry-After")
+      .map { it.toLongOrNull() ?: DEFAULT_RETRY_AFTER_SECONDS }
+      .orElse(DEFAULT_RETRY_AFTER_SECONDS)
+    logger.warn { "Spotify rate limit exceeded on ${request().uri().path}, retry after ${retryAfterSeconds}s" }
+    return SpotifyRateLimitError(retryAfterSeconds.seconds).left()
+  }
+  if (statusCode() != HTTP_OK) {
+    logger.error { "Spotify HTTP request to ${request().uri().path} failed with ${statusCode()} - ${body()}" }
+    return fallbackError.left()
+  }
+  return null
 }

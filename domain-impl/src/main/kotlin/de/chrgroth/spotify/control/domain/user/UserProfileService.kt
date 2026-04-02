@@ -16,36 +16,36 @@ import mu.KLogging
 @ApplicationScoped
 @Suppress("Unused")
 class UserProfileService(
-    private val userRepository: UserRepositoryPort,
-    private val spotifyAccessToken: SpotifyAccessTokenPort,
-    private val spotifyAuth: SpotifyAuthPort,
-    private val outboxPort: OutboxPort,
+  private val userRepository: UserRepositoryPort,
+  private val spotifyAccessToken: SpotifyAccessTokenPort,
+  private val spotifyAuth: SpotifyAuthPort,
+  private val outboxPort: OutboxPort,
 ) : UserProfilePort {
 
-    override fun enqueueUpdates() {
-        val users = userRepository.findAll()
-        logger.info { "Scheduling profile update for ${users.size} user(s)" }
-        users.forEach { user ->
-            outboxPort.enqueue(DomainOutboxEvent.UpdateUserProfile(user.spotifyUserId))
-        }
+  override fun enqueueUpdates() {
+    val users = userRepository.findAll()
+    logger.info { "Scheduling profile update for ${users.size} user(s)" }
+    users.forEach { user ->
+      outboxPort.enqueue(DomainOutboxEvent.UpdateUserProfile(user.spotifyUserId))
     }
+  }
 
-    override fun update(userId: UserId): Either<DomainError, Unit> {
-        val user = userRepository.findById(userId) ?: run {
-            logger.warn { "User not found for profile update: ${userId.value}" }
-            return Unit.right()
-        }
-        val accessToken = spotifyAccessToken.getValidAccessToken(userId)
-        return spotifyAuth.getUserProfile(accessToken).map { profile ->
-            if (profile.displayName != user.displayName) {
-                logger.info { "Updating displayName for user ${userId.value}" }
-                userRepository.upsert(user.copy(displayName = profile.displayName))
-            }
-        }
+  override fun update(userId: UserId): Either<DomainError, Unit> {
+    val user = userRepository.findById(userId) ?: run {
+      logger.warn { "User not found for profile update: ${userId.value}" }
+      return Unit.right()
     }
+    val accessToken = spotifyAccessToken.getValidAccessToken(userId)
+    return spotifyAuth.getUserProfile(accessToken).map { profile ->
+      if (profile.displayName != user.displayName) {
+        logger.info { "Updating displayName for user ${userId.value}" }
+        userRepository.upsert(user.copy(displayName = profile.displayName))
+      }
+    }
+  }
 
-    override fun handle(event: DomainOutboxEvent.UpdateUserProfile): Either<DomainError, Unit> =
-        update(event.userId)
+  override fun handle(event: DomainOutboxEvent.UpdateUserProfile): Either<DomainError, Unit> =
+    update(event.userId)
 
-    companion object : KLogging()
+  companion object : KLogging()
 }

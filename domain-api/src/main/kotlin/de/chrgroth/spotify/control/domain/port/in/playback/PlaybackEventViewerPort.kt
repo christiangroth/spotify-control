@@ -5,5 +5,5 @@ import de.chrgroth.spotify.control.domain.model.user.UserId
 import kotlinx.datetime.LocalDate
 
 interface PlaybackEventViewerPort {
-    fun getEvents(userId: UserId, date: LocalDate): PlaybackEventViewerResult
+  fun getEvents(userId: UserId, date: LocalDate): PlaybackEventViewerResult
 }

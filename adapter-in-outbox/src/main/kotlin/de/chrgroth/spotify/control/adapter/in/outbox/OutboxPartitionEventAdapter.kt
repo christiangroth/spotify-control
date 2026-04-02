@@ -17,41 +17,41 @@ import jakarta.enterprise.inject.Instance
 @ApplicationScoped
 @Suppress("Unused")
 class OutboxPartitionEventAdapter(
-    @param:Any private val partitionObservers: Instance<OutboxPartitionObserver>,
-    @param:Any private val taskCountObservers: Instance<OutboxTaskCountObserver>,
+  @param:Any private val partitionObservers: Instance<OutboxPartitionObserver>,
+  @param:Any private val taskCountObservers: Instance<OutboxTaskCountObserver>,
 ) {
 
-    fun onPartitionPaused(@Observes event: OutboxPartitionPausedEvent) {
-        val reason = event.reason?.takeIf { it.isNotBlank() } ?: "unknown"
-        partitionObservers.forEach { it.onPartitionPaused(event.partition.key, reason) }
-    }
+  fun onPartitionPaused(@Observes event: OutboxPartitionPausedEvent) {
+    val reason = event.reason?.takeIf { it.isNotBlank() } ?: "unknown"
+    partitionObservers.forEach { it.onPartitionPaused(event.partition.key, reason) }
+  }
 
-    fun onPartitionActivated(@Observes event: OutboxPartitionActivatedEvent) {
-        partitionObservers.forEach { it.onPartitionActivated(event.partition.key) }
-    }
+  fun onPartitionActivated(@Observes event: OutboxPartitionActivatedEvent) {
+    partitionObservers.forEach { it.onPartitionActivated(event.partition.key) }
+  }
 
-    @Suppress("UnusedParameter")
-    fun onTaskEnqueued(@Observes event: OutboxTaskEnqueuedEvent) {
-        taskCountObservers.forEach { it.onOutboxTaskCountChanged() }
-    }
+  @Suppress("UnusedParameter")
+  fun onTaskEnqueued(@Observes event: OutboxTaskEnqueuedEvent) {
+    taskCountObservers.forEach { it.onOutboxTaskCountChanged() }
+  }
 
-    @Suppress("UnusedParameter")
-    fun onTaskDispatched(@Observes event: OutboxTaskDispatchedEvent) {
-        taskCountObservers.forEach { it.onOutboxTaskCountChanged() }
-    }
+  @Suppress("UnusedParameter")
+  fun onTaskDispatched(@Observes event: OutboxTaskDispatchedEvent) {
+    taskCountObservers.forEach { it.onOutboxTaskCountChanged() }
+  }
 
-    @Suppress("UnusedParameter")
-    fun onTaskFailed(@Observes event: OutboxTaskFailedEvent) {
-        taskCountObservers.forEach { it.onOutboxTaskCountChanged() }
-    }
+  @Suppress("UnusedParameter")
+  fun onTaskFailed(@Observes event: OutboxTaskFailedEvent) {
+    taskCountObservers.forEach { it.onOutboxTaskCountChanged() }
+  }
 
-    @Suppress("UnusedParameter")
-    fun onTaskRescheduled(@Observes event: OutboxTaskRescheduledEvent) {
-        taskCountObservers.forEach { it.onOutboxTaskCountChanged() }
-    }
+  @Suppress("UnusedParameter")
+  fun onTaskRescheduled(@Observes event: OutboxTaskRescheduledEvent) {
+    taskCountObservers.forEach { it.onOutboxTaskCountChanged() }
+  }
 
-    @Suppress("UnusedParameter")
-    fun onTaskRetryScheduled(@Observes event: OutboxTaskRetryScheduledEvent) {
-        taskCountObservers.forEach { it.onOutboxTaskCountChanged() }
-    }
+  @Suppress("UnusedParameter")
+  fun onTaskRetryScheduled(@Observes event: OutboxTaskRetryScheduledEvent) {
+    taskCountObservers.forEach { it.onOutboxTaskCountChanged() }
+  }
 }

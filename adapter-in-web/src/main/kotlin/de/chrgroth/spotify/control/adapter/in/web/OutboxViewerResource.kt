@@ -17,22 +17,22 @@ import jakarta.ws.rs.core.MediaType
 @Suppress("Unused")
 class OutboxViewerResource {
 
-    @Inject
-    @Location("outbox-viewer.html")
-    private lateinit var template: Template
+  @Inject
+  @Location("outbox-viewer.html")
+  private lateinit var template: Template
 
-    @Inject
-    private lateinit var outboxViewer: OutboxViewerPort
+  @Inject
+  private lateinit var outboxViewer: OutboxViewerPort
 
-    @GET
-    @Authenticated
-    @Produces(MediaType.TEXT_HTML)
-    fun viewer(): TemplateInstance = template.data("partitions", outboxViewer.getPartitions())
+  @GET
+  @Authenticated
+  @Produces(MediaType.TEXT_HTML)
+  fun viewer(): TemplateInstance = template.data("partitions", outboxViewer.getPartitions())
 
-    @GET
-    @Path("/snippets/tasks")
-    @Authenticated
-    @Produces(MediaType.TEXT_HTML)
-    fun snippetTasks(): TemplateInstance =
-        template.getFragment("snippet_tasks").data("partitions", outboxViewer.getPartitions())
+  @GET
+  @Path("/snippets/tasks")
+  @Authenticated
+  @Produces(MediaType.TEXT_HTML)
+  fun snippetTasks(): TemplateInstance =
+    template.getFragment("snippet_tasks").data("partitions", outboxViewer.getPartitions())
 }

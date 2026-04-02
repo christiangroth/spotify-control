@@ -9,7 +9,7 @@ import de.chrgroth.spotify.control.domain.model.user.SpotifyRefreshedTokens
 import de.chrgroth.spotify.control.domain.model.user.SpotifyTokens
 
 interface SpotifyAuthPort {
-    fun exchangeCode(code: String): Either<DomainError, SpotifyTokens>
-    fun getUserProfile(accessToken: AccessToken): Either<DomainError, SpotifyProfile>
-    fun refreshToken(refreshToken: RefreshToken): Either<DomainError, SpotifyRefreshedTokens>
+  fun exchangeCode(code: String): Either<DomainError, SpotifyTokens>
+  fun getUserProfile(accessToken: AccessToken): Either<DomainError, SpotifyProfile>
+  fun refreshToken(refreshToken: RefreshToken): Either<DomainError, SpotifyRefreshedTokens>
 }

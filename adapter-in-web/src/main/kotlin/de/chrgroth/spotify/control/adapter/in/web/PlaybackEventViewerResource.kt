@@ -27,31 +27,31 @@ import kotlinx.datetime.toLocalDateTime
 @Suppress("Unused")
 class PlaybackEventViewerResource {
 
-    @Inject
-    @Location("playback-event-viewer.html")
-    private lateinit var template: Template
+  @Inject
+  @Location("playback-event-viewer.html")
+  private lateinit var template: Template
 
-    @Inject
-    private lateinit var securityIdentity: SecurityIdentity
+  @Inject
+  private lateinit var securityIdentity: SecurityIdentity
 
-    @Inject
-    private lateinit var playbackEventViewer: PlaybackEventViewerPort
+  @Inject
+  private lateinit var playbackEventViewer: PlaybackEventViewerPort
 
-    @GET
-    @Authenticated
-    @Produces(MediaType.TEXT_HTML)
-    fun viewer(@QueryParam("date") dateParam: String?): TemplateInstance {
-        val today = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
-        val requestedDate = dateParam?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: today
-        val date = if (requestedDate > today) today else requestedDate
+  @GET
+  @Authenticated
+  @Produces(MediaType.TEXT_HTML)
+  fun viewer(@QueryParam("date") dateParam: String?): TemplateInstance {
+    val today = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
+    val requestedDate = dateParam?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: today
+    val date = if (requestedDate > today) today else requestedDate
 
-        val userId = UserId(securityIdentity.principal.name)
-        val result = playbackEventViewer.getEvents(userId, date)
+    val userId = UserId(securityIdentity.principal.name)
+    val result = playbackEventViewer.getEvents(userId, date)
 
-        return template
-            .data("result", result)
-            .data("prevDate", date.minus(DatePeriod(days = 1)))
-            .data("nextDate", date.plus(DatePeriod(days = 1)))
-            .data("today", today)
-    }
+    return template
+      .data("result", result)
+      .data("prevDate", date.minus(DatePeriod(days = 1)))
+      .data("nextDate", date.plus(DatePeriod(days = 1)))
+      .data("today", today)
+  }
 }

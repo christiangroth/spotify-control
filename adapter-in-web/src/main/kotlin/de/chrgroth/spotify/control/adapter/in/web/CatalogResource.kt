@@ -26,79 +26,79 @@ import mu.KLogging
 @Suppress("Unused")
 class CatalogResource {
 
-    @Inject
-    @Location("catalog.html")
-    private lateinit var catalogTemplate: Template
+  @Inject
+  @Location("catalog.html")
+  private lateinit var catalogTemplate: Template
 
-    @Inject
-    private lateinit var catalogBrowser: CatalogBrowserPort
+  @Inject
+  private lateinit var catalogBrowser: CatalogBrowserPort
 
-    @Inject
-    private lateinit var catalog: CatalogPort
+  @Inject
+  private lateinit var catalog: CatalogPort
 
-    @GET
-    @Authenticated
-    @Produces(MediaType.TEXT_HTML)
-    fun catalog(@QueryParam("filter") filter: String?): TemplateInstance {
-        val filterActive = !filter.isNullOrBlank()
-        val artists = if (filterActive) catalogBrowser.getArtists(filter) else emptyList<ArtistBrowseItem>()
-        return catalogTemplate
-            .data("artists", artists)
-            .data("filter", filter ?: "")
-            .data("filterActive", filterActive)
-            .data("albums", emptyList<AlbumBrowseItem>())
-            .data("tracks", emptyList<TrackBrowseItem>())
-    }
+  @GET
+  @Authenticated
+  @Produces(MediaType.TEXT_HTML)
+  fun catalog(@QueryParam("filter") filter: String?): TemplateInstance {
+    val filterActive = !filter.isNullOrBlank()
+    val artists = if (filterActive) catalogBrowser.getArtists(filter) else emptyList<ArtistBrowseItem>()
+    return catalogTemplate
+      .data("artists", artists)
+      .data("filter", filter ?: "")
+      .data("filterActive", filterActive)
+      .data("albums", emptyList<AlbumBrowseItem>())
+      .data("tracks", emptyList<TrackBrowseItem>())
+  }
 
-    @GET
-    @Path("/artists")
-    @Authenticated
-    @Produces(MediaType.TEXT_HTML)
-    fun artistList(@QueryParam("filter") filter: String?): TemplateInstance {
-        val filterActive = !filter.isNullOrBlank()
-        val artists = if (filterActive) catalogBrowser.getArtists(filter) else emptyList<ArtistBrowseItem>()
-        return catalogTemplate.getFragment("fragment_artist_list")
-            .data("artists", artists)
-            .data("filter", filter ?: "")
-            .data("filterActive", filterActive)
-    }
+  @GET
+  @Path("/artists")
+  @Authenticated
+  @Produces(MediaType.TEXT_HTML)
+  fun artistList(@QueryParam("filter") filter: String?): TemplateInstance {
+    val filterActive = !filter.isNullOrBlank()
+    val artists = if (filterActive) catalogBrowser.getArtists(filter) else emptyList<ArtistBrowseItem>()
+    return catalogTemplate.getFragment("fragment_artist_list")
+      .data("artists", artists)
+      .data("filter", filter ?: "")
+      .data("filterActive", filterActive)
+  }
 
-    @GET
-    @Path("/artists/{artistId}/albums")
-    @Authenticated
-    @Produces(MediaType.TEXT_HTML)
-    fun artistAlbums(@PathParam("artistId") artistId: String): TemplateInstance {
-        val albums = catalogBrowser.getArtistAlbums(artistId)
-        return catalogTemplate.getFragment("fragment_album_list")
-            .data("albums", albums)
-            .data("artistId", artistId)
-    }
+  @GET
+  @Path("/artists/{artistId}/albums")
+  @Authenticated
+  @Produces(MediaType.TEXT_HTML)
+  fun artistAlbums(@PathParam("artistId") artistId: String): TemplateInstance {
+    val albums = catalogBrowser.getArtistAlbums(artistId)
+    return catalogTemplate.getFragment("fragment_album_list")
+      .data("albums", albums)
+      .data("artistId", artistId)
+  }
 
-    @GET
-    @Path("/albums/{albumId}/tracks")
-    @Authenticated
-    @Produces(MediaType.TEXT_HTML)
-    fun albumTracks(@PathParam("albumId") albumId: String): TemplateInstance {
-        val tracks = catalogBrowser.getAlbumTracks(albumId)
-        return catalogTemplate.getFragment("fragment_track_list")
-            .data("tracks", tracks)
-    }
+  @GET
+  @Path("/albums/{albumId}/tracks")
+  @Authenticated
+  @Produces(MediaType.TEXT_HTML)
+  fun albumTracks(@PathParam("albumId") albumId: String): TemplateInstance {
+    val tracks = catalogBrowser.getAlbumTracks(albumId)
+    return catalogTemplate.getFragment("fragment_track_list")
+      .data("tracks", tracks)
+  }
 
-    @POST
-    @Authenticated
-    @Path("/wipe")
-    @Produces(MediaType.APPLICATION_JSON)
-    fun wipeCatalog(): Response {
-        return catalog.wipeCatalog().fold(
-            ifLeft = { error ->
-                logger.error { "Catalog wipe failed: ${error.code}" }
-                Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(mapOf("error" to "Wipe failed: ${error.code}"))
-                    .build()
-            },
-            ifRight = { Response.ok(mapOf("status" to "ok")).build() },
-        )
-    }
+  @POST
+  @Authenticated
+  @Path("/wipe")
+  @Produces(MediaType.APPLICATION_JSON)
+  fun wipeCatalog(): Response {
+    return catalog.wipeCatalog().fold(
+      ifLeft = { error ->
+        logger.error { "Catalog wipe failed: ${error.code}" }
+        Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+          .entity(mapOf("error" to "Wipe failed: ${error.code}"))
+          .build()
+      },
+      ifRight = { Response.ok(mapOf("status" to "ok")).build() },
+    )
+  }
 
-    companion object : KLogging()
+  companion object : KLogging()
 }

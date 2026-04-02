@@ -8,19 +8,19 @@ import jakarta.enterprise.context.ApplicationScoped
 @ApplicationScoped
 @Suppress("Unused")
 class RuntimeConfigService(
-    private val spotifyThrottling: SpotifyThrottlingPort,
+  private val spotifyThrottling: SpotifyThrottlingPort,
 ) : RuntimeConfigPort {
 
-    override fun getRuntimeConfig(): RuntimeConfig = RuntimeConfig(
-        throttleIntervalSeconds = spotifyThrottling.getThrottleIntervalMs() / MILLIS_PER_SECOND,
-        defaultThrottleIntervalSeconds = spotifyThrottling.getDefaultThrottleIntervalMs() / MILLIS_PER_SECOND,
-    )
+  override fun getRuntimeConfig(): RuntimeConfig = RuntimeConfig(
+    throttleIntervalSeconds = spotifyThrottling.getThrottleIntervalMs() / MILLIS_PER_SECOND,
+    defaultThrottleIntervalSeconds = spotifyThrottling.getDefaultThrottleIntervalMs() / MILLIS_PER_SECOND,
+  )
 
-    override fun setThrottleIntervalSeconds(seconds: Long) {
-        spotifyThrottling.setThrottleIntervalMs(seconds * MILLIS_PER_SECOND)
-    }
+  override fun setThrottleIntervalSeconds(seconds: Long) {
+    spotifyThrottling.setThrottleIntervalMs(seconds * MILLIS_PER_SECOND)
+  }
 
-    companion object {
-        private const val MILLIS_PER_SECOND = 1000L
-    }
+  companion object {
+    private const val MILLIS_PER_SECOND = 1000L
+  }
 }

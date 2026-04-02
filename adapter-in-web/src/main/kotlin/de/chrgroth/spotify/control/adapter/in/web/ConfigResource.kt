@@ -23,37 +23,37 @@ import kotlin.coroutines.CoroutineContext
 @Suppress("Unused")
 class ConfigResource {
 
-    @Inject
-    @Location("config.html")
-    private lateinit var configTemplate: Template
+  @Inject
+  @Location("config.html")
+  private lateinit var configTemplate: Template
 
-    @Inject
-    private lateinit var configurationInfo: ConfigurationInfoPort
+  @Inject
+  private lateinit var configurationInfo: ConfigurationInfoPort
 
-    @Inject
-    private lateinit var runtimeConfig: RuntimeConfigPort
+  @Inject
+  private lateinit var runtimeConfig: RuntimeConfigPort
 
-    @GET
-    @Authenticated
-    @Produces(MediaType.TEXT_HTML)
-    fun config(): TemplateInstance = runBlocking {
-        val dispatcher = Dispatchers.IO + tcclContext()
-        val statsAsync = async(dispatcher) { configurationInfo.getConfigurationStats() }
-        val runtimeConfigAsync = async(dispatcher) { runtimeConfig.getRuntimeConfig() }
-        configTemplate
-            .data("stats", statsAsync.await())
-            .data("runtimeConfig", runtimeConfigAsync.await())
-    }
+  @GET
+  @Authenticated
+  @Produces(MediaType.TEXT_HTML)
+  fun config(): TemplateInstance = runBlocking {
+    val dispatcher = Dispatchers.IO + tcclContext()
+    val statsAsync = async(dispatcher) { configurationInfo.getConfigurationStats() }
+    val runtimeConfigAsync = async(dispatcher) { runtimeConfig.getRuntimeConfig() }
+    configTemplate
+      .data("stats", statsAsync.await())
+      .data("runtimeConfig", runtimeConfigAsync.await())
+  }
 }
 
 private class TcclContext(private val classLoader: ClassLoader) : ThreadContextElement<ClassLoader?> {
-    companion object Key : CoroutineContext.Key<TcclContext>
-    override val key: CoroutineContext.Key<*> = Key
-    override fun updateThreadContext(context: CoroutineContext): ClassLoader? =
-        Thread.currentThread().contextClassLoader.also { Thread.currentThread().contextClassLoader = classLoader }
-    override fun restoreThreadContext(context: CoroutineContext, oldState: ClassLoader?) {
-        Thread.currentThread().contextClassLoader = oldState
-    }
+  companion object Key : CoroutineContext.Key<TcclContext>
+  override val key: CoroutineContext.Key<*> = Key
+  override fun updateThreadContext(context: CoroutineContext): ClassLoader? =
+    Thread.currentThread().contextClassLoader.also { Thread.currentThread().contextClassLoader = classLoader }
+  override fun restoreThreadContext(context: CoroutineContext, oldState: ClassLoader?) {
+    Thread.currentThread().contextClassLoader = oldState
+  }
 }
 
 private fun tcclContext(): TcclContext = TcclContext(Thread.currentThread().contextClassLoader)

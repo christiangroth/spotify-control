@@ -16,53 +16,53 @@ private const val MASKED_ENV_KEYS_PROPERTY = "app.health.masked-env-keys"
 @ApplicationScoped
 @Suppress("Unused")
 class ConfigurationInfoAdapter(
-    @ConfigProperty(name = MASKED_CONFIG_KEYS_PROPERTY)
-    maskedConfigKeys: List<String>,
-    @ConfigProperty(name = MASKED_ENV_KEYS_PROPERTY)
-    maskedEnvKeys: List<String>,
+  @ConfigProperty(name = MASKED_CONFIG_KEYS_PROPERTY)
+  maskedConfigKeys: List<String>,
+  @ConfigProperty(name = MASKED_ENV_KEYS_PROPERTY)
+  maskedEnvKeys: List<String>,
 ) : ConfigurationInfoPort {
 
-    private val configKeyMasks = maskedConfigKeys
-    private val envKeyMasks = maskedEnvKeys
-    private val cachedStats: ConfigurationStats by lazy { buildConfigurationStats() }
+  private val configKeyMasks = maskedConfigKeys
+  private val envKeyMasks = maskedEnvKeys
+  private val cachedStats: ConfigurationStats by lazy { buildConfigurationStats() }
 
-    override fun getConfigurationStats(): ConfigurationStats = cachedStats
+  override fun getConfigurationStats(): ConfigurationStats = cachedStats
 
-    private fun buildConfigurationStats(): ConfigurationStats {
-        val config = ConfigProvider.getConfig()
-        val configEntries = config.propertyNames
-            .filter { key -> !key.startsWith("%dev.") && !key.startsWith("%test.") }
-            .filter { key -> !ENV_KEY_PATTERN.matches(key) }
-            .filter { key -> key != MASKED_CONFIG_KEYS_PROPERTY && key != MASKED_ENV_KEYS_PROPERTY }
-            .sorted()
-            .map { key ->
-                val value = if (shouldMaskConfigKey(key)) {
-                    MASKED_VALUE
-                } else {
-                    runCatching { config.getOptionalValue(key, String::class.java).orElse("") }
-                        .getOrElse { e ->
-                            logger.warn(e) { "Failed to read config value for key '$key'" }
-                            ERROR_VALUE
-                        }
-                }
-                ConfigEntry(key, value)
+  private fun buildConfigurationStats(): ConfigurationStats {
+    val config = ConfigProvider.getConfig()
+    val configEntries = config.propertyNames
+      .filter { key -> !key.startsWith("%dev.") && !key.startsWith("%test.") }
+      .filter { key -> !ENV_KEY_PATTERN.matches(key) }
+      .filter { key -> key != MASKED_CONFIG_KEYS_PROPERTY && key != MASKED_ENV_KEYS_PROPERTY }
+      .sorted()
+      .map { key ->
+        val value = if (shouldMaskConfigKey(key)) {
+          MASKED_VALUE
+        } else {
+          runCatching { config.getOptionalValue(key, String::class.java).orElse("") }
+            .getOrElse { e ->
+              logger.warn(e) { "Failed to read config value for key '$key'" }
+              ERROR_VALUE
             }
-        val envEntries = System.getenv()
-            .entries
-            .sortedBy { it.key }
-            .map { (key, value) ->
-                ConfigEntry(key, if (envKeyMasks.contains(key)) MASKED_VALUE else value)
-            }
-        return ConfigurationStats(configEntries, envEntries)
-    }
+        }
+        ConfigEntry(key, value)
+      }
+    val envEntries = System.getenv()
+      .entries
+      .sortedBy { it.key }
+      .map { (key, value) ->
+        ConfigEntry(key, if (envKeyMasks.contains(key)) MASKED_VALUE else value)
+      }
+    return ConfigurationStats(configEntries, envEntries)
+  }
 
-    private fun shouldMaskConfigKey(key: String): Boolean {
-        if (configKeyMasks.contains(key)) return true
-        val keyWithoutProfile = if (key.startsWith("%")) key.substringAfter(".") else key
-        return configKeyMasks.contains(keyWithoutProfile)
-    }
+  private fun shouldMaskConfigKey(key: String): Boolean {
+    if (configKeyMasks.contains(key)) return true
+    val keyWithoutProfile = if (key.startsWith("%")) key.substringAfter(".") else key
+    return configKeyMasks.contains(keyWithoutProfile)
+  }
 
-    companion object : KLogging() {
-        private val ENV_KEY_PATTERN = Regex("^[A-Z][A-Z0-9_]*$")
-    }
+  companion object : KLogging() {
+    private val ENV_KEY_PATTERN = Regex("^[A-Z][A-Z0-9_]*$")
+  }
 }

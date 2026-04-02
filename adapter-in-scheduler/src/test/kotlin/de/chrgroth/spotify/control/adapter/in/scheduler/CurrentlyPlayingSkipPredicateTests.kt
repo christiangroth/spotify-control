@@ -10,42 +10,42 @@ import org.junit.jupiter.api.Test
 
 class CurrentlyPlayingSkipPredicateTests {
 
-    private val starterSkipPredicate: ScheduledSkipPredicate = mockk(relaxed = true)
-    private val playbackActivity: PlaybackActivityPort = mockk()
-    private val execution: ScheduledExecution = mockk(relaxed = true)
+  private val starterSkipPredicate: ScheduledSkipPredicate = mockk(relaxed = true)
+  private val playbackActivity: PlaybackActivityPort = mockk()
+  private val execution: ScheduledExecution = mockk(relaxed = true)
 
-    private val predicate = CurrentlyPlayingSkipPredicate(playbackActivity, starterSkipPredicate)
+  private val predicate = CurrentlyPlayingSkipPredicate(playbackActivity, starterSkipPredicate)
 
-    @Test
-    fun `skips when ScheduledSkipPredicate returns true`() {
-        every { starterSkipPredicate.test(execution) } returns true
+  @Test
+  fun `skips when ScheduledSkipPredicate returns true`() {
+    every { starterSkipPredicate.test(execution) } returns true
 
-        assertThat(predicate.test(execution)).isTrue()
-    }
+    assertThat(predicate.test(execution)).isTrue()
+  }
 
-    @Test
-    fun `does not skip on first call when no playback active`() {
-        every { starterSkipPredicate.test(execution) } returns false
-        every { playbackActivity.isPlaybackActive() } returns false
+  @Test
+  fun `does not skip on first call when no playback active`() {
+    every { starterSkipPredicate.test(execution) } returns false
+    every { playbackActivity.isPlaybackActive() } returns false
 
-        assertThat(predicate.test(execution)).isFalse()
-    }
+    assertThat(predicate.test(execution)).isFalse()
+  }
 
-    @Test
-    fun `skips on second immediate call when no playback active (slow interval not elapsed)`() {
-        every { starterSkipPredicate.test(execution) } returns false
-        every { playbackActivity.isPlaybackActive() } returns false
-        predicate.test(execution)
+  @Test
+  fun `skips on second immediate call when no playback active (slow interval not elapsed)`() {
+    every { starterSkipPredicate.test(execution) } returns false
+    every { playbackActivity.isPlaybackActive() } returns false
+    predicate.test(execution)
 
-        assertThat(predicate.test(execution)).isTrue()
-    }
+    assertThat(predicate.test(execution)).isTrue()
+  }
 
-    @Test
-    fun `skips on second immediate call when playback active (fast interval not elapsed)`() {
-        every { starterSkipPredicate.test(execution) } returns false
-        every { playbackActivity.isPlaybackActive() } returns true
-        predicate.test(execution)
+  @Test
+  fun `skips on second immediate call when playback active (fast interval not elapsed)`() {
+    every { starterSkipPredicate.test(execution) } returns false
+    every { playbackActivity.isPlaybackActive() } returns true
+    predicate.test(execution)
 
-        assertThat(predicate.test(execution)).isTrue()
-    }
+    assertThat(predicate.test(execution)).isTrue()
+  }
 }

@@ -16,15 +16,15 @@ import org.jboss.resteasy.reactive.RestStreamElementType
 @ApplicationScoped
 @Suppress("Unused")
 class HealthSseResource(
-    private val sseAdapter: HealthSseAdapter,
+  private val sseAdapter: HealthSseAdapter,
 ) {
 
-    @Inject
-    private lateinit var securityIdentity: SecurityIdentity
+  @Inject
+  private lateinit var securityIdentity: SecurityIdentity
 
-    @GET
-    @Authenticated
-    @Produces(MediaType.SERVER_SENT_EVENTS)
-    @RestStreamElementType(MediaType.TEXT_PLAIN)
-    fun events(): Multi<String> = sseAdapter.stream(UserId(securityIdentity.principal.name))
+  @GET
+  @Authenticated
+  @Produces(MediaType.SERVER_SENT_EVENTS)
+  @RestStreamElementType(MediaType.TEXT_PLAIN)
+  fun events(): Multi<String> = sseAdapter.stream(UserId(securityIdentity.principal.name))
 }

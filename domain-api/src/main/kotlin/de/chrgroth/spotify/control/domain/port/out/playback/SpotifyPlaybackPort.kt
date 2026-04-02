@@ -9,6 +9,6 @@ import de.chrgroth.spotify.control.domain.model.user.UserId
 import kotlin.time.Instant
 
 interface SpotifyPlaybackPort {
-    fun getCurrentlyPlaying(userId: UserId, accessToken: AccessToken): Either<DomainError, CurrentlyPlayingItem?>
-    fun getRecentlyPlayed(userId: UserId, accessToken: AccessToken, after: Instant? = null): Either<DomainError, List<RecentlyPlayedItem>>
+  fun getCurrentlyPlaying(userId: UserId, accessToken: AccessToken): Either<DomainError, CurrentlyPlayingItem?>
+  fun getRecentlyPlayed(userId: UserId, accessToken: AccessToken, after: Instant? = null): Either<DomainError, List<RecentlyPlayedItem>>
 }
