@@ -1,3 +1,13 @@
+# 0.78.3 (2026.04.02)
+
+## Bugfixes / Chore
+* Updated outbox library to 0.8.0.
+* Updated starters library to version 0.6.1.
+
+
+
+---
+
 # 0.78.2 (2026.03.26)
 
 ## Bugfixes / Chore
