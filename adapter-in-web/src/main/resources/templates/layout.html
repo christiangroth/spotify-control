@@ -9,10 +9,17 @@
     <style>
         :root {
             --spotify-green: #1db954;
+            --color-bg-card: #1e1e1e;
+            --color-bg-nested: #161616;
+            --color-border: #333;
+            --color-border-muted: #444;
+            --color-text-primary: #e0e0e0;
+            --color-text-muted: #888;
+            --color-danger: #dc3545;
         }
         body {
             background-color: #121212;
-            color: #e0e0e0;
+            color: var(--color-text-primary);
         }
         .app-navbar {
             background-color: #000000;
@@ -23,7 +30,7 @@
             letter-spacing: 0.04em;
         }
         .app-navbar .app-version {
-            color: #888888;
+            color: var(--color-text-muted);
             font-size: 0.8rem;
         }
         .app-navbar .nav-link {
@@ -41,20 +48,48 @@
             background-color: #1ed760;
             color: #000000;
         }
+        /* Dark card with app border */
+        .app-card {
+            background-color: var(--color-bg-card);
+            border-color: var(--color-border) !important;
+        }
+        /* Section label / card subtitle */
+        .app-section-label {
+            color: var(--color-text-muted);
+            font-size: .8rem;
+        }
+        /* Transparent table used in dark cards (health, config) */
+        .app-table {
+            color: var(--color-text-primary);
+            background-color: transparent;
+        }
+        .app-table th,
+        .app-table td {
+            border-color: var(--color-border) !important;
+            background-color: transparent !important;
+        }
+        .app-table thead th {
+            color: var(--color-text-muted);
+            font-weight: 400;
+        }
+        /* Override Bootstrap's dark table border with app color */
+        .table-dark {
+            --bs-table-border-color: var(--color-border);
+        }
         .docs-content h1, .docs-content h2, .docs-content h3 {
-            color: #e0e0e0;
-            border-bottom: 1px solid #333333;
+            color: var(--color-text-primary);
+            border-bottom: 1px solid var(--color-border);
             padding-bottom: 0.3em;
             margin-top: 1.5em;
         }
         .docs-content code {
-            background-color: #1e1e1e;
+            background-color: var(--color-bg-card);
             padding: 0.1em 0.4em;
             border-radius: 3px;
             font-family: monospace;
         }
         .docs-content pre {
-            background-color: #1e1e1e;
+            background-color: var(--color-bg-card);
             padding: 1em;
             border-radius: 4px;
             overflow-x: auto;
@@ -69,11 +104,11 @@
             margin-bottom: 1em;
         }
         .docs-content th, .docs-content td {
-            border: 1px solid #333333;
+            border: 1px solid var(--color-border);
             padding: 0.5em 0.75em;
         }
         .docs-content th {
-            background-color: #1e1e1e;
+            background-color: var(--color-bg-card);
         }
         .docs-content a {
             color: var(--spotify-green);
@@ -82,7 +117,7 @@
             max-width: 860px;
         }
         .form-control::placeholder {
-            color: #888;
+            color: var(--color-text-muted);
             opacity: 1;
         }
     </style>
@@ -101,6 +136,10 @@
             </symbol>
             <symbol id="icon-music" viewBox="0 0 16 16">
                 <path d="M6 13c0 1.105-1.12 2-2.5 2S1 14.105 1 13s1.12-2 2.5-2 2.5.895 2.5 2m9-2c0 1.105-1.12 2-2.5 2s-2.5-.895-2.5-2 1.12-2 2.5-2 2.5.895 2.5 2"/><path d="M14 11V2h1v9zM6 3v10H5V3z"/><path d="M5 2.905a1 1 0 0 1 .9-.995l8-.8a1 1 0 0 1 1.1.995V3L5 4z"/>
+            </symbol>
+            <symbol id="icon-user-placeholder" viewBox="0 0 16 16">
+                <path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0"/>
+                <path fill-rule="evenodd" d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1"/>
             </symbol>
         </defs>
     </svg>
@@ -146,6 +185,8 @@
         {/insert}
     </nav>
     <script src="/webjars/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="/webjars/htmx.org/dist/htmx.min.js"></script>
+    <script src="/webjars/htmx.org/dist/ext/json-enc.js"></script>
     <script src="/webjars/marked/lib/marked.umd.js"></script>
     <script src="/sse-utils.js"></script>
     {#insert scripts}{/insert}

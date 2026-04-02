@@ -9,7 +9,12 @@
 
         <h2 class="fs-5 fw-semibold mb-2">Playback Data</h2>
         <p class="text-secondary small mb-3">Rebuild all processed playback data (app_playback and app_track_data) from scratch by reprocessing the raw Spotify data. Use this if your playback stats appear incomplete or outdated.</p>
-        <button id="rebuild-playback-btn" class="btn btn-spotify btn-sm">Recreate Playback Data</button>
+        <button id="rebuild-playback-btn" class="btn btn-spotify btn-sm"
+            hx-post="/settings/playback/rebuild"
+            hx-swap="none"
+            hx-disabled-elt="this"
+            data-success-msg="Playback data rebuild enqueued successfully."
+            data-error-prefix="Rebuild failed">Recreate Playback Data</button>
 
         <hr class="my-4" style="border-color:#333;">
 
@@ -43,8 +48,26 @@
                                     {/if}
                                     <span class="flex-grow-1 text-truncate small" style="min-width:0" title="{artist.artistName}">{artist.artistName}</span>
                                     <div class="d-flex gap-1 flex-shrink-0">
-                                        <button class="btn btn-sm btn-outline-success artist-status-btn py-0 px-1" data-artist-id="{artist.artistId}" data-new-status="ACTIVE" title="Set Active">✓</button>
-                                        <button class="btn btn-sm btn-outline-danger artist-status-btn py-0 px-1" data-artist-id="{artist.artistId}" data-new-status="INACTIVE" title="Set Inactive">✗</button>
+                                        <button class="btn btn-sm btn-outline-success py-0 px-1"
+                                            hx-put="/settings/playback/artists/{artist.artistId}/status"
+                                            hx-ext="json-enc"
+                                            hx-vals='{"status": "ACTIVE"}'
+                                            hx-swap="none"
+                                            hx-disabled-elt="this"
+                                            data-success-msg="Artist status updated. Reloading..."
+                                            data-error-prefix="Failed to update artist status"
+                                            data-on-success="reload"
+                                            title="Set Active">✓</button>
+                                        <button class="btn btn-sm btn-outline-danger py-0 px-1"
+                                            hx-put="/settings/playback/artists/{artist.artistId}/status"
+                                            hx-ext="json-enc"
+                                            hx-vals='{"status": "INACTIVE"}'
+                                            hx-swap="none"
+                                            hx-disabled-elt="this"
+                                            data-success-msg="Artist status updated. Reloading..."
+                                            data-error-prefix="Failed to update artist status"
+                                            data-on-success="reload"
+                                            title="Set Inactive">✗</button>
                                     </div>
                                 </div>
                             </li>
@@ -77,7 +100,16 @@
                                     {/if}
                                     <span class="flex-grow-1 text-truncate small" style="min-width:0" title="{artist.artistName}">{artist.artistName}</span>
                                     <div class="d-flex gap-1 flex-shrink-0">
-                                        <button class="btn btn-sm btn-outline-danger artist-status-btn py-0 px-1" data-artist-id="{artist.artistId}" data-new-status="INACTIVE" title="Set Inactive">✗</button>
+                                        <button class="btn btn-sm btn-outline-danger py-0 px-1"
+                                            hx-put="/settings/playback/artists/{artist.artistId}/status"
+                                            hx-ext="json-enc"
+                                            hx-vals='{"status": "INACTIVE"}'
+                                            hx-swap="none"
+                                            hx-disabled-elt="this"
+                                            data-success-msg="Artist status updated. Reloading..."
+                                            data-error-prefix="Failed to update artist status"
+                                            data-on-success="reload"
+                                            title="Set Inactive">✗</button>
                                     </div>
                                 </div>
                             </li>
@@ -110,7 +142,16 @@
                                     {/if}
                                     <span class="flex-grow-1 text-truncate small" style="min-width:0" title="{artist.artistName}">{artist.artistName}</span>
                                     <div class="d-flex gap-1 flex-shrink-0">
-                                        <button class="btn btn-sm btn-outline-success artist-status-btn py-0 px-1" data-artist-id="{artist.artistId}" data-new-status="ACTIVE" title="Set Active">✓</button>
+                                        <button class="btn btn-sm btn-outline-success py-0 px-1"
+                                            hx-put="/settings/playback/artists/{artist.artistId}/status"
+                                            hx-ext="json-enc"
+                                            hx-vals='{"status": "ACTIVE"}'
+                                            hx-swap="none"
+                                            hx-disabled-elt="this"
+                                            data-success-msg="Artist status updated. Reloading..."
+                                            data-error-prefix="Failed to update artist status"
+                                            data-on-success="reload"
+                                            title="Set Active">✓</button>
                                     </div>
                                 </div>
                             </li>
@@ -126,7 +167,13 @@
         </div>
         <div class="row mt-3">
             <div class="col-12">
-                <button id="sync-from-playlists-btn" class="btn btn-spotify btn-sm">Update from playlists</button>
+                <button id="sync-from-playlists-btn" class="btn btn-spotify btn-sm"
+                    hx-post="/settings/playback/sync-from-playlists"
+                    hx-swap="none"
+                    hx-disabled-elt="this"
+                    data-success-msg="Artist playback state synced from playlists. Reloading..."
+                    data-error-prefix="Sync failed"
+                    data-on-success="reload">Update from playlists</button>
             </div>
         </div>
     </div>
@@ -145,10 +192,28 @@
             <span class="flex-grow-1 text-truncate small" style="min-width:0" title="{artist.artistName}">{artist.artistName}</span>
             <div class="d-flex gap-1 flex-shrink-0">
                 {#if status == "UNDECIDED" || status == "INACTIVE"}
-                <button class="btn btn-sm btn-outline-success artist-status-btn py-0 px-1" data-artist-id="{artist.artistId}" data-new-status="ACTIVE" title="Set Active">✓</button>
+                <button class="btn btn-sm btn-outline-success py-0 px-1"
+                    hx-put="/settings/playback/artists/{artist.artistId}/status"
+                    hx-ext="json-enc"
+                    hx-vals='{"status": "ACTIVE"}'
+                    hx-swap="none"
+                    hx-disabled-elt="this"
+                    data-success-msg="Artist status updated. Reloading..."
+                    data-error-prefix="Failed to update artist status"
+                    data-on-success="reload"
+                    title="Set Active">✓</button>
                 {/if}
                 {#if status == "UNDECIDED" || status == "ACTIVE"}
-                <button class="btn btn-sm btn-outline-danger artist-status-btn py-0 px-1" data-artist-id="{artist.artistId}" data-new-status="INACTIVE" title="Set Inactive">✗</button>
+                <button class="btn btn-sm btn-outline-danger py-0 px-1"
+                    hx-put="/settings/playback/artists/{artist.artistId}/status"
+                    hx-ext="json-enc"
+                    hx-vals='{"status": "INACTIVE"}'
+                    hx-swap="none"
+                    hx-disabled-elt="this"
+                    data-success-msg="Artist status updated. Reloading..."
+                    data-error-prefix="Failed to update artist status"
+                    data-on-success="reload"
+                    title="Set Inactive">✗</button>
                 {/if}
             </div>
         </div>
@@ -160,16 +225,6 @@
     {/fragment}
 
     <script>
-        document.getElementById('rebuild-playback-btn').addEventListener('click', function() {
-            postWithButton(this, '/settings/playback/rebuild', 'Playback data rebuild enqueued successfully.', 'Rebuild failed');
-        });
-
-        document.getElementById('sync-from-playlists-btn').addEventListener('click', function() {
-            postWithButton(this, '/settings/playback/sync-from-playlists', 'Artist playback state synced from playlists. Reloading...', 'Sync failed', function() {
-                setTimeout(function() { window.location.reload(); }, 1000);
-            });
-        });
-
         (function() {
             document.getElementById('artist-filter').addEventListener('input', function() {
                 var pattern = this.value;
@@ -204,37 +259,6 @@
                 });
             });
         })();
-
-        document.addEventListener('click', function(e) {
-            var btn = e.target.closest('.artist-status-btn');
-            if (!btn) return;
-            var artistId = btn.getAttribute('data-artist-id');
-            var newStatus = btn.getAttribute('data-new-status');
-            btn.disabled = true;
-            fetch('/settings/playback/artists/' + encodeURIComponent(artistId) + '/status', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: newStatus })
-            })
-            .then(function(response) {
-                return response.json().then(function(data) {
-                    return { ok: response.ok, data: data };
-                });
-            })
-            .then(function(result) {
-                if (result.ok) {
-                    showBanner('Artist status updated to ' + result.data.status + '. Reloading...', 'success');
-                    setTimeout(function() { window.location.reload(); }, 1000);
-                } else {
-                    showBanner('Failed to update artist status: ' + (result.data.error || 'Unknown error'), 'danger');
-                    btn.disabled = false;
-                }
-            })
-            .catch(function(err) {
-                showBanner('Request failed: ' + err.message, 'danger');
-                btn.disabled = false;
-            });
-        });
 
         (function() {
             var SENTINEL_PRELOAD_PX = 100;

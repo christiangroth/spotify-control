@@ -13,6 +13,7 @@ dependencies {
   api("io.quarkus:quarkus-web-dependency-locator")
 
   implementation(libs.bootstrap)
+  implementation(libs.htmx)
   implementation(libs.marked)
 }
 

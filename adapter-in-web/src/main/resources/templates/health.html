@@ -9,23 +9,23 @@
             <h2 class="mb-3 fs-6 fw-semibold text-uppercase" style="color:#888;letter-spacing:.05em;">Communication</h2>
             <div class="row g-3 mb-4">
                 <div class="col-12 col-sm-6 col-lg-6">
-                    <div id="snippet-outgoing-http-calls" class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                    <div id="snippet-outgoing-http-calls" class="card h-100 app-card">
                         {#fragment id="snippet_outgoing_http_calls"}
                         <div class="card-body">
-                            <p class="card-subtitle mb-3" style="color:#888;font-size:.8rem;">Outgoing HTTP Requests (Last 24h)</p>
+                            <p class="card-subtitle mb-3 app-section-label">Outgoing HTTP Requests (Last 24h)</p>
                             <div class="table-responsive">
-                                <table class="table table-sm mb-0" style="color:#e0e0e0;background-color:transparent;" data-testid="outgoing-requests-table">
+                                <table class="table table-sm mb-0 app-table" data-testid="outgoing-requests-table">
                                     <thead>
-                                        <tr style="border-color:#333;">
-                                            <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Endpoint</th>
-                                            <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">#</th>
+                                        <tr>
+                                            <th>Endpoint</th>
+                                            <th class="text-end">#</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {#for r in stats.outgoingRequestStats}
-                                        <tr style="border-color:#333;">
-                                            <td style="border-color:#333;color:#e0e0e0;background-color:transparent;">{r.endpoint}</td>
-                                            <td style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">{r.requestCountLast24h.formatted}</td>
+                                        <tr>
+                                            <td>{r.endpoint}</td>
+                                            <td class="text-end">{r.requestCountLast24h.formatted}</td>
                                         </tr>
                                         {/for}
                                     </tbody>
@@ -36,23 +36,23 @@
                     </div>
                 </div>
                 <div class="col-12 col-sm-6 col-lg-6">
-                    <div id="snippet-outbox-partitions" class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                    <div id="snippet-outbox-partitions" class="card h-100 app-card">
                         {#fragment id="snippet_outbox_partitions"}
                         <div class="card-body">
-                            <p class="card-subtitle mb-3" style="color:#888;font-size:.8rem;">Outbox Partitions</p>
+                            <p class="card-subtitle mb-3 app-section-label">Outbox Partitions</p>
                             <div class="table-responsive">
-                                <table class="table table-sm mb-0" style="color:#e0e0e0;background-color:transparent;" data-testid="outbox-table">
+                                <table class="table table-sm mb-0 app-table" data-testid="outbox-table">
                                     <thead>
-                                        <tr style="border-color:#333;">
-                                            <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Partition</th>
-                                            <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">Blocked</th>
-                                            <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">#</th>
+                                        <tr>
+                                            <th>Partition</th>
+                                            <th class="text-end">Blocked</th>
+                                            <th class="text-end">#</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {#for p in stats.outboxPartitions}
-                                        <tr style="border-color:#333;" {#if p.blockedUntil}data-blocked-until="{p.blockedUntil.toEpochMilliseconds()}"{/if}>
-                                            <td style="border-color:#333;color:#e0e0e0;background-color:transparent;">
+                                        <tr {#if p.blockedUntil}data-blocked-until="{p.blockedUntil.toEpochMilliseconds()}"{/if}>
+                                            <td>
                                                 {#if p.status == "ACTIVE"}
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#1db954" viewBox="0 0 16 16" style="vertical-align:middle;margin-right:4px;">
                                                     <use href="#icon-check-circle"/>
@@ -64,18 +64,18 @@
                                                 {/if}
                                                 {p.name}
                                             </td>
-                                            <td class="outbox-blocked-until" style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">-</td>
-                                            <td style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;" data-testid="outbox-doc-count">{p.documentCount.formatted}</td>
+                                            <td class="outbox-blocked-until text-end">-</td>
+                                            <td class="text-end" data-testid="outbox-doc-count">{p.documentCount.formatted}</td>
                                         </tr>
                                         {#if p.documentCount > 0}
-                                        <tr class="outbox-detail-row" data-partition="{p.name}" style="border-color:#333;">
-                                            <td colspan="3" style="padding:4px 8px 4px 24px;background-color:#161616;border-color:#333;">
+                                        <tr class="outbox-detail-row" data-partition="{p.name}">
+                                            <td colspan="3" style="padding:4px 8px 4px 24px;background-color:var(--color-bg-nested);">
                                                 <table class="table table-sm mb-0" style="color:#aaa;background-color:transparent;font-size:0.8rem;">
                                                     <tbody>
                                                         {#for etc in p.eventTypeCounts}
-                                                        <tr style="border-color:#2a2a2a;">
-                                                            <td style="border-color:#2a2a2a;color:#bbb;background-color:transparent;">{etc.eventType}</td>
-                                                            <td style="border-color:#2a2a2a;color:#bbb;text-align:right;background-color:transparent;">{etc.count.formatted}</td>
+                                                        <tr>
+                                                            <td>{etc.eventType}</td>
+                                                            <td class="text-end">{etc.count.formatted}</td>
                                                         </tr>
                                                         {/for}
                                                     </tbody>
@@ -96,23 +96,23 @@
             <h2 class="mb-3 fs-6 fw-semibold text-uppercase" style="color:#888;letter-spacing:.05em;">Cronjobs &amp; State</h2>
             <div class="row g-3 mb-4">
                 <div class="col-12 col-lg-6">
-                    <div id="snippet-cronjobs" class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                    <div id="snippet-cronjobs" class="card h-100 app-card">
                         {#fragment id="snippet_cronjobs"}
                         <div class="card-body">
-                            <p class="card-subtitle mb-3" style="color:#888;font-size:.8rem;">Cronjobs</p>
+                            <p class="card-subtitle mb-3 app-section-label">Cronjobs</p>
                             <div class="table-responsive">
-                                <table class="table table-sm mb-0" style="color:#e0e0e0;background-color:transparent;" data-testid="cronjobs-table">
+                                <table class="table table-sm mb-0 app-table" data-testid="cronjobs-table">
                                     <thead>
-                                        <tr style="border-color:#333;">
-                                            <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Job</th>
-                                            <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Cron</th>
-                                            <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">Next</th>
+                                        <tr>
+                                            <th>Job</th>
+                                            <th>Cron</th>
+                                            <th class="text-end">Next</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {#for job in stats.cronjobStats}
-                                        <tr style="border-color:#333;" {#if job.nextExecution}data-next-execution="{job.nextExecution.toEpochMilliseconds()}"{/if}>
-                                            <td style="border-color:#333;color:#e0e0e0;background-color:transparent;">
+                                        <tr {#if job.nextExecution}data-next-execution="{job.nextExecution.toEpochMilliseconds()}"{/if}>
+                                            <td>
                                                 {#if job.running}
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#1db954" viewBox="0 0 16 16" style="vertical-align:middle;margin-right:4px;">
                                                     <use href="#icon-check-circle"/>
@@ -124,8 +124,8 @@
                                                 {/if}
                                                 {job.simpleName}
                                             </td>
-                                            <td style="border-color:#333;color:#e0e0e0;background-color:transparent;">{job.cronSchedule}</td>
-                                            <td class="cronjob-countdown" style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">{#if job.nextExecution}-{#else}N/A{/if}</td>
+                                            <td>{job.cronSchedule}</td>
+                                            <td class="cronjob-countdown text-end">{#if job.nextExecution}-{#else}N/A{/if}</td>
                                         </tr>
                                         {/for}
                                     </tbody>
@@ -136,22 +136,22 @@
                     </div>
                 </div>
                 <div class="col-12 col-lg-6">
-                    <div id="snippet-predicates" class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                    <div id="snippet-predicates" class="card h-100 app-card">
                         {#fragment id="snippet_predicates"}
                         <div class="card-body">
-                            <p class="card-subtitle mb-3" style="color:#888;font-size:.8rem;">State</p>
+                            <p class="card-subtitle mb-3 app-section-label">State</p>
                             <div class="table-responsive">
-                                <table class="table table-sm mb-0" style="color:#e0e0e0;background-color:transparent;" data-testid="predicates-table">
+                                <table class="table table-sm mb-0 app-table" data-testid="predicates-table">
                                     <thead>
-                                        <tr style="border-color:#333;">
-                                            <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Predicate</th>
-                                            <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">Since</th>
+                                        <tr>
+                                            <th>Predicate</th>
+                                            <th class="text-end">Since</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {#for p in stats.predicateStats}
-                                        <tr style="border-color:#333;">
-                                            <td style="border-color:#333;color:#e0e0e0;background-color:transparent;">
+                                        <tr>
+                                            <td>
                                                 {#if p.active}
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#1db954" viewBox="0 0 16 16" style="vertical-align:middle;margin-right:4px;">
                                                     <use href="#icon-check-circle"/>
@@ -163,7 +163,7 @@
                                                 {/if}
                                                 {p.name}
                                             </td>
-                                            <td class="predicate-last-check" {#if p.lastCheck}data-last-check="{p.lastCheck.toEpochMilliseconds()}"{/if} style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">{#if p.lastCheck}-{#else}N/A{/if}</td>
+                                            <td class="predicate-last-check text-end" {#if p.lastCheck}data-last-check="{p.lastCheck.toEpochMilliseconds()}"{/if}>{#if p.lastCheck}-{#else}N/A{/if}</td>
                                         </tr>
                                         {/for}
                                     </tbody>
@@ -178,33 +178,33 @@
             <h2 class="mb-3 fs-6 fw-semibold text-uppercase" style="color:#888;letter-spacing:.05em;">MongoDB</h2>
             <div class="row g-3 mb-4">
                 <div class="col-12 col-sm-6 col-lg-6">
-                    <div id="snippet-mongodb-collections" class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                    <div id="snippet-mongodb-collections" class="card h-100 app-card">
                         {#fragment id="snippet_mongodb_collections"}
                         <div class="card-body">
-                            <p class="card-subtitle mb-3" style="color:#888;font-size:.8rem;">Collections</p>
+                            <p class="card-subtitle mb-3 app-section-label">Collections</p>
                             <div class="table-responsive">
-                                <table class="table table-sm mb-0" style="color:#e0e0e0;background-color:transparent;" data-testid="mongodb-collections-table">
+                                <table class="table table-sm mb-0 app-table" data-testid="mongodb-collections-table">
                                     <thead>
-                                        <tr style="border-color:#333;">
-                                            <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Collection</th>
-                                            <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">#</th>
-                                            <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">Size</th>
+                                        <tr>
+                                            <th>Collection</th>
+                                            <th class="text-end">#</th>
+                                            <th class="text-end">Size</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {#for c in stats.mongoCollectionStats}
-                                        <tr style="border-color:#333;">
-                                            <td style="border-color:#333;color:#e0e0e0;background-color:transparent;">{c.name}</td>
-                                            <td style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">{c.documentCount.formatted}</td>
-                                            <td style="border-color:#333;color:#e0e0e0;text-align:right;background-color:transparent;">{c.sizeKb.formatted} kb</td>
+                                        <tr>
+                                            <td>{c.name}</td>
+                                            <td class="text-end">{c.documentCount.formatted}</td>
+                                            <td class="text-end">{c.sizeKb.formatted} kb</td>
                                         </tr>
                                         {/for}
                                     </tbody>
                                     <tfoot>
-                                        <tr style="border-color:#333;border-top:2px solid #555;">
-                                            <td style="border-color:#333;color:#888;background-color:transparent;">Total</td>
-                                            <td style="border-color:#333;color:#888;text-align:right;background-color:transparent;">{stats.mongoCollectionDocumentTotal.formatted}</td>
-                                            <td style="border-color:#333;color:#888;text-align:right;background-color:transparent;">{stats.mongoCollectionSizeTotalKb.formatted} kb</td>
+                                        <tr style="border-top:2px solid #555;">
+                                            <td style="color:#888;">Total</td>
+                                            <td class="text-end" style="color:#888;">{stats.mongoCollectionDocumentTotal.formatted}</td>
+                                            <td class="text-end" style="color:#888;">{stats.mongoCollectionSizeTotalKb.formatted} kb</td>
                                         </tr>
                                     </tfoot>
                                 </table>
@@ -214,23 +214,23 @@
                     </div>
                 </div>
                 <div class="col-12 col-sm-6 col-lg-6">
-                    <div id="snippet-mongodb-queries" class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                    <div id="snippet-mongodb-queries" class="card h-100 app-card">
                         {#fragment id="snippet_mongodb_queries"}
                         <div class="card-body">
-                            <p class="card-subtitle mb-3" style="color:#888;font-size:.8rem;">Queries (Last 24h)</p>
+                            <p class="card-subtitle mb-3 app-section-label">Queries (Last 24h)</p>
                             <div class="table-responsive">
-                                <table class="table table-sm mb-0" style="color:#e0e0e0;background-color:transparent;" data-testid="mongodb-queries-table">
+                                <table class="table table-sm mb-0 app-table" data-testid="mongodb-queries-table">
                                     <thead>
-                                        <tr style="border-color:#333;">
-                                            <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Query</th>
-                                            <th style="border-color:#333;color:#888;font-weight:400;text-align:right;background-color:transparent;">Executions</th>
+                                        <tr>
+                                            <th>Query</th>
+                                            <th class="text-end">Executions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {#for q in stats.mongoQueryStats}
-                                        <tr style="border-color:#333;">
-                                            <td style="border-color:#333;color:#e0e0e0;background-color:transparent;">{q.name}</td>
-                                            <td style="border-color:#333;background-color:transparent;text-align:right;">
+                                        <tr>
+                                            <td>{q.name}</td>
+                                            <td class="text-end">
                                                 {#if q.slowQueryCount > 0}
                                                 <span style="color:#f90;">{q.slowQueryCount.formatted}</span>
                                                 {#else}

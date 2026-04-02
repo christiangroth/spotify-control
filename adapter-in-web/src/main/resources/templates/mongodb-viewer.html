@@ -11,7 +11,7 @@
                 <div class="col-auto">
                     <label for="collection-select" class="form-label text-secondary small mb-1">Collection</label>
                     <select id="collection-select" name="collection" class="form-select form-select-sm"
-                            style="background-color:#1e1e1e;border-color:#444;color:#e0e0e0;min-width:220px;"
+                            style="background-color:var(--color-bg-card);border-color:var(--color-border-muted);color:var(--color-text-primary);min-width:220px;"
                             onchange="changeCollection(this.value)">
                         <option value="">-- select collection --</option>
                         {#for c in result.collections}
@@ -36,7 +36,7 @@
                         <label class="form-label text-secondary small mb-1">{field.name} <span class="badge" style="background-color:#333;color:#aaa;font-size:.7rem;font-weight:400;">contains</span></label>
                         <input type="text" name="fc_{field.name}" value="{field.containsValue}"
                                class="form-control form-control-sm"
-                               style="background-color:#1e1e1e;border-color:#444;color:#e0e0e0;"
+                               style="background-color:var(--color-bg-card);border-color:var(--color-border-muted);color:var(--color-text-primary);"
                                placeholder="contains (case insensitive)">
                     </div>
                     {#else}
@@ -44,15 +44,15 @@
                         <label class="form-label text-secondary small mb-1">{field.name} <span class="badge" style="background-color:#333;color:#aaa;font-size:.7rem;font-weight:400;">id</span></label>
                         <input type="text" name="feq_{field.name}" value="{field.equalsValue}"
                                class="form-control form-control-sm mb-1"
-                               style="background-color:#1e1e1e;border-color:#444;color:#e0e0e0;"
+                               style="background-color:var(--color-bg-card);border-color:var(--color-border-muted);color:var(--color-text-primary);"
                                placeholder="equals">
                         <input type="text" name="fin_{field.name}" value="{field.inValue}"
                                class="form-control form-control-sm mb-1"
-                               style="background-color:#1e1e1e;border-color:#444;color:#e0e0e0;"
+                               style="background-color:var(--color-bg-card);border-color:var(--color-border-muted);color:var(--color-text-primary);"
                                placeholder="in (comma-separated)">
                         <input type="text" name="fnin_{field.name}" value="{field.notInValue}"
                                class="form-control form-control-sm"
-                               style="background-color:#1e1e1e;border-color:#444;color:#e0e0e0;"
+                               style="background-color:var(--color-bg-card);border-color:var(--color-border-muted);color:var(--color-text-primary);"
                                placeholder="not in (comma-separated)">
                     </div>
                     {/if}
@@ -66,7 +66,7 @@
                 <div class="row g-2 align-items-center">
                     <div class="col-auto">
                         <select name="sort" class="form-select form-select-sm"
-                                style="background-color:#1e1e1e;border-color:#444;color:#e0e0e0;min-width:180px;">
+                                style="background-color:var(--color-bg-card);border-color:var(--color-border-muted);color:var(--color-text-primary);min-width:180px;">
                             <option value="">-- no sort --</option>
                             {#for field in result.fields}
                             <option value="{field.name}" {#if field.name == result.sortField}selected{/if}>{field.name}</option>
@@ -108,7 +108,7 @@
             <div class="d-flex align-items-center gap-2">
                 <label class="text-secondary small mb-0">Per page:</label>
                 <select onchange="changePageSize(this.value)" class="form-select form-select-sm"
-                        style="background-color:#1e1e1e;border-color:#444;color:#e0e0e0;width:auto;">
+                        style="background-color:var(--color-bg-card);border-color:var(--color-border-muted);color:var(--color-text-primary);width:auto;">
                     {#for ps in pageSizes}
                     <option value="{ps}" {#if ps == result.pageSize}selected{/if}>{ps}</option>
                     {/for}
@@ -121,7 +121,7 @@
         {#else}
 
         {#for doc in result.documents}
-        <pre class="mb-2" style="background-color:#1a1a1a;border:1px solid #333;border-radius:4px;padding:.75rem 1rem;font-size:.78rem;color:#ccc;overflow-x:auto;">{doc}</pre>
+        <pre class="mb-2" style="background-color:var(--color-bg-nested);border:1px solid var(--color-border);border-radius:4px;padding:.75rem 1rem;font-size:.78rem;color:#ccc;overflow-x:auto;">{doc}</pre>
         {/for}
 
         <!-- Pagination -->

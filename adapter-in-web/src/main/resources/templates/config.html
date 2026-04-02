@@ -14,7 +14,7 @@
                 These settings take effect immediately but are <strong>transient</strong> — they reset to their default values on the next application restart.
             </p>
 
-            <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+            <div class="card h-100 app-card">
                 <div class="card-body">
                     <p class="card-subtitle mb-1 fw-semibold" style="color:#e0e0e0;">Spotify Request Throttling</p>
                     <p class="text-secondary small mb-3">
@@ -47,22 +47,22 @@
         <div id="config-section">
             <div class="row g-3 mb-4">
                 <div class="col-12">
-                    <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                    <div class="card h-100 app-card">
                         <div class="card-body">
-                            <p class="card-subtitle mb-3" style="color:#888;font-size:.8rem;">Environment</p>
+                            <p class="card-subtitle mb-3 app-section-label">Environment</p>
                             <div class="table-responsive">
-                                <table class="table table-sm mb-0" style="color:#e0e0e0;background-color:transparent;" data-testid="env-table">
+                                <table class="table table-sm mb-0 app-table" data-testid="env-table">
                                     <thead>
-                                        <tr style="border-color:#333;">
-                                            <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Key</th>
-                                            <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Value</th>
+                                        <tr>
+                                            <th>Key</th>
+                                            <th>Value</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {#for entry in stats.envEntries}
-                                        <tr style="border-color:#333;">
-                                            <td style="border-color:#333;color:#e0e0e0;background-color:transparent;word-break:break-all;">{entry.key}</td>
-                                            <td style="border-color:#333;color:#e0e0e0;background-color:transparent;word-break:break-all;">{entry.value}</td>
+                                        <tr>
+                                            <td style="word-break:break-all;">{entry.key}</td>
+                                            <td style="word-break:break-all;">{entry.value}</td>
                                         </tr>
                                         {/for}
                                     </tbody>
@@ -74,22 +74,22 @@
             </div>
             <div class="row g-3 mb-4">
                 <div class="col-12">
-                    <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                    <div class="card h-100 app-card">
                         <div class="card-body">
-                            <p class="card-subtitle mb-3" style="color:#888;font-size:.8rem;">Config</p>
+                            <p class="card-subtitle mb-3 app-section-label">Config</p>
                             <div class="table-responsive">
-                                <table class="table table-sm mb-0" style="color:#e0e0e0;background-color:transparent;" data-testid="config-table">
+                                <table class="table table-sm mb-0 app-table" data-testid="config-table">
                                     <thead>
-                                        <tr style="border-color:#333;">
-                                            <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Key</th>
-                                            <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Value</th>
+                                        <tr>
+                                            <th>Key</th>
+                                            <th>Value</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {#for entry in stats.configEntries}
-                                        <tr style="border-color:#333;">
-                                            <td style="border-color:#333;color:#e0e0e0;background-color:transparent;word-break:break-all;">{entry.key}</td>
-                                            <td style="border-color:#333;color:#e0e0e0;background-color:transparent;word-break:break-all;">{entry.value}</td>
+                                        <tr>
+                                            <td style="word-break:break-all;">{entry.key}</td>
+                                            <td style="word-break:break-all;">{entry.value}</td>
                                         </tr>
                                         {/for}
                                     </tbody>
