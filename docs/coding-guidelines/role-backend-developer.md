@@ -97,7 +97,24 @@ Adapters translate between the domain model and infrastructure types:
 - Extension functions for mapping between domain objects and MongoDB documents or Spotify API responses
 - Adapters catch exceptions at their boundary and convert them to `Either.Left<DomainError>`
 - Adapters do not contain business logic – only translation and infrastructure calls
-- A single adapter class implements exactly one port interface (one concern per class)
+- Use **constructor injection** for all dependencies and configuration properties – never `@Inject lateinit var` field injection. Use `@param:ConfigProperty` (with the use-site target) for `@ConfigProperty` constructor parameters.
+
+```kotlin
+// Good: constructor injection with correct use-site target
+@ApplicationScoped
+class MyAdapter(
+    private val repository: MyRepositoryPort,
+    @param:ConfigProperty(name = "app.my-setting")
+    private val mySetting: String,
+)
+
+// Bad: field injection
+@ApplicationScoped
+class MyAdapter {
+    @Inject
+    lateinit var repository: MyRepositoryPort
+}
+```
 - MongoDB document field names are defined in adapter constants – never scatter magic strings
 
 ```kotlin

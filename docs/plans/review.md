@@ -83,7 +83,7 @@ Reviewed against the coding guidelines in `docs/coding-guidelines/` and the arch
 
 ## adapter-out-slack
 
-* **`SlackNotificationAdapter` implements two separate port interfaces.** The adapter implements both `OutboxPartitionObserver` and `PlaylistCheckNotificationPort`. The architectural guideline states that a single adapter class should implement exactly one port interface (one concern per class). The two notification concerns should be split into separate adapter classes.
+* No violations found.
 
 ---
 
