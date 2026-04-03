@@ -120,15 +120,15 @@ class PlaybackService(
   }
 
   private fun deduplicateWithPartialPlays(userId: UserId, newRecentlyPlayedItems: List<RecentlyPlayedItem>) {
-    val itemsWithStartTime = newRecentlyPlayedItems.filter { it.startTime != null }
-    if (itemsWithStartTime.isEmpty()) return
+    val recentlyPlayedWithStartTime = newRecentlyPlayedItems.filter { it.startTime != null }
+    if (recentlyPlayedWithStartTime.isEmpty()) return
 
-    val trackIds = itemsWithStartTime.map { it.trackId }.toSet()
+    val trackIds = recentlyPlayedWithStartTime.map { it.trackId }.toSet()
     val partialPlays = recentlyPartialPlayedRepository.findByUserIdAndTrackIds(userId, trackIds)
     if (partialPlays.isEmpty()) return
 
     val duplicatePlayedAts = mutableSetOf<Instant>()
-    for (recentlyPlayed in itemsWithStartTime) {
+    for (recentlyPlayed in recentlyPlayedWithStartTime) {
       val startTime = recentlyPlayed.startTime ?: continue
       for (partial in partialPlays.filter { it.trackId == recentlyPlayed.trackId }) {
         val startTimeDifferenceSeconds = (startTime - partial.startTime).absoluteValue.inWholeSeconds
