@@ -16,6 +16,7 @@ class RecentlyPlayedDocument {
   lateinit var artistIds: List<String>
   lateinit var artistNames: List<String>
   lateinit var playedAt: Instant
+  var startTime: Instant? = null
   var durationSeconds: Long = 0L
   var albumId: String? = null
 }

@@ -10,6 +10,7 @@ import jakarta.inject.Inject
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -31,6 +32,7 @@ class RecentlyPartialPlayedRepositoryTests {
     artistIds = listOf(ArtistId("artist-id-$index")),
     artistNames = listOf("Artist $index"),
     playedAt = now - index.hours,
+    startTime = now - index.hours - (index * 30).seconds,
     playedSeconds = (index * 30).toLong(),
   )
 
@@ -104,6 +106,7 @@ class RecentlyPartialPlayedRepositoryTests {
       artistIds = listOf(ArtistId("artist-1")),
       artistNames = listOf("Artist 1"),
       playedAt = now - 1.hours,
+      startTime = now - 1.hours - 60.seconds,
       playedSeconds = 60L,
     )
     val otherItem = RecentlyPartialPlayedItem(
@@ -113,6 +116,7 @@ class RecentlyPartialPlayedRepositoryTests {
       artistIds = listOf(ArtistId("artist-1")),
       artistNames = listOf("Artist 1"),
       playedAt = now - 1.hours - 5.minutes,
+      startTime = now - 1.hours - 5.minutes - 60.seconds,
       playedSeconds = 60L,
     )
     recentlyPartialPlayedRepository.saveAll(listOf(myItem, otherItem))

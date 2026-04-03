@@ -7,6 +7,7 @@ import de.chrgroth.spotify.control.domain.model.playback.RecentlyPartialPlayedIt
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.playback.RecentlyPartialPlayedRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 import kotlin.time.toJavaInstant
 import kotlin.time.toKotlinInstant
@@ -63,6 +64,7 @@ class RecentlyPartialPlayedRepositoryAdapter(
         artistIds = item.artistIds.map { it.value }
         artistNames = item.artistNames
         playedAt = item.playedAt.toJavaInstant()
+        startTime = item.startTime.toJavaInstant()
         playedSeconds = item.playedSeconds
         albumId = item.albumId?.value
       }
@@ -89,6 +91,7 @@ class RecentlyPartialPlayedRepositoryAdapter(
     artistIds = artistIds.map { ArtistId(it) },
     artistNames = artistNames,
     playedAt = playedAt.toKotlinInstant(),
+    startTime = startTime?.toKotlinInstant() ?: (playedAt.toKotlinInstant() - playedSeconds.seconds),
     playedSeconds = playedSeconds,
     albumId = albumId?.let { AlbumId(it) },
   )

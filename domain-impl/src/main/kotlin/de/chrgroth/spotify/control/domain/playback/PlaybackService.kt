@@ -30,7 +30,7 @@ import de.chrgroth.spotify.control.domain.catalog.CatalogSyncRequest
 import de.chrgroth.spotify.control.domain.port.out.playback.SpotifyPlaybackPort
 import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
-import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Instant
 import mu.KLogging
 import org.eclipse.microprofile.config.inject.ConfigProperty
@@ -120,20 +120,18 @@ class PlaybackService(
   }
 
   private fun deduplicateWithPartialPlays(userId: UserId, newRecentlyPlayedItems: List<RecentlyPlayedItem>) {
-    val itemsWithDuration = newRecentlyPlayedItems.filter { (it.durationSeconds ?: 0) > 0 }
-    if (itemsWithDuration.isEmpty()) return
+    val itemsWithStartTime = newRecentlyPlayedItems.filter { it.startTime != null }
+    if (itemsWithStartTime.isEmpty()) return
 
-    val trackIds = itemsWithDuration.map { it.trackId }.toSet()
+    val trackIds = itemsWithStartTime.map { it.trackId }.toSet()
     val partialPlays = recentlyPartialPlayedRepository.findByUserIdAndTrackIds(userId, trackIds)
     if (partialPlays.isEmpty()) return
 
     val duplicatePlayedAts = mutableSetOf<Instant>()
-    for (recentlyPlayed in itemsWithDuration) {
-      val duration = recentlyPlayed.durationSeconds ?: continue
-      val startTime = recentlyPlayed.playedAt - duration.seconds
+    for (recentlyPlayed in itemsWithStartTime) {
+      val startTime = recentlyPlayed.startTime ?: continue
       for (partial in partialPlays.filter { it.trackId == recentlyPlayed.trackId }) {
-        val partialStartTime = partial.playedAt - partial.playedSeconds.seconds
-        val startTimeDifferenceSeconds = (startTime - partialStartTime).absoluteValue.inWholeSeconds
+        val startTimeDifferenceSeconds = (startTime - partial.startTime).absoluteValue.inWholeSeconds
         if (startTimeDifferenceSeconds <= PARTIAL_DUPLICATE_TOLERANCE_SECONDS) {
           duplicatePlayedAts.add(partial.playedAt)
         }
@@ -168,6 +166,7 @@ class PlaybackService(
           artistIds = item.artistIds,
           artistNames = item.artistNames,
           playedAt = item.observedAt,
+          startTime = item.observedAt - playedMs.milliseconds,
           playedSeconds = playedMs / MS_PER_SECOND,
           albumId = item.albumId,
         )

@@ -16,5 +16,6 @@ data class CurrentlyPlayingItem(
   val durationMs: Long,
   val isPlaying: Boolean,
   val observedAt: Instant,
+  val startTime: Instant,
   val albumId: AlbumId? = null,
 )
