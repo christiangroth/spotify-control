@@ -57,7 +57,7 @@ class CatalogResource {
   fun artistList(@QueryParam("filter") filter: String?): TemplateInstance {
     val filterActive = !filter.isNullOrBlank()
     val artists = if (filterActive) catalogBrowser.getArtists(filter) else emptyList<ArtistBrowseItem>()
-    return catalogTemplate.getFragment("fragment_artist_list")
+    return catalogTemplate.getFragment("snippet_artist_list")
       .data("artists", artists)
       .data("filter", filter ?: "")
       .data("filterActive", filterActive)
@@ -69,7 +69,7 @@ class CatalogResource {
   @Produces(MediaType.TEXT_HTML)
   fun artistAlbums(@PathParam("artistId") artistId: String): TemplateInstance {
     val albums = catalogBrowser.getArtistAlbums(artistId)
-    return catalogTemplate.getFragment("fragment_album_list")
+    return catalogTemplate.getFragment("snippet_album_list")
       .data("albums", albums)
       .data("artistId", artistId)
   }
@@ -80,7 +80,7 @@ class CatalogResource {
   @Produces(MediaType.TEXT_HTML)
   fun albumTracks(@PathParam("albumId") albumId: String): TemplateInstance {
     val tracks = catalogBrowser.getAlbumTracks(albumId)
-    return catalogTemplate.getFragment("fragment_track_list")
+    return catalogTemplate.getFragment("snippet_track_list")
       .data("tracks", tracks)
   }
 

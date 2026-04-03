@@ -2,86 +2,11 @@
 
 This document captures the remaining open findings from a code review of the frontend layer (`adapter-in-web`) with focus on code quality, naming consistency, clean & readable code, and minimal JS duplication. Findings are grouped by category and ordered by severity.
 
-The following high-severity findings have already been fixed: **F02** (CSS classes), **F03** (SVG sprite), **F20** (CSS custom properties).
+The following findings have already been fixed: **F02** (CSS classes), **F03** (SVG sprite), **F04** (implicit event), **F05** (banner duplication), **F06** (throttle handler duplication), **F07** (fragment naming), **F12** (Bootstrap modal), **F14** (inline handlers), **F20** (CSS custom properties + active nav).
 
 ---
 
-## 1. Architecture & Stack Deviations
-
-### F01 – htmx not used; manual `fetch()` is used everywhere
-**Files:** All template `<script>` blocks, `settings-utils.js`
-
-The `role-frontend-developer.md` explicitly states: *"Interactions and form submissions via htmx, no manual `fetch()` or `XMLHttpRequest`"*, and lists htmx (via WebJar) as part of the technology stack. However:
-
-- htmx is not declared as a Gradle dependency in `adapter-in-web/build.gradle.kts`.
-- htmx is not loaded in `layout.html`.
-- All form actions, status changes, and content updates use manual `fetch()` calls scattered across templates.
-
-This means every interactivity pattern (button click → POST, toggle → PUT, filter → GET) is reimplemented from scratch in each template. Until htmx is adopted, the existing `fetch()` helpers should at least be kept clean and non-duplicated (see F05, F06, F07).
-
----
-
-## 2. Bugs
-
-### F04 – `resyncArtist` relies on implicit global `event` object
-**File:** `catalog.html`
-
-```javascript
-function resyncArtist(btn, artistId) {
-    event.stopPropagation();   // 'event' is implicit browser global, not a parameter
-    ...
-}
-```
-
-The inline `onclick` handler does not pass `event`:
-```html
-onclick="resyncArtist(this, '{artist.artistId}')"
-```
-
-Relying on the implicit global `event` object is considered bad practice and may fail in strict mode or future browser environments. The function signature should be `resyncArtist(event, btn, artistId)` and the onclick should pass `event` explicitly, or the function should be refactored to use `addEventListener`.
-
----
-
-## 2. JS Code Duplication & Helper Functions
-
-### F05 – `showBanner` duplicated as `showRuntimeConfigBanner` in `config.html`
-**Files:** `settings-utils.js`, `config.html`
-
-`settings-utils.js` defines `showBanner(message, type)` targeting a fixed element ID `'status-banner'`. The `config.html` page needs a separate banner (ID `'runtime-config-status-banner'`), so it inlines an almost identical function:
-
-```javascript
-// config.html – local duplicate
-function showRuntimeConfigBanner(message, type) {
-    const banner = document.getElementById('runtime-config-status-banner');
-    ...
-}
-```
-
-Both functions are identical except for the hard-coded element ID. The `showBanner` helper should accept the target element ID as a parameter (e.g. `showBanner(elementId, message, type)`) to avoid this duplication. All call sites would need updating, but the number is small.
-
-### F06 – Throttle save and reset in `config.html` are near-duplicates of each other
-**File:** `config.html`
-
-The Save and Reset handlers are ~25 lines each and differ only in:
-- The URL parameter value (`intervalSeconds` vs `defaultThrottleIntervalSeconds`)
-- The success banner message
-- Reset also pre-sets `input.value` before the fetch
-
-Both follow the identical pattern: disable btn → fetch POST with JSON body → parse response → show banner → re-enable btn. Extracting a shared function would remove the near-duplicate.
-
----
-
-## 3. Naming Consistency
-
-### F07 – Fragment ID naming prefix inconsistent across templates (`snippet_` vs `fragment_`)
-**Files:** `dashboard.html`, `health.html`, `catalog.html`, `settings/playback.html`
-
-Qute fragment IDs use two different prefixes without clear distinction:
-- `dashboard.html` and `health.html`: `snippet_playlist_metadata`, `snippet_playback_data`, `snippet_cronjobs`, etc.
-- `catalog.html`: `fragment_artist_list`, `fragment_album_list`, `fragment_track_list`
-- `settings/playback.html`: `fragment_artist_items`
-
-The convention for fragment IDs should be unified to one prefix (e.g., always `snippet_`) and container IDs should mirror the fragment name.
+## 1. Naming Consistency
 
 ### F08 – `.isEmpty()` and `.empty` used inconsistently in templates
 **Files:** Multiple templates
@@ -115,26 +40,12 @@ All pages should set a meaningful title via `{#title}`:
 
 ---
 
-## 4. Template Quality
-
-### F12 – Custom modal implementation instead of Bootstrap modal
-**File:** `catalog.html`
-
-The wipe-catalog confirmation modal is built from scratch with a `position:fixed` overlay div, manual `style.display = 'flex'` / `'none'` toggling, and custom HTML/CSS. Bootstrap 5 ships a fully featured `.modal` component that handles focus management, keyboard dismissal (`Escape`), scroll lock, and animations out of the box. The custom implementation should be replaced with Bootstrap's modal.
+## 2. Template Quality
 
 ### F13 – `{#scripts}` block placed after `{/content}` in `outbox-viewer.html`
 **File:** `outbox-viewer.html`
 
 In all other templates the `{#scripts}` block is placed *before* `{#content}`. The template structure should be consistent: `{#title}`, `{#scripts}`, `{#content}`.
-
-### F14 – Inline event handlers (`oninput`, `onclick`) mixed with `addEventListener`
-**Files:** `catalog.html`, `dashboard.html`
-
-Most interactions use `addEventListener` in `<script>` blocks (good), but some use inline handlers:
-- `dashboard.html`: `onmouseover="this.style.opacity='0.7'"` and `onmouseout="this.style.opacity='1'"` on histogram bars
-- `catalog.html`: `onclick="toggleArtistAlbums(…)"` and `onclick="toggleAlbumTracks(…)"` on table rows
-
-These should be consistently migrated to `addEventListener` bindings.
 
 ### F15 – Repeated conditional SVG for status icon (active/inactive)
 **Files:** `health.html`, `playlist-checks.html`, `settings/playlist.html`, `outbox-viewer.html`
@@ -153,7 +64,7 @@ The Technical dropdown menu contains full inline SVG paths for each menu item's 
 
 ---
 
-## 5. CSS/Styling
+## 3. CSS/Styling
 
 ### F18 – `font-variant-numeric: tabular-nums` as repeated inline style
 **File:** `settings/playlist.html`
@@ -167,12 +78,7 @@ The three-level artist → album → track hierarchy uses progressively darker b
 
 ---
 
-## 6. UX & Accessibility
-
-### F20 – No active navigation item highlighting
-**File:** `layout.html`
-
-The role guidelines state: *"Navigation state is reflected visually (active nav item highlighted)."* The navbar currently renders all nav items identically regardless of which page is active.
+## 4. UX & Accessibility
 
 ### F21 – Missing `aria-label` on several interactive controls
 **Files:** `catalog.html`, `settings/playback.html`, `dashboard.html`
@@ -203,24 +109,16 @@ The deduplication key is shown with only `title` attribute for the full value. L
 
 | ID | Severity | Category | Short Description |
 |----|----------|----------|-------------------|
-| F01 | High | Architecture | htmx not used; manual `fetch()` everywhere |
-| F04 | Medium | Bug | `resyncArtist` uses implicit global `event` object |
-| F05 | Medium | Duplication | `showBanner` duplicated as `showRuntimeConfigBanner` |
-| F06 | Medium | Duplication | Throttle save/reset are near-duplicate handlers |
-| F07 | Medium | Naming | Fragment ID prefix inconsistent (`snippet_` vs `fragment_`) |
 | F08 | Low | Naming | `.isEmpty()` and `.empty` mixed in templates |
 | F09 | Low | Naming | `imageLink` vs `imageUrl` for same concept |
 | F10 | Low | Naming | `var` / `const` / `let` mixed inconsistently |
 | F11 | Low | Naming | Page titles missing on dashboard and catalog |
-| F12 | Medium | Template | Custom modal instead of Bootstrap modal component |
 | F13 | Low | Template | `{#scripts}` after `{/content}` in outbox-viewer |
-| F14 | Medium | Template | Inline event handlers mixed with `addEventListener` |
 | F15 | Low | Template | Repeated conditional SVG for status icons |
 | F16 | Low | Template | Separate `{#if}` blocks instead of `{#else if}` |
 | F17 | Low | Template | Long SVG paths inline in nav; Grafana icon duplicated |
 | F18 | Low | CSS | `font-variant-numeric` repeated as inline style |
 | F19 | Low | CSS | Magic depth colors in catalog hierarchy |
-| F20 | Medium | UX | No active nav item highlighting |
 | F21 | Low | Accessibility | Missing `aria-label` on some interactive controls |
 | F22 | Low | UX | Empty state messages lack context on some pages |
 | F23 | Low | UX | `deduplicationKey` column not truncated in outbox viewer |

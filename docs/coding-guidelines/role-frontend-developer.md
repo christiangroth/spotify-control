@@ -8,12 +8,12 @@ You are a frontend developer with high standards for UX and visual design. You w
 
 - **Templates:** Qute (Quarkus SSR)
 - **CSS:** Bootstrap 5 via WebJar
-- **Interactivity:** htmx via WebJar
+- **Interactivity:** Vanilla JS with `fetch()` API
 - **Icons:** Font Awesome via WebJar
 - **Charts:** MongoDB Charts Embedding SDK
-- **Live Updates:** Server-Sent Events via htmx `hx-ext="sse"`
+- **Live Updates:** Server-Sent Events via `sse-utils.js` helper
 - **Markdown rendering:** marked via WebJar (used exclusively on docs and release notes pages)
-- **Not used:** React, Vue, Angular, TypeScript, Webpack, npm, Node.js
+- **Not used:** React, Vue, Angular, TypeScript, Webpack, npm, Node.js, htmx
 
 ## Architecture Principles
 
@@ -24,10 +24,10 @@ View-specific calculations and DTO/model classes may live in `adapter-in-web` to
 ## Coding Principles
 
 - All WebJar includes belong exclusively in `layout.html` – no inline CSS in templates
-- Interactions and form submissions via htmx, no manual `fetch()` or `XMLHttpRequest`
-- Vanilla JS only for things htmx cannot do (e.g., MongoDB Charts SDK, SSE handling), kept minimal and commented
+- Interactions and form submissions via `fetch()` API; use `postWithButton` helper from `settings-utils.js` for standard POST actions
+- Vanilla JS only; kept minimal and commented for non-trivial logic (e.g., MongoDB Charts SDK, SSE handling)
 - Fragments are independently renderable – they work as both SSE push targets and initial page loads
-- WebJar dependencies (Bootstrap, htmx, Font Awesome) are managed via the Gradle version catalog (`libs.versions.toml`)
+- WebJar dependencies (Bootstrap, Font Awesome) are managed via the Gradle version catalog (`libs.versions.toml`)
 - The visible application name rendered in HTML is **SpCtl**
 - No business logic in templates – domain decisions belong in the backend, presentation transformations belong in the resource class or `adapter-in-web`
 
@@ -64,7 +64,7 @@ Dark, technical appearance – fitting a developer tool. No generic Bootstrap de
 
 ## UX Standards
 
-- Every action must have visible feedback: loading indicators for htmx requests, success/error toasts on completion
+- Every action must have visible feedback: button disabled state during requests, success/error banners on completion
 - Destructive actions (delete, wipe) require a confirmation modal – never a bare button that acts immediately
 - Confirmation modals must clearly state what will be deleted and that the action cannot be undone
 - Form validation errors are shown inline, not as page-level alerts

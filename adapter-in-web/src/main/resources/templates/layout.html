@@ -76,6 +76,10 @@
         .table-dark {
             --bs-table-border-color: var(--color-border);
         }
+        /* Histogram bar hover state */
+        .histogram-bar:hover {
+            opacity: 0.7;
+        }
         .docs-content h1, .docs-content h2, .docs-content h3 {
             color: var(--color-text-primary);
             border-bottom: 1px solid var(--color-border);
@@ -279,6 +283,16 @@
             }, function () {
                 updateNavbarOutboxStatus();
                 updateNavbarPlaybackStatus();
+            });
+        })();
+    </script>
+    <script>
+        (function() {
+            const path = window.location.pathname;
+            document.querySelectorAll('.dropdown-menu a.dropdown-item[href]').forEach(function(link) {
+                if (link.getAttribute('href') === path) {
+                    link.classList.add('active');
+                }
             });
         })();
     </script>
