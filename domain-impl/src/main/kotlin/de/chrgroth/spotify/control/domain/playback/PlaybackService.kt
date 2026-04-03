@@ -133,8 +133,8 @@ class PlaybackService(
       val startTime = recentlyPlayed.playedAt - duration.seconds
       for (partial in partialPlays.filter { it.trackId == recentlyPlayed.trackId }) {
         val partialStartTime = partial.playedAt - partial.playedSeconds.seconds
-        val diffSeconds = (startTime - partialStartTime).absoluteValue.inWholeSeconds
-        if (diffSeconds <= PARTIAL_DUPLICATE_TOLERANCE_SECONDS) {
+        val startTimeDifferenceSeconds = (startTime - partialStartTime).absoluteValue.inWholeSeconds
+        if (startTimeDifferenceSeconds <= PARTIAL_DUPLICATE_TOLERANCE_SECONDS) {
           duplicatePlayedAts.add(partial.playedAt)
         }
       }
