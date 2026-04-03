@@ -2,7 +2,6 @@
 arrow = "2.2.1.1"
 assertJ = "3.27.7"
 bootstrap = "5.3.8"
-htmx = "2.0.6"
 buildTimeTracker = "5.0.1"
 detekt = "2.0.0-alpha.2"
 junit = "6.0.3"
@@ -24,7 +23,6 @@ versionCatalogUpdate = "1.1.0"
 arrowCore = { module = "io.arrow-kt:arrow-core", version.ref = "arrow" }
 assertJ = { module = "org.assertj:assertj-core", version.ref = "assertJ" }
 bootstrap = { module = "org.webjars:bootstrap", version.ref = "bootstrap" }
-htmx = { module = "org.webjars.npm:htmx.org", version.ref = "htmx" }
 detekt = { module = "dev.detekt:detekt-gradle-plugin", version.ref = "detekt" }
 junit = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
 kotlinGradlePlugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }

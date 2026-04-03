@@ -2,11 +2,26 @@
 
 This document captures the remaining open findings from a code review of the frontend layer (`adapter-in-web`) with focus on code quality, naming consistency, clean & readable code, and minimal JS duplication. Findings are grouped by category and ordered by severity.
 
-The following high-severity findings have already been fixed: **F01** (htmx integration), **F02** (CSS classes), **F03** (SVG sprite), **F20** (CSS custom properties).
+The following high-severity findings have already been fixed: **F02** (CSS classes), **F03** (SVG sprite), **F20** (CSS custom properties).
 
 ---
 
-## 1. Bugs
+## 1. Architecture & Stack Deviations
+
+### F01 – htmx not used; manual `fetch()` is used everywhere
+**Files:** All template `<script>` blocks, `settings-utils.js`
+
+The `role-frontend-developer.md` explicitly states: *"Interactions and form submissions via htmx, no manual `fetch()` or `XMLHttpRequest`"*, and lists htmx (via WebJar) as part of the technology stack. However:
+
+- htmx is not declared as a Gradle dependency in `adapter-in-web/build.gradle.kts`.
+- htmx is not loaded in `layout.html`.
+- All form actions, status changes, and content updates use manual `fetch()` calls scattered across templates.
+
+This means every interactivity pattern (button click → POST, toggle → PUT, filter → GET) is reimplemented from scratch in each template. Until htmx is adopted, the existing `fetch()` helpers should at least be kept clean and non-duplicated (see F05, F06, F07).
+
+---
+
+## 2. Bugs
 
 ### F04 – `resyncArtist` relies on implicit global `event` object
 **File:** `catalog.html`
@@ -188,6 +203,7 @@ The deduplication key is shown with only `title` attribute for the full value. L
 
 | ID | Severity | Category | Short Description |
 |----|----------|----------|-------------------|
+| F01 | High | Architecture | htmx not used; manual `fetch()` everywhere |
 | F04 | Medium | Bug | `resyncArtist` uses implicit global `event` object |
 | F05 | Medium | Duplication | `showBanner` duplicated as `showRuntimeConfigBanner` |
 | F06 | Medium | Duplication | Throttle save/reset are near-duplicate handlers |
