@@ -75,7 +75,7 @@ class PlaybackSettingsResource(
     val status = ArtistPlaybackProcessingStatus.entries.find { it.name == statusStr }
     if (status == null) {
       logger.warn { "Unknown artist status requested: $statusStr" }
-      return playbackTemplate.getFragment("fragment_artist_items")
+      return playbackTemplate.getFragment("snippet_artist_items")
         .data("artists", emptyList<AppArtist>())
         .data("status", "")
         .data("hasMore", false)
@@ -84,7 +84,7 @@ class PlaybackSettingsResource(
     val limit = PAGE_SIZE
     val artists = catalog.findArtistsByStatus(status, offset, limit)
     val hasMore = artists.size == limit
-    return playbackTemplate.getFragment("fragment_artist_items")
+    return playbackTemplate.getFragment("snippet_artist_items")
       .data("artists", artists)
       .data("status", statusStr)
       .data("hasMore", hasMore)

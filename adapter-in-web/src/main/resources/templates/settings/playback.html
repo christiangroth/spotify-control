@@ -20,14 +20,14 @@
             a full playback data rebuild.
         </p>
         <div class="mb-3">
-            <input type="text" id="artist-filter" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="Filter artists by name…" autocomplete="off">
+            <input type="text" id="artist-filter" class="form-control form-control-sm bg-dark text-white border-secondary" aria-label="Filter artists by name" placeholder="Filter artists by name…" autocomplete="off">
         </div>
         <div class="row g-3">
             <div class="col-md-4">
                 <div class="card bg-dark border-secondary h-100">
                     <div class="card-header text-secondary small fw-semibold">Undecided (<span id="count-undecided" data-total="{undecidedTotal}">{undecidedTotal}</span>)</div>
                     <div class="card-body p-0" style="max-height:400px;overflow-y:auto;">
-                        {#if undecidedArtists.isEmpty()}
+                        {#if undecidedArtists.empty}
                         <p class="text-secondary small p-3 mb-0">No undecided artists.</p>
                         {#else}
                         <ul class="list-group list-group-flush" id="list-undecided">
@@ -61,7 +61,7 @@
                 <div class="card bg-dark border-secondary h-100">
                     <div class="card-header text-secondary small fw-semibold" style="color:#1db954!important;">Active (<span id="count-active" data-total="{activeTotal}">{activeTotal}</span>)</div>
                     <div class="card-body p-0" style="max-height:400px;overflow-y:auto;">
-                        {#if activeArtists.isEmpty()}
+                        {#if activeArtists.empty}
                         <p class="text-secondary small p-3 mb-0">No active artists.</p>
                         {#else}
                         <ul class="list-group list-group-flush" id="list-active">
@@ -94,7 +94,7 @@
                 <div class="card bg-dark border-secondary h-100">
                     <div class="card-header text-secondary small fw-semibold" style="color:#dc3545!important;">Inactive (<span id="count-inactive" data-total="{inactiveTotal}">{inactiveTotal}</span>)</div>
                     <div class="card-body p-0" style="max-height:400px;overflow-y:auto;">
-                        {#if inactiveArtists.isEmpty()}
+                        {#if inactiveArtists.empty}
                         <p class="text-secondary small p-3 mb-0">No inactive artists.</p>
                         {#else}
                         <ul class="list-group list-group-flush" id="list-inactive">
@@ -131,7 +131,7 @@
         </div>
     </div>
 
-    {#fragment id="fragment_artist_items"}
+    {#fragment id="snippet_artist_items"}
     {#for artist in artists}
     <li class="list-group-item bg-dark border-secondary text-white py-2 px-3" data-artist-name="{artist.artistName}" data-artist-id="{artist.artistId}">
         <div class="d-flex align-items-center gap-2">
@@ -172,10 +172,10 @@
 
         (function() {
             document.getElementById('artist-filter').addEventListener('input', function() {
-                var pattern = this.value;
+                const pattern = this.value;
                 ['undecided', 'active', 'inactive'].forEach(function(status) {
-                    var countEl = document.getElementById('count-' + status);
-                    var list = document.getElementById('list-' + status);
+                    const countEl = document.getElementById('count-' + status);
+                    const list = document.getElementById('list-' + status);
                     if (!list) return;
                     if (!pattern) {
                         list.querySelectorAll('[data-artist-name]').forEach(function(item) {
@@ -184,15 +184,15 @@
                         countEl.textContent = countEl.getAttribute('data-total');
                         return;
                     }
-                    var regex;
+                    let regex;
                     try {
                         regex = new RegExp(pattern, 'i');
                     } catch(e) {
                         regex = new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
                     }
-                    var visibleCount = 0;
+                    let visibleCount = 0;
                     list.querySelectorAll('[data-artist-name]').forEach(function(item) {
-                        var name = item.getAttribute('data-artist-name');
+                        const name = item.getAttribute('data-artist-name');
                         if (regex.test(name)) {
                             item.style.display = '';
                             visibleCount++;
@@ -206,10 +206,10 @@
         })();
 
         document.addEventListener('click', function(e) {
-            var btn = e.target.closest('.artist-status-btn');
+            const btn = e.target.closest('.artist-status-btn');
             if (!btn) return;
-            var artistId = btn.getAttribute('data-artist-id');
-            var newStatus = btn.getAttribute('data-new-status');
+            const artistId = btn.getAttribute('data-artist-id');
+            const newStatus = btn.getAttribute('data-new-status');
             btn.disabled = true;
             fetch('/settings/playback/artists/' + encodeURIComponent(artistId) + '/status', {
                 method: 'PUT',
@@ -237,38 +237,38 @@
         });
 
         (function() {
-            var SENTINEL_PRELOAD_PX = 100;
+            const SENTINEL_PRELOAD_PX = 100;
             function setupListInfiniteScroll(status, listEl) {
-                var containerEl = listEl.parentElement;
-                var observer = new IntersectionObserver(function(entries) {
+                const containerEl = listEl.parentElement;
+                const observer = new IntersectionObserver(function(entries) {
                     entries.forEach(function(entry) {
                         if (!entry.isIntersecting) return;
-                        var sentinel = entry.target;
+                        const sentinel = entry.target;
                         observer.unobserve(sentinel);
                         sentinel.remove();
-                        var offset = parseInt(sentinel.getAttribute('data-offset'));
+                        const offset = parseInt(sentinel.getAttribute('data-offset'));
                         fetch('/settings/playback/artists?status=' + encodeURIComponent(status) + '&offset=' + offset)
                             .then(function(r) { return r.text(); })
                             .then(function(html) {
-                                var temp = document.createElement('div');
+                                const temp = document.createElement('div');
                                 temp.innerHTML = html;
                                 while (temp.firstChild) {
                                     listEl.appendChild(temp.firstChild);
                                 }
-                                var newSentinel = listEl.querySelector('.load-more-sentinel');
+                                const newSentinel = listEl.querySelector('.load-more-sentinel');
                                 if (newSentinel) {
                                     observer.observe(newSentinel);
                                 }
                             });
                     });
                 }, { root: containerEl, rootMargin: '0px 0px ' + SENTINEL_PRELOAD_PX + 'px 0px' });
-                var sentinel = listEl.querySelector('.load-more-sentinel');
+                const sentinel = listEl.querySelector('.load-more-sentinel');
                 if (sentinel) {
                     observer.observe(sentinel);
                 }
             }
             ['UNDECIDED', 'ACTIVE', 'INACTIVE'].forEach(function(status) {
-                var listEl = document.getElementById('list-' + status.toLowerCase());
+                const listEl = document.getElementById('list-' + status.toLowerCase());
                 if (listEl) {
                     setupListInfiniteScroll(status, listEl);
                 }

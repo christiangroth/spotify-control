@@ -22,8 +22,9 @@ function postWithButton(btn, url, successMsg, errorPrefix, onSuccess) {
     });
 }
 
-function showBanner(message, type) {
-    var banner = document.getElementById('status-banner');
+function showBanner(message, type, elementId) {
+    var banner = document.getElementById(elementId || 'status-banner');
+    if (!banner) return;
     banner.textContent = message;
     banner.className = 'alert alert-' + type + ' mb-3';
     banner.classList.remove('d-none');

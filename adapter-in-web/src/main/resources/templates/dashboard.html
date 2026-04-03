@@ -1,4 +1,5 @@
 {#include layout.html}
+    {#title}SpCtl – Dashboard{/title}
     {#content}
     <div class="container-fluid py-4 px-3 px-md-4">
 
@@ -11,9 +12,9 @@
                         <div id="snippet-playlist-metadata" class="col-6">
                             {#fragment id="snippet_playlist_metadata"}
                             <a href="/settings/playlist" class="text-decoration-none" data-testid="playlist-settings-link" aria-label="View playlist settings">
-                            <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                            <div class="card h-100 app-card">
                                 <div class="card-body">
-                                    <p class="card-subtitle mb-1" style="color:#888;font-size:.8rem;">Playlists synced</p>
+                                    <p class="card-subtitle mb-1 app-section-label">Playlists synced</p>
                                     <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.syncedPlaylists.formatted} / {stats.totalPlaylists.formatted}</p>
                                 </div>
                             </div>
@@ -23,9 +24,9 @@
                         <div id="snippet-playlist-checks" class="col-6">
                             {#fragment id="snippet_playlist_checks"}
                             <a href="/playlist-checks" class="text-decoration-none" data-testid="playlist-checks-link" aria-label="View playlist checks">
-                            <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                            <div class="card h-100 app-card">
                                 <div class="card-body">
-                                    <p class="card-subtitle mb-1" style="color:#888;font-size:.8rem;">Playlist checks</p>
+                                    <p class="card-subtitle mb-1 app-section-label">Playlist checks</p>
                                     {#if stats.playlistCheckStats.allSucceeded}
                                     <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);" data-testid="playlist-checks-count">{stats.playlistCheckStats.succeededChecks.formatted} / {stats.playlistCheckStats.totalChecks.formatted}</p>
                                     {#else}
@@ -41,9 +42,9 @@
                             <div class="row g-3">
                                 <div class="col-6">
                                     <a href="/settings/playback" class="text-decoration-none">
-                                    <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                                    <div class="card h-100 app-card">
                                         <div class="card-body">
-                                            <p class="card-subtitle mb-1" style="color:#888;font-size:.8rem;">Playback Events (Last 30 Days)</p>
+                                            <p class="card-subtitle mb-1 app-section-label">Playback Events (Last 30 Days)</p>
                                             <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.playbackEventsLast30Days.formatted}</p>
                                         </div>
                                     </div>
@@ -51,9 +52,9 @@
                                 </div>
                                 <div class="col-6">
                                     <a href="/settings/playback" class="text-decoration-none">
-                                    <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                                    <div class="card h-100 app-card">
                                         <div class="card-body">
-                                            <p class="card-subtitle mb-1" style="color:#888;font-size:.8rem;">Total Playback Events</p>
+                                            <p class="card-subtitle mb-1 app-section-label">Total Playback Events</p>
                                             <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.totalPlaybackEvents.formatted}</p>
                                         </div>
                                     </div>
@@ -67,19 +68,19 @@
                 <div id="snippet-catalog-stats" class="col-12 col-sm-6">
                     {#fragment id="snippet_catalog_stats"}
                     <a href="/catalog" class="text-decoration-none h-100 d-block" aria-label="Catalog statistics">
-                        <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                        <div class="card h-100 app-card">
                             <div class="card-body">
-                                <p class="card-subtitle mb-3" style="color:#888;font-size:.8rem;">Catalog</p>
+                                <p class="card-subtitle mb-3 app-section-label">Catalog</p>
                                 <div class="mb-3">
-                                    <p class="card-subtitle mb-1" style="color:#888;font-size:.75rem;">Artists</p>
+                                    <p class="card-subtitle mb-1 app-section-label">Artists</p>
                                     <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.catalogStats.artistCount.formatted}</p>
                                 </div>
                                 <div class="mb-3">
-                                    <p class="card-subtitle mb-1" style="color:#888;font-size:.75rem;">Albums</p>
+                                    <p class="card-subtitle mb-1 app-section-label">Albums</p>
                                     <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.catalogStats.albumCount.formatted}</p>
                                 </div>
                                 <div>
-                                    <p class="card-subtitle mb-1" style="color:#888;font-size:.75rem;">Tracks</p>
+                                    <p class="card-subtitle mb-1 app-section-label">Tracks</p>
                                     <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.catalogStats.trackCount.formatted}</p>
                                 </div>
                             </div>
@@ -89,17 +90,15 @@
                 </div>
             </div>
 
-            <div id="snippet-playback-histogram" class="card mb-4" style="background-color:#1e1e1e;border-color:#333;">
+            <div id="snippet-playback-histogram" class="card mb-4 app-card">
                 {#fragment id="snippet_playback_histogram"}
                 <div class="card-body">
-                    <p class="card-subtitle mb-3" style="color:#888;font-size:.8rem;">Playback Events per Day (Last 30 Days)</p>
+                    <p class="card-subtitle mb-3 app-section-label">Playback Events per Day (Last 30 Days)</p>
                     <div style="overflow-x:auto;">
                         <div class="d-flex align-items-end" style="height:80px;gap:2px;" data-testid="histogram">
                             {#for entry in stats.playbackEventsPerDay}
-                            <a href="/playback-event-viewer?date={entry.date}" style="flex:1;min-width:6px;height:100%;display:flex;align-items:flex-end;text-decoration:none;" title="{entry.count.formatted} events on {entry.date}">
-                            <div style="height:{entry.heightPercent}%;min-height:2px;width:100%;background-color:var(--spotify-green);border-radius:2px 2px 0 0;cursor:pointer;"
-                                 onmouseover="this.style.opacity='0.7'"
-                                 onmouseout="this.style.opacity='1'"></div>
+                            <a href="/playback-event-viewer?date={entry.date}" style="flex:1;min-width:6px;height:100%;display:flex;align-items:flex-end;text-decoration:none;" title="{entry.count.formatted} events on {entry.date}" aria-label="{entry.count.formatted} events on {entry.date}">
+                            <div style="height:{entry.heightPercent}%;min-height:2px;width:100%;background-color:var(--spotify-green);border-radius:2px 2px 0 0;cursor:pointer;" class="histogram-bar"></div>
                             </a>
                             {/for}
                         </div>
@@ -116,17 +115,17 @@
             <div class="row g-3 mb-4">
                 <div id="snippet-recently-played" class="col-12 col-sm-6">
                     {#fragment id="snippet_recently_played"}
-                    <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                    <div class="card h-100 app-card">
                         <div class="card-body">
-                            <p class="card-subtitle mb-3" style="color:#888;font-size:.8rem;">Recently Played</p>
+                            <p class="card-subtitle mb-3 app-section-label">Recently Played</p>
                             {#if stats.recentlyPlayedTracks.empty}
                             <p style="color:#888;font-size:.85rem;">No recently played tracks available yet.</p>
                             {#else}
                             <ul class="list-unstyled mb-0" data-testid="recently-played-list">
                                 {#for track in stats.recentlyPlayedTracks}
                                 <li class="d-flex align-items-center mb-2">
-                                    {#if track.imageUrl}
-                                    <img src="{track.imageUrl}" alt="{track.trackName}" width="40" height="40" style="min-width:40px;border-radius:4px;margin-right:10px;object-fit:cover;">
+                                    {#if track.imageLink}
+                                    <img src="{track.imageLink}" alt="{track.trackName}" width="40" height="40" style="min-width:40px;border-radius:4px;margin-right:10px;object-fit:cover;">
                                     {#else}
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" style="width:40px;height:40px;min-width:40px;border-radius:4px;margin-right:10px;" aria-label="Album cover placeholder">
                                         <rect width="40" height="40" fill="#333"/>
@@ -150,9 +149,9 @@
                 </div>
                 <div id="snippet-listening-stats" class="col-12 col-sm-6">
                     {#fragment id="snippet_listening_stats"}
-                    <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                    <div class="card h-100 app-card">
                         <div class="card-body">
-                            <p class="card-subtitle mb-3" style="color:#888;font-size:.8rem;">Listening Stats (Last 30 Days)</p>
+                            <p class="card-subtitle mb-3 app-section-label">Listening Stats (Last 30 Days)</p>
                             <p class="mb-3" style="color:#fff;font-size:.85rem;" data-testid="listened-minutes">
                                 <span style="color:var(--spotify-green);font-weight:600;">{stats.listeningStats.listenedMinutesLast30Days.formatted}</span>
                                 <span style="color:#888;"> minutes listened</span>
@@ -160,13 +159,13 @@
                             <div class="mb-3">
                                 <p class="mb-1" style="color:#888;font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;">Top Tracks</p>
                                 {#if stats.listeningStats.topTracksLast30Days.empty}
-                                <p style="color:#888;font-size:.8rem;">No data yet.</p>
+                                <p style="color:#888;font-size:.8rem;">No data yet – listen to some tracks and check back later.</p>
                                 {#else}
                                 <ul class="list-unstyled mb-0" data-testid="top-tracks-list">
                                     {#for entry in stats.listeningStats.topTracksLast30Days}
                                     <li class="d-flex align-items-center mb-2">
-                                        {#if entry.imageUrl}
-                                        <img src="{entry.imageUrl}" alt="{entry.name}" width="36" height="36" style="min-width:36px;border-radius:3px;margin-right:10px;object-fit:cover;">
+                                        {#if entry.imageLink}
+                                        <img src="{entry.imageLink}" alt="{entry.name}" width="36" height="36" style="min-width:36px;border-radius:3px;margin-right:10px;object-fit:cover;">
                                         {#else}
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" style="width:36px;height:36px;min-width:36px;border-radius:3px;margin-right:10px;" aria-label="Album cover placeholder">
                                             <rect width="36" height="36" fill="#333"/>
@@ -186,13 +185,13 @@
                             <div class="mb-3">
                                 <p class="mb-1" style="color:#888;font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;">Top Artists</p>
                                 {#if stats.listeningStats.topArtistsLast30Days.empty}
-                                <p style="color:#888;font-size:.8rem;">No data yet.</p>
+                                <p style="color:#888;font-size:.8rem;">No data yet – listen to some tracks and check back later.</p>
                                 {#else}
                                 <ul class="list-unstyled mb-0" data-testid="top-artists-list">
                                     {#for entry in stats.listeningStats.topArtistsLast30Days}
                                     <li class="d-flex align-items-center mb-2">
-                                        {#if entry.imageUrl}
-                                        <img src="{entry.imageUrl}" alt="{entry.name}" width="36" height="36" style="min-width:36px;border-radius:50%;margin-right:10px;object-fit:cover;">
+                                        {#if entry.imageLink}
+                                        <img src="{entry.imageLink}" alt="{entry.name}" width="36" height="36" style="min-width:36px;border-radius:50%;margin-right:10px;object-fit:cover;">
                                         {#else}
                                         <div style="width:36px;height:36px;min-width:36px;border-radius:50%;margin-right:10px;background:#333;display:flex;align-items:center;justify-content:center;">
                                             <svg width="18" height="18" fill="#888"><use href="#icon-user-placeholder"/></svg>

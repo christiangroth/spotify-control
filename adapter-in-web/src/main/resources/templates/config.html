@@ -1,5 +1,6 @@
 {#include layout.html}
     {#title}SpCtl – Config{/title}
+    {#scripts}<script src="/settings-utils.js"></script>{/scripts}
     {#content}
     <div class="container-fluid py-4 px-3 px-md-4">
 
@@ -14,7 +15,7 @@
                 These settings take effect immediately but are <strong>transient</strong> — they reset to their default values on the next application restart.
             </p>
 
-            <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+            <div class="card h-100 app-card">
                 <div class="card-body">
                     <p class="card-subtitle mb-1 fw-semibold" style="color:#e0e0e0;">Spotify Request Throttling</p>
                     <p class="text-secondary small mb-3">
@@ -47,22 +48,22 @@
         <div id="config-section">
             <div class="row g-3 mb-4">
                 <div class="col-12">
-                    <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                    <div class="card h-100 app-card">
                         <div class="card-body">
-                            <p class="card-subtitle mb-3" style="color:#888;font-size:.8rem;">Environment</p>
+                            <p class="card-subtitle mb-3 app-section-label">Environment</p>
                             <div class="table-responsive">
-                                <table class="table table-sm mb-0" style="color:#e0e0e0;background-color:transparent;" data-testid="env-table">
+                                <table class="table table-sm mb-0 app-table" data-testid="env-table">
                                     <thead>
-                                        <tr style="border-color:#333;">
-                                            <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Key</th>
-                                            <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Value</th>
+                                        <tr>
+                                            <th>Key</th>
+                                            <th>Value</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {#for entry in stats.envEntries}
-                                        <tr style="border-color:#333;">
-                                            <td style="border-color:#333;color:#e0e0e0;background-color:transparent;word-break:break-all;">{entry.key}</td>
-                                            <td style="border-color:#333;color:#e0e0e0;background-color:transparent;word-break:break-all;">{entry.value}</td>
+                                        <tr>
+                                            <td style="word-break:break-all;">{entry.key}</td>
+                                            <td style="word-break:break-all;">{entry.value}</td>
                                         </tr>
                                         {/for}
                                     </tbody>
@@ -74,22 +75,22 @@
             </div>
             <div class="row g-3 mb-4">
                 <div class="col-12">
-                    <div class="card h-100" style="background-color:#1e1e1e;border-color:#333;">
+                    <div class="card h-100 app-card">
                         <div class="card-body">
-                            <p class="card-subtitle mb-3" style="color:#888;font-size:.8rem;">Config</p>
+                            <p class="card-subtitle mb-3 app-section-label">Config</p>
                             <div class="table-responsive">
-                                <table class="table table-sm mb-0" style="color:#e0e0e0;background-color:transparent;" data-testid="config-table">
+                                <table class="table table-sm mb-0 app-table" data-testid="config-table">
                                     <thead>
-                                        <tr style="border-color:#333;">
-                                            <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Key</th>
-                                            <th style="border-color:#333;color:#888;font-weight:400;background-color:transparent;">Value</th>
+                                        <tr>
+                                            <th>Key</th>
+                                            <th>Value</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {#for entry in stats.configEntries}
-                                        <tr style="border-color:#333;">
-                                            <td style="border-color:#333;color:#e0e0e0;background-color:transparent;word-break:break-all;">{entry.key}</td>
-                                            <td style="border-color:#333;color:#e0e0e0;background-color:transparent;word-break:break-all;">{entry.value}</td>
+                                        <tr>
+                                            <td style="word-break:break-all;">{entry.key}</td>
+                                            <td style="word-break:break-all;">{entry.value}</td>
                                         </tr>
                                         {/for}
                                     </tbody>
@@ -103,15 +104,9 @@
     </div>
     <script>
         const defaultThrottleIntervalSeconds = {runtimeConfig.defaultThrottleIntervalSeconds};
+        const CONFIG_BANNER_ID = 'runtime-config-status-banner';
 
-        document.getElementById('throttle-save-btn').addEventListener('click', function() {
-            const input = document.getElementById('throttle-interval-input');
-            const intervalSeconds = parseInt(input.value, 10);
-            if (isNaN(intervalSeconds) || intervalSeconds < 0) {
-                showRuntimeConfigBanner('Please enter a valid non-negative number.', 'danger');
-                return;
-            }
-            const btn = this;
+        function doThrottleRequest(intervalSeconds, successMsg, btn, inputEl) {
             btn.disabled = true;
             fetch('/settings/runtime-config/throttle-interval', {
                 method: 'POST',
@@ -123,52 +118,33 @@
             })
             .then(function(result) {
                 if (result.ok) {
-                    input.value = result.data.intervalSeconds;
-                    showRuntimeConfigBanner('Throttle interval updated to ' + result.data.intervalSeconds + ' s.', 'success');
+                    if (inputEl) inputEl.value = result.data.intervalSeconds;
+                    showBanner(successMsg, 'success', CONFIG_BANNER_ID);
                 } else {
-                    showRuntimeConfigBanner('Failed to update throttle interval: ' + (result.data.error || 'Unknown error'), 'danger');
+                    showBanner('Failed to update throttle interval: ' + (result.data.error || 'Unknown error'), 'danger', CONFIG_BANNER_ID);
                 }
             })
             .catch(function(err) {
-                showRuntimeConfigBanner('Request failed: ' + err.message, 'danger');
+                showBanner('Request failed: ' + err.message, 'danger', CONFIG_BANNER_ID);
             })
             .finally(function() { btn.disabled = false; });
+        }
+
+        document.getElementById('throttle-save-btn').addEventListener('click', function() {
+            const input = document.getElementById('throttle-interval-input');
+            const intervalSeconds = parseInt(input.value, 10);
+            if (isNaN(intervalSeconds) || intervalSeconds < 0) {
+                showBanner('Please enter a valid non-negative number.', 'danger', CONFIG_BANNER_ID);
+                return;
+            }
+            doThrottleRequest(intervalSeconds, 'Throttle interval updated to ' + intervalSeconds + ' s.', this, input);
         });
 
         document.getElementById('throttle-reset-btn').addEventListener('click', function() {
             const input = document.getElementById('throttle-interval-input');
             input.value = defaultThrottleIntervalSeconds;
-            const btn = this;
-            btn.disabled = true;
-            fetch('/settings/runtime-config/throttle-interval', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ intervalSeconds: defaultThrottleIntervalSeconds })
-            })
-            .then(function(response) {
-                return response.json().then(function(data) { return { ok: response.ok, data: data }; });
-            })
-            .then(function(result) {
-                if (result.ok) {
-                    showRuntimeConfigBanner('Throttle interval reset to default (' + defaultThrottleIntervalSeconds + ' s).', 'success');
-                } else {
-                    showRuntimeConfigBanner('Failed to reset throttle interval: ' + (result.data.error || 'Unknown error'), 'danger');
-                }
-            })
-            .catch(function(err) {
-                showRuntimeConfigBanner('Request failed: ' + err.message, 'danger');
-            })
-            .finally(function() { btn.disabled = false; });
+            doThrottleRequest(defaultThrottleIntervalSeconds, 'Throttle interval reset to default (' + defaultThrottleIntervalSeconds + ' s).', this, null);
         });
-
-        function showRuntimeConfigBanner(message, type) {
-            const banner = document.getElementById('runtime-config-status-banner');
-            banner.textContent = message;
-            banner.className = 'alert alert-' + type + ' mb-3';
-            banner.classList.remove('d-none');
-            clearTimeout(banner._fadeTimer);
-            banner._fadeTimer = setTimeout(function() { banner.classList.add('d-none'); }, 5000);
-        }
     </script>
     {/content}
 {/include}

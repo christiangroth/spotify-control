@@ -5,34 +5,30 @@
 
         <h1 class="mb-4 fs-4 fw-semibold">Playlist Checks</h1>
 
-        {#if groups.isEmpty()}
+        {#if groups.empty}
         <p class="text-secondary">No playlist check results available yet. Checks run automatically after playlist data is synced.</p>
         {#else}
         {#for group in groups}
         <h2 class="mb-3 fs-5 fw-semibold" style="color:#ccc;">{group.checkName}</h2>
         <div class="table-responsive mb-5">
-            <table class="table table-dark table-hover align-middle" style="border-color:#333;">
+            <table class="table table-dark table-hover align-middle">
                 <thead>
-                    <tr style="color:#888;font-size:.8rem;border-color:#333;">
-                        <th style="border-color:#333;">Playlist</th>
-                        <th style="border-color:#333;">Checked</th>
-                        <th style="border-color:#333;">Violations</th>
+                    <tr class="app-section-label" style="font-size:.8rem;">
+                        <th>Playlist</th>
+                        <th>Checked</th>
+                        <th>Violations</th>
                     </tr>
                 </thead>
                 <tbody>
                     {#for row in group.rows}
-                    <tr style="border-color:#333;">
-                        <td style="border-color:#333;color:#fff;font-size:.9rem;">
-                            {#if row.check.violations.isEmpty()}
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#1db954" viewBox="0 0 16 16" style="vertical-align:middle;margin-right:4px;"><use href="#icon-check-circle"/></svg>
-                            {#else}
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#dc3545" viewBox="0 0 16 16" style="vertical-align:middle;margin-right:4px;"><use href="#icon-x-circle"/></svg>
-                            {/if}
+                    <tr>
+                        <td style="color:#fff;font-size:.9rem;">
+                            {#status-icon condition=row.check.violations.empty size=16/}
                             {row.playlistName}
                         </td>
-                        <td style="border-color:#333;color:#888;font-size:.82rem;">{row.checkDateFormatted}</td>
-                        <td style="border-color:#333;color:#888;font-size:.82rem;">
-                            {#if row.check.violations.isEmpty()}
+                        <td style="color:#888;font-size:.82rem;">{row.checkDateFormatted}</td>
+                        <td style="color:#888;font-size:.82rem;">
+                            {#if row.check.violations.empty}
                             -
                             {#else}
                             <ul class="list-unstyled mb-0">
