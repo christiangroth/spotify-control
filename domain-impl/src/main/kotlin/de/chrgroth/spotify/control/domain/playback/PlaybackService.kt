@@ -306,6 +306,6 @@ class PlaybackService(
 
   companion object : KLogging() {
     private const val MS_PER_SECOND = 1_000L
-    private const val PARTIAL_DUPLICATE_TOLERANCE_SECONDS = 30L
+    private const val PARTIAL_DUPLICATE_TOLERANCE_SECONDS = 8L
   }
 }

@@ -16,7 +16,7 @@ class RecentlyPartialPlayedDocument {
   lateinit var artistIds: List<String>
   lateinit var artistNames: List<String>
   lateinit var playedAt: Instant
-  var startTime: Instant? = null
+  lateinit var startTime: Instant
   var playedSeconds: Long = 0L
   var albumId: String? = null
 }
