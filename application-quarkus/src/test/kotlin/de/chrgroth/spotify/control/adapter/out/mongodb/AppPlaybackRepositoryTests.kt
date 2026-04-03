@@ -71,6 +71,44 @@ class AppPlaybackRepositoryTests {
   }
 
   @Test
+  fun `deleteAllByTrackIds removes items for specified tracks`() {
+    appPlaybackRepository.saveAll(listOf(item(1), item(2), item(3)))
+
+    appPlaybackRepository.deleteAllByTrackIds(setOf("track-1", "track-2"))
+
+    val existing = appPlaybackRepository.findExistingPlayedAts(
+      userId,
+      setOf(item(1).playedAt, item(2).playedAt, item(3).playedAt),
+    )
+    assertThat(existing).containsOnly(item(3).playedAt)
+  }
+
+  @Test
+  fun `deleteByUserAndPlayedAts removes only matching items for that user`() {
+    val otherUserId = UserId("other-${UUID.randomUUID()}")
+    val myItem1 = item(1)
+    val myItem2 = item(2)
+    val otherItem = AppPlaybackItem(userId = otherUserId, playedAt = now - 1.hours, trackId = "t", secondsPlayed = 0)
+    appPlaybackRepository.saveAll(listOf(myItem1, myItem2))
+    appPlaybackRepository.saveAll(listOf(otherItem))
+
+    appPlaybackRepository.deleteByUserAndPlayedAts(userId, setOf(myItem1.playedAt))
+
+    val remaining = appPlaybackRepository.findExistingPlayedAts(userId, setOf(myItem1.playedAt, myItem2.playedAt))
+    assertThat(remaining).containsOnly(myItem2.playedAt)
+    assertThat(appPlaybackRepository.countAll(otherUserId)).isGreaterThanOrEqualTo(1)
+  }
+
+  @Test
+  fun `deleteByUserAndPlayedAts is a no-op for empty input`() {
+    appPlaybackRepository.saveAll(listOf(item(1)))
+
+    appPlaybackRepository.deleteByUserAndPlayedAts(userId, emptySet())
+
+    assertThat(appPlaybackRepository.countAll(userId)).isGreaterThanOrEqualTo(1)
+  }
+
+  @Test
   fun `deleteAllByUserId removes only items for that user`() {
     val otherUserId = UserId("other-${UUID.randomUUID()}")
     appPlaybackRepository.saveAll(listOf(item(1), item(2)))

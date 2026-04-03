@@ -2,8 +2,8 @@ package de.chrgroth.spotify.control.adapter.out.mongodb
 
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
-import de.chrgroth.spotify.control.domain.model.playback.RecentlyPartialPlayedItem
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
+import de.chrgroth.spotify.control.domain.model.playback.RecentlyPartialPlayedItem
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.playback.RecentlyPartialPlayedRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
@@ -40,19 +40,18 @@ class RecentlyPartialPlayedRepositoryAdapter(
       } else {
         recentlyPartialPlayedDocumentRepository.list("spotifyUserId = ?1", userId.value)
       }
-      query.map { doc ->
-        RecentlyPartialPlayedItem(
-          spotifyUserId = UserId(doc.spotifyUserId),
-          trackId = TrackId(doc.trackId),
-          trackName = doc.trackName,
-          artistIds = doc.artistIds.map { ArtistId(it) },
-          artistNames = doc.artistNames,
-          playedAt = doc.playedAt.toKotlinInstant(),
-          playedSeconds = doc.playedSeconds,
-          albumId = doc.albumId?.let { AlbumId(it) },
-        )
-      }
+      query.map { doc -> doc.toItem() }
     }
+
+  override fun findByUserIdAndTrackIds(userId: UserId, trackIds: Set<TrackId>): List<RecentlyPartialPlayedItem> {
+    if (trackIds.isEmpty()) return emptyList()
+    val trackIdValues = trackIds.map { it.value }
+    return mongoQueryMetrics.timed("recently_partial_played.findByUserIdAndTrackIds") {
+      recentlyPartialPlayedDocumentRepository
+        .list("spotifyUserId = ?1 and trackId in ?2", userId.value, trackIdValues)
+        .map { doc -> doc.toItem() }
+    }
+  }
 
   override fun saveAll(items: List<RecentlyPartialPlayedItem>) {
     if (items.isEmpty()) return
@@ -73,6 +72,26 @@ class RecentlyPartialPlayedRepositoryAdapter(
       recentlyPartialPlayedDocumentRepository.persist(documents)
     }
   }
+
+  override fun deleteByPlayedAts(userId: UserId, playedAts: Set<Instant>) {
+    if (playedAts.isEmpty()) return
+    val javaPlayedAts = playedAts.map { it.toJavaInstant() }
+    logger.info { "Deleting ${playedAts.size} recently partial played document(s) for user: ${userId.value}" }
+    mongoQueryMetrics.timed("recently_partial_played.deleteByPlayedAts") {
+      recentlyPartialPlayedDocumentRepository.delete("spotifyUserId = ?1 and playedAt in ?2", userId.value, javaPlayedAts)
+    }
+  }
+
+  private fun RecentlyPartialPlayedDocument.toItem() = RecentlyPartialPlayedItem(
+    spotifyUserId = UserId(spotifyUserId),
+    trackId = TrackId(trackId),
+    trackName = trackName,
+    artistIds = artistIds.map { ArtistId(it) },
+    artistNames = artistNames,
+    playedAt = playedAt.toKotlinInstant(),
+    playedSeconds = playedSeconds,
+    albumId = albumId?.let { AlbumId(it) },
+  )
 
   companion object : KLogging()
 }

@@ -54,6 +54,15 @@ class AppPlaybackRepositoryAdapter(
     }
   }
 
+  override fun deleteByUserAndPlayedAts(userId: UserId, playedAts: Set<Instant>) {
+    if (playedAts.isEmpty()) return
+    val javaPlayedAts = playedAts.map { it.toJavaInstant() }
+    logger.info { "Deleting ${playedAts.size} app_playback document(s) for user: ${userId.value}" }
+    mongoQueryMetrics.timed("app_playback.deleteByUserAndPlayedAts") {
+      appPlaybackDocumentRepository.delete("spotifyUserId = ?1 and playedAt in ?2", userId.value, javaPlayedAts)
+    }
+  }
+
   override fun findMostRecentPlayedAt(userId: UserId): Instant? =
     mongoQueryMetrics.timed("app_playback.findMostRecentPlayedAt") {
       appPlaybackDocumentRepository
