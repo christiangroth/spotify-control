@@ -9,69 +9,36 @@ You write tests that provide real confidence, not just coverage numbers. You tes
 This project follows the *Test Your Boundaries* principle mapped to the hexagonal architecture. The goal is not maximum line coverage – it is functional confidence at the points where components hand off responsibility to each other.
 
 **Good tests:**
-- Test that the domain behaves correctly when called through its inbound ports
 - Test that outbound adapters correctly translate domain calls to infrastructure and back
-- Catch regressions in business rules without knowing the internal implementation
+- Test that inbound adapters correctly translate external triggers into domain calls
+- Catch regressions at architectural crossing points without knowing the internal implementation
 
 **Tests to avoid:**
 - Tests that verify the internal structure of a class (whitebox testing of private state)
 - Tests that mock every single dependency and only assert mock calls were made
 - Tests that duplicate every line of implementation logic as assertions
 
+## Test Location Rule
+
+**All tests live in `application-quarkus/src/test` and are annotated with `@QuarkusTest`.**
+
+No test files exist in other modules. This rule exists to keep tests decoupled from implementation
+internals: when domain logic or adapter implementation is refactored, tests break only if the
+observable behaviour at a port boundary actually changes.
+
 ## Test Layers
 
-| Layer | Entry point | Test doubles | Module | Framework |
-|-------|-------------|--------------|--------|-----------|
-| 1 – Domain logic | Inbound port (`*Port` in `domain-api`) | MockK mocks for all outbound ports | `domain-impl` | JUnit 5 + MockK |
-| 2 – Outbound adapters | Outbound port interface | None – real infra (MongoDB dev-service, Spotify mock) | `application-quarkus` | `@QuarkusTest` |
-| 3 – Inbound adapters | HTTP endpoint / scheduler `run()` | CDI mocks via `@InjectMock` | `application-quarkus` | `@QuarkusTest` + REST Assured |
-| 4 – App wiring | Health/metrics endpoints | None | `application-quarkus` | `@QuarkusTest` |
-| 5 – Adapter-local logic | Class under test | MockK mocks | individual adapter module | JUnit 5 + MockK |
+| Layer | Entry point | Test doubles | Framework |
+|-------|-------------|--------------|-----------|
+| Contract – Outbox event schema | `DomainOutboxEvent` subtypes | None | `@QuarkusTest` |
+| 2 – Outbound adapters | Outbound port interface | None – real infra (MongoDB dev-service, Spotify mock) | `@QuarkusTest` |
+| 3 – Inbound adapters | HTTP endpoint / scheduler `run()` | CDI mocks via `@InjectMock` | `@QuarkusTest` + REST Assured |
+| 4 – App wiring | Health/metrics endpoints | None | `@QuarkusTest` |
 
-**Priority order:** L1 > Contract tests > L2 > L3 > L4 > L5
-
-Layer 5 applies only to adapter modules with non-trivial pure logic that does not require a Quarkus context (e.g. `adapter-in-starter` starters, `adapter-out-scheduler` info providers).
-
-## Layer 1 – Domain Logic Tests
-
-**Where:** `domain-impl/src/test`  
-**Framework:** JUnit 5 + MockK  
-**Entry point:** Call the domain service through its inbound port interface
-
-These are the most important tests. They verify that business rules are correctly implemented in the domain, isolated from all infrastructure.
-
-### Rules
-
-- Instantiate the domain service directly (no CDI, no Quarkus)
-- Mock all outbound ports with MockK
-- Call methods on the inbound port interface (not on the concrete adapter class)
-- Assert the `Either` result – both `Left` (error) and `Right` (success) paths
-
-### Example
-
-```kotlin
-class PlaylistAdapterTests {
-
-    private val playlistRepository = mockk<PlaylistRepositoryPort>()
-    private val outboxPort = mockk<OutboxPort>()
-    private val underTest: PlaylistPort = PlaylistAdapter(playlistRepository, outboxPort)
-
-    @Test
-    fun `sync enqueues outbox event for each changed playlist`() {
-        every { playlistRepository.findMetadata(USER_ID) } returns Either.Right(listOf(outdatedMetadata()))
-        every { outboxPort.enqueue(any()) } returns Either.Right(Unit)
-
-        val result = underTest.syncPlaylists(USER_ID)
-
-        result.shouldBeRight()
-        verify(exactly = 1) { outboxPort.enqueue(ofType<SyncPlaylistData>()) }
-    }
-}
-```
+**Priority order:** Contract > L2 > L3 > L4
 
 ## Layer 2 – Outbound Adapter Tests
 
-**Where:** `application-quarkus/src/test`  
 **Framework:** `@QuarkusTest` with real dev services  
 **Entry point:** Call the adapter through the outbound port interface
 
@@ -106,7 +73,6 @@ class PlaylistRepositoryAdapterTests {
 
 ## Layer 3 – Inbound Adapter Tests
 
-**Where:** `application-quarkus/src/test`  
 **Framework:** `@QuarkusTest` + REST Assured  
 **Entry point:** HTTP request or scheduler `run()` call
 
@@ -148,7 +114,6 @@ class PlaylistResourceTests {
 
 ## Contract Tests
 
-**Where:** `application-quarkus/src/test`  
 **What:** Outbox event payload serialization/deserialization round-trips
 
 Every `DomainOutboxEvent` subtype must have a contract test. These tests must fail the build if the payload schema changes in a breaking way.
@@ -170,14 +135,6 @@ fun `SyncPlaylistData payload round-trip`() {
     restored shouldBe event
 }
 ```
-
-## Layer 5 – Adapter-Local Unit Tests
-
-**Where:** individual adapter module `src/test`  
-**Framework:** JUnit 5 + MockK  
-**When:** adapter module has non-trivial pure logic (parsing, mapping, calculation) that does not require Quarkus
-
-Use these sparingly. If the logic is complex enough to need its own unit test, question whether it should live in the domain instead.
 
 ## Test Data Conventions
 
