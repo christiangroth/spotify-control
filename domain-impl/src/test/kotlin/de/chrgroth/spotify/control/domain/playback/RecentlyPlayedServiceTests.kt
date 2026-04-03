@@ -37,6 +37,7 @@ import io.mockk.slot
 import io.mockk.verify
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
@@ -116,6 +117,7 @@ class RecentlyPlayedServiceTests {
     durationMs = durationMs,
     isPlaying = true,
     observedAt = observedAt,
+    startTime = observedAt - progressMs.milliseconds,
   )
 
   private fun setupNoConsolidation() {

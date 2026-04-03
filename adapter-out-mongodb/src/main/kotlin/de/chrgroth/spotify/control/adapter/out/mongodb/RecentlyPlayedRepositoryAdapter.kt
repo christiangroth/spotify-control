@@ -57,6 +57,7 @@ class RecentlyPlayedRepositoryAdapter(
           artistIds = doc.artistIds.map { ArtistId(it) },
           artistNames = doc.artistNames,
           playedAt = doc.playedAt.toKotlinInstant(),
+          startTime = doc.startTime?.toKotlinInstant(),
           albumId = doc.albumId?.let { AlbumId(it) },
           durationSeconds = doc.durationSeconds,
         )
@@ -73,6 +74,7 @@ class RecentlyPlayedRepositoryAdapter(
         artistIds = item.artistIds.map { it.value }
         artistNames = item.artistNames
         playedAt = item.playedAt.toJavaInstant()
+        startTime = item.startTime?.toJavaInstant()
         albumId = item.albumId?.value
         durationSeconds = item.durationSeconds ?: 0L
       }

@@ -19,5 +19,6 @@ class CurrentlyPlayingDocument {
   var durationMs: Long = 0L
   var isPlaying: Boolean = false
   lateinit var observedAt: Instant
+  lateinit var startTime: Instant
   var albumId: String? = null
 }

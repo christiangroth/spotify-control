@@ -30,6 +30,8 @@ import de.chrgroth.spotify.control.domain.catalog.CatalogSyncRequest
 import de.chrgroth.spotify.control.domain.port.out.playback.SpotifyPlaybackPort
 import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Instant
 import mu.KLogging
 import org.eclipse.microprofile.config.inject.ConfigProperty
 
@@ -106,6 +108,7 @@ class PlaybackService(
       if (newItems.isNotEmpty()) {
         logger.info { "Persisting ${newItems.size} new recently played items for user: ${userId.value}" }
         recentlyPlayedRepository.saveAll(newItems)
+        deduplicateWithPartialPlays(userId, newItems)
       }
       val computedCount = convertPartialPlays(userId, tracks.map { it.trackId }.toSet())
       if (newItems.isNotEmpty() || computedCount > 0) {
@@ -113,6 +116,32 @@ class PlaybackService(
         outboxPort.enqueue(DomainOutboxEvent.AppendPlaybackData(userId))
       }
       Unit.right()
+    }
+  }
+
+  private fun deduplicateWithPartialPlays(userId: UserId, newRecentlyPlayedItems: List<RecentlyPlayedItem>) {
+    val recentlyPlayedWithStartTime = newRecentlyPlayedItems.filter { it.startTime != null }
+    if (recentlyPlayedWithStartTime.isEmpty()) return
+
+    val trackIds = recentlyPlayedWithStartTime.map { it.trackId }.toSet()
+    val partialPlays = recentlyPartialPlayedRepository.findByUserIdAndTrackIds(userId, trackIds)
+    if (partialPlays.isEmpty()) return
+
+    val duplicatePlayedAts = mutableSetOf<Instant>()
+    for (recentlyPlayed in recentlyPlayedWithStartTime) {
+      val startTime = recentlyPlayed.startTime ?: continue
+      for (partial in partialPlays.filter { it.trackId == recentlyPlayed.trackId }) {
+        val startTimeDifferenceSeconds = (startTime - partial.startTime).absoluteValue.inWholeSeconds
+        if (startTimeDifferenceSeconds <= PARTIAL_DUPLICATE_TOLERANCE_SECONDS) {
+          duplicatePlayedAts.add(partial.playedAt)
+        }
+      }
+    }
+
+    if (duplicatePlayedAts.isNotEmpty()) {
+      logger.info { "Removing ${duplicatePlayedAts.size} duplicate partial play(s) superseded by recently played for user: ${userId.value}" }
+      recentlyPartialPlayedRepository.deleteByPlayedAts(userId, duplicatePlayedAts)
+      appPlaybackRepository.deleteByUserAndPlayedAts(userId, duplicatePlayedAts)
     }
   }
 
@@ -137,6 +166,7 @@ class PlaybackService(
           artistIds = item.artistIds,
           artistNames = item.artistNames,
           playedAt = item.observedAt,
+          startTime = item.observedAt - playedMs.milliseconds,
           playedSeconds = playedMs / MS_PER_SECOND,
           albumId = item.albumId,
         )
@@ -276,5 +306,6 @@ class PlaybackService(
 
   companion object : KLogging() {
     private const val MS_PER_SECOND = 1_000L
+    private const val PARTIAL_DUPLICATE_TOLERANCE_SECONDS = 8L
   }
 }

@@ -24,6 +24,8 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
 @ApplicationScoped
@@ -69,16 +71,19 @@ class SpotifyPlaybackAdapter(
       logger.info { "Ignoring local currently playing track '${track.name}'" }
       return null
     }
+    val progressMs = response.progressMs ?: 0L
+    val observedAt = Clock.System.now()
     return CurrentlyPlayingItem(
       spotifyUserId = userId,
       trackId = TrackId(track.id),
       trackName = track.name,
       artistIds = track.artists.map { ArtistId(it.id) },
       artistNames = track.artists.map { it.name },
-      progressMs = response.progressMs ?: 0L,
+      progressMs = progressMs,
       durationMs = track.durationMs ?: 0L,
       isPlaying = response.isPlaying,
-      observedAt = Clock.System.now(),
+      observedAt = observedAt,
+      startTime = observedAt - progressMs.milliseconds,
       albumId = track.album?.id?.let { AlbumId(it) },
     )
   }
@@ -121,15 +126,18 @@ class SpotifyPlaybackAdapter(
       logger.info { "Ignoring local track '${track.name}'" }
       return null
     }
+    val durationSeconds = track.durationMs?.let { it / MS_PER_SECOND }
+    val playedAtInstant = Instant.parse(playedAt)
     return RecentlyPlayedItem(
       spotifyUserId = userId,
       trackId = TrackId(track.id),
       trackName = track.name,
       artistIds = track.artists.map { ArtistId(it.id) },
       artistNames = track.artists.map { it.name },
-      playedAt = Instant.parse(playedAt),
+      playedAt = playedAtInstant,
+      startTime = durationSeconds?.let { playedAtInstant - it.seconds },
       albumId = track.album?.id?.let { AlbumId(it) },
-      durationSeconds = track.durationMs?.let { it / MS_PER_SECOND },
+      durationSeconds = durationSeconds,
     )
   }
 

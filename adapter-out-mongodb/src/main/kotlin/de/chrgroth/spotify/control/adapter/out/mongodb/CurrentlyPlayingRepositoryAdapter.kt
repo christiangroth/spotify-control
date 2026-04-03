@@ -30,6 +30,7 @@ class CurrentlyPlayingRepositoryAdapter(
       durationMs = item.durationMs
       isPlaying = item.isPlaying
       observedAt = item.observedAt.toJavaInstant()
+      startTime = item.startTime.toJavaInstant()
       albumId = item.albumId?.value
     }
     logger.info { "Saving currently playing document for user ${item.spotifyUserId.value}, track ${item.trackId.value}" }
@@ -55,6 +56,21 @@ class CurrentlyPlayingRepositoryAdapter(
   override fun updateProgressByUserAndTrackAndObservedMinute(item: CurrentlyPlayingItem) {
     val observedMinuteStart = item.observedAt.toJavaInstant().truncatedTo(java.time.temporal.ChronoUnit.MINUTES)
     val observedMinuteEnd = observedMinuteStart.plusSeconds(SECONDS_PER_MINUTE)
+    val existingDoc = mongoQueryMetrics.timed("spotify_currently_playing.findForProgressUpdate") {
+      currentlyPlayingDocumentRepository.find(
+        "spotifyUserId = ?1 and trackId = ?2 and observedAt >= ?3 and observedAt < ?4",
+        item.spotifyUserId.value,
+        item.trackId.value,
+        observedMinuteStart,
+        observedMinuteEnd,
+      ).firstResult()
+    }
+    val existingStartTime = existingDoc?.startTime?.toKotlinInstant()
+    if (existingStartTime == null || (item.startTime - existingStartTime).absoluteValue.inWholeSeconds > START_TIME_TOLERANCE_SECONDS) {
+      logger.info { "Start time differs for user ${item.spotifyUserId.value}, track ${item.trackId.value} — saving as new document" }
+      save(item)
+      return
+    }
     logger.info { "Updating currently playing progress for user ${item.spotifyUserId.value}, track ${item.trackId.value}, progressMs=${item.progressMs}" }
     mongoQueryMetrics.timed("spotify_currently_playing.updateProgressByUserAndTrackAndObservedMinute") {
       currentlyPlayingDocumentRepository.mongoCollection().updateOne(
@@ -68,6 +84,7 @@ class CurrentlyPlayingRepositoryAdapter(
           Updates.set(PROGRESS_MS_FIELD, item.progressMs),
           Updates.set(IS_PLAYING_FIELD, item.isPlaying),
           Updates.set(OBSERVED_AT_FIELD, item.observedAt.toJavaInstant()),
+          Updates.set(START_TIME_FIELD, item.startTime.toJavaInstant()),
         ),
       )
     }
@@ -88,6 +105,7 @@ class CurrentlyPlayingRepositoryAdapter(
             durationMs = doc.durationMs,
             isPlaying = doc.isPlaying,
             observedAt = doc.observedAt.toKotlinInstant(),
+            startTime = doc.startTime.toKotlinInstant(),
             albumId = doc.albumId?.let { AlbumId(it) },
           )
         }
@@ -108,8 +126,10 @@ class CurrentlyPlayingRepositoryAdapter(
     internal const val SPOTIFY_USER_ID_FIELD = "spotifyUserId"
     internal const val TRACK_ID_FIELD = "trackId"
     internal const val OBSERVED_AT_FIELD = "observedAt"
+    internal const val START_TIME_FIELD = "startTime"
     internal const val PROGRESS_MS_FIELD = "progressMs"
     internal const val IS_PLAYING_FIELD = "isPlaying"
     private const val SECONDS_PER_MINUTE = 60L
+    private const val START_TIME_TOLERANCE_SECONDS = 5L
   }
 }
