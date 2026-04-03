@@ -5,7 +5,7 @@
 
         <h1 class="mb-4 fs-4 fw-semibold">Playlist Checks</h1>
 
-        {#if groups.isEmpty()}
+        {#if groups.empty}
         <p class="text-secondary">No playlist check results available yet. Checks run automatically after playlist data is synced.</p>
         {#else}
         {#for group in groups}
@@ -23,16 +23,12 @@
                     {#for row in group.rows}
                     <tr>
                         <td style="color:#fff;font-size:.9rem;">
-                            {#if row.check.violations.isEmpty()}
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#1db954" viewBox="0 0 16 16" style="vertical-align:middle;margin-right:4px;"><use href="#icon-check-circle"/></svg>
-                            {#else}
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#dc3545" viewBox="0 0 16 16" style="vertical-align:middle;margin-right:4px;"><use href="#icon-x-circle"/></svg>
-                            {/if}
+                            {#status-icon condition=row.check.violations.empty size=16/}
                             {row.playlistName}
                         </td>
                         <td style="color:#888;font-size:.82rem;">{row.checkDateFormatted}</td>
                         <td style="color:#888;font-size:.82rem;">
-                            {#if row.check.violations.isEmpty()}
+                            {#if row.check.violations.empty}
                             -
                             {#else}
                             <ul class="list-unstyled mb-0">

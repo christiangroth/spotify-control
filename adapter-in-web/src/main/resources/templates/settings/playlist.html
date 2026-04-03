@@ -10,7 +10,7 @@
 
         <div id="status-banner" class="alert d-none mb-3" role="alert"></div>
 
-        {#if rows.isEmpty()}
+        {#if rows.empty}
         <p class="text-secondary">No playlists found. Playlist data is synced automatically every hour.</p>
         {#else}
         <table class="table table-dark table-hover align-middle">
@@ -27,7 +27,7 @@
             <tbody>
                 {#for row in rows}
                 <tr>
-                    <td class="text-secondary" style="font-variant-numeric: tabular-nums">{row.lineNumber}</td>
+                    <td class="text-secondary tabular-nums">{row.lineNumber}</td>
                     <td>
                         <button
                             class="btn btn-link p-0 border-0 sync-toggle"
@@ -36,15 +36,7 @@
                             title="Click to toggle sync status"
                             aria-label="Toggle sync status for {row.playlist.name}"
                         >
-                            {#if row.active}
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#1db954" viewBox="0 0 16 16">
-                                <use href="#icon-check-circle"/>
-                            </svg>
-                            {#else}
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#dc3545" viewBox="0 0 16 16">
-                                <use href="#icon-x-circle"/>
-                            </svg>
-                            {/if}
+                            {#status-icon condition=row.active size=20/}
                         </button>
                     </td>
                     <td>
@@ -53,7 +45,7 @@
                         <span class="badge text-bg-secondary ms-1" style="font-size:.7rem;vertical-align:middle;">{row.typeLabel}</span>
                         {/if}
                     </td>
-                    <td class="text-secondary small" style="font-variant-numeric: tabular-nums">{#if row.numberOfTracks}{row.numberOfTracks}{#else}–{/if}</td>
+                    <td class="text-secondary small tabular-nums">{#if row.numberOfTracks}{row.numberOfTracks}{#else}–{/if}</td>
                     <td class="text-secondary small">{row.lastSyncTime.formattedShort}</td>
                     <td>
                         {#if row.active}

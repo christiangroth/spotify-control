@@ -167,7 +167,7 @@ class DashboardService(
           artistNames = trackArtistIds.mapNotNull { artistMap[it]?.artistName },
           playedAt = playback.playedAt,
           albumName = album?.title ?: track?.albumName,
-          imageUrl = album?.imageLink,
+          imageLink = album?.imageLink,
           durationSeconds = playback.secondsPlayed.takeIf { it > 0 },
         )
       }
@@ -222,7 +222,7 @@ class DashboardService(
     secondsById.entries
       .sortedByDescending { it.value }
       .take(topEntriesLimit)
-      .map { (id, seconds) -> TopEntry(name = nameResolver(id), totalMinutes = seconds / SECONDS_PER_MINUTE, imageUrl = imageResolver?.invoke(id)) }
+      .map { (id, seconds) -> TopEntry(name = nameResolver(id), totalMinutes = seconds / SECONDS_PER_MINUTE, imageLink = imageResolver?.invoke(id)) }
 
   companion object {
     private const val STATS_DAYS = 30

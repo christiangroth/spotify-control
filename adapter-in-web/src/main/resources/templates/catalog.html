@@ -1,4 +1,5 @@
 {#include layout.html}
+    {#title}SpCtl – Catalog{/title}
     {#scripts}<script src="/settings-utils.js"></script>{/scripts}
     {#content}
     <div class="container-fluid py-4 px-3 px-md-4">
@@ -49,6 +50,7 @@
         <div class="mb-3">
             <input type="text" id="catalog-filter" class="form-control"
                    style="background-color:var(--color-bg-card);border-color:var(--color-border-muted);color:var(--color-text-primary);max-width:400px;"
+                   aria-label="Filter artists by name"
                    placeholder="Filter artists by name..."
                    value="{filter}">
         </div>
@@ -58,7 +60,7 @@
             {#if !filterActive}
             <p style="color:#888;">Enter a filter to search for artists.</p>
             {#else if artists.empty}
-            <p style="color:#888;">No artists found.</p>
+            <p style="color:#888;">No artists found matching your filter.</p>
             {#else}
             <div class="table-responsive">
                 <table class="table table-dark table-hover align-middle mb-0">
@@ -98,7 +100,7 @@
                         </tr>
                         <tr id="albums-row-{artist.artistId}" style="display:none;">
                             <td colspan="5" style="padding:0;">
-                                <div id="albums-container-{artist.artistId}" style="background-color:#161616;padding:12px 16px;">
+                                <div id="albums-container-{artist.artistId}" style="background-color:var(--color-bg-depth-albums);padding:12px 16px;">
                                     <span style="color:#888;font-size:.82rem;">Loading albums…</span>
                                 </div>
                             </td>
@@ -115,19 +117,19 @@
         {#if albums.empty}
         {#else}
         <div class="table-responsive">
-            <table class="table table-dark table-hover align-middle mb-0" style="border-color:#2a2a2a;font-size:.85rem;">
+            <table class="table table-dark table-hover align-middle mb-0" style="border-color:var(--color-border-depth-albums);font-size:.85rem;">
                 <thead>
-                    <tr style="color:#888;font-size:.75rem;border-color:#2a2a2a;">
+                    <tr style="color:#888;font-size:.75rem;border-color:var(--color-border-depth-albums);">
                         <th style="width:44px;"></th>
                         <th>Album</th>
                         <th>Released</th>
-                        <th class="text-end" style="border-color:#2a2a2a;">Tracks</th>
-                        <th class="text-end" style="border-color:#2a2a2a;">Duration</th>
+                        <th class="text-end" style="border-color:var(--color-border-depth-albums);">Tracks</th>
+                        <th class="text-end" style="border-color:var(--color-border-depth-albums);">Duration</th>
                     </tr>
                 </thead>
                 <tbody>
                     {#for album in albums}
-                    <tr style="cursor:pointer;border-color:#2a2a2a;" data-album-id="{album.albumId}">
+                    <tr style="cursor:pointer;border-color:var(--color-border-depth-albums);" data-album-id="{album.albumId}">
                         <td style="padding:6px;">
                             {#if album.imageLink}
                             <img src="{album.imageLink}" alt="{album.title}" width="36" height="36"
@@ -142,12 +144,12 @@
                         </td>
                         <td style="color:#fff;">{#if album.title}{album.title}{#else}(untitled){/if}</td>
                         <td style="color:#888;">{album.releaseDate}</td>
-                        <td class="text-end" style="border-color:#2a2a2a;color:#888;">{album.trackCount.formatted}</td>
-                        <td class="text-end" style="border-color:#2a2a2a;color:#888;">{album.durationMs.formattedAlbumDuration}</td>
+                        <td class="text-end" style="border-color:var(--color-border-depth-albums);color:#888;">{album.trackCount.formatted}</td>
+                        <td class="text-end" style="border-color:var(--color-border-depth-albums);color:#888;">{album.durationMs.formattedAlbumDuration}</td>
                     </tr>
-                    <tr id="tracks-row-{album.albumId}" style="display:none;border-color:#2a2a2a;">
-                        <td colspan="5" style="border-color:#2a2a2a;padding:0;">
-                            <div id="tracks-container-{album.albumId}" style="background-color:#111;padding:8px 16px;">
+                    <tr id="tracks-row-{album.albumId}" style="display:none;border-color:var(--color-border-depth-albums);">
+                        <td colspan="5" style="border-color:var(--color-border-depth-albums);padding:0;">
+                            <div id="tracks-container-{album.albumId}" style="background-color:var(--color-bg-depth-tracks);padding:8px 16px;">
                                 <span style="color:#888;font-size:.78rem;">Loading tracks…</span>
                             </div>
                         </td>
@@ -162,12 +164,12 @@
         {#fragment id="snippet_track_list"}
         {#if tracks.empty}
         {#else}
-        <table class="table table-dark align-middle mb-0" style="border-color:#1a1a1a;font-size:.8rem;">
+        <table class="table table-dark align-middle mb-0" style="border-color:var(--color-border-depth-tracks);font-size:.8rem;">
             <thead>
-                <tr style="color:#666;font-size:.72rem;border-color:#1a1a1a;">
+                <tr style="color:#666;font-size:.72rem;border-color:var(--color-border-depth-tracks);">
                     <th style="width:40px;">#</th>
                     <th>Title</th>
-                    <th class="text-end" style="border-color:#1a1a1a;">Duration</th>
+                    <th class="text-end" style="border-color:var(--color-border-depth-tracks);">Duration</th>
                 </tr>
             </thead>
             <tbody>
@@ -175,7 +177,7 @@
                 <tr>
                     <td style="color:#666;">{track.trackNumber}</td>
                     <td style="color:#ccc;">{track.title}</td>
-                    <td class="text-end" style="border-color:#1a1a1a;color:#666;">{track.durationMs.formattedTrackDuration}</td>
+                    <td class="text-end" style="border-color:var(--color-border-depth-tracks);color:#666;">{track.durationMs.formattedTrackDuration}</td>
                 </tr>
                 {/for}
             </tbody>

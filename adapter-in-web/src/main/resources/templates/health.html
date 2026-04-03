@@ -53,15 +53,7 @@
                                         {#for p in stats.outboxPartitions}
                                         <tr {#if p.blockedUntil}data-blocked-until="{p.blockedUntil.toEpochMilliseconds()}"{/if}>
                                             <td>
-                                                {#if p.status == "ACTIVE"}
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#1db954" viewBox="0 0 16 16" style="vertical-align:middle;margin-right:4px;">
-                                                    <use href="#icon-check-circle"/>
-                                                </svg>
-                                                {#else}
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#dc3545" viewBox="0 0 16 16" style="vertical-align:middle;margin-right:4px;">
-                                                    <use href="#icon-x-circle"/>
-                                                </svg>
-                                                {/if}
+                                                {#status-icon condition=(p.status == "ACTIVE") size=16/}
                                                 {p.name}
                                             </td>
                                             <td class="outbox-blocked-until text-end">-</td>
@@ -113,15 +105,7 @@
                                         {#for job in stats.cronjobStats}
                                         <tr {#if job.nextExecution}data-next-execution="{job.nextExecution.toEpochMilliseconds()}"{/if}>
                                             <td>
-                                                {#if job.running}
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#1db954" viewBox="0 0 16 16" style="vertical-align:middle;margin-right:4px;">
-                                                    <use href="#icon-check-circle"/>
-                                                </svg>
-                                                {#else}
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#dc3545" viewBox="0 0 16 16" style="vertical-align:middle;margin-right:4px;">
-                                                    <use href="#icon-x-circle"/>
-                                                </svg>
-                                                {/if}
+                                                {#status-icon condition=job.running size=16/}
                                                 {job.simpleName}
                                             </td>
                                             <td>{job.cronSchedule}</td>
