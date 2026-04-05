@@ -312,6 +312,19 @@ class FetchCurrentlyPlayingServiceTests {
     verify { currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, setOf("track-a")) }
   }
 
+  @Test
+  fun `fetchCurrentlyPlaying deletes lingering entry below progress threshold without creating partial play when nothing is playing`() {
+    val lingeringTrack = currentlyPlayingItem("track-a", progressMs = 5_000L, observedAt = now - 5.minutes)
+    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyPlayback.getCurrentlyPlaying(userId, accessToken) } returns null.right()
+    every { currentlyPlayingRepository.findByUserId(userId) } returns listOf(lingeringTrack)
+
+    service.fetchCurrentlyPlaying(userId)
+
+    verify(exactly = 0) { recentlyPartialPlayedRepository.saveAll(any()) }
+    verify { currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, setOf("track-a")) }
+  }
+
   // --- playback state and dashboard notifications ---
 
   @Test
