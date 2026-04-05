@@ -1,3 +1,12 @@
+# 0.79.1 (2026.04.05)
+
+## Bugfixes / Chore
+* Dashboard timestamps (recently played, playlist sync times) now display in the server's local timezone instead of UTC.
+
+
+
+---
+
 # 0.79.0 (2026.04.05)
 
 ## New Features
