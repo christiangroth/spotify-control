@@ -19,12 +19,13 @@ class MigratePlaybackStartTimesStarter(
   private val databaseName: String,
 ) : Starter {
 
-  override val id = "MigratePlaybackStartTimesStarter-v1"
+  override val id = "MigratePlaybackStartTimesStarter-v2"
 
   override fun execute() {
     val database = mongoClient.getDatabase(databaseName)
     migrateCurrentlyPlayingStartTimes(database)
     migratePartialPlayedStartTimes(database)
+    migrateRecentlyPlayedStartTimes(database)
     deleteSupersededPartialPlays(database)
   }
 
@@ -63,6 +64,32 @@ class MigratePlaybackStartTimesStarter(
         ),
       )
     logger.info { "Migrated startTime for ${result.modifiedCount} recently partial played documents" }
+  }
+
+  private fun migrateRecentlyPlayedStartTimes(database: MongoDatabase) {
+    val result = database.getCollection(RECENTLY_PLAYED_COLLECTION)
+      .updateMany(
+        Filters.and(
+          Filters.not(Filters.exists(START_TIME_FIELD)),
+          Filters.gt(RP_DURATION_SECONDS_FIELD, 0L),
+        ),
+        listOf(
+          Document(
+            "\$set",
+            Document(
+              START_TIME_FIELD,
+              Document(
+                "\$subtract",
+                listOf(
+                  "\$$RP_PLAYED_AT_FIELD",
+                  Document("\$multiply", listOf("\$$RP_DURATION_SECONDS_FIELD", MS_PER_SECOND)),
+                ),
+              ),
+            ),
+          ),
+        ),
+      )
+    logger.info { "Migrated startTime for ${result.modifiedCount} recently played documents" }
   }
 
   private fun deleteSupersededPartialPlays(database: MongoDatabase) {
@@ -150,6 +177,8 @@ class MigratePlaybackStartTimesStarter(
     private const val START_TIME_FIELD = "startTime"
     private const val SPOTIFY_USER_ID_FIELD = "spotifyUserId"
     private const val TRACK_ID_FIELD = "trackId"
+    private const val RP_DURATION_SECONDS_FIELD = "durationSeconds"
+    private const val RP_PLAYED_AT_FIELD = "playedAt"
     private const val CP_OBSERVED_AT_FIELD = "observedAt"
     private const val CP_PROGRESS_MS_FIELD = "progressMs"
     private const val RPP_PLAYED_AT_FIELD = "playedAt"
