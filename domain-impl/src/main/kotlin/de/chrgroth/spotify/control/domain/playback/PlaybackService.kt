@@ -90,6 +90,9 @@ class PlaybackService(
         logger.info { "Removing orphaned currently playing entries for user: ${userId.value}, except track: ${item.trackId}" }
         convertAndDeleteOrphanedItems(userId, item.trackId)
         dashboardRefresh.notifyUserPlaybackData(userId)
+      } else {
+        logger.info { "No currently playing item for user: ${userId.value}, removing any lingering entries" }
+        convertAndDeleteOrphanedItems(userId, null)
       }
       Unit.right()
     }
@@ -98,9 +101,9 @@ class PlaybackService(
   private fun isTrackRestart(newItem: CurrentlyPlayingItem, existingItem: CurrentlyPlayingItem): Boolean =
     newItem.progressMs < RESTART_THRESHOLD_MS && existingItem.progressMs > minimumProgressMs
 
-  private fun convertAndDeleteOrphanedItems(userId: UserId, currentTrackId: TrackId) {
+  private fun convertAndDeleteOrphanedItems(userId: UserId, currentTrackId: TrackId?) {
     val orphanedItems = currentlyPlayingRepository.findByUserId(userId)
-      .filter { it.trackId != currentTrackId }
+      .let { items -> if (currentTrackId != null) items.filter { it.trackId != currentTrackId } else items }
     if (orphanedItems.isEmpty()) return
 
     val convertibleItems = orphanedItems.filter { it.progressMs > minimumProgressMs }
