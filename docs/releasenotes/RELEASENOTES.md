@@ -1,3 +1,12 @@
+# 0.79.3 (2026.04.05)
+
+## Bugfixes / Chore
+* Fixed orphaned entries accumulating in the currently playing collection when playback stops.
+
+
+
+---
+
 # 0.79.2 (2026.04.05)
 
 ## Bugfixes / Chore
