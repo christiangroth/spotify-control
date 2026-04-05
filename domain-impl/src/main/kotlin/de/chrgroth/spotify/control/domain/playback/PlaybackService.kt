@@ -75,18 +75,28 @@ class PlaybackService(
         playbackState.onPlaybackDetected()
       }
       if (item != null) {
-        if (currentlyPlayingRepository.existsByUserAndTrackAndObservedMinute(item)) {
+        val existing = currentlyPlayingRepository.findMostRecentByUserAndTrack(userId, item.trackId)
+        if (existing != null && !isTrackRestart(item, existing)) {
           logger.info { "Updating currently playing item for user: ${userId.value}, track: ${item.trackId}" }
-          currentlyPlayingRepository.updateProgressByUserAndTrackAndObservedMinute(item)
+          currentlyPlayingRepository.updateProgress(item.copy(startTime = existing.startTime))
         } else {
+          if (existing != null) {
+            logger.info { "Track restart detected for user: ${userId.value}, track: ${item.trackId} — replacing existing entry" }
+            currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, setOf(item.trackId.value))
+          }
           logger.info { "Persisting currently playing item for user: ${userId.value}, track: ${item.trackId}" }
           currentlyPlayingRepository.save(item)
         }
+        logger.info { "Removing orphaned currently playing entries for user: ${userId.value}, except track: ${item.trackId}" }
+        currentlyPlayingRepository.deleteByUserIdExceptTrackId(userId, item.trackId)
         dashboardRefresh.notifyUserPlaybackData(userId)
       }
       Unit.right()
     }
   }
+
+  private fun isTrackRestart(newItem: CurrentlyPlayingItem, existingItem: CurrentlyPlayingItem): Boolean =
+    newItem.progressMs < RESTART_THRESHOLD_MS && existingItem.progressMs > minimumProgressMs
 
   // --- Recently Played ---
 
@@ -307,5 +317,6 @@ class PlaybackService(
   companion object : KLogging() {
     private const val MS_PER_SECOND = 1_000L
     private const val PARTIAL_DUPLICATE_TOLERANCE_SECONDS = 8L
+    private const val RESTART_THRESHOLD_MS = 10_000L
   }
 }
