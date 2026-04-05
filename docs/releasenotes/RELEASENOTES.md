@@ -1,3 +1,14 @@
+# 0.79.2 (2026.04.05)
+
+## Bugfixes / Chore
+* Orphaned currently playing entries are now removed immediately when a different track is detected.
+* Pause and resume no longer creates duplicate currently playing entries for the same track.
+* Track restarts are correctly detected and stored as a fresh currently playing entry.
+
+
+
+---
+
 # 0.79.1 (2026.04.05)
 
 ## Bugfixes / Chore
