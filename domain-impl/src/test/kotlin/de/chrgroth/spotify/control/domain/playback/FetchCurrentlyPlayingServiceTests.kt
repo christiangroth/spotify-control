@@ -281,7 +281,7 @@ class FetchCurrentlyPlayingServiceTests {
   }
 
   @Test
-  fun `fetchCurrentlyPlaying cleans up lingering entries when nothing is playing`() {
+  fun `fetchCurrentlyPlaying cleans up orphaned entries when nothing is playing`() {
     every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
     every { spotifyPlayback.getCurrentlyPlaying(userId, accessToken) } returns null.right()
     every { currentlyPlayingRepository.findByUserId(userId) } returns emptyList()
@@ -294,7 +294,7 @@ class FetchCurrentlyPlayingServiceTests {
   }
 
   @Test
-  fun `fetchCurrentlyPlaying converts and deletes lingering entries when nothing is playing`() {
+  fun `fetchCurrentlyPlaying converts and deletes orphaned entries when nothing is playing`() {
     val lingeringTrack = currentlyPlayingItem("track-a", progressMs = 50_000L, observedAt = now - 5.minutes)
     every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
     every { spotifyPlayback.getCurrentlyPlaying(userId, accessToken) } returns null.right()
@@ -313,7 +313,7 @@ class FetchCurrentlyPlayingServiceTests {
   }
 
   @Test
-  fun `fetchCurrentlyPlaying deletes lingering entry below progress threshold without creating partial play when nothing is playing`() {
+  fun `fetchCurrentlyPlaying deletes orphaned entry below progress threshold without creating partial play when nothing is playing`() {
     val lingeringTrack = currentlyPlayingItem("track-a", progressMs = 5_000L, observedAt = now - 5.minutes)
     every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
     every { spotifyPlayback.getCurrentlyPlaying(userId, accessToken) } returns null.right()

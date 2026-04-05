@@ -91,7 +91,7 @@ class PlaybackService(
         convertAndDeleteOrphanedItems(userId, item.trackId)
         dashboardRefresh.notifyUserPlaybackData(userId)
       } else {
-        logger.info { "No currently playing item for user: ${userId.value}, removing any lingering entries" }
+        logger.info { "No currently playing item for user: ${userId.value}, removing any orphaned entries" }
         convertAndDeleteOrphanedItems(userId, null)
       }
       Unit.right()
