@@ -1,7 +1,7 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
 import io.quarkus.qute.TemplateExtension
-import java.time.ZoneOffset
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.time.Instant
@@ -11,8 +11,8 @@ import kotlin.time.toJavaInstant
 @Suppress("Unused")
 object TemplateFormattingExtensions {
 
-  private val DATETIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneOffset.UTC)
-  private val DATETIME_SHORT_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(ZoneOffset.UTC)
+  private val DATETIME_FORMATTER by lazy { DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.systemDefault()) }
+  private val DATETIME_SHORT_FORMATTER by lazy { DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(ZoneId.systemDefault()) }
 
   private const val MS_PER_SECOND = 1000L
   private const val SECONDS_PER_MINUTE = 60L
