@@ -1,11 +1,13 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
 import com.mongodb.client.model.Filters
+import com.mongodb.client.model.FindOneAndUpdateOptions
+import com.mongodb.client.model.Sorts
 import com.mongodb.client.model.Updates
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
-import de.chrgroth.spotify.control.domain.model.playback.CurrentlyPlayingItem
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
+import de.chrgroth.spotify.control.domain.model.playback.CurrentlyPlayingItem
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.playback.CurrentlyPlayingRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
@@ -39,46 +41,36 @@ class CurrentlyPlayingRepositoryAdapter(
     }
   }
 
-  override fun existsByUserAndTrackAndObservedMinute(item: CurrentlyPlayingItem): Boolean {
-    val observedMinuteStart = item.observedAt.toJavaInstant().truncatedTo(java.time.temporal.ChronoUnit.MINUTES)
-    val observedMinuteEnd = observedMinuteStart.plusSeconds(SECONDS_PER_MINUTE)
-    return mongoQueryMetrics.timed("spotify_currently_playing.existsByUserAndTrackAndObservedMinute") {
-      currentlyPlayingDocumentRepository.count(
-        "spotifyUserId = ?1 and trackId = ?2 and observedAt >= ?3 and observedAt < ?4",
-        item.spotifyUserId.value,
-        item.trackId.value,
-        observedMinuteStart,
-        observedMinuteEnd,
-      ) > 0
+  override fun findMostRecentByUserAndTrack(userId: UserId, trackId: TrackId): CurrentlyPlayingItem? =
+    mongoQueryMetrics.timed("spotify_currently_playing.findMostRecentByUserAndTrack") {
+      currentlyPlayingDocumentRepository
+        .find("spotifyUserId = ?1 and trackId = ?2", userId.value, trackId.value)
+        .list()
+        .maxByOrNull { it.observedAt }
+        ?.let { doc ->
+          CurrentlyPlayingItem(
+            spotifyUserId = UserId(doc.spotifyUserId),
+            trackId = TrackId(doc.trackId),
+            trackName = doc.trackName,
+            artistIds = doc.artistIds.map { ArtistId(it) },
+            artistNames = doc.artistNames,
+            progressMs = doc.progressMs,
+            durationMs = doc.durationMs,
+            isPlaying = doc.isPlaying,
+            observedAt = doc.observedAt.toKotlinInstant(),
+            startTime = doc.startTime.toKotlinInstant(),
+            albumId = doc.albumId?.let { AlbumId(it) },
+          )
+        }
     }
-  }
 
-  override fun updateProgressByUserAndTrackAndObservedMinute(item: CurrentlyPlayingItem) {
-    val observedMinuteStart = item.observedAt.toJavaInstant().truncatedTo(java.time.temporal.ChronoUnit.MINUTES)
-    val observedMinuteEnd = observedMinuteStart.plusSeconds(SECONDS_PER_MINUTE)
-    val existingDoc = mongoQueryMetrics.timed("spotify_currently_playing.findForProgressUpdate") {
-      currentlyPlayingDocumentRepository.find(
-        "spotifyUserId = ?1 and trackId = ?2 and observedAt >= ?3 and observedAt < ?4",
-        item.spotifyUserId.value,
-        item.trackId.value,
-        observedMinuteStart,
-        observedMinuteEnd,
-      ).firstResult()
-    }
-    val existingStartTime = existingDoc?.startTime?.toKotlinInstant()
-    if (existingStartTime == null || (item.startTime - existingStartTime).absoluteValue.inWholeSeconds > START_TIME_TOLERANCE_SECONDS) {
-      logger.info { "Start time differs for user ${item.spotifyUserId.value}, track ${item.trackId.value} — saving as new document" }
-      save(item)
-      return
-    }
+  override fun updateProgress(item: CurrentlyPlayingItem) {
     logger.info { "Updating currently playing progress for user ${item.spotifyUserId.value}, track ${item.trackId.value}, progressMs=${item.progressMs}" }
-    mongoQueryMetrics.timed("spotify_currently_playing.updateProgressByUserAndTrackAndObservedMinute") {
-      currentlyPlayingDocumentRepository.mongoCollection().updateOne(
+    mongoQueryMetrics.timed("spotify_currently_playing.updateProgress") {
+      currentlyPlayingDocumentRepository.mongoCollection().findOneAndUpdate(
         Filters.and(
           Filters.eq(SPOTIFY_USER_ID_FIELD, item.spotifyUserId.value),
           Filters.eq(TRACK_ID_FIELD, item.trackId.value),
-          Filters.gte(OBSERVED_AT_FIELD, observedMinuteStart),
-          Filters.lt(OBSERVED_AT_FIELD, observedMinuteEnd),
         ),
         Updates.combine(
           Updates.set(PROGRESS_MS_FIELD, item.progressMs),
@@ -86,6 +78,7 @@ class CurrentlyPlayingRepositoryAdapter(
           Updates.set(OBSERVED_AT_FIELD, item.observedAt.toJavaInstant()),
           Updates.set(START_TIME_FIELD, item.startTime.toJavaInstant()),
         ),
+        FindOneAndUpdateOptions().sort(Sorts.descending(OBSERVED_AT_FIELD)),
       )
     }
   }
@@ -129,7 +122,5 @@ class CurrentlyPlayingRepositoryAdapter(
     internal const val START_TIME_FIELD = "startTime"
     internal const val PROGRESS_MS_FIELD = "progressMs"
     internal const val IS_PLAYING_FIELD = "isPlaying"
-    private const val SECONDS_PER_MINUTE = 60L
-    private const val START_TIME_TOLERANCE_SECONDS = 5L
   }
 }
