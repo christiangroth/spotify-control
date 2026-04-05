@@ -6,8 +6,8 @@ import de.chrgroth.spotify.control.domain.error.PlaybackError
 import de.chrgroth.spotify.control.domain.model.user.AccessToken
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.model.playback.CurrentlyPlayingItem
+import de.chrgroth.spotify.control.domain.model.playback.RecentlyPartialPlayedItem
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
-import de.chrgroth.spotify.control.domain.model.user.User
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playback.AppPlaybackRepositoryPort
@@ -27,9 +27,9 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
+import io.mockk.slot
 import io.mockk.verify
 import kotlin.time.Clock
-import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Instant
@@ -221,25 +221,74 @@ class FetchCurrentlyPlayingServiceTests {
   // --- orphan cleanup tests ---
 
   @Test
-  fun `fetchCurrentlyPlaying deletes orphaned entries for other tracks`() {
-    val item = currentlyPlayingItem("track-1", progressMs = 30_000L)
+  fun `fetchCurrentlyPlaying converts orphaned entry with sufficient progress to partial play`() {
+    val trackB = currentlyPlayingItem("track-b", progressMs = 60_000L)
+    val orphanedTrackA = currentlyPlayingItem("track-a", progressMs = 50_000L, observedAt = now - 5.minutes)
     every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
-    every { spotifyPlayback.getCurrentlyPlaying(userId, accessToken) } returns item.right()
-    every { currentlyPlayingRepository.findMostRecentByUserAndTrack(userId, item.trackId) } returns null
+    every { spotifyPlayback.getCurrentlyPlaying(userId, accessToken) } returns trackB.right()
+    every { currentlyPlayingRepository.findMostRecentByUserAndTrack(userId, trackB.trackId) } returns null
+    every { currentlyPlayingRepository.findByUserId(userId) } returns listOf(orphanedTrackA)
+    every { recentlyPartialPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
+    every { recentlyPartialPlayedRepository.saveAll(any()) } just runs
 
     service.fetchCurrentlyPlaying(userId)
 
-    verify { currentlyPlayingRepository.deleteByUserIdExceptTrackId(userId, TrackId("track-1")) }
+    val savedSlot = slot<List<RecentlyPartialPlayedItem>>()
+    verify { recentlyPartialPlayedRepository.saveAll(capture(savedSlot)) }
+    assertThat(savedSlot.captured).hasSize(1)
+    assertThat(savedSlot.captured[0].trackId).isEqualTo(TrackId("track-a"))
+    assertThat(savedSlot.captured[0].playedSeconds).isEqualTo(50L)
+    verify { currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, setOf("track-a")) }
   }
 
   @Test
-  fun `fetchCurrentlyPlaying does not delete orphans when nothing is playing`() {
+  fun `fetchCurrentlyPlaying deletes orphaned entry below progress threshold without creating partial play`() {
+    val trackB = currentlyPlayingItem("track-b", progressMs = 60_000L)
+    val orphanedTrackA = currentlyPlayingItem("track-a", progressMs = 5_000L, observedAt = now - 5.minutes)
+    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyPlayback.getCurrentlyPlaying(userId, accessToken) } returns trackB.right()
+    every { currentlyPlayingRepository.findMostRecentByUserAndTrack(userId, trackB.trackId) } returns null
+    every { currentlyPlayingRepository.findByUserId(userId) } returns listOf(orphanedTrackA)
+
+    service.fetchCurrentlyPlaying(userId)
+
+    verify(exactly = 0) { recentlyPartialPlayedRepository.saveAll(any()) }
+    verify { currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, setOf("track-a")) }
+  }
+
+  @Test
+  fun `fetchCurrentlyPlaying preserves first Track A play when returning to Track A after Track B`() {
+    // Simulate: Track A (50% played) → Track B → back to Track A
+    // When Track B is detected, Track A's entry must be converted to a partial play before deletion
+    val trackA = currentlyPlayingItem("track-a", progressMs = 150_000L, observedAt = now - 10.minutes)
+    val trackB = currentlyPlayingItem("track-b", progressMs = 60_000L)
+    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyPlayback.getCurrentlyPlaying(userId, accessToken) } returns trackB.right()
+    every { currentlyPlayingRepository.findMostRecentByUserAndTrack(userId, trackB.trackId) } returns null
+    every { currentlyPlayingRepository.findByUserId(userId) } returns listOf(trackA)
+    every { recentlyPartialPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
+    every { recentlyPartialPlayedRepository.saveAll(any()) } just runs
+
+    service.fetchCurrentlyPlaying(userId)
+
+    // Track A is converted to a partial play
+    val savedSlot = slot<List<RecentlyPartialPlayedItem>>()
+    verify { recentlyPartialPlayedRepository.saveAll(capture(savedSlot)) }
+    assertThat(savedSlot.captured[0].trackId).isEqualTo(TrackId("track-a"))
+    assertThat(savedSlot.captured[0].startTime).isEqualTo(trackA.startTime)
+    // Track A's currently playing entry is deleted
+    verify { currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, setOf("track-a")) }
+  }
+
+  @Test
+  fun `fetchCurrentlyPlaying does not convert orphans when nothing is playing`() {
     every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
     every { spotifyPlayback.getCurrentlyPlaying(userId, accessToken) } returns null.right()
 
     service.fetchCurrentlyPlaying(userId)
 
-    verify(exactly = 0) { currentlyPlayingRepository.deleteByUserIdExceptTrackId(any(), any()) }
+    verify(exactly = 0) { currentlyPlayingRepository.findByUserId(any()) }
+    verify(exactly = 0) { recentlyPartialPlayedRepository.saveAll(any()) }
   }
 
   // --- playback state and dashboard notifications ---

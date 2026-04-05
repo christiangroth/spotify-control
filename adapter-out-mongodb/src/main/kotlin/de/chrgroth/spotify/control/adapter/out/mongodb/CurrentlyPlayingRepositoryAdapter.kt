@@ -115,16 +115,6 @@ class CurrentlyPlayingRepositoryAdapter(
     }
   }
 
-  override fun deleteByUserIdExceptTrackId(userId: UserId, trackId: TrackId) {
-    mongoQueryMetrics.timed("spotify_currently_playing.deleteByUserIdExceptTrackId") {
-      currentlyPlayingDocumentRepository.delete(
-        "spotifyUserId = ?1 and trackId != ?2",
-        userId.value,
-        trackId.value,
-      )
-    }
-  }
-
   companion object : KLogging() {
     internal const val SPOTIFY_USER_ID_FIELD = "spotifyUserId"
     internal const val TRACK_ID_FIELD = "trackId"

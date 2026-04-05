@@ -88,7 +88,7 @@ class PlaybackService(
           currentlyPlayingRepository.save(item)
         }
         logger.info { "Removing orphaned currently playing entries for user: ${userId.value}, except track: ${item.trackId}" }
-        currentlyPlayingRepository.deleteByUserIdExceptTrackId(userId, item.trackId)
+        convertAndDeleteOrphanedItems(userId, item.trackId)
         dashboardRefresh.notifyUserPlaybackData(userId)
       }
       Unit.right()
@@ -97,6 +97,39 @@ class PlaybackService(
 
   private fun isTrackRestart(newItem: CurrentlyPlayingItem, existingItem: CurrentlyPlayingItem): Boolean =
     newItem.progressMs < RESTART_THRESHOLD_MS && existingItem.progressMs > minimumProgressMs
+
+  private fun convertAndDeleteOrphanedItems(userId: UserId, currentTrackId: TrackId) {
+    val orphanedItems = currentlyPlayingRepository.findByUserId(userId)
+      .filter { it.trackId != currentTrackId }
+    if (orphanedItems.isEmpty()) return
+
+    val convertibleItems = orphanedItems.filter { it.progressMs > minimumProgressMs }
+    if (convertibleItems.isNotEmpty()) {
+      val partialItems = convertibleItems.map { item ->
+        val playedMs = minOf(item.progressMs, item.durationMs)
+        RecentlyPartialPlayedItem(
+          spotifyUserId = userId,
+          trackId = item.trackId,
+          trackName = item.trackName,
+          artistIds = item.artistIds,
+          artistNames = item.artistNames,
+          playedAt = item.observedAt,
+          startTime = item.startTime,
+          playedSeconds = playedMs / MS_PER_SECOND,
+          albumId = item.albumId,
+        )
+      }
+      val existingPlayedAts = recentlyPartialPlayedRepository.findExistingPlayedAts(userId, partialItems.map { it.playedAt }.toSet())
+      val newPartial = partialItems.filter { it.playedAt !in existingPlayedAts }
+      if (newPartial.isNotEmpty()) {
+        logger.info { "Persisting ${newPartial.size} orphaned partial play(s) for user: ${userId.value}" }
+        recentlyPartialPlayedRepository.saveAll(newPartial)
+      }
+    }
+
+    val orphanedTrackIds = orphanedItems.map { it.trackId.value }.toSet()
+    currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, orphanedTrackIds)
+  }
 
   // --- Recently Played ---
 

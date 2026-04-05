@@ -10,5 +10,4 @@ interface CurrentlyPlayingRepositoryPort {
   fun updateProgress(item: CurrentlyPlayingItem)
   fun findByUserId(userId: UserId): List<CurrentlyPlayingItem>
   fun deleteByUserIdAndTrackIds(userId: UserId, trackIds: Set<String>)
-  fun deleteByUserIdExceptTrackId(userId: UserId, trackId: TrackId)
 }
