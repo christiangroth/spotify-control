@@ -3,6 +3,7 @@ package de.chrgroth.spotify.control.adapter.out.spotify
 import arrow.core.Either
 import arrow.core.left
 import arrow.core.right
+import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyAddPlaylistTracksRequest
 import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyPlaylistTrackObject
 import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyPlaylistTracksResponse
 import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyRemovePlaylistTracksRequest
@@ -178,7 +179,36 @@ class SpotifyPlaylistAdapter(
     }
   }
 
+  override fun addPlaylistTracks(
+    userId: UserId,
+    accessToken: AccessToken,
+    playlistId: String,
+    trackIds: List<String>,
+  ): Either<DomainError, Unit> {
+    return try {
+      val uris = trackIds.map { "spotify:track:$it" }
+      uris.chunked(ADD_TRACKS_BATCH_SIZE).forEach { batch ->
+        throttler.throttle(DomainOutboxPartition.ToSpotify.key)
+        val requestBody = spotifyJson.encodeToString(SpotifyAddPlaylistTracksRequest(uris = batch))
+        val request = HttpRequest.newBuilder()
+          .uri(URI.create("$apiBaseUrl/v1/playlists/$playlistId/tracks"))
+          .header("Authorization", "Bearer ${accessToken.value}")
+          .header("Content-Type", "application/json")
+          .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+          .build()
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        val errorResult = response.checkRateLimitOrError(logger, PlaylistFixError.FIX_FAILED)
+        if (errorResult != null) return errorResult
+      }
+      Unit.right()
+    } catch (e: Exception) {
+      logger.error(e) { "Unexpected error during track addition to playlist $playlistId (user ${userId.value})" }
+      PlaylistFixError.FIX_FAILED.left()
+    }
+  }
+
   companion object : KLogging() {
     private const val REMOVE_TRACKS_BATCH_SIZE = 100
+    private const val ADD_TRACKS_BATCH_SIZE = 100
   }
 }

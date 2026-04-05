@@ -91,9 +91,11 @@ class PlaylistCheckService(
       logger.warn { "Playlist $playlistId not found for user ${userId.value}" }
       return PlaylistFixError.PLAYLIST_NOT_FOUND.left()
     }
+    val allPlaylistInfos = playlistRepository.findByUserId(userId)
+    val currentPlaylistInfo = allPlaylistInfos.find { it.spotifyPlaylistId == playlistId }
     val accessToken = spotifyAccessToken.getValidAccessToken(userId)
     logger.info { "Running fix '$checkType' for playlist $playlistId (user ${userId.value})" }
-    return runner.fix(userId, accessToken, playlistId, playlist).also { result ->
+    return runner.fix(userId, accessToken, playlistId, playlist, currentPlaylistInfo, allPlaylistInfos).also { result ->
       if (result.isRight()) {
         logger.info { "Fix '$checkType' for playlist $playlistId completed, enqueueing re-check" }
         outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, playlistId))

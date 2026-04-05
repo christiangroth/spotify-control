@@ -13,4 +13,5 @@ interface SpotifyPlaylistPort {
   fun getPlaylistTracks(userId: UserId, accessToken: AccessToken, playlistId: String): Either<DomainError, Playlist>
   fun getPlaylistTracksPage(userId: UserId, accessToken: AccessToken, playlistId: String, pageUrl: String?): Either<DomainError, PlaylistTracksPage>
   fun removePlaylistTracks(userId: UserId, accessToken: AccessToken, playlistId: String, positionsByTrackId: Map<String, List<Int>>): Either<DomainError, Unit>
+  fun addPlaylistTracks(userId: UserId, accessToken: AccessToken, playlistId: String, trackIds: List<String>): Either<DomainError, Unit>
 }

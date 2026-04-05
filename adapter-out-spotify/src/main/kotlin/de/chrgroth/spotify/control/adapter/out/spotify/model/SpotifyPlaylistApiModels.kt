@@ -42,3 +42,8 @@ internal data class SpotifyRemoveTrackObject(
 internal data class SpotifyRemovePlaylistTracksRequest(
   val tracks: List<SpotifyRemoveTrackObject>,
 )
+
+@Serializable
+internal data class SpotifyAddPlaylistTracksRequest(
+  val uris: List<String>,
+)

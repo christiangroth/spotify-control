@@ -16,6 +16,12 @@ interface PlaylistCheckRunner {
   fun isApplicable(playlistInfo: PlaylistInfo?): Boolean = true
   fun run(userId: UserId, playlistId: String, playlist: Playlist, currentPlaylistInfo: PlaylistInfo?, allPlaylistInfos: List<PlaylistInfo>): AppPlaylistCheck
   fun canFix(): Boolean = false
-  fun fix(userId: UserId, accessToken: AccessToken, playlistId: String, playlist: Playlist): Either<DomainError, Unit> =
-    PlaylistFixError.FIX_NOT_FOUND.left()
+  fun fix(
+    userId: UserId,
+    accessToken: AccessToken,
+    playlistId: String,
+    playlist: Playlist,
+    currentPlaylistInfo: PlaylistInfo?,
+    allPlaylistInfos: List<PlaylistInfo>,
+  ): Either<DomainError, Unit> = PlaylistFixError.FIX_NOT_FOUND.left()
 }

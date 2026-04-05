@@ -53,7 +53,14 @@ class DuplicateTrackIdsCheckRunner(
 
   override fun canFix(): Boolean = true
 
-  override fun fix(userId: UserId, accessToken: AccessToken, playlistId: String, playlist: Playlist): Either<DomainError, Unit> {
+  override fun fix(
+    userId: UserId,
+    accessToken: AccessToken,
+    playlistId: String,
+    playlist: Playlist,
+    currentPlaylistInfo: PlaylistInfo?,
+    allPlaylistInfos: List<PlaylistInfo>,
+  ): Either<DomainError, Unit> {
     val positionsToRemoveByTrackId = mutableMapOf<String, MutableList<Int>>()
     val seenTrackIds = mutableSetOf<String>()
     playlist.tracks.forEachIndexed { index, track ->

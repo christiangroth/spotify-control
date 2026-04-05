@@ -290,12 +290,14 @@ class PlaylistCheckServiceTests {
   @Test
   fun `runFix calls fix on runner and enqueues re-sync on success`() {
     val playlist = buildPlaylist(listOf(buildTrack("t1")))
+    val playlistInfo = buildPlaylistInfo()
     every { checkRunners.iterator() } returns mutableListOf(checkRunner).iterator()
     every { checkRunner.checkId } returns checkId
     every { checkRunner.canFix() } returns true
     every { playlistRepository.findByUserIdAndPlaylistId(userId, playlistId) } returns playlist
+    every { playlistRepository.findByUserId(userId) } returns listOf(playlistInfo)
     every { spotifyAccessToken.getValidAccessToken(userId) } returns AccessToken("token")
-    every { checkRunner.fix(userId, AccessToken("token"), playlistId, playlist) } returns Unit.right()
+    every { checkRunner.fix(userId, AccessToken("token"), playlistId, playlist, playlistInfo, listOf(playlistInfo)) } returns Unit.right()
     every { outboxPort.enqueue(any()) } just runs
 
     val result = adapter.runFix(userId, playlistId, checkId)
