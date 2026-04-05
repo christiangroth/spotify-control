@@ -281,14 +281,48 @@ class FetchCurrentlyPlayingServiceTests {
   }
 
   @Test
-  fun `fetchCurrentlyPlaying does not convert orphans when nothing is playing`() {
+  fun `fetchCurrentlyPlaying cleans up orphaned entries when nothing is playing`() {
     every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
     every { spotifyPlayback.getCurrentlyPlaying(userId, accessToken) } returns null.right()
+    every { currentlyPlayingRepository.findByUserId(userId) } returns emptyList()
 
     service.fetchCurrentlyPlaying(userId)
 
-    verify(exactly = 0) { currentlyPlayingRepository.findByUserId(any()) }
+    verify { currentlyPlayingRepository.findByUserId(userId) }
     verify(exactly = 0) { recentlyPartialPlayedRepository.saveAll(any()) }
+    verify(exactly = 0) { currentlyPlayingRepository.deleteByUserIdAndTrackIds(any(), any()) }
+  }
+
+  @Test
+  fun `fetchCurrentlyPlaying converts and deletes orphaned entries when nothing is playing`() {
+    val lingeringTrack = currentlyPlayingItem("track-a", progressMs = 50_000L, observedAt = now - 5.minutes)
+    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyPlayback.getCurrentlyPlaying(userId, accessToken) } returns null.right()
+    every { currentlyPlayingRepository.findByUserId(userId) } returns listOf(lingeringTrack)
+    every { recentlyPartialPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
+    every { recentlyPartialPlayedRepository.saveAll(any()) } just runs
+
+    service.fetchCurrentlyPlaying(userId)
+
+    val savedSlot = slot<List<RecentlyPartialPlayedItem>>()
+    verify { recentlyPartialPlayedRepository.saveAll(capture(savedSlot)) }
+    assertThat(savedSlot.captured).hasSize(1)
+    assertThat(savedSlot.captured[0].trackId).isEqualTo(TrackId("track-a"))
+    assertThat(savedSlot.captured[0].playedSeconds).isEqualTo(50L)
+    verify { currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, setOf("track-a")) }
+  }
+
+  @Test
+  fun `fetchCurrentlyPlaying deletes orphaned entry below progress threshold without creating partial play when nothing is playing`() {
+    val lingeringTrack = currentlyPlayingItem("track-a", progressMs = 5_000L, observedAt = now - 5.minutes)
+    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyPlayback.getCurrentlyPlaying(userId, accessToken) } returns null.right()
+    every { currentlyPlayingRepository.findByUserId(userId) } returns listOf(lingeringTrack)
+
+    service.fetchCurrentlyPlaying(userId)
+
+    verify(exactly = 0) { recentlyPartialPlayedRepository.saveAll(any()) }
+    verify { currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, setOf("track-a")) }
   }
 
   // --- playback state and dashboard notifications ---
