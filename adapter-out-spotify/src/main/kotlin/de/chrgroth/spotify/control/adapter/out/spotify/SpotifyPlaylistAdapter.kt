@@ -3,10 +3,14 @@ package de.chrgroth.spotify.control.adapter.out.spotify
 import arrow.core.Either
 import arrow.core.left
 import arrow.core.right
+import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyAddPlaylistTracksRequest
 import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyPlaylistTrackObject
 import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyPlaylistTracksResponse
+import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyRemovePlaylistTracksRequest
+import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyRemoveTrackObject
 import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyUserPlaylistsResponse
 import de.chrgroth.spotify.control.domain.error.DomainError
+import de.chrgroth.spotify.control.domain.error.PlaylistFixError
 import de.chrgroth.spotify.control.domain.error.PlaylistSyncError
 import de.chrgroth.spotify.control.domain.model.user.AccessToken
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
@@ -145,5 +149,66 @@ class SpotifyPlaylistAdapter(
       )
     }
 
-  companion object : KLogging()
+  override fun removePlaylistTracks(
+    userId: UserId,
+    accessToken: AccessToken,
+    playlistId: String,
+    positionsByTrackId: Map<String, List<Int>>,
+  ): Either<DomainError, Unit> {
+    return try {
+      val allTracks = positionsByTrackId.entries.map { (trackId, positions) ->
+        SpotifyRemoveTrackObject(uri = "spotify:track:$trackId", positions = positions)
+      }
+      allTracks.chunked(REMOVE_TRACKS_BATCH_SIZE).forEach { batch ->
+        throttler.throttle(DomainOutboxPartition.ToSpotify.key)
+        val requestBody = spotifyJson.encodeToString(SpotifyRemovePlaylistTracksRequest(tracks = batch))
+        val request = HttpRequest.newBuilder()
+          .uri(URI.create("$apiBaseUrl/v1/playlists/$playlistId/items"))
+          .header("Authorization", "Bearer ${accessToken.value}")
+          .header("Content-Type", "application/json")
+          .method("DELETE", HttpRequest.BodyPublishers.ofString(requestBody))
+          .build()
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        val errorResult = response.checkRateLimitOrError(logger, PlaylistFixError.FIX_FAILED)
+        if (errorResult != null) return errorResult
+      }
+      Unit.right()
+    } catch (e: Exception) {
+      logger.error(e) { "Unexpected error during track removal from playlist $playlistId (user ${userId.value})" }
+      PlaylistFixError.FIX_FAILED.left()
+    }
+  }
+
+  override fun addPlaylistTracks(
+    userId: UserId,
+    accessToken: AccessToken,
+    playlistId: String,
+    trackIds: List<String>,
+  ): Either<DomainError, Unit> {
+    return try {
+      val uris = trackIds.map { "spotify:track:$it" }
+      uris.chunked(ADD_TRACKS_BATCH_SIZE).forEach { batch ->
+        throttler.throttle(DomainOutboxPartition.ToSpotify.key)
+        val requestBody = spotifyJson.encodeToString(SpotifyAddPlaylistTracksRequest(uris = batch))
+        val request = HttpRequest.newBuilder()
+          .uri(URI.create("$apiBaseUrl/v1/playlists/$playlistId/items"))
+          .header("Authorization", "Bearer ${accessToken.value}")
+          .header("Content-Type", "application/json")
+          .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+          .build()
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        val errorResult = response.checkRateLimitOrError(logger, PlaylistFixError.FIX_FAILED)
+        if (errorResult != null) return errorResult
+      }
+      Unit.right()
+    } catch (e: Exception) {
+      logger.error(e) { "Unexpected error during track addition to playlist $playlistId (user ${userId.value})" }
+      PlaylistFixError.FIX_FAILED.left()
+    }
+  }
+
+  companion object : KLogging() {
+    private const val REMOVE_TRACKS_BATCH_SIZE = 100
+    private const val ADD_TRACKS_BATCH_SIZE = 100
+  }
 }

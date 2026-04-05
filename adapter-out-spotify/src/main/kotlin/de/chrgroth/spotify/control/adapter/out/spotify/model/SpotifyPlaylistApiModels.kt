@@ -31,3 +31,19 @@ internal data class SpotifyPlaylistTracksResponse(
   val next: String? = null,
   @SerialName("snapshot_id") val snapshotId: String? = null,
 )
+
+@Serializable
+internal data class SpotifyRemoveTrackObject(
+  val uri: String,
+  val positions: List<Int>,
+)
+
+@Serializable
+internal data class SpotifyRemovePlaylistTracksRequest(
+  val tracks: List<SpotifyRemoveTrackObject>,
+)
+
+@Serializable
+internal data class SpotifyAddPlaylistTracksRequest(
+  val uris: List<String>,
+)
