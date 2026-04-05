@@ -1,3 +1,12 @@
+# 0.79.0 (2026.04.05)
+
+## New Features
+* Recently played tracks now include a calculated start time.
+
+
+
+---
+
 # 0.78.6 (2026.04.03)
 
 ## Bugfixes / Chore
