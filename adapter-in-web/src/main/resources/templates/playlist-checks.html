@@ -4,6 +4,7 @@
     <div class="container-fluid py-4 px-3 px-md-4">
 
         <h1 class="mb-4 fs-4 fw-semibold">Playlist Checks</h1>
+        <div id="status-banner" class="alert d-none mb-3" role="alert"></div>
 
         {#if groups.empty}
         <p class="text-secondary">No playlist check results available yet. Checks run automatically after playlist data is synced.</p>
@@ -17,6 +18,7 @@
                         <th>Playlist</th>
                         <th>Checked</th>
                         <th>Violations</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -38,6 +40,14 @@
                             </ul>
                             {/if}
                         </td>
+                        <td style="white-space:nowrap;">
+                            {#if row.hasfix && !row.check.violations.empty}
+                            <button class="btn btn-sm btn-outline-warning"
+                                onclick="postWithButton(this, '/playlist-checks/{row.playlistIdValue}/fix/{row.checkType}', 'Fix applied – re-syncing playlist', 'Fix failed', function(){ location.reload(); })">
+                                Fix
+                            </button>
+                            {/if}
+                        </td>
                     </tr>
                     {/for}
                 </tbody>
@@ -46,5 +56,6 @@
         {/for}
         {/if}
     </div>
+    <script src="/settings-utils.js"></script>
     {/content}
 {/include}
