@@ -43,6 +43,7 @@
                         <td style="white-space:nowrap;">
                             {#if row.hasfix && !row.check.violations.empty}
                             <button class="btn btn-sm btn-outline-warning"
+                                aria-label="Fix {row.checkType} for {row.playlistName}"
                                 onclick="postWithButton(this, '/playlist-checks/{row.playlistIdValue}/fix/{row.checkType}', 'Fix applied – re-syncing playlist', 'Fix failed', function(){ location.reload(); })">
                                 Fix
                             </button>

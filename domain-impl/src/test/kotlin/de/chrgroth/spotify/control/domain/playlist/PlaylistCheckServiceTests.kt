@@ -291,6 +291,6 @@ class PlaylistCheckServiceTests {
     val result = adapter.runFix(userId, playlistId, checkId)
 
     assertThat(result.isRight()).isTrue()
-    verify(exactly = 1) { outboxPort.enqueue(any()) }
+    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, playlistId)) }
   }
 }
