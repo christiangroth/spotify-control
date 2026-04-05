@@ -1,7 +1,6 @@
 package de.chrgroth.spotify.control.domain.playlist
 
 import arrow.core.right
-import de.chrgroth.spotify.control.domain.playlist.check.PlaylistCheckFixRunner
 import de.chrgroth.spotify.control.domain.playlist.check.PlaylistCheckRunner
 import de.chrgroth.spotify.control.domain.error.PlaylistFixError
 import de.chrgroth.spotify.control.domain.model.playlist.AppPlaylistCheck
@@ -37,8 +36,6 @@ class PlaylistCheckServiceTests {
 
   private val checkRunner: PlaylistCheckRunner = mockk()
   private val checkRunners: Instance<PlaylistCheckRunner> = mockk()
-  private val fixRunner: PlaylistCheckFixRunner = mockk()
-  private val fixRunners: Instance<PlaylistCheckFixRunner> = mockk()
   private val playlistRepository: PlaylistRepositoryPort = mockk()
   private val playlistCheckRepository: AppPlaylistCheckRepositoryPort = mockk()
   private val dashboardRefresh: DashboardRefreshPort = mockk()
@@ -49,7 +46,6 @@ class PlaylistCheckServiceTests {
 
   private val adapter = PlaylistCheckService(
     checkRunners,
-    fixRunners,
     playlistRepository,
     playlistCheckRepository,
     dashboardRefresh,
@@ -247,9 +243,10 @@ class PlaylistCheckServiceTests {
   }
 
   @Test
-  fun `getFixableCheckIds returns check ids from all fix runners`() {
-    every { fixRunners.iterator() } returns mutableListOf(fixRunner).iterator()
-    every { fixRunner.checkId } returns checkId
+  fun `getFixableCheckIds returns check ids from runners that can fix`() {
+    every { checkRunners.iterator() } returns mutableListOf(checkRunner).iterator()
+    every { checkRunner.checkId } returns checkId
+    every { checkRunner.canFix() } returns true
 
     val fixableIds = adapter.getFixableCheckIds()
 
@@ -257,8 +254,19 @@ class PlaylistCheckServiceTests {
   }
 
   @Test
-  fun `runFix returns error when no fix runner found`() {
-    every { fixRunners.iterator() } returns mutableListOf<PlaylistCheckFixRunner>().iterator()
+  fun `getFixableCheckIds excludes runners that cannot fix`() {
+    every { checkRunners.iterator() } returns mutableListOf(checkRunner).iterator()
+    every { checkRunner.checkId } returns checkId
+    every { checkRunner.canFix() } returns false
+
+    val fixableIds = adapter.getFixableCheckIds()
+
+    assertThat(fixableIds).isEmpty()
+  }
+
+  @Test
+  fun `runFix returns error when no runner with canFix found`() {
+    every { checkRunners.iterator() } returns mutableListOf<PlaylistCheckRunner>().iterator()
 
     val result = adapter.runFix(userId, playlistId, "unknown-check")
 
@@ -268,8 +276,9 @@ class PlaylistCheckServiceTests {
 
   @Test
   fun `runFix returns error when playlist not found`() {
-    every { fixRunners.iterator() } returns mutableListOf(fixRunner).iterator()
-    every { fixRunner.checkId } returns checkId
+    every { checkRunners.iterator() } returns mutableListOf(checkRunner).iterator()
+    every { checkRunner.checkId } returns checkId
+    every { checkRunner.canFix() } returns true
     every { playlistRepository.findByUserIdAndPlaylistId(userId, playlistId) } returns null
 
     val result = adapter.runFix(userId, playlistId, checkId)
@@ -279,13 +288,14 @@ class PlaylistCheckServiceTests {
   }
 
   @Test
-  fun `runFix calls fix runner and enqueues re-sync on success`() {
+  fun `runFix calls fix on runner and enqueues re-sync on success`() {
     val playlist = buildPlaylist(listOf(buildTrack("t1")))
-    every { fixRunners.iterator() } returns mutableListOf(fixRunner).iterator()
-    every { fixRunner.checkId } returns checkId
+    every { checkRunners.iterator() } returns mutableListOf(checkRunner).iterator()
+    every { checkRunner.checkId } returns checkId
+    every { checkRunner.canFix() } returns true
     every { playlistRepository.findByUserIdAndPlaylistId(userId, playlistId) } returns playlist
     every { spotifyAccessToken.getValidAccessToken(userId) } returns AccessToken("token")
-    every { fixRunner.runFix(userId, AccessToken("token"), playlistId, playlist) } returns Unit.right()
+    every { checkRunner.fix(userId, AccessToken("token"), playlistId, playlist) } returns Unit.right()
     every { outboxPort.enqueue(any()) } just runs
 
     val result = adapter.runFix(userId, playlistId, checkId)

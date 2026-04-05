@@ -5,7 +5,6 @@ import arrow.core.left
 import arrow.core.right
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.PlaylistFixError
-import de.chrgroth.spotify.control.domain.playlist.check.PlaylistCheckFixRunner
 import de.chrgroth.spotify.control.domain.playlist.check.PlaylistCheckRunner
 import de.chrgroth.spotify.control.domain.model.playlist.AppPlaylistCheck
 import de.chrgroth.spotify.control.domain.model.user.UserId
@@ -32,7 +31,6 @@ import java.util.concurrent.TimeUnit
 @Suppress("Unused")
 class PlaylistCheckService(
   private val checkRunners: Instance<PlaylistCheckRunner>,
-  private val fixRunners: Instance<PlaylistCheckFixRunner>,
   private val playlistRepository: PlaylistRepositoryPort,
   private val playlistCheckRepository: AppPlaylistCheckRepositoryPort,
   private val dashboardRefresh: DashboardRefreshPort,
@@ -82,10 +80,10 @@ class PlaylistCheckService(
     checkRunners.associate { it.checkId to it.displayName }
 
   override fun getFixableCheckIds(): Set<String> =
-    fixRunners.map { it.checkId }.toSet()
+    checkRunners.filter { it.canFix() }.map { it.checkId }.toSet()
 
   override fun runFix(userId: UserId, playlistId: String, checkType: String): Either<DomainError, Unit> {
-    val fixRunner = fixRunners.find { it.checkId == checkType } ?: run {
+    val runner = checkRunners.find { it.checkId == checkType && it.canFix() } ?: run {
       logger.warn { "No fix runner found for checkType $checkType" }
       return PlaylistFixError.FIX_NOT_FOUND.left()
     }
@@ -95,7 +93,7 @@ class PlaylistCheckService(
     }
     val accessToken = spotifyAccessToken.getValidAccessToken(userId)
     logger.info { "Running fix '$checkType' for playlist $playlistId (user ${userId.value})" }
-    return fixRunner.runFix(userId, accessToken, playlistId, playlist).also { result ->
+    return runner.fix(userId, accessToken, playlistId, playlist).also { result ->
       if (result.isRight()) {
         logger.info { "Fix '$checkType' for playlist $playlistId completed, enqueueing re-check" }
         outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, playlistId))
