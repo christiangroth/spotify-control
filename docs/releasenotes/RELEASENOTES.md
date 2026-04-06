@@ -1,3 +1,13 @@
+# 0.80.3 (2026.04.06)
+
+## Bugfixes / Chore
+* Fixed black text on dark background in tables on health, outbox, and config pages.
+* Fixed black text in outbox overlay in the navigation menu.
+
+
+
+---
+
 # 0.80.2 (2026.04.06)
 
 ## Bugfixes / Chore
