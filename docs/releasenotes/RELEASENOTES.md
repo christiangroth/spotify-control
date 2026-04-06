@@ -1,3 +1,12 @@
+# 0.80.1 (2026.04.06)
+
+## Bugfixes / Chore
+* Fixed table text color on dark background.
+
+
+
+---
+
 # 0.80.0 (2026.04.06)
 
 ## New Features
