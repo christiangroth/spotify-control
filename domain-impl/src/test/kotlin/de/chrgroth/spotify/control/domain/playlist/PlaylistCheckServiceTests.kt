@@ -1,6 +1,8 @@
 package de.chrgroth.spotify.control.domain.playlist
 
+import arrow.core.right
 import de.chrgroth.spotify.control.domain.playlist.check.PlaylistCheckRunner
+import de.chrgroth.spotify.control.domain.error.PlaylistFixError
 import de.chrgroth.spotify.control.domain.model.playlist.AppPlaylistCheck
 import de.chrgroth.spotify.control.domain.model.playlist.Playlist
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistInfo
@@ -10,12 +12,15 @@ import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistId
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistTrack
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
+import de.chrgroth.spotify.control.domain.model.user.AccessToken
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.out.playlist.AppPlaylistCheckRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.infra.DashboardRefreshPort
+import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistCheckNotificationPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAccessTokenPort
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.mockk.every
 import io.mockk.just
@@ -35,6 +40,8 @@ class PlaylistCheckServiceTests {
   private val playlistCheckRepository: AppPlaylistCheckRepositoryPort = mockk()
   private val dashboardRefresh: DashboardRefreshPort = mockk()
   private val notification: PlaylistCheckNotificationPort = mockk()
+  private val spotifyAccessToken: SpotifyAccessTokenPort = mockk()
+  private val outboxPort: OutboxPort = mockk()
   private val meterRegistry = SimpleMeterRegistry()
 
   private val adapter = PlaylistCheckService(
@@ -43,6 +50,8 @@ class PlaylistCheckServiceTests {
     playlistCheckRepository,
     dashboardRefresh,
     notification,
+    spotifyAccessToken,
+    outboxPort,
     meterRegistry,
   )
 
@@ -231,5 +240,69 @@ class PlaylistCheckServiceTests {
     val names = adapter.getDisplayNames()
 
     assertThat(names).containsEntry(checkId, "Test Check")
+  }
+
+  @Test
+  fun `getFixableCheckIds returns check ids from runners that can fix`() {
+    every { checkRunners.iterator() } returns mutableListOf(checkRunner).iterator()
+    every { checkRunner.checkId } returns checkId
+    every { checkRunner.canFix() } returns true
+
+    val fixableIds = adapter.getFixableCheckIds()
+
+    assertThat(fixableIds).containsExactly(checkId)
+  }
+
+  @Test
+  fun `getFixableCheckIds excludes runners that cannot fix`() {
+    every { checkRunners.iterator() } returns mutableListOf(checkRunner).iterator()
+    every { checkRunner.checkId } returns checkId
+    every { checkRunner.canFix() } returns false
+
+    val fixableIds = adapter.getFixableCheckIds()
+
+    assertThat(fixableIds).isEmpty()
+  }
+
+  @Test
+  fun `runFix returns error when no runner with canFix found`() {
+    every { checkRunners.iterator() } returns mutableListOf<PlaylistCheckRunner>().iterator()
+
+    val result = adapter.runFix(userId, playlistId, "unknown-check")
+
+    assertThat(result.isLeft()).isTrue()
+    assertThat((result as arrow.core.Either.Left).value).isEqualTo(PlaylistFixError.FIX_NOT_FOUND)
+  }
+
+  @Test
+  fun `runFix returns error when playlist not found`() {
+    every { checkRunners.iterator() } returns mutableListOf(checkRunner).iterator()
+    every { checkRunner.checkId } returns checkId
+    every { checkRunner.canFix() } returns true
+    every { playlistRepository.findByUserIdAndPlaylistId(userId, playlistId) } returns null
+
+    val result = adapter.runFix(userId, playlistId, checkId)
+
+    assertThat(result.isLeft()).isTrue()
+    assertThat((result as arrow.core.Either.Left).value).isEqualTo(PlaylistFixError.PLAYLIST_NOT_FOUND)
+  }
+
+  @Test
+  fun `runFix calls fix on runner and enqueues re-sync on success`() {
+    val playlist = buildPlaylist(listOf(buildTrack("t1")))
+    val playlistInfo = buildPlaylistInfo()
+    every { checkRunners.iterator() } returns mutableListOf(checkRunner).iterator()
+    every { checkRunner.checkId } returns checkId
+    every { checkRunner.canFix() } returns true
+    every { playlistRepository.findByUserIdAndPlaylistId(userId, playlistId) } returns playlist
+    every { playlistRepository.findByUserId(userId) } returns listOf(playlistInfo)
+    every { spotifyAccessToken.getValidAccessToken(userId) } returns AccessToken("token")
+    every { checkRunner.fix(userId, AccessToken("token"), playlistId, playlist, playlistInfo, listOf(playlistInfo)) } returns Unit.right()
+    every { outboxPort.enqueue(any()) } just runs
+
+    val result = adapter.runFix(userId, playlistId, checkId)
+
+    assertThat(result.isRight()).isTrue()
+    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, playlistId)) }
   }
 }

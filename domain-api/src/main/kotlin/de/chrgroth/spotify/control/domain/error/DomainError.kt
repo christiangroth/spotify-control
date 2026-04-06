@@ -54,6 +54,13 @@ enum class ArtistSettingsError(override val code: String) : DomainError {
   ;
 }
 
+enum class PlaylistFixError(override val code: String) : DomainError {
+  FIX_NOT_FOUND("FIX-001"),
+  PLAYLIST_NOT_FOUND("FIX-002"),
+  FIX_FAILED("FIX-003"),
+  ;
+}
+
 data class SpotifyRateLimitError(val retryAfter: kotlin.time.Duration) : DomainError {
   override val code: String = "SPOTIFY-429"
 }
