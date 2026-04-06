@@ -40,6 +40,13 @@ class SpotifyMockResource {
     """{"id":"$mockUserId","display_name":"Mock User"}"""
 
   @GET
+  @Path("/v1/me/playlists")
+  @PermitAll
+  @Produces(MediaType.APPLICATION_JSON)
+  fun playlists(): String =
+    """{"items":[{"id":"mock-playlist-1","name":"Mock Playlist One","snapshot_id":"mock-snapshot-1","owner":{"id":"$mockUserId"}}],"next":null}"""
+
+  @GET
   @Path("/v1/me/player/currently-playing")
   @PermitAll
   @Produces(MediaType.APPLICATION_JSON)

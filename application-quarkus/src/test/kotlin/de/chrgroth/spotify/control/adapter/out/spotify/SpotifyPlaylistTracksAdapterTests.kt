@@ -27,6 +27,19 @@ class SpotifyPlaylistTracksAdapterTests {
   lateinit var meterRegistry: MeterRegistry
 
   @Test
+  fun `getPlaylists returns playlists from mock`() {
+    val result = spotifyPlaylist.getPlaylists(UserId("test-user-a"), AccessToken("mock-access-token"))
+
+    assertThat(result).isInstanceOf(Either.Right::class.java)
+    val playlists = (result as Either.Right).value
+    assertThat(playlists).hasSize(1)
+    assertThat(playlists[0].id).isEqualTo("mock-playlist-1")
+    assertThat(playlists[0].name).isEqualTo("Mock Playlist One")
+    assertThat(playlists[0].snapshotId).isEqualTo("mock-snapshot-1")
+    assertThat(playlists[0].ownerId).isEqualTo("test-user-a")
+  }
+
+  @Test
   fun `getPlaylistTracks returns tracks from mock`() {
     val result = spotifyPlaylist.getPlaylistTracks(UserId("test-user-a"), AccessToken("mock-access-token"), "mock-playlist-1")
 
@@ -82,5 +95,37 @@ class SpotifyPlaylistTracksAdapterTests {
     val stats = outgoingRequestStats.getRequestStats()
     assertThat(stats).isNotEmpty
     assertThat(stats.any { it.requestCountLast24h > 0 }).isTrue
+  }
+
+  @Test
+  fun `getPlaylistTracksPage returns tracks from mock`() {
+    val result = spotifyPlaylist.getPlaylistTracksPage(UserId("test-user-a"), AccessToken("mock-access-token"), "mock-playlist-1", null)
+
+    assertThat(result).isInstanceOf(Either.Right::class.java)
+    val page = (result as Either.Right).value
+    assertThat(page.snapshotId).isEqualTo("mock-snapshot-1")
+    assertThat(page.tracks).hasSize(1)
+    assertThat(page.tracks[0].trackId).isEqualTo(TrackId("track-1"))
+    assertThat(page.tracks[0].artistIds).containsExactly(ArtistId("artist-1"))
+    assertThat(page.tracks[0].albumId).isEqualTo(AlbumId("album-1"))
+    assertThat(page.nextUrl).isNull()
+  }
+
+  @Test
+  fun `getPlaylistTracksPage filters out non-track items`() {
+    val result = spotifyPlaylist.getPlaylistTracksPage(UserId("test-user-a"), AccessToken("mock-access-token"), "mock-playlist-1", null)
+
+    assertThat(result).isInstanceOf(Either.Right::class.java)
+    val page = (result as Either.Right).value
+    assertThat(page.tracks.none { it.trackId == TrackId("episode-1") }).isTrue
+  }
+
+  @Test
+  fun `getPlaylistTracksPage filters out null track and null item entries`() {
+    val result = spotifyPlaylist.getPlaylistTracksPage(UserId("test-user-a"), AccessToken("mock-access-token"), "mock-playlist-1", null)
+
+    assertThat(result).isInstanceOf(Either.Right::class.java)
+    val page = (result as Either.Right).value
+    assertThat(page.tracks).hasSize(1)
   }
 }
