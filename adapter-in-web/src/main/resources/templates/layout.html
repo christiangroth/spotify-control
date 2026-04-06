@@ -64,6 +64,7 @@
         }
         /* Transparent table used in dark cards (health, config) */
         .app-table {
+            --bs-table-color: var(--color-text-primary);
             color: var(--color-text-primary);
             background-color: transparent;
         }
@@ -78,6 +79,7 @@
         }
         /* Override Bootstrap's dark table border and text color with app values */
         .table-dark {
+            --bs-table-color: var(--color-text-primary);
             color: var(--color-text-primary);
             --bs-table-border-color: var(--color-border);
         }
