@@ -1,3 +1,13 @@
+# 0.80.2 (2026.04.06)
+
+## Bugfixes / Chore
+* Fixed playlist sync failing with PLAYLIST-003 when syncing large playlists that contain unavailable or deleted tracks.
+* Local tracks and tracks without an id are now gracefully skipped during playlist sync.
+
+
+
+---
+
 # 0.80.1 (2026.04.06)
 
 ## Bugfixes / Chore
