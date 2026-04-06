@@ -153,15 +153,13 @@ class SpotifyPlaylistAdapter(
     userId: UserId,
     accessToken: AccessToken,
     playlistId: String,
-    positionsByTrackId: Map<String, List<Int>>,
+    trackIds: List<String>,
   ): Either<DomainError, Unit> {
     return try {
-      val allTracks = positionsByTrackId.entries.map { (trackId, positions) ->
-        SpotifyRemoveTrackObject(uri = "spotify:track:$trackId", positions = positions)
-      }
-      allTracks.chunked(REMOVE_TRACKS_BATCH_SIZE).forEach { batch ->
+      val allItems = trackIds.map { trackId -> SpotifyRemoveTrackObject(uri = "spotify:track:$trackId") }
+      allItems.chunked(REMOVE_TRACKS_BATCH_SIZE).forEach { batch ->
         throttler.throttle(DomainOutboxPartition.ToSpotify.key)
-        val requestBody = spotifyJson.encodeToString(SpotifyRemovePlaylistTracksRequest(tracks = batch))
+        val requestBody = spotifyJson.encodeToString(SpotifyRemovePlaylistTracksRequest(items = batch))
         val request = HttpRequest.newBuilder()
           .uri(URI.create("$apiBaseUrl/v1/playlists/$playlistId/items"))
           .header("Authorization", "Bearer ${accessToken.value}")

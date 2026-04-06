@@ -35,12 +35,11 @@ internal data class SpotifyPlaylistTracksResponse(
 @Serializable
 internal data class SpotifyRemoveTrackObject(
   val uri: String,
-  val positions: List<Int>,
 )
 
 @Serializable
 internal data class SpotifyRemovePlaylistTracksRequest(
-  val tracks: List<SpotifyRemoveTrackObject>,
+  val items: List<SpotifyRemoveTrackObject>,
 )
 
 @Serializable
