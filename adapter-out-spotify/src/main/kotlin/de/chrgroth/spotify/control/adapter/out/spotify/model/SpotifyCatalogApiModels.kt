@@ -31,7 +31,7 @@ internal data class SpotifyAlbumRef(
 
 @Serializable
 internal data class SpotifyTrackResponse(
-  val id: String,
+  val id: String?,
   val name: String,
   val type: String,
   @SerialName("is_local") val isLocal: Boolean = false,

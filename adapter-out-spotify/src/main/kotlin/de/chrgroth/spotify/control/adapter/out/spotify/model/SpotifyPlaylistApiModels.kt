@@ -22,12 +22,12 @@ internal data class SpotifyUserPlaylistsResponse(
 
 @Serializable
 internal data class SpotifyPlaylistTrackObject(
-  val item: SpotifyTrackResponse? = null,
+  @SerialName("track") val track: SpotifyTrackResponse? = null,
 )
 
 @Serializable
 internal data class SpotifyPlaylistTracksResponse(
-  val items: List<SpotifyPlaylistTrackObject> = emptyList(),
+  val items: List<SpotifyPlaylistTrackObject?> = emptyList(),
   val next: String? = null,
   @SerialName("snapshot_id") val snapshotId: String? = null,
 )

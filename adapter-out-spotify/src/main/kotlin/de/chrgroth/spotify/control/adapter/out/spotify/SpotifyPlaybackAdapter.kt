@@ -67,8 +67,8 @@ class SpotifyPlaybackAdapter(
       logger.info { "Ignoring non-track currently playing event of type '${track?.type}'" }
       return null
     }
-    if (track.isLocal) {
-      logger.info { "Ignoring local currently playing track '${track.name}'" }
+    if (track.isLocal || track.id == null) {
+      logger.info { "Ignoring local or id-less currently playing track '${track.name}'" }
       return null
     }
     val progressMs = response.progressMs ?: 0L
@@ -122,8 +122,8 @@ class SpotifyPlaybackAdapter(
       logger.info { "Ignoring non-track playback event of type '${track.type}'" }
       return null
     }
-    if (track.isLocal) {
-      logger.info { "Ignoring local track '${track.name}'" }
+    if (track.isLocal || track.id == null) {
+      logger.info { "Ignoring local or id-less recently played track '${track.name}'" }
       return null
     }
     val durationSeconds = track.durationMs?.let { it / MS_PER_SECOND }
