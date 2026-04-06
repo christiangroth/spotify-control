@@ -71,6 +71,10 @@ class SpotifyPlaybackAdapter(
       logger.info { "Ignoring local currently playing track '${track.name}'" }
       return null
     }
+    if (track.id == null) {
+      logger.info { "Ignoring currently playing track '${track.name}' without id" }
+      return null
+    }
     val progressMs = response.progressMs ?: 0L
     val observedAt = Clock.System.now()
     return CurrentlyPlayingItem(
@@ -124,6 +128,10 @@ class SpotifyPlaybackAdapter(
     }
     if (track.isLocal) {
       logger.info { "Ignoring local track '${track.name}'" }
+      return null
+    }
+    if (track.id == null) {
+      logger.info { "Ignoring recently played track '${track.name}' without id" }
       return null
     }
     val durationSeconds = track.durationMs?.let { it / MS_PER_SECOND }

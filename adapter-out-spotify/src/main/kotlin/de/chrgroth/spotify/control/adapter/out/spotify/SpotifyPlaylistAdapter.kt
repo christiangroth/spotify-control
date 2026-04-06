@@ -130,11 +130,16 @@ class SpotifyPlaylistAdapter(
     }
   }
 
-  private fun parsePlaylistTracks(items: List<SpotifyPlaylistTrackObject>): List<PlaylistTrack> =
+  private fun parsePlaylistTracks(items: List<SpotifyPlaylistTrackObject?>): List<PlaylistTrack> =
     items.mapNotNull { item ->
-      val track = item.item ?: return@mapNotNull null
+      if (item == null) return@mapNotNull null
+      val track = item.track ?: return@mapNotNull null
       if (track.type != "track") {
         logger.info { "Ignoring non-track playlist item of type '${track.type}'" }
+        return@mapNotNull null
+      }
+      if (track.id == null) {
+        logger.info { "Ignoring local track '${track.name}' without id in playlist" }
         return@mapNotNull null
       }
       val albumId = track.album?.id
