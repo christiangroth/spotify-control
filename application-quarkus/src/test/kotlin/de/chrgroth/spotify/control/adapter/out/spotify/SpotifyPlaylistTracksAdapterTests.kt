@@ -67,6 +67,29 @@ class SpotifyPlaylistTracksAdapterTests {
   }
 
   @Test
+  fun `getPlaylistTracks includes track with null album id`() {
+    val result = spotifyPlaylist.getPlaylistTracks(UserId("test-user-a"), AccessToken("mock-access-token"), "mock-playlist-2")
+
+    assertThat(result).isInstanceOf(Either.Right::class.java)
+    val playlist = (result as Either.Right).value
+    val trackWithNullAlbum = playlist.tracks.find { it.trackId == TrackId("track-3") }
+    assertThat(trackWithNullAlbum).isNotNull
+    assertThat(trackWithNullAlbum!!.albumId).isNull()
+    assertThat(trackWithNullAlbum.artistIds).containsExactly(ArtistId("artist-3"))
+  }
+
+  @Test
+  fun `getPlaylistTracks includes track with album id when present`() {
+    val result = spotifyPlaylist.getPlaylistTracks(UserId("test-user-a"), AccessToken("mock-access-token"), "mock-playlist-2")
+
+    assertThat(result).isInstanceOf(Either.Right::class.java)
+    val playlist = (result as Either.Right).value
+    val trackWithAlbum = playlist.tracks.find { it.trackId == TrackId("track-1") }
+    assertThat(trackWithAlbum).isNotNull
+    assertThat(trackWithAlbum!!.albumId).isEqualTo(AlbumId("album-1"))
+  }
+
+  @Test
   fun `getPlaylistTracks records spotify request metrics`() {
     spotifyPlaylist.getPlaylistTracks(UserId("test-user-a"), AccessToken("mock-access-token"), "mock-playlist-1")
 
