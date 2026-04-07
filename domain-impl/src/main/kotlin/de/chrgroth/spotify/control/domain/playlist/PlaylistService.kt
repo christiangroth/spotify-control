@@ -142,6 +142,7 @@ class PlaylistService(
           it.type != null -> it.type
           it.name.equals("all", ignoreCase = true) -> PlaylistType.ALL
           it.name.matches(YEAR_NAME_REGEX) -> PlaylistType.YEAR
+          it.name.equals(PlaylistType.SINGULARITY_PLAYLIST_NAME, ignoreCase = true) -> PlaylistType.SINGULARITY
           else -> PlaylistType.UNKNOWN
         }
         it.copy(syncStatus = syncStatus, type = newType)
@@ -193,6 +194,10 @@ class PlaylistService(
       }
       type == PlaylistType.ALL && playlists.any { it.type == PlaylistType.ALL && it.spotifyPlaylistId != playlistId } -> {
         logger.warn { "Playlist type ALL already assigned to another playlist for user ${userId.value}" }
+        PlaylistSyncError.PLAYLIST_TYPE_CONFLICT
+      }
+      type == PlaylistType.SINGULARITY && playlists.any { it.type == PlaylistType.SINGULARITY && it.spotifyPlaylistId != playlistId } -> {
+        logger.warn { "Playlist type SINGULARITY already assigned to another playlist for user ${userId.value}" }
         PlaylistSyncError.PLAYLIST_TYPE_CONFLICT
       }
       else -> null
