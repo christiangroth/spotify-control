@@ -1,3 +1,12 @@
+# 0.80.4 (2026.04.07)
+
+## Bugfixes / Chore
+* Fixed playlist track sync not finding any tracks due to incorrect JSON field mapping.
+
+
+
+---
+
 # 0.80.3 (2026.04.06)
 
 ## Bugfixes / Chore
