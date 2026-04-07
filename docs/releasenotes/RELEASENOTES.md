@@ -1,3 +1,13 @@
+# 0.80.5 (2026.04.07)
+
+## Bugfixes / Chore
+* Fixed sync failure for large playlists when Spotify returns null album information for a track.
+* Tracks without album information are now saved and their artists are still synced.
+
+
+
+---
+
 # 0.80.4 (2026.04.07)
 
 ## Bugfixes / Chore
