@@ -6,6 +6,7 @@ import io.quarkus.scheduler.Scheduled
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
 import java.time.LocalDate
+import java.time.ZoneOffset
 
 @ApplicationScoped
 @Suppress("Unused")
@@ -15,7 +16,7 @@ class ArtistCatalogSyncJob(
 
   @Scheduled(cron = "0 0 2 * * ?", skipExecutionIf = ScheduledSkipPredicate::class)
   fun run() {
-    val partition = LocalDate.now().dayOfYear % TOTAL_PARTITIONS
+    val partition = LocalDate.now(ZoneOffset.UTC).dayOfYear % TOTAL_PARTITIONS
     logger.info { "Running scheduled artist catalog sync for partition $partition/$TOTAL_PARTITIONS" }
     catalog.enqueueArtistAlbumsSync(partition, TOTAL_PARTITIONS)
   }
