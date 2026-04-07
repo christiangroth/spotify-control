@@ -144,13 +144,12 @@ class SpotifyPlaylistAdapter(
       }
       val albumId = track.album?.id
       if (albumId == null) {
-        logger.error { "Ignoring track ${track.id} without albumId in playlist" }
-        return@mapNotNull null
+        logger.warn { "Track ${track.id} has no albumId in playlist, saving track without album" }
       }
       PlaylistTrack(
         trackId = TrackId(track.id),
         artistIds = track.artists.map { ArtistId(it.id) },
-        albumId = AlbumId(albumId),
+        albumId = albumId?.let { AlbumId(it) },
       )
     }
 

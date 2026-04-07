@@ -130,7 +130,7 @@ class PlaylistRepositoryAdapter(
   private fun PlaylistTrackSubdocument.toDomain() = PlaylistTrack(
     trackId = TrackId(trackId),
     artistIds = artistIds.map { ArtistId(it) },
-    albumId = AlbumId(albumId),
+    albumId = albumId?.let { AlbumId(it) },
   )
 
   private fun Playlist.toDocument(userId: UserId) = PlaylistDocument().apply {
@@ -143,7 +143,7 @@ class PlaylistRepositoryAdapter(
   private fun PlaylistTrack.toSubdocument() = PlaylistTrackSubdocument().apply {
     trackId = this@toSubdocument.trackId.value
     artistIds = this@toSubdocument.artistIds.map { it.value }
-    albumId = this@toSubdocument.albumId.value
+    albumId = this@toSubdocument.albumId?.value
   }
 
   override fun setAllSyncInactive() {

@@ -19,7 +19,7 @@ internal data class SpotifyArtistResponse(
 
 @Serializable
 internal data class SpotifyAlbumRef(
-  val id: String,
+  val id: String?,
   val name: String,
   val images: List<SpotifyImage> = emptyList(),
   @SerialName("release_date") val releaseDate: String? = null,

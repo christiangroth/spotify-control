@@ -111,7 +111,7 @@ class PlaylistService(
         playlistRepository.appendTracks(userId, playlistId, page.tracks)
       }
 
-      val catalogRequests = page.tracks.map { CatalogSyncRequest(it.trackId.value, it.albumId.value, it.artistIds.map { a -> a.value }) }
+      val catalogRequests = page.tracks.map { CatalogSyncRequest(it.trackId.value, it.albumId?.value, it.artistIds.map { a -> a.value }) }
       syncController.syncForTracks(catalogRequests, userId)
 
       if (page.nextUrl != null) {
