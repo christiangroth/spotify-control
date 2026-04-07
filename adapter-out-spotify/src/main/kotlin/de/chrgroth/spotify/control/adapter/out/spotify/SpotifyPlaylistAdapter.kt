@@ -6,7 +6,9 @@ import arrow.core.right
 import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyAddPlaylistTracksRequest
 import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyPlaylistTrackObject
 import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyPlaylistTracksResponse
+import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyRemovePlaylistTrackAtPositionRequest
 import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyRemovePlaylistTracksRequest
+import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyRemoveTrackAtPositionObject
 import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyRemoveTrackObject
 import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyUserPlaylistsResponse
 import de.chrgroth.spotify.control.domain.error.DomainError
@@ -205,6 +207,50 @@ class SpotifyPlaylistAdapter(
       Unit.right()
     } catch (e: Exception) {
       logger.error(e) { "Unexpected error during track addition to playlist $playlistId (user ${userId.value})" }
+      PlaylistFixError.FIX_FAILED.left()
+    }
+  }
+
+  override fun replacePlaylistTrack(
+    userId: UserId,
+    accessToken: AccessToken,
+    playlistId: String,
+    oldTrackId: String,
+    newTrackId: String,
+    position: Int,
+  ): Either<DomainError, Unit> {
+    return try {
+      throttler.throttle(DomainOutboxPartition.ToSpotify.key)
+      val removeBody = spotifyJson.encodeToString(
+        SpotifyRemovePlaylistTrackAtPositionRequest(
+          items = listOf(SpotifyRemoveTrackAtPositionObject(uri = "spotify:track:$oldTrackId", positions = listOf(position))),
+        ),
+      )
+      val removeRequest = HttpRequest.newBuilder()
+        .uri(URI.create("$apiBaseUrl/v1/playlists/$playlistId/tracks"))
+        .header("Authorization", "Bearer ${accessToken.value}")
+        .header("Content-Type", "application/json")
+        .method("DELETE", HttpRequest.BodyPublishers.ofString(removeBody))
+        .build()
+      val removeResponse = httpClient.send(removeRequest, HttpResponse.BodyHandlers.ofString())
+      val removeError = removeResponse.checkRateLimitOrError(logger, PlaylistFixError.FIX_FAILED)
+      if (removeError != null) return removeError
+
+      throttler.throttle(DomainOutboxPartition.ToSpotify.key)
+      val addBody = spotifyJson.encodeToString(SpotifyAddPlaylistTracksRequest(uris = listOf("spotify:track:$newTrackId"), position = position))
+      val addRequest = HttpRequest.newBuilder()
+        .uri(URI.create("$apiBaseUrl/v1/playlists/$playlistId/tracks"))
+        .header("Authorization", "Bearer ${accessToken.value}")
+        .header("Content-Type", "application/json")
+        .POST(HttpRequest.BodyPublishers.ofString(addBody))
+        .build()
+      val addResponse = httpClient.send(addRequest, HttpResponse.BodyHandlers.ofString())
+      val addError = addResponse.checkRateLimitOrError(logger, PlaylistFixError.FIX_FAILED)
+      if (addError != null) return addError
+
+      Unit.right()
+    } catch (e: Exception) {
+      logger.error(e) { "Unexpected error during track replacement in playlist $playlistId (user ${userId.value})" }
       PlaylistFixError.FIX_FAILED.left()
     }
   }

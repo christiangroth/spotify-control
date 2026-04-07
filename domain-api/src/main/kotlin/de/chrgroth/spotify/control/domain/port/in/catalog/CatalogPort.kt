@@ -21,6 +21,8 @@ interface CatalogPort {
   fun resyncArtist(artistId: String): Either<DomainError, Unit>
   fun wipeCatalog(): Either<DomainError, Unit>
   fun handle(event: DomainOutboxEvent.SyncArtistDetails): Either<DomainError, Unit>
+  fun handle(event: DomainOutboxEvent.SyncArtistAlbums): Either<DomainError, Unit>
   fun handle(event: DomainOutboxEvent.SyncAlbumDetails): Either<DomainError, Unit>
   fun handle(event: DomainOutboxEvent.ResyncCatalog): Either<DomainError, Unit>
+  fun enqueueArtistAlbumsSync(partition: Int, totalPartitions: Int)
 }

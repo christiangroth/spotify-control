@@ -74,4 +74,17 @@ internal data class SpotifyAlbumResponse(
   val tracks: SpotifyAlbumTracksPage = SpotifyAlbumTracksPage(),
 )
 
+@Serializable
+internal data class SpotifyArtistAlbumRef(
+  val id: String,
+  @SerialName("album_type") val albumType: String? = null,
+)
+
+@Serializable
+internal data class SpotifyArtistAlbumsPage(
+  val items: List<SpotifyArtistAlbumRef> = emptyList(),
+  val next: String? = null,
+  val total: Int = 0,
+)
+
 

@@ -169,6 +169,31 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
   }
 
   /**
+   * Syncs all album IDs for a single artist from the Spotify API and enqueues
+   * SyncAlbumDetails for any albums not yet in the catalog.
+   * Deduplication is by artistId only (album data is shared across users).
+   * payload = "$artistId:${userId.value}"
+   */
+  data class SyncArtistAlbums(val artistId: String, val userId: UserId) : DomainOutboxEvent {
+    override val key = KEY
+    override val deduplicationKey = "$KEY:$artistId"
+    override val partition = DomainOutboxPartition.ToSpotify
+    override val serializePayload = "$artistId:${userId.value}"
+
+    companion object {
+      const val KEY = "SyncArtistAlbums"
+      fun fromPayload(payload: String): SyncArtistAlbums {
+        val colonIndex = payload.indexOf(':')
+        require(colonIndex > 0 && colonIndex < payload.length - 1) { "Invalid SyncArtistAlbums payload: $payload" }
+        return SyncArtistAlbums(
+          artistId = payload.substring(0, colonIndex),
+          userId = UserId(payload.substring(colonIndex + 1)),
+        )
+      }
+    }
+  }
+
+  /**
    * Re-enqueues sync events for all known artists, tracks, and albums in the catalog
    * so that they are refreshed from Spotify.
    * Deduplication ensures only one instance is queued at a time.
@@ -215,6 +240,7 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
       RebuildPlaybackData.KEY -> RebuildPlaybackData(UserId(payload))
       AppendPlaybackData.KEY -> AppendPlaybackData(UserId(payload))
       SyncArtistDetails.KEY, SyncArtistDetails.LEGACY_KEY -> SyncArtistDetails.fromPayload(payload)
+      SyncArtistAlbums.KEY -> SyncArtistAlbums.fromPayload(payload)
       SyncAlbumDetails.KEY -> SyncAlbumDetails.fromPayload(payload)
       ResyncCatalog.KEY -> ResyncCatalog()
       RunPlaylistChecks.KEY -> RunPlaylistChecks.fromPayload(payload)
