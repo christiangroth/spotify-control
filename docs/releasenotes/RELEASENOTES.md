@@ -1,3 +1,14 @@
+# 0.82.2 (2026.04.08)
+
+## Bugfixes / Chore
+* Removed artist sync status feature.
+* All artists from playlists and playback events are now always synchronized to the catalog.
+* Fixed syncing large playlists that fail when Spotify returns null artist or album IDs.
+
+
+
+---
+
 # 0.82.1 (2026.04.08)
 
 ## Bugfixes / Chore
