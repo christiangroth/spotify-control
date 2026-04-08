@@ -169,9 +169,9 @@ class SpotifyCatalogAdapter(
       releaseDate = album.releaseDate,
       releaseDatePrecision = album.releaseDatePrecision,
       type = album.albumType,
-      artistId = album.artists.firstOrNull()?.let { ArtistId(it.id) },
+      artistId = album.artists.firstOrNull()?.id?.let { ArtistId(it) },
       artistName = album.artists.firstOrNull()?.name,
-      additionalArtistIds = album.artists.additionalItems { ArtistId(id) },
+      additionalArtistIds = album.artists.additionalItems { id?.let { ArtistId(it) } }?.filterNotNull(),
       additionalArtistNames = album.artists.additionalItems { name },
       lastSync = Clock.System.now(),
     )
@@ -179,14 +179,15 @@ class SpotifyCatalogAdapter(
   private fun parseAlbumTrack(track: SpotifySimplifiedTrackResponse, album: AppAlbum): AppTrack? {
     val trackId = track.id ?: return null
     val primaryArtist = track.artists.firstOrNull() ?: return null
+    val primaryArtistId = primaryArtist.id ?: return null
     return AppTrack(
       id = TrackId(trackId),
       title = track.name,
       albumId = album.id,
       albumName = album.title,
-      artistId = ArtistId(primaryArtist.id),
+      artistId = ArtistId(primaryArtistId),
       artistName = primaryArtist.name,
-      additionalArtistIds = track.artists.additionalItems { ArtistId(id) } ?: emptyList(),
+      additionalArtistIds = track.artists.additionalItems { id?.let { ArtistId(it) } }?.filterNotNull() ?: emptyList(),
       additionalArtistNames = track.artists.additionalItems { name },
       discNumber = track.discNumber,
       durationMs = track.durationMs,
