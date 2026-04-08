@@ -88,18 +88,6 @@ class PlaylistRepositoryAdapter(
     }
   }
 
-  override fun findArtistIdsInActivePlaylists(): Set<String> {
-    val activeMetadata = mongoQueryMetrics.timed("spotify_playlist_metadata.findAllActive") {
-      playlistMetadataDocumentRepository.list("syncStatus = ?1", PlaylistSyncStatus.ACTIVE.name)
-    }
-    return mongoQueryMetrics.timed("spotify_playlist.findArtistIdsInActivePlaylists") {
-      activeMetadata
-        .mapNotNull { meta -> playlistDocumentRepository.findById("${meta.spotifyUserId}:${meta.spotifyPlaylistId}") }
-        .flatMap { playlist -> playlist.tracks.flatMap { it.artistIds } }
-        .toSet()
-    }
-  }
-
   private fun PlaylistMetadataDocument.toDomain() = PlaylistInfo(
     spotifyPlaylistId = spotifyPlaylistId,
     snapshotId = snapshotId,

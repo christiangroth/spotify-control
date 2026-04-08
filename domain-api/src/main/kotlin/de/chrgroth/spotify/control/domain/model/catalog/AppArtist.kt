@@ -12,5 +12,4 @@ data class AppArtist(
   val imageLink: String? = null,
   val type: String? = null,
   val lastSync: Instant,
-  val playbackProcessingStatus: ArtistPlaybackProcessingStatus = ArtistPlaybackProcessingStatus.UNDECIDED,
 )

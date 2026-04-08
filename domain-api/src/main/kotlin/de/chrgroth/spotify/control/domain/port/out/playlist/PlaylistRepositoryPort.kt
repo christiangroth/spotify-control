@@ -12,7 +12,6 @@ interface PlaylistRepositoryPort {
   fun findTrackCountsByUserId(userId: UserId): Map<String, Int>
   fun save(userId: UserId, playlist: Playlist)
   fun appendTracks(userId: UserId, playlistId: String, tracks: List<PlaylistTrack>)
-  fun findArtistIdsInActivePlaylists(): Set<String>
   fun updateLastSyncTime(userId: UserId, playlistId: String, time: kotlin.time.Instant)
   fun setAllSyncInactive()
 }

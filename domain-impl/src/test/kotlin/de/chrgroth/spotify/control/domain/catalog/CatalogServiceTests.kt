@@ -10,7 +10,6 @@ import de.chrgroth.spotify.control.domain.model.catalog.AppAlbum
 import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
 import de.chrgroth.spotify.control.domain.model.catalog.AppTrack
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
-import de.chrgroth.spotify.control.domain.model.catalog.ArtistPlaybackProcessingStatus
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.model.user.User
@@ -20,7 +19,6 @@ import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppAlbumRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.playback.AppPlaybackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.AppPlaylistCheckRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.infra.DashboardRefreshPort
@@ -44,7 +42,6 @@ class CatalogServiceTests {
   private val appArtistRepository: AppArtistRepositoryPort = mockk()
   private val appTrackRepository: AppTrackRepositoryPort = mockk()
   private val appAlbumRepository: AppAlbumRepositoryPort = mockk()
-  private val appPlaybackRepository: AppPlaybackRepositoryPort = mockk()
   private val userRepository: UserRepositoryPort = mockk()
   private val outboxPort: OutboxPort = mockk()
   private val playlistRepository: PlaylistRepositoryPort = mockk()
@@ -55,7 +52,7 @@ class CatalogServiceTests {
   private val adapter = CatalogService(
     spotifyAccessToken, spotifyCatalog,
     appArtistRepository, appTrackRepository, appAlbumRepository,
-    appPlaybackRepository, userRepository, outboxPort,
+    userRepository, outboxPort,
     playlistRepository, playlistCheckRepository,
     dashboardRefresh, syncController,
   )
@@ -63,11 +60,11 @@ class CatalogServiceTests {
   private val syncTimestamp = Instant.fromEpochSeconds(1)
   private val artist1 = AppArtist(
     id = ArtistId("artist-1"), artistName = "Artist One",
-    playbackProcessingStatus = ArtistPlaybackProcessingStatus.UNDECIDED, lastSync = syncTimestamp,
+    lastSync = syncTimestamp,
   )
   private val artist2 = AppArtist(
     id = ArtistId("artist-2"), artistName = "Artist Two",
-    playbackProcessingStatus = ArtistPlaybackProcessingStatus.UNDECIDED, lastSync = syncTimestamp,
+    lastSync = syncTimestamp,
   )
   private val track1 = AppTrack(id = TrackId("track-1"), title = "Track One", artistId = ArtistId("artist-1"), lastSync = syncTimestamp)
   private val track2 = AppTrack(id = TrackId("track-2"), title = "Track Two", artistId = ArtistId("artist-2"), lastSync = syncTimestamp)

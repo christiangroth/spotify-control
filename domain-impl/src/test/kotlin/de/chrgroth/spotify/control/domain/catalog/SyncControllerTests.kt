@@ -3,7 +3,6 @@ package de.chrgroth.spotify.control.domain.catalog
 import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
 import de.chrgroth.spotify.control.domain.model.catalog.AppTrack
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
-import de.chrgroth.spotify.control.domain.model.catalog.ArtistPlaybackProcessingStatus
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
@@ -41,7 +40,6 @@ class SyncControllerTests {
   private fun artist(id: String) = AppArtist(
     id = ArtistId(id),
     artistName = "Artist $id",
-    playbackProcessingStatus = ArtistPlaybackProcessingStatus.UNDECIDED,
     lastSync = syncTime,
   )
 

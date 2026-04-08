@@ -13,7 +13,6 @@ interface PlaybackPort {
   fun enqueueRebuildPlaybackData(userId: UserId)
   fun rebuildPlaybackData(userId: UserId)
   fun appendPlaybackData(userId: UserId)
-  fun syncArtistPlaybackFromPlaylists(userId: UserId)
   fun handle(event: DomainOutboxEvent.FetchCurrentlyPlaying): Either<DomainError, Unit>
   fun handle(event: DomainOutboxEvent.FetchRecentlyPlayed): Either<DomainError, Unit>
   fun handle(event: DomainOutboxEvent.RebuildPlaybackData): Either<DomainError, Unit>

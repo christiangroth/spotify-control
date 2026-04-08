@@ -9,19 +9,16 @@ import de.chrgroth.spotify.control.domain.model.playback.CurrentlyPlayingItem
 import de.chrgroth.spotify.control.domain.model.playback.RecentlyPartialPlayedItem
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
 import de.chrgroth.spotify.control.domain.model.user.UserId
-import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playback.AppPlaybackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playback.CurrentlyPlayingRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.infra.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.playback.PlaybackStatePort
-import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playback.RecentlyPartialPlayedRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playback.RecentlyPlayedRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.playback.SpotifyPlaybackPort
 import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
-import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogPort
 import de.chrgroth.spotify.control.domain.catalog.SyncController
 import io.mockk.every
 import io.mockk.just
@@ -45,13 +42,10 @@ class FetchCurrentlyPlayingServiceTests {
   private val recentlyPlayedRepository: RecentlyPlayedRepositoryPort = mockk(relaxed = true)
   private val recentlyPartialPlayedRepository: RecentlyPartialPlayedRepositoryPort = mockk(relaxed = true)
   private val appPlaybackRepository: AppPlaybackRepositoryPort = mockk(relaxed = true)
-  private val appArtistRepository: AppArtistRepositoryPort = mockk(relaxed = true)
   private val syncController: SyncController = mockk(relaxed = true)
   private val outboxPort: OutboxPort = mockk(relaxed = true)
   private val dashboardRefresh: DashboardRefreshPort = mockk(relaxed = true)
   private val playbackState: PlaybackStatePort = mockk(relaxed = true)
-  private val catalog: CatalogPort = mockk(relaxed = true)
-  private val playlistRepository: PlaylistRepositoryPort = mockk(relaxed = true)
 
   private val service = PlaybackService(
     userRepository,
@@ -61,13 +55,10 @@ class FetchCurrentlyPlayingServiceTests {
     recentlyPlayedRepository,
     recentlyPartialPlayedRepository,
     appPlaybackRepository,
-    appArtistRepository,
     syncController,
     outboxPort,
     dashboardRefresh,
     playbackState,
-    catalog,
-    playlistRepository,
     minimumProgressSeconds = 25L,
   )
 
