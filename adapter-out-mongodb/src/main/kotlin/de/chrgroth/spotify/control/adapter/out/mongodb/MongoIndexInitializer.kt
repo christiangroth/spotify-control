@@ -62,10 +62,6 @@ class MongoIndexInitializer(
   }
 
   private fun ensureCatalogCollectionIndexes() {
-    appArtistDocumentRepository.mongoCollection().createIndex(
-      Document(AppArtistRepositoryAdapter.PLAYBACK_PROCESSING_STATUS_FIELD, 1),
-      IndexOptions().name("app_artist_playbackProcessingStatus_1"),
-    )
     appAlbumDocumentRepository.mongoCollection().createIndex(
       Document(AppAlbumRepositoryAdapter.ARTIST_ID_FIELD, 1),
       IndexOptions().name("app_album_artistId_1"),

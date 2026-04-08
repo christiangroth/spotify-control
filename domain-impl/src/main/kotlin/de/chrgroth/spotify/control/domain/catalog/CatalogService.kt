@@ -7,16 +7,13 @@ import arrow.core.right
 import de.chrgroth.spotify.control.domain.error.ArtistSettingsError
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
-import de.chrgroth.spotify.control.domain.model.user.AccessToken
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
-import de.chrgroth.spotify.control.domain.model.catalog.ArtistPlaybackProcessingStatus
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppAlbumRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.playback.AppPlaybackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.AppPlaylistCheckRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.infra.DashboardRefreshPort
@@ -36,7 +33,6 @@ class CatalogService(
   private val appArtistRepository: AppArtistRepositoryPort,
   private val appTrackRepository: AppTrackRepositoryPort,
   private val appAlbumRepository: AppAlbumRepositoryPort,
-  private val appPlaybackRepository: AppPlaybackRepositoryPort,
   private val userRepository: UserRepositoryPort,
   private val outboxPort: OutboxPort,
   private val playlistRepository: PlaylistRepositoryPort,
@@ -48,49 +44,6 @@ class CatalogService(
   // --- Artist Settings ---
 
   override fun findAllArtists(): List<AppArtist> = appArtistRepository.findAll()
-
-  override fun findArtistsByStatus(status: ArtistPlaybackProcessingStatus, offset: Int, limit: Int): List<AppArtist> =
-    appArtistRepository.findByPlaybackProcessingStatusPaged(status, offset, limit)
-
-  override fun countArtistsByStatus(status: ArtistPlaybackProcessingStatus): Long =
-    appArtistRepository.countByPlaybackProcessingStatus(status)
-
-  override fun updateArtistPlaybackProcessingStatus(
-    artistId: String,
-    status: ArtistPlaybackProcessingStatus,
-    userId: UserId,
-  ): Either<DomainError, Unit> {
-    val existing = appArtistRepository.findByArtistIds(setOf(ArtistId(artistId))).firstOrNull()
-      ?: return ArtistSettingsError.ARTIST_NOT_FOUND.left()
-
-    if (existing.playbackProcessingStatus == status) {
-      logger.debug { "Artist $artistId already has status $status, skipping" }
-      return Unit.right()
-    }
-
-    logger.info { "Updating playback processing status for artist $artistId to $status" }
-    appArtistRepository.updatePlaybackProcessingStatus(ArtistId(artistId), status)
-
-    when (status) {
-      ArtistPlaybackProcessingStatus.INACTIVE -> {
-        val trackIds = appTrackRepository.findByArtistId(ArtistId(artistId)).map { it.id.value }.toSet()
-        if (trackIds.isNotEmpty()) {
-          logger.info { "Deleting app_playback for ${trackIds.size} tracks of artist $artistId" }
-          appPlaybackRepository.deleteAllByTrackIds(trackIds)
-        }
-      }
-      ArtistPlaybackProcessingStatus.ACTIVE, ArtistPlaybackProcessingStatus.UNDECIDED -> {
-        if (existing.playbackProcessingStatus == ArtistPlaybackProcessingStatus.INACTIVE) {
-          logger.info { "Artist $artistId reactivated, enqueueing RebuildPlaybackData for all users" }
-          userRepository.findAll().forEach { user ->
-            outboxPort.enqueue(DomainOutboxEvent.RebuildPlaybackData(user.spotifyUserId))
-          }
-        }
-      }
-    }
-
-    return Unit.right()
-  }
 
   // --- Catalog Sync ---
 
