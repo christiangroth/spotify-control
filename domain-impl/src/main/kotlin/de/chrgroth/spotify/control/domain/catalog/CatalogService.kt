@@ -106,7 +106,8 @@ class CatalogService(
       .flatMap { detail ->
         if (detail != null) {
           appArtistRepository.upsertAll(listOf(detail))
-          logger.info { "Updated sync data for artist $artistId" }
+          logger.info { "Updated sync data for artist $artistId, enqueueing album sync" }
+          outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums(artistId, userId))
           dashboardRefresh.notifyCatalogData()
         } else {
           logger.warn { "No data returned from Spotify for artist $artistId" }

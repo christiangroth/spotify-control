@@ -127,7 +127,7 @@ class SpotifyCatalogAdapter(
   ): Either<DomainError, List<String>> {
     return try {
       val albumIds = mutableListOf<String>()
-      var nextUrl: String? = "$apiBaseUrl/v1/artists/$artistId/albums?include_groups=album,single,compilation&limit=50"
+      var nextUrl: String? = "$apiBaseUrl/v1/artists/$artistId/albums?limit=10"
       while (nextUrl != null) {
         throttler.throttle(DomainOutboxPartition.ToSpotify.key)
         val request = HttpRequest.newBuilder()
