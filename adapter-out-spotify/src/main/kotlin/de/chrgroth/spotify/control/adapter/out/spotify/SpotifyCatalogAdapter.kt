@@ -178,15 +178,16 @@ class SpotifyCatalogAdapter(
 
   private fun parseAlbumTrack(track: SpotifySimplifiedTrackResponse, album: AppAlbum): AppTrack? {
     val trackId = track.id ?: return null
-    val primaryArtist = track.artists.firstOrNull() ?: return null
-    val primaryArtistId = primaryArtist.id ?: return null
+    val (primaryArtistId, primaryArtistName) = track.artists.firstOrNull()
+      ?.let { artist -> artist.id?.let { id -> id to artist.name } }
+      ?: return null
     return AppTrack(
       id = TrackId(trackId),
       title = track.name,
       albumId = album.id,
       albumName = album.title,
       artistId = ArtistId(primaryArtistId),
-      artistName = primaryArtist.name,
+      artistName = primaryArtistName,
       additionalArtistIds = track.artists.additionalItems { id?.let { ArtistId(it) } }?.filterNotNull() ?: emptyList(),
       additionalArtistNames = track.artists.additionalItems { name },
       discNumber = track.discNumber,
