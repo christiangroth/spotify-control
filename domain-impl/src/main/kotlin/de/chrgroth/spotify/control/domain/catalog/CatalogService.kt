@@ -118,14 +118,11 @@ class CatalogService(
 
   override fun resyncCatalog(): Either<DomainError, Unit> {
     val allArtistIds = appArtistRepository.findAll().map { it.id.value }
-    val allTracks = appTrackRepository.findAll()
-    val allAlbumIds = allTracks.mapNotNull { it.albumId?.value }.distinct()
     val userId = userRepository.findAll().firstOrNull()?.spotifyUserId
-    logger.info { "Re-syncing catalog: ${allArtistIds.size} artist(s) and ${allAlbumIds.size} album(s)" }
+    logger.info { "Re-syncing catalog: ${allArtistIds.size} artist(s)" }
     if (userId != null) {
-      allArtistIds.forEach { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails(it, userId)) }
+      allArtistIds.forEach { outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums(it, userId)) }
     }
-    allAlbumIds.forEach { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails(it)) }
     return Unit.right()
   }
 
@@ -137,11 +134,7 @@ class CatalogService(
       return Unit.right()
     }
     logger.info { "Re-syncing artist $artistId and all their albums" }
-    outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails(artistId, userId))
-    val albumIds = appTrackRepository.findByArtistId(ArtistId(artistId))
-      .mapNotNull { it.albumId?.value }
-      .distinct()
-    albumIds.forEach { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails(it)) }
+    outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums(artistId, userId))
     return Unit.right()
   }
 

@@ -481,7 +481,7 @@ class PlaylistServiceTests {
 
     verify {
       syncController.syncForTracks(
-        listOf(CatalogSyncRequest("track-1", "album-1", listOf("artist-1"))),
+        listOf(CatalogSyncRequest("track-1", listOf("artist-1"))),
         userId,
       )
     }

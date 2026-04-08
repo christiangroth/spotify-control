@@ -711,7 +711,7 @@ class RecentlyPlayedServiceTests {
 
     verify {
       syncController.syncForTracks(
-        listOf(CatalogSyncRequest("track-1", "album-1", listOf("artist-id-1"))),
+        listOf(CatalogSyncRequest("track-1", listOf("artist-id-1"))),
         userId,
       )
     }
@@ -729,8 +729,8 @@ class RecentlyPlayedServiceTests {
       syncController.syncForTracks(
         match { requests ->
           requests.size == 2 &&
-            requests.any { it.trackId == "track-1" && it.albumId == "album-1" } &&
-            requests.any { it.trackId == "track-2" && it.albumId == "album-2" }
+            requests.any { it.trackId == "track-1" } &&
+            requests.any { it.trackId == "track-2" }
         },
         userId,
       )
@@ -762,7 +762,7 @@ class RecentlyPlayedServiceTests {
 
     verify {
       syncController.syncForTracks(
-        listOf(CatalogSyncRequest("track-1", null, listOf("artist-id-1"))),
+        listOf(CatalogSyncRequest("track-1", listOf("artist-id-1"))),
         userId,
       )
     }

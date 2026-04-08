@@ -111,30 +111,15 @@ class CatalogServiceTests {
   }
 
   @Test
-  fun `resyncArtist enqueues SyncArtistDetails and SyncAlbumDetails for artist and their albums`() {
+  fun `resyncArtist enqueues SyncArtistAlbums for existing artist`() {
     every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns listOf(artist1)
-    every { appTrackRepository.findByArtistId(ArtistId("artist-1")) } returns listOf(trackWithAlbum1)
     every { userRepository.findAll() } returns listOf(buildUser())
     every { outboxPort.enqueue(any()) } just runs
 
     val result = adapter.resyncArtist("artist-1")
 
     assertThat(result.isRight()).isTrue()
-    verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails("artist-1", userId)) }
-    verify { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails("album-1")) }
-  }
-
-  @Test
-  fun `resyncArtist enqueues only SyncArtistDetails when artist has no tracks with albums`() {
-    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns listOf(artist1)
-    every { appTrackRepository.findByArtistId(ArtistId("artist-1")) } returns listOf(track1)
-    every { userRepository.findAll() } returns listOf(buildUser())
-    every { outboxPort.enqueue(any()) } just runs
-
-    val result = adapter.resyncArtist("artist-1")
-
-    assertThat(result.isRight()).isTrue()
-    verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails("artist-1", userId)) }
+    verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums("artist-1", userId)) }
     verify(exactly = 0) { outboxPort.enqueue(match { it is DomainOutboxEvent.SyncAlbumDetails }) }
   }
 
@@ -154,7 +139,6 @@ class CatalogServiceTests {
   @Test
   fun `resyncCatalog does nothing when catalog is empty`() {
     every { appArtistRepository.findAll() } returns emptyList()
-    every { appTrackRepository.findAll() } returns emptyList()
     every { userRepository.findAll() } returns listOf(buildUser())
 
     val result = adapter.resyncCatalog()
@@ -164,57 +148,27 @@ class CatalogServiceTests {
   }
 
   @Test
-  fun `resyncCatalog enqueues SyncArtistDetails for all artists`() {
+  fun `resyncCatalog enqueues SyncArtistAlbums for all artists`() {
     every { appArtistRepository.findAll() } returns listOf(artist1, artist2)
-    every { appTrackRepository.findAll() } returns emptyList()
     every { userRepository.findAll() } returns listOf(buildUser())
     every { outboxPort.enqueue(any()) } just runs
 
     val result = adapter.resyncCatalog()
 
     assertThat(result.isRight()).isTrue()
-    verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails("artist-1", userId)) }
-    verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails("artist-2", userId)) }
+    verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums("artist-1", userId)) }
+    verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums("artist-2", userId)) }
   }
 
   @Test
-  fun `resyncCatalog enqueues SyncAlbumDetails for albums derived from tracks`() {
-    every { appArtistRepository.findAll() } returns emptyList()
-    every { appTrackRepository.findAll() } returns listOf(trackWithAlbum1, trackWithAlbum2, trackWithAlbum3)
-    every { userRepository.findAll() } returns listOf(buildUser())
-    every { outboxPort.enqueue(any()) } just runs
-
-    val result = adapter.resyncCatalog()
-
-    assertThat(result.isRight()).isTrue()
-    verify { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails("album-1")) }
-    verify { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails("album-2")) }
-  }
-
-  @Test
-  fun `resyncCatalog skips tracks without albumId`() {
-    every { appArtistRepository.findAll() } returns emptyList()
-    every { appTrackRepository.findAll() } returns listOf(track1, track2)
-    every { userRepository.findAll() } returns listOf(buildUser())
+  fun `resyncCatalog does not enqueue events when no users available`() {
+    every { appArtistRepository.findAll() } returns listOf(artist1)
+    every { userRepository.findAll() } returns emptyList()
 
     val result = adapter.resyncCatalog()
 
     assertThat(result.isRight()).isTrue()
     verify(exactly = 0) { outboxPort.enqueue(any()) }
-  }
-
-  @Test
-  fun `resyncCatalog does not enqueue artist events when no users available`() {
-    every { appArtistRepository.findAll() } returns listOf(artist1)
-    every { appTrackRepository.findAll() } returns listOf(trackWithAlbum1)
-    every { userRepository.findAll() } returns emptyList()
-    every { outboxPort.enqueue(any()) } just runs
-
-    val result = adapter.resyncCatalog()
-
-    assertThat(result.isRight()).isTrue()
-    verify(exactly = 0) { outboxPort.enqueue(match { it is DomainOutboxEvent.SyncArtistDetails }) }
-    verify { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails("album-1")) }
   }
 
   // --- handle(ResyncCatalog) tests ---
@@ -222,7 +176,6 @@ class CatalogServiceTests {
   @Test
   fun `handle ResyncCatalog returns success`() {
     every { appArtistRepository.findAll() } returns listOf(artist1)
-    every { appTrackRepository.findAll() } returns listOf(trackWithAlbum1)
     every { userRepository.findAll() } returns listOf(buildUser())
     every { outboxPort.enqueue(any()) } just runs
 
@@ -234,7 +187,6 @@ class CatalogServiceTests {
   @Test
   fun `handle ResyncCatalog returns success when catalog is empty`() {
     every { appArtistRepository.findAll() } returns emptyList()
-    every { appTrackRepository.findAll() } returns emptyList()
     every { userRepository.findAll() } returns emptyList()
 
     val result = adapter.handle(DomainOutboxEvent.ResyncCatalog())
