@@ -13,6 +13,15 @@
 ./gradlew :application-quarkus:quarkusDev
 ```
 
+## Green Build Requirement for PRs
+
+**Every PR must have a green CI build before merging.** Follow these rules:
+
+- **Never use `[no ci]`** in commit messages to bypass CI. All commits to a PR branch must be validated by CI.
+- **Run `./gradlew build` before pushing** to verify the build, tests, and static analysis all pass.
+- **CI must be green** on the PR branch before requesting or completing a merge into `main`.
+- If CI fails on a PR, fix the underlying issue — do not skip CI.
+
 ## Formatting
 
 All code must follow the formatting rules in `.editorconfig`. The most important rules for Kotlin:
