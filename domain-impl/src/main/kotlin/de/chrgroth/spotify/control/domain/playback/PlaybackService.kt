@@ -281,8 +281,8 @@ class PlaybackService(
     appPlaybackRepository.saveAll(newPlaybackItems)
 
     val catalogRequests = (
-      filteredRecentlyPlayed.map { CatalogSyncRequest(it.trackId.value, it.albumId?.value, it.artistIds.map { a -> a.value }) } +
-        filteredPartialPlayed.map { CatalogSyncRequest(it.trackId.value, it.albumId?.value, it.artistIds.map { a -> a.value }) }
+      filteredRecentlyPlayed.map { CatalogSyncRequest(it.trackId.value, it.artistIds.map { a -> a.value }) } +
+        filteredPartialPlayed.map { CatalogSyncRequest(it.trackId.value, it.artistIds.map { a -> a.value }) }
     ).distinctBy { it.trackId }
     syncController.syncForTracks(catalogRequests, userId)
   }

@@ -106,7 +106,8 @@ class CatalogService(
       .flatMap { detail ->
         if (detail != null) {
           appArtistRepository.upsertAll(listOf(detail))
-          logger.info { "Updated sync data for artist $artistId" }
+          logger.info { "Updated sync data for artist $artistId, enqueueing album sync" }
+          outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums(artistId, userId))
           dashboardRefresh.notifyCatalogData()
         } else {
           logger.warn { "No data returned from Spotify for artist $artistId" }
@@ -117,14 +118,11 @@ class CatalogService(
 
   override fun resyncCatalog(): Either<DomainError, Unit> {
     val allArtistIds = appArtistRepository.findAll().map { it.id.value }
-    val allTracks = appTrackRepository.findAll()
-    val allAlbumIds = allTracks.mapNotNull { it.albumId?.value }.distinct()
     val userId = userRepository.findAll().firstOrNull()?.spotifyUserId
-    logger.info { "Re-syncing catalog: ${allArtistIds.size} artist(s) and ${allAlbumIds.size} album(s)" }
+    logger.info { "Re-syncing catalog: ${allArtistIds.size} artist(s)" }
     if (userId != null) {
-      allArtistIds.forEach { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails(it, userId)) }
+      allArtistIds.forEach { outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums(it, userId)) }
     }
-    allAlbumIds.forEach { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails(it)) }
     return Unit.right()
   }
 
@@ -136,11 +134,7 @@ class CatalogService(
       return Unit.right()
     }
     logger.info { "Re-syncing artist $artistId and all their albums" }
-    outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails(artistId, userId))
-    val albumIds = appTrackRepository.findByArtistId(ArtistId(artistId))
-      .mapNotNull { it.albumId?.value }
-      .distinct()
-    albumIds.forEach { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails(it)) }
+    outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums(artistId, userId))
     return Unit.right()
   }
 
@@ -192,11 +186,45 @@ class CatalogService(
   override fun handle(event: DomainOutboxEvent.SyncArtistDetails): Either<DomainError, Unit> =
     syncArtistDetails(event.artistId, event.userId)
 
+  override fun handle(event: DomainOutboxEvent.SyncArtistAlbums): Either<DomainError, Unit> =
+    syncArtistAlbums(event.artistId, event.userId)
+
   override fun handle(event: DomainOutboxEvent.SyncAlbumDetails): Either<DomainError, Unit> =
     syncAlbumDetails(event.albumId).map { Unit }
 
   override fun handle(event: DomainOutboxEvent.ResyncCatalog): Either<DomainError, Unit> =
     resyncCatalog()
+
+  override fun enqueueArtistAlbumsSync(partition: Int, totalPartitions: Int) {
+    val allArtists = appArtistRepository.findAll()
+    val userId = userRepository.findAll().firstOrNull()?.spotifyUserId
+    if (userId == null) {
+      logger.warn { "No users available for artist albums sync, skipping partition $partition/$totalPartitions" }
+      return
+    }
+    val partitioned = allArtists.filterIndexed { idx, _ -> idx % totalPartitions == partition }
+    logger.info { "Enqueueing artist album syncs for ${partitioned.size} artist(s) (partition $partition/$totalPartitions)" }
+    partitioned.forEach { artist ->
+      outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums(artist.id.value, userId))
+    }
+  }
+
+  private fun syncArtistAlbums(artistId: String, userId: UserId): Either<DomainError, Unit> {
+    logger.info { "Syncing all album ids for artist $artistId (user ${userId.value})" }
+    val accessToken = spotifyAccessToken.getValidAccessToken(userId)
+    return spotifyCatalog.getArtistAlbumIds(userId, accessToken, artistId)
+      .flatMap { albumIds ->
+        val existingAlbumIds = appAlbumRepository.findByAlbumIds(albumIds.map { AlbumId(it) }.toSet()).map { it.id.value }.toSet()
+        val newAlbumIds = albumIds.filter { it !in existingAlbumIds }
+        if (newAlbumIds.isNotEmpty()) {
+          logger.info { "Enqueueing SyncAlbumDetails for ${newAlbumIds.size} new album(s) of artist $artistId" }
+          newAlbumIds.forEach { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails(it)) }
+        } else {
+          logger.debug { "All ${albumIds.size} album(s) for artist $artistId already in catalog" }
+        }
+        Unit.right()
+      }
+  }
 
   companion object : KLogging()
 }

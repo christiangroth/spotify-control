@@ -20,6 +20,7 @@ class DomainOutboxContractTests {
     DomainOutboxEvent.RebuildPlaybackData(UserId("user-1")),
     DomainOutboxEvent.AppendPlaybackData(UserId("user-1")),
     DomainOutboxEvent.SyncArtistDetails("artist-1", UserId("user-1")),
+    DomainOutboxEvent.SyncArtistAlbums("artist-1", UserId("user-1")),
     DomainOutboxEvent.SyncAlbumDetails("album-1"),
   )
 
