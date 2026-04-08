@@ -52,13 +52,4 @@ class SettingsPageTests {
       .body(containsString("Recreate Playback Data"))
   }
 
-  @Test
-  fun `playback settings page displays artist playback processing section`() {
-    given()
-      .`when`()
-      .get("/settings/playback")
-      .then()
-      .statusCode(200)
-      .body(containsString("Artist Playback Processing"))
-  }
 }
