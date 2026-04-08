@@ -28,11 +28,11 @@
                     <thead>
                         <tr class="app-section-label" style="font-size:.8rem;">
                             <th>Status</th>
-                            <th>Created (UTC)</th>
+                            <th>Created</th>
                             <th>Type</th>
                             <th>Deduplication Key</th>
                             <th class="text-end">Attempts</th>
-                            <th>Next Retry (UTC)</th>
+                            <th>Next Retry</th>
                             <th>Last Error</th>
                         </tr>
                     </thead>
@@ -48,7 +48,7 @@
                                 <span class="badge" style="background-color:#555;color:#fff;">{task.status}</span>
                                 {/if}
                             </td>
-                            <td style="white-space:nowrap;">{task.createdAt.formattedUtc}</td>
+                            <td style="white-space:nowrap;">{task.createdAt.formatted}</td>
                             <td>
                                 {task.eventType}
                                 {#if task.isHighPriority}
@@ -59,7 +59,7 @@
                             </td>
                             <td style="color:#aaa;font-size:0.8rem;word-break:break-all;">{task.deduplicationKey}</td>
                             <td style="text-align:right;">{task.attempts}</td>
-                            <td style="white-space:nowrap;">{#if task.nextRetryAt}{task.nextRetryAt.formattedUtc}{#else}-{/if}</td>
+                            <td style="white-space:nowrap;">{#if task.nextRetryAt}{task.nextRetryAt.formatted}{#else}-{/if}</td>
                             <td style="color:#e07070;font-size:0.8rem;">{#if task.lastError}{task.lastError}{#else}-{/if}</td>
                         </tr>
                         {/for}
