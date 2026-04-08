@@ -13,6 +13,7 @@ object TemplateFormattingExtensions {
 
   private val DATETIME_FORMATTER by lazy { DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.systemDefault()) }
   private val DATETIME_SHORT_FORMATTER by lazy { DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(ZoneId.systemDefault()) }
+  private val DATETIME_UTC_FORMATTER by lazy { DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.of("UTC")) }
 
   private const val MS_PER_SECOND = 1000L
   private const val SECONDS_PER_MINUTE = 60L
@@ -26,6 +27,9 @@ object TemplateFormattingExtensions {
 
   @JvmStatic
   fun formatted(instant: Instant): String = DATETIME_FORMATTER.format(instant.toJavaInstant())
+
+  @JvmStatic
+  fun formattedUtc(instant: Instant): String = DATETIME_UTC_FORMATTER.format(instant.toJavaInstant())
 
   @JvmStatic
   fun formattedShort(instant: Instant): String = DATETIME_SHORT_FORMATTER.format(instant.toJavaInstant())
