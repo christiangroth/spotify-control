@@ -57,6 +57,7 @@ class SpotifyMockResource {
   @Produces(MediaType.APPLICATION_JSON)
   fun playlistTracks(@PathParam("playlistId") playlistId: String): String = when (playlistId) {
     "mock-playlist-2" -> PLAYLIST_TRACKS_NULL_ALBUM_RESPONSE
+    "mock-playlist-3" -> PLAYLIST_TRACKS_NULL_ARTIST_RESPONSE
     else -> PLAYLIST_TRACKS_RESPONSE
   }
 
@@ -80,6 +81,8 @@ class SpotifyMockResource {
       """{"snapshot_id":"mock-snapshot-1","items":[{"item":{"id":"track-1","name":"Track One","type":"track","artists":[{"id":"artist-1","name":"Artist One"}],"album":{"id":"album-1","name":"Album One","album_type":"album","total_tracks":1,"artists":[{"id":"artist-1","name":"Artist One"}],"images":[],"release_date":"2024-01-01","release_date_precision":"day"}}},{"item":{"id":"episode-1","name":"Podcast Episode One","type":"episode"}},{"item":null},null],"next":null}"""
     private const val PLAYLIST_TRACKS_NULL_ALBUM_RESPONSE =
       """{"snapshot_id":"mock-snapshot-2","items":[{"item":{"id":"track-1","name":"Track One","type":"track","artists":[{"id":"artist-1","name":"Artist One"}],"album":{"id":"album-1","name":"Album One","album_type":"album","total_tracks":1,"artists":[{"id":"artist-1","name":"Artist One"}],"images":[],"release_date":"2024-01-01","release_date_precision":"day"}}},{"item":{"id":"track-3","name":"Track Three","type":"track","artists":[{"id":"artist-3","name":"Artist Three"}],"album":{"id":null,"name":"Back Catalogue","href":null,"images":[],"external_urls":{}}}}],"next":null}"""
+    private const val PLAYLIST_TRACKS_NULL_ARTIST_RESPONSE =
+      """{"snapshot_id":"mock-snapshot-3","items":[{"item":{"id":"track-1","name":"Track One","type":"track","artists":[{"id":"artist-1","name":"Artist One"}],"album":{"id":"album-1","name":"Album One","album_type":"album","total_tracks":1,"artists":[{"id":"artist-1","name":"Artist One"}],"images":[],"release_date":"2024-01-01","release_date_precision":"day"}}},{"item":{"id":"track-4","name":"Track Four","type":"track","artists":[{"id":null,"name":"Unknown Artist"},{"id":"artist-4","name":"Artist Four"}],"album":{"id":"album-4","name":"Album Four","album_type":"album","total_tracks":1,"artists":[{"id":"artist-4","name":"Artist Four"}],"images":[],"release_date":"2024-01-01","release_date_precision":"day"}}}],"next":null}"""
     private const val ALBUM_RESPONSE =
       """{"id":"album-1","name":"Album One","album_type":"album","total_tracks":2,"artists":[{"id":"artist-1","name":"Artist One"}],"images":[{"url":"https://example.com/cover.jpg"}],"release_date":"2024-01-01","release_date_precision":"day","tracks":{"items":[{"id":"track-1","name":"Track One","type":"track","is_local":false,"artists":[{"id":"artist-1","name":"Artist One"}],"disc_number":1,"track_number":1,"duration_ms":180000},{"id":"track-2","name":"Track Two","type":"track","is_local":false,"artists":[{"id":"artist-1","name":"Artist One"}],"disc_number":1,"track_number":2,"duration_ms":200000}],"next":null,"total":2}}"""
   }
