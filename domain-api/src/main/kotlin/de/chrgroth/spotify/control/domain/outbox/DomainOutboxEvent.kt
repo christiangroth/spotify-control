@@ -2,7 +2,9 @@ package de.chrgroth.spotify.control.domain.outbox
 
 import de.chrgroth.quarkus.outbox.domain.ApplicationOutboxEvent
 import de.chrgroth.quarkus.outbox.domain.OutboxEventPriority
+import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationPeriodType
 import de.chrgroth.spotify.control.domain.model.user.UserId
+import kotlinx.datetime.LocalDate
 
 sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
   override val partition: DomainOutboxPartition
@@ -217,6 +219,32 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
     }
   }
 
+  /**
+   * Triggers aggregation of playback data for a specific period and user.
+   * payload = "${userId.value}:${type.name}:${periodStart}"
+   */
+  data class AggregatePlaybackData(val userId: UserId, val type: AggregationPeriodType, val periodStart: LocalDate) : DomainOutboxEvent {
+    override val key = KEY
+    override val deduplicationKey = "$KEY:${userId.value}:${type.name}:$periodStart"
+    override val partition = DomainOutboxPartition.Domain
+    override val serializePayload = "${userId.value}:${type.name}:$periodStart"
+
+    companion object {
+      const val KEY = "AggregatePlaybackData"
+      fun fromPayload(payload: String): AggregatePlaybackData {
+        val firstColon = payload.indexOf(':')
+        require(firstColon > 0) { "Invalid AggregatePlaybackData payload: $payload" }
+        val secondColon = payload.indexOf(':', firstColon + 1)
+        require(secondColon > firstColon) { "Invalid AggregatePlaybackData payload: $payload" }
+        return AggregatePlaybackData(
+          userId = UserId(payload.substring(0, firstColon)),
+          type = AggregationPeriodType.valueOf(payload.substring(firstColon + 1, secondColon)),
+          periodStart = LocalDate.parse(payload.substring(secondColon + 1)),
+        )
+      }
+    }
+  }
+
   companion object {
     @Suppress("CyclomaticComplexMethod")
     fun fromKey(key: String, payload: String): DomainOutboxEvent = when (key) {
@@ -231,6 +259,7 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
       SyncAlbumDetails.KEY -> SyncAlbumDetails.fromPayload(payload)
       ResyncCatalog.KEY -> ResyncCatalog()
       RunPlaylistChecks.KEY -> RunPlaylistChecks.fromPayload(payload)
+      AggregatePlaybackData.KEY -> AggregatePlaybackData.fromPayload(payload)
       else -> throw IllegalArgumentException("Unknown outbox event type: $key")
     }
   }

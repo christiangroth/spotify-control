@@ -71,6 +71,13 @@ class AppPlaybackRepositoryAdapter(
         ?.playedAt?.toKotlinInstant()
     }
 
+  override fun findOldestPlayedAt(): Instant? =
+    mongoQueryMetrics.timed("app_playback.findOldestPlayedAt") {
+      appPlaybackDocumentRepository
+        .findAll(Sort.by("playedAt").ascending())
+        .firstResult()
+        ?.playedAt?.toKotlinInstant()
+    }
   override fun findExistingPlayedAts(userId: UserId, playedAts: Set<Instant>): Set<Instant> {
     if (playedAts.isEmpty()) return emptySet()
     val javaPlayedAts = playedAts.map { it.toJavaInstant() }
@@ -142,6 +149,20 @@ class AppPlaybackRepositoryAdapter(
     mongoQueryMetrics.timed("app_playback.findAllSince") {
       appPlaybackDocumentRepository
         .list("spotifyUserId = ?1 and playedAt >= ?2", userId.value, since.toJavaInstant())
+        .map { doc ->
+          AppPlaybackItem(
+            userId = UserId(doc.spotifyUserId),
+            playedAt = doc.playedAt.toKotlinInstant(),
+            trackId = doc.trackId,
+            secondsPlayed = doc.secondsPlayed,
+          )
+        }
+    }
+
+  override fun findAllBetween(userId: UserId, from: Instant, to: Instant): List<AppPlaybackItem> =
+    mongoQueryMetrics.timed("app_playback.findAllBetween") {
+      appPlaybackDocumentRepository
+        .list("spotifyUserId = ?1 and playedAt >= ?2 and playedAt < ?3", userId.value, from.toJavaInstant(), to.toJavaInstant())
         .map { doc ->
           AppPlaybackItem(
             userId = UserId(doc.spotifyUserId),
