@@ -1,17 +1,22 @@
 package de.chrgroth.spotify.control.domain.model.playback.aggregation
 
+private const val HOUR_00 = 0
+private const val HOUR_06 = 6
+private const val HOUR_12 = 12
+private const val HOUR_18 = 18
+
 enum class ActivityTimeWindow(val fromHour: Int) {
-  H00_06(0),
-  H06_12(6),
-  H12_18(12),
-  H18_24(18),
+  H00_06(HOUR_00),
+  H06_12(HOUR_06),
+  H12_18(HOUR_12),
+  H18_24(HOUR_18),
   ;
 
   companion object {
     fun fromHour(hour: Int): ActivityTimeWindow = when {
-      hour < 6 -> H00_06
-      hour < 12 -> H06_12
-      hour < 18 -> H12_18
+      hour < HOUR_06 -> H00_06
+      hour < HOUR_12 -> H06_12
+      hour < HOUR_18 -> H12_18
       else -> H18_24
     }
   }
