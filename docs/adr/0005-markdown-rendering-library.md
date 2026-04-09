@@ -10,7 +10,7 @@ The application will serve documentation and release notes written in Markdown t
 
 ## Decision Drivers
 
-* Must be available as a WebJar (consistent with Bootstrap, htmx, Font Awesome)
+* Must be available as a WebJar (consistent with Bootstrap, Font Awesome)
 * Minimal bundle size – project complexity guidelines favour lightweight dependencies
 * No build step, no npm – usable as a plain `<script>` include
 * GitHub-Flavored Markdown (GFM) support (tables, fenced code blocks, task lists)

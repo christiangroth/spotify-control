@@ -56,7 +56,7 @@ spotify-control interacts with the following external systems:
 |-----------------------|---------------------------------------------------------|
 | Spotify API           | REST via `adapter-out-spotify`; OAuth 2.0 token refresh |
 | MongoDB Atlas         | MongoDB driver via `adapter-out-mongodb`                |
-| Web UI                | Quarkus Qute SSR, htmx, Bootstrap 5, Server-Sent Events |
+| Web UI                | Quarkus Qute SSR, Vanilla JS (fetch API), Bootstrap 5, Server-Sent Events |
 | Scheduled jobs        | Quarkus scheduler                                       |
 | Internal event bus    | CDI Events (in-process)                                 |
 | Async task queue      | Persistent Outbox (`de.chrgroth.quarkus.outbox`)        |
@@ -66,7 +66,7 @@ spotify-control interacts with the following external systems:
 
 - **Hexagonal Architecture** – The application is structured using hexagonal (ports and adapters) architecture to cleanly separate domain logic from infrastructure concerns.
 - **Outbox Pattern** – All Spotify API operations are routed through a persistent outbox to ensure reliability and rate limit handling. No direct Spotify calls are made outside `adapter-out-spotify`.
-- **Server-Side Rendering** – The frontend uses Quarkus Qute templates with htmx for dynamic interactions, eliminating the need for a separate frontend project or JavaScript framework.
+- **Server-Side Rendering** – The frontend uses Quarkus Qute templates with vanilla JS (fetch API) for dynamic interactions, eliminating the need for a separate frontend project or JavaScript framework.
 - **Allow-listed User System** – Access is restricted to users whose Spotify user IDs appear in a configured allow list. Multiple users are supported, but no self-service registration exists.
 
 # Building Block View
@@ -424,14 +424,14 @@ One-time startup beans for data migrations, schema changes, and one-time bugfixe
 
 ## Frontend Approach
 
-No separate frontend project. The UI is rendered server-side using Quarkus Qute templates. Dynamic interactions are handled by htmx. No React, Vue, npm, Node.js, or build steps are required.
+No separate frontend project. The UI is rendered server-side using Quarkus Qute templates. Dynamic interactions are handled via vanilla JS with the fetch API. No React, Vue, npm, Node.js, or build steps are required.
 
 **Technology stack:**
 - Templates: Qute (Quarkus SSR)
 - CSS: Bootstrap 5 via WebJar
-- Interactivity: htmx via WebJar
+- Interactivity: Vanilla JS (fetch API)
 - Icons: Font Awesome via WebJar
-- Live Updates: Server-Sent Events via htmx `hx-ext="sse"`
+- Live Updates: Server-Sent Events via native `EventSource` API
 - Markdown rendering: marked via WebJar (docs and release notes pages)
 
 ## Documentation and Release Notes Serving
