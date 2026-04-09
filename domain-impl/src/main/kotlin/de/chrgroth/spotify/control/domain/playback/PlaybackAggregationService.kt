@@ -149,7 +149,7 @@ class PlaybackAggregationService(
     var count = 0
     while (!quarterStart.isAfter(lastCompleteQuarterStart)) {
       enqueueAggregateQuarter(quarterStart.toKotlin())
-      quarterStart = quarterStart.plusMonths(3)
+      quarterStart = quarterStart.plusMonths(MONTHS_PER_QUARTER)
       count++
     }
     logger.info { "Enqueued $count quarterly aggregation(s)" }
@@ -168,7 +168,7 @@ class PlaybackAggregationService(
   }
 
   private fun firstDayOfQuarter(date: JLocalDate): JLocalDate {
-    val firstMonthOfQuarter = ((date.monthValue - 1) / 3) * 3 + 1
+    val firstMonthOfQuarter = ((date.monthValue - 1) / MONTHS_PER_QUARTER.toInt()) * MONTHS_PER_QUARTER.toInt() + 1
     return JLocalDate.of(date.year, firstMonthOfQuarter, 1)
   }
 
@@ -177,10 +177,18 @@ class PlaybackAggregationService(
   override fun handle(event: DomainOutboxEvent.AggregatePlaybackData): Either<DomainError, Unit> {
     when (event.type) {
       AggregationPeriodType.DAY -> aggregateDay(event.userId, event.periodStart)
-      AggregationPeriodType.WEEK -> aggregateFromDailyAggregations(event.userId, AggregationPeriodType.WEEK, event.periodStart, event.periodStart.plusKDays(6))
-      AggregationPeriodType.MONTH -> aggregateFromDailyAggregations(event.userId, AggregationPeriodType.MONTH, event.periodStart, event.periodStart.endOfMonth())
-      AggregationPeriodType.QUARTER -> aggregateFromDailyAggregations(event.userId, AggregationPeriodType.QUARTER, event.periodStart, event.periodStart.plusKMonths(3).minusKDays(1))
-      AggregationPeriodType.YEAR -> aggregateFromDailyAggregations(event.userId, AggregationPeriodType.YEAR, event.periodStart, event.periodStart.plusKMonths(12).minusKDays(1))
+      AggregationPeriodType.WEEK -> aggregateFromDailyAggregations(
+        event.userId, AggregationPeriodType.WEEK, event.periodStart, event.periodStart.plusKDays(DAYS_IN_WEEK),
+      )
+      AggregationPeriodType.MONTH -> aggregateFromDailyAggregations(
+        event.userId, AggregationPeriodType.MONTH, event.periodStart, event.periodStart.endOfMonth(),
+      )
+      AggregationPeriodType.QUARTER -> aggregateFromDailyAggregations(
+        event.userId, AggregationPeriodType.QUARTER, event.periodStart, event.periodStart.plusKMonths(MONTHS_PER_QUARTER).minusKDays(1),
+      )
+      AggregationPeriodType.YEAR -> aggregateFromDailyAggregations(
+        event.userId, AggregationPeriodType.YEAR, event.periodStart, event.periodStart.plusKMonths(MONTHS_PER_YEAR).minusKDays(1),
+      )
     }
     return Unit.right()
   }
@@ -300,6 +308,9 @@ class PlaybackAggregationService(
 
   companion object : KLogging() {
     private const val UNKNOWN_ARTIST_ID = "unknown"
+    private const val DAYS_IN_WEEK = 6L
+    private const val MONTHS_PER_QUARTER = 3L
+    private const val MONTHS_PER_YEAR = 12L
   }
 }
 

@@ -38,7 +38,7 @@ class PlaybackAggregationJob(
 
   @Scheduled(cron = "0 30 2 1 1,4,7,10 ?", skipExecutionIf = ScheduledSkipPredicate::class)
   fun aggregateQuarterly() {
-    val firstOfPreviousQuarter = LocalDate.now(ZoneOffset.UTC).minusMonths(3).withDayOfMonth(1)
+    val firstOfPreviousQuarter = LocalDate.now(ZoneOffset.UTC).minusMonths(MONTHS_PER_QUARTER).withDayOfMonth(1)
     logger.info { "Triggering quarter aggregation starting $firstOfPreviousQuarter" }
     aggregation.enqueueAggregateQuarter(firstOfPreviousQuarter.toKotlin())
   }
@@ -50,7 +50,9 @@ class PlaybackAggregationJob(
     aggregation.enqueueAggregateYear(firstOfPreviousYear.toKotlin())
   }
 
-  companion object : KLogging()
+  companion object : KLogging() {
+    private const val MONTHS_PER_QUARTER = 3L
+  }
 }
 
 private fun LocalDate.toKotlin(): KLocalDate = KLocalDate(year, monthValue, dayOfMonth)
