@@ -250,7 +250,7 @@ class HealthPageTests {
       .then()
       .statusCode(200)
       .body(containsString("PlaylistSyncJob"))
-      .body(containsString("RecentlyPlayedFetchJob"))
+      .body(containsString("PlaybackDetectionJob"))
       .body(containsString("UserProfileUpdateJob"))
       .body(containsString("ArchiverJob"))
   }

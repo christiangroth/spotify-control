@@ -9,6 +9,19 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
   override val priority: OutboxEventPriority get() = OutboxEventPriority.MEDIUM
   override val serializePayload: String
 
+  data class FetchPlaybackData(val userId: UserId) : DomainOutboxEvent {
+    override val key = KEY
+    override val deduplicationKey = "$KEY:${userId.value}"
+    override val partition = DomainOutboxPartition.ToSpotifyPlayback
+    override val priority = OutboxEventPriority.HIGH
+    override val serializePayload = userId.value
+
+    companion object {
+      const val KEY = "FetchPlaybackData"
+    }
+  }
+
+  // Legacy events kept for backward compatibility with pending outbox entries
   data class FetchCurrentlyPlaying(val userId: UserId) : DomainOutboxEvent {
     override val key = KEY
     override val deduplicationKey = "$KEY:${userId.value}"
@@ -232,6 +245,7 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
   companion object {
     @Suppress("CyclomaticComplexMethod")
     fun fromKey(key: String, payload: String): DomainOutboxEvent = when (key) {
+      FetchPlaybackData.KEY -> FetchPlaybackData(UserId(payload))
       FetchCurrentlyPlaying.KEY -> FetchCurrentlyPlaying(UserId(payload))
       FetchRecentlyPlayed.KEY -> FetchRecentlyPlayed(UserId(payload))
       UpdateUserProfile.KEY -> UpdateUserProfile(UserId(payload))

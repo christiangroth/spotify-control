@@ -40,6 +40,7 @@ class DomainOutboxTaskDispatcher(
   private fun dispatchEvent(event: DomainOutboxEvent): DispatchResult =
     handleDomainOperation(event.key) {
       when (event) {
+        is DomainOutboxEvent.FetchPlaybackData -> playback.handle(event)
         is DomainOutboxEvent.FetchCurrentlyPlaying -> playback.handle(event)
         is DomainOutboxEvent.FetchRecentlyPlayed -> playback.handle(event)
         is DomainOutboxEvent.UpdateUserProfile -> userProfile.handle(event)

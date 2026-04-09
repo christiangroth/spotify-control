@@ -50,17 +50,22 @@ class PlaybackService(
 
   private val minimumProgressMs = minimumProgressSeconds * MS_PER_SECOND
 
-  // --- Currently Playing ---
+  // --- Combined Playback Detection ---
 
-  override fun enqueueFetchCurrentlyPlaying() {
+  override fun enqueueFetchPlaybackData() {
     val users = userRepository.findAll()
-    logger.info { "Scheduling currently playing fetch for ${users.size} user(s)" }
+    logger.info { "Scheduling playback data fetch for ${users.size} user(s)" }
     users.forEach { user ->
-      outboxPort.enqueue(DomainOutboxEvent.FetchCurrentlyPlaying(user.spotifyUserId))
+      outboxPort.enqueue(DomainOutboxEvent.FetchPlaybackData(user.spotifyUserId))
     }
   }
 
-  override fun fetchCurrentlyPlaying(userId: UserId): Either<DomainError, Unit> {
+  override fun fetchPlaybackData(userId: UserId): Either<DomainError, Unit> =
+    fetchCurrentlyPlaying(userId).flatMap { fetchRecentlyPlayed(userId) }
+
+  // --- Currently Playing ---
+
+  internal fun fetchCurrentlyPlaying(userId: UserId): Either<DomainError, Unit> {
     val accessToken = spotifyAccessToken.getValidAccessToken(userId)
     return spotifyPlayback.getCurrentlyPlaying(userId, accessToken).flatMap { item ->
       if (item != null && item.isPlaying) {
@@ -128,15 +133,7 @@ class PlaybackService(
 
   // --- Recently Played ---
 
-  override fun enqueueFetchRecentlyPlayed() {
-    val users = userRepository.findAll()
-    logger.info { "Scheduling recently played fetch for ${users.size} user(s)" }
-    users.forEach { user ->
-      outboxPort.enqueue(DomainOutboxEvent.FetchRecentlyPlayed(user.spotifyUserId))
-    }
-  }
-
-  override fun fetchRecentlyPlayed(userId: UserId): Either<DomainError, Unit> {
+  internal fun fetchRecentlyPlayed(userId: UserId): Either<DomainError, Unit> {
     val accessToken = spotifyAccessToken.getValidAccessToken(userId)
     val after = recentlyPlayedRepository.findMostRecentPlayedAt(userId)
     return spotifyPlayback.getRecentlyPlayed(userId, accessToken, after).flatMap { tracks ->
@@ -293,11 +290,15 @@ class PlaybackService(
 
   // --- Outbox Handlers ---
 
+  override fun handle(event: DomainOutboxEvent.FetchPlaybackData): Either<DomainError, Unit> =
+    fetchPlaybackData(event.userId)
+
+  // Legacy handlers kept for backward compatibility with pending outbox entries
   override fun handle(event: DomainOutboxEvent.FetchCurrentlyPlaying): Either<DomainError, Unit> =
-    fetchCurrentlyPlaying(event.userId)
+    fetchPlaybackData(event.userId)
 
   override fun handle(event: DomainOutboxEvent.FetchRecentlyPlayed): Either<DomainError, Unit> =
-    fetchRecentlyPlayed(event.userId)
+    fetchPlaybackData(event.userId)
 
   override fun handle(event: DomainOutboxEvent.RebuildPlaybackData): Either<DomainError, Unit> {
     rebuildPlaybackData(event.userId)
