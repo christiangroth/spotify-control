@@ -15,7 +15,7 @@ It provides smarter playlist management than Spotify itself, personal listening 
 | Layer | Technology |
 |-------|-----------|
 | Backend | Kotlin · Quarkus · Gradle |
-| Frontend | Quarkus Qute (SSR) · htmx · Bootstrap 5 · SSE |
+| Frontend | Quarkus Qute (SSR) · Vanilla JS (fetch API) · Bootstrap 5 · SSE |
 | Database | MongoDB Atlas |
 | Deployment | Docker Swarm · Traefik · VPS |
 | Monitoring | Grafana Cloud (Prometheus metrics + Loki logs) |
@@ -37,8 +37,6 @@ It provides smarter playlist management than Spotify itself, personal listening 
 | Document | Description |
 |----------|-------------|
 | [Architecture (arc42)](docs/arc42/arc42.md) | Full architecture documentation |
-| [Outbox Pattern](docs/arc42/outbox.md) | Outbox design and usage |
-| [Starters](docs/arc42/starters.md) | One-time startup bean infrastructure |
 | [ADRs](docs/adr/) | Architecture Decision Records |
 | [Release Notes](docs/releasenotes/RELEASENOTES.md) | Version history |
 | [Coding Guidelines – Architect](docs/coding-guidelines/role-architect.md) | Architectural conventions |

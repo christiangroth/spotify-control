@@ -18,7 +18,7 @@ The application requires a web UI. The question is whether to build a separate f
 ## Considered Options
 
 * Separate frontend project (React, Vue, or similar SPA)
-* Server-side rendering within the Quarkus application (Qute templates + htmx)
+* Server-side rendering within the Quarkus application (Qute templates + vanilla JS)
 
 ## Decision Outcome
 
@@ -29,7 +29,7 @@ Chosen option: "Server-side rendering within the Quarkus application", because i
 * Single deployable artifact
 * No npm, Node.js, or JavaScript build step
 * Simple dependency management via WebJars
-* htmx provides sufficient interactivity without a JavaScript framework
+* Vanilla JS (fetch API) provides sufficient interactivity without a JavaScript framework
 
 ### Negative Consequences
 
