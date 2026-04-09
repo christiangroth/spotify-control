@@ -12,9 +12,6 @@ interface PlaybackPort {
   fun rebuildPlaybackData(userId: UserId)
   fun appendPlaybackData(userId: UserId)
   fun handle(event: DomainOutboxEvent.FetchPlaybackData): Either<DomainError, Unit>
-  // Legacy handlers kept for backward compatibility with pending outbox entries
-  fun handle(event: DomainOutboxEvent.FetchCurrentlyPlaying): Either<DomainError, Unit>
-  fun handle(event: DomainOutboxEvent.FetchRecentlyPlayed): Either<DomainError, Unit>
   fun handle(event: DomainOutboxEvent.RebuildPlaybackData): Either<DomainError, Unit>
   fun handle(event: DomainOutboxEvent.AppendPlaybackData): Either<DomainError, Unit>
 }

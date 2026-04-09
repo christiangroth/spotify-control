@@ -60,8 +60,11 @@ class PlaybackService(
     }
   }
 
-  override fun fetchPlaybackData(userId: UserId): Either<DomainError, Unit> =
-    fetchCurrentlyPlaying(userId).flatMap { fetchRecentlyPlayed(userId) }
+  override fun fetchPlaybackData(userId: UserId): Either<DomainError, Unit> {
+    val currentlyPlayingResult = fetchCurrentlyPlaying(userId)
+    val recentlyPlayedResult = fetchRecentlyPlayed(userId)
+    return currentlyPlayingResult.flatMap { recentlyPlayedResult }
+  }
 
   // --- Currently Playing ---
 
@@ -291,13 +294,6 @@ class PlaybackService(
   // --- Outbox Handlers ---
 
   override fun handle(event: DomainOutboxEvent.FetchPlaybackData): Either<DomainError, Unit> =
-    fetchPlaybackData(event.userId)
-
-  // Legacy handlers kept for backward compatibility with pending outbox entries
-  override fun handle(event: DomainOutboxEvent.FetchCurrentlyPlaying): Either<DomainError, Unit> =
-    fetchPlaybackData(event.userId)
-
-  override fun handle(event: DomainOutboxEvent.FetchRecentlyPlayed): Either<DomainError, Unit> =
     fetchPlaybackData(event.userId)
 
   override fun handle(event: DomainOutboxEvent.RebuildPlaybackData): Either<DomainError, Unit> {

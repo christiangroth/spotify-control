@@ -21,31 +21,6 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
     }
   }
 
-  // Legacy events kept for backward compatibility with pending outbox entries
-  data class FetchCurrentlyPlaying(val userId: UserId) : DomainOutboxEvent {
-    override val key = KEY
-    override val deduplicationKey = "$KEY:${userId.value}"
-    override val partition = DomainOutboxPartition.ToSpotifyPlayback
-    override val priority = OutboxEventPriority.HIGH
-    override val serializePayload = userId.value
-
-    companion object {
-      const val KEY = "FetchCurrentlyPlaying"
-    }
-  }
-
-  data class FetchRecentlyPlayed(val userId: UserId) : DomainOutboxEvent {
-    override val key = KEY
-    override val deduplicationKey = "$KEY:${userId.value}"
-    override val partition = DomainOutboxPartition.ToSpotifyPlayback
-    override val priority = OutboxEventPriority.HIGH
-    override val serializePayload = userId.value
-
-    companion object {
-      const val KEY = "FetchRecentlyPlayed"
-    }
-  }
-
   data class UpdateUserProfile(val userId: UserId) : DomainOutboxEvent {
     override val key = KEY
     override val deduplicationKey = "$KEY:${userId.value}"
@@ -246,8 +221,6 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
     @Suppress("CyclomaticComplexMethod")
     fun fromKey(key: String, payload: String): DomainOutboxEvent = when (key) {
       FetchPlaybackData.KEY -> FetchPlaybackData(UserId(payload))
-      FetchCurrentlyPlaying.KEY -> FetchCurrentlyPlaying(UserId(payload))
-      FetchRecentlyPlayed.KEY -> FetchRecentlyPlayed(UserId(payload))
       UpdateUserProfile.KEY -> UpdateUserProfile(UserId(payload))
       SyncPlaylistInfo.KEY -> SyncPlaylistInfo(UserId(payload))
       SyncPlaylistData.KEY -> SyncPlaylistData.fromPayload(payload)

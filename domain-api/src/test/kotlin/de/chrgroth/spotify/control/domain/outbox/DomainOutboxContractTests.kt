@@ -12,8 +12,6 @@ class DomainOutboxContractTests {
 
   private val allEvents: List<DomainOutboxEvent> = listOf(
     DomainOutboxEvent.FetchPlaybackData(UserId("user-1")),
-    DomainOutboxEvent.FetchCurrentlyPlaying(UserId("user-1")),
-    DomainOutboxEvent.FetchRecentlyPlayed(UserId("user-1")),
     DomainOutboxEvent.UpdateUserProfile(UserId("user-1")),
     DomainOutboxEvent.SyncPlaylistInfo(UserId("user-1")),
     DomainOutboxEvent.SyncPlaylistData(UserId("user-1"), "playlist-1"),
@@ -39,8 +37,6 @@ class DomainOutboxContractTests {
     val userId = "user-abc"
     listOf(
       DomainOutboxEvent.FetchPlaybackData(UserId(userId)),
-      DomainOutboxEvent.FetchCurrentlyPlaying(UserId(userId)),
-      DomainOutboxEvent.FetchRecentlyPlayed(UserId(userId)),
       DomainOutboxEvent.UpdateUserProfile(UserId(userId)),
       DomainOutboxEvent.SyncPlaylistInfo(UserId(userId)),
       DomainOutboxEvent.SyncPlaylistData(UserId(userId), "playlist-abc"),
