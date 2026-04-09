@@ -10,6 +10,7 @@ import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
 import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogPort
+import de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackAggregationPort
 import de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackPort
 import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistCheckPort
 import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistPort
@@ -23,6 +24,7 @@ import kotlin.time.toJavaInstant
 @Suppress("Unused", "TooGenericExceptionCaught")
 class DomainOutboxTaskDispatcher(
   private val playback: PlaybackPort,
+  private val playbackAggregation: PlaybackAggregationPort,
   private val catalog: CatalogPort,
   private val playlist: PlaylistPort,
   private val playlistCheck: PlaylistCheckPort,
@@ -47,6 +49,7 @@ class DomainOutboxTaskDispatcher(
         is DomainOutboxEvent.SyncPlaylistData -> playlist.handle(event)
         is DomainOutboxEvent.RebuildPlaybackData -> playback.handle(event)
         is DomainOutboxEvent.AppendPlaybackData -> playback.handle(event)
+        is DomainOutboxEvent.AggregatePlaybackData -> playbackAggregation.handle(event)
         is DomainOutboxEvent.SyncArtistDetails -> catalog.handle(event)
         is DomainOutboxEvent.SyncArtistAlbums -> catalog.handle(event)
         is DomainOutboxEvent.SyncAlbumDetails -> catalog.handle(event)

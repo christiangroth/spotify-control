@@ -14,6 +14,7 @@ class MongoIndexInitializer(
   private val currentlyPlayingDocumentRepository: CurrentlyPlayingDocumentRepository,
   private val recentlyPartialPlayedDocumentRepository: RecentlyPartialPlayedDocumentRepository,
   private val appPlaybackDocumentRepository: AppPlaybackDocumentRepository,
+  private val playbackAggregationDocumentRepository: PlaybackAggregationDocumentRepository,
   private val appArtistDocumentRepository: AppArtistDocumentRepository,
   private val appAlbumDocumentRepository: AppAlbumDocumentRepository,
   private val appTrackDocumentRepository: AppTrackDocumentRepository,
@@ -24,6 +25,7 @@ class MongoIndexInitializer(
   fun onStartup(@Observes event: StartupEvent) {
     logger.info { "Ensuring MongoDB indexes..." }
     ensurePlaybackCollectionIndexes()
+    ensurePlaybackAggregationCollectionIndexes()
     ensureCatalogCollectionIndexes()
     ensurePlaylistCollectionIndexes()
     logger.info { "MongoDB indexes ready." }
@@ -58,6 +60,15 @@ class MongoIndexInitializer(
         .append(AppPlaybackRepositoryAdapter.TRACK_ID_FIELD, 1)
         .append(AppPlaybackRepositoryAdapter.SECONDS_PLAYED_FIELD, 1),
       IndexOptions().name("app_playback_spotifyUserId_1_playedAt_1_trackId_1_secondsPlayed_1"),
+    )
+  }
+
+  private fun ensurePlaybackAggregationCollectionIndexes() {
+    playbackAggregationDocumentRepository.mongoCollection().createIndex(
+      Document(PlaybackAggregationRepositoryAdapter.SPOTIFY_USER_ID_FIELD, 1)
+        .append(PlaybackAggregationRepositoryAdapter.TYPE_FIELD, 1)
+        .append(PlaybackAggregationRepositoryAdapter.PERIOD_START_FIELD, 1),
+      IndexOptions().name("app_playback_aggregation_spotifyUserId_1_type_1_periodStart_1"),
     )
   }
 

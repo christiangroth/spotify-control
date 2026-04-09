@@ -1,10 +1,13 @@
 package de.chrgroth.spotify.control.domain.outbox
 
+import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationPeriodType
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogPort
+import de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackAggregationPort
 import de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackPort
 import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistPort
 import de.chrgroth.spotify.control.domain.port.`in`.user.UserProfilePort
+import kotlinx.datetime.LocalDate
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -22,6 +25,11 @@ class DomainOutboxContractTests {
     DomainOutboxEvent.SyncArtistDetails("artist-1", UserId("user-1")),
     DomainOutboxEvent.SyncArtistAlbums("artist-1", UserId("user-1")),
     DomainOutboxEvent.SyncAlbumDetails("album-1"),
+    DomainOutboxEvent.AggregatePlaybackData(UserId("user-1"), AggregationPeriodType.DAY, LocalDate(2024, 1, 15)),
+    DomainOutboxEvent.AggregatePlaybackData(UserId("user-1"), AggregationPeriodType.WEEK, LocalDate(2024, 1, 8)),
+    DomainOutboxEvent.AggregatePlaybackData(UserId("user-1"), AggregationPeriodType.MONTH, LocalDate(2024, 1, 1)),
+    DomainOutboxEvent.AggregatePlaybackData(UserId("user-1"), AggregationPeriodType.QUARTER, LocalDate(2024, 1, 1)),
+    DomainOutboxEvent.AggregatePlaybackData(UserId("user-1"), AggregationPeriodType.YEAR, LocalDate(2024, 1, 1)),
   )
 
   @Test
@@ -44,6 +52,7 @@ class DomainOutboxContractTests {
       DomainOutboxEvent.SyncPlaylistData(UserId(userId), "playlist-abc"),
       DomainOutboxEvent.RebuildPlaybackData(UserId(userId)),
       DomainOutboxEvent.AppendPlaybackData(UserId(userId)),
+      DomainOutboxEvent.AggregatePlaybackData(UserId(userId), AggregationPeriodType.DAY, LocalDate(2024, 1, 15)),
     ).forEach { event ->
       assertThat(event.deduplicationKey)
         .describedAs("deduplicationKey for ${event::class.simpleName} should contain userId")
@@ -63,7 +72,7 @@ class DomainOutboxContractTests {
 
   @Test
   fun `every DomainOutboxEvent type has a handler method in one of the domain ports`() {
-    val allPortMethods = listOf(PlaybackPort::class, CatalogPort::class, PlaylistPort::class, UserProfilePort::class)
+    val allPortMethods = listOf(PlaybackPort::class, PlaybackAggregationPort::class, CatalogPort::class, PlaylistPort::class, UserProfilePort::class)
       .flatMap { it.java.methods.toList() }
     allEvents.forEach { event ->
       val eventClass = event::class.java

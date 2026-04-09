@@ -152,6 +152,20 @@ class AppPlaybackRepositoryAdapter(
         }
     }
 
+  override fun findAllBetween(userId: UserId, from: Instant, to: Instant): List<AppPlaybackItem> =
+    mongoQueryMetrics.timed("app_playback.findAllBetween") {
+      appPlaybackDocumentRepository
+        .list("spotifyUserId = ?1 and playedAt >= ?2 and playedAt < ?3", userId.value, from.toJavaInstant(), to.toJavaInstant())
+        .map { doc ->
+          AppPlaybackItem(
+            userId = UserId(doc.spotifyUserId),
+            playedAt = doc.playedAt.toKotlinInstant(),
+            trackId = doc.trackId,
+            secondsPlayed = doc.secondsPlayed,
+          )
+        }
+    }
+
   override fun sumSecondsPlayedByTrackIdSince(userId: UserId, since: Instant): Map<String, Long> {
     val pipeline = listOf(
       Aggregates.match(
