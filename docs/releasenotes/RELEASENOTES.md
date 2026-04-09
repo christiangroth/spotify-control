@@ -1,3 +1,17 @@
+# 0.83.0 (2026.04.09)
+
+## New Features
+* Combined currently playing and recently played fetches into a single playback detection job.
+
+## Bugfixes / Chore
+* Removed unused `DatabaseMigrationPort` and `DatabaseMigrationAdapter` dead code.
+* Fixed outdated documentation references to htmx (replaced by vanilla JS fetch API).
+* Removed broken links to non-existent documentation files from README.
+
+
+
+---
+
 # 0.82.2 (2026.04.08)
 
 ## Bugfixes / Chore
