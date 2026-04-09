@@ -7,6 +7,7 @@ import kotlinx.datetime.LocalDate
 
 interface PlaybackAggregationRepositoryPort {
   fun save(aggregation: PlaybackAggregation)
+  fun deleteAll()
   fun findByUserAndPeriod(userId: UserId, type: AggregationPeriodType, periodStart: LocalDate): PlaybackAggregation?
   fun findByUserTypeAndPeriodRange(userId: UserId, type: AggregationPeriodType, from: LocalDate, to: LocalDate): List<PlaybackAggregation>
 }

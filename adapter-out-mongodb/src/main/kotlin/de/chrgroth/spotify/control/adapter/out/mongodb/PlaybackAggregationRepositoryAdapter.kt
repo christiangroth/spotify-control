@@ -26,6 +26,13 @@ class PlaybackAggregationRepositoryAdapter(
     }
   }
 
+  override fun deleteAll() {
+    val count = mongoQueryMetrics.timed("app_playback_aggregation.deleteAll") {
+      repository.deleteAll()
+    }
+    logger.info { "Deleted $count playback aggregation document(s)" }
+  }
+
   override fun findByUserAndPeriod(userId: UserId, type: AggregationPeriodType, periodStart: LocalDate): PlaybackAggregation? {
     val id = documentId(userId, type, periodStart)
     return mongoQueryMetrics.timed("app_playback_aggregation.findByUserAndPeriod") {

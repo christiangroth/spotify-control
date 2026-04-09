@@ -20,12 +20,15 @@ import de.chrgroth.spotify.control.domain.port.out.playback.AppPlaybackRepositor
 import de.chrgroth.spotify.control.domain.port.out.playback.PlaybackAggregationRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
+import java.time.DayOfWeek
 import java.time.ZoneOffset
+import java.time.temporal.TemporalAdjusters
 import kotlin.time.Instant
 import kotlin.time.toJavaInstant
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.toJavaLocalDate
 import mu.KLogging
+import java.time.LocalDate as JLocalDate
 
 @ApplicationScoped
 @Suppress("Unused")
@@ -78,6 +81,95 @@ class PlaybackAggregationService(
     users.forEach { user ->
       outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(user.spotifyUserId, AggregationPeriodType.YEAR, yearStart))
     }
+  }
+
+  // --- Rebuild ---
+
+  override fun rebuildAllAggregations() {
+    val oldestInstant = appPlaybackRepository.findOldestPlayedAt()
+    if (oldestInstant == null) {
+      logger.info { "No playback data found, skipping aggregation rebuild" }
+      return
+    }
+
+    val firstDate = JLocalDate.ofInstant(oldestInstant.toJavaInstant(), ZoneOffset.UTC)
+    val today = JLocalDate.now(ZoneOffset.UTC)
+    val yesterday = today.minusDays(1)
+
+    logger.info { "Deleting all aggregation data before rebuild" }
+    aggregationRepository.deleteAll()
+
+    logger.info { "Rebuilding aggregations from $firstDate to $yesterday" }
+
+    enqueueDays(firstDate, yesterday)
+    enqueueWeeks(firstDate, yesterday)
+    enqueueMonths(firstDate, yesterday)
+    enqueueQuarters(firstDate, yesterday)
+    enqueueYears(firstDate, yesterday)
+
+    logger.info { "Aggregation rebuild enqueuing complete" }
+  }
+
+  private fun enqueueDays(from: JLocalDate, to: JLocalDate) {
+    var date = from
+    while (!date.isAfter(to)) {
+      enqueueAggregateDay(date.toKotlin())
+      date = date.plusDays(1)
+    }
+    logger.info { "Enqueued daily aggregations from $from to $to" }
+  }
+
+  private fun enqueueWeeks(from: JLocalDate, to: JLocalDate) {
+    var weekStart = from.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+    val lastCompleteWeekStart = to.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+    var count = 0
+    while (!weekStart.isAfter(lastCompleteWeekStart)) {
+      enqueueAggregateWeek(weekStart.toKotlin())
+      weekStart = weekStart.plusWeeks(1)
+      count++
+    }
+    logger.info { "Enqueued $count weekly aggregation(s)" }
+  }
+
+  private fun enqueueMonths(from: JLocalDate, to: JLocalDate) {
+    var monthStart = from.withDayOfMonth(1)
+    val lastCompleteMonthStart = to.withDayOfMonth(1)
+    var count = 0
+    while (!monthStart.isAfter(lastCompleteMonthStart)) {
+      enqueueAggregateMonth(monthStart.toKotlin())
+      monthStart = monthStart.plusMonths(1)
+      count++
+    }
+    logger.info { "Enqueued $count monthly aggregation(s)" }
+  }
+
+  private fun enqueueQuarters(from: JLocalDate, to: JLocalDate) {
+    var quarterStart = firstDayOfQuarter(from)
+    val lastCompleteQuarterStart = firstDayOfQuarter(to)
+    var count = 0
+    while (!quarterStart.isAfter(lastCompleteQuarterStart)) {
+      enqueueAggregateQuarter(quarterStart.toKotlin())
+      quarterStart = quarterStart.plusMonths(3)
+      count++
+    }
+    logger.info { "Enqueued $count quarterly aggregation(s)" }
+  }
+
+  private fun enqueueYears(from: JLocalDate, to: JLocalDate) {
+    var yearStart = from.withDayOfYear(1)
+    val lastCompleteYearStart = to.withDayOfYear(1)
+    var count = 0
+    while (!yearStart.isAfter(lastCompleteYearStart)) {
+      enqueueAggregateYear(yearStart.toKotlin())
+      yearStart = yearStart.plusYears(1)
+      count++
+    }
+    logger.info { "Enqueued $count yearly aggregation(s)" }
+  }
+
+  private fun firstDayOfQuarter(date: JLocalDate): JLocalDate {
+    val firstMonthOfQuarter = ((date.monthValue - 1) / 3) * 3 + 1
+    return JLocalDate.of(date.year, firstMonthOfQuarter, 1)
   }
 
   // --- Outbox handler ---
@@ -231,3 +323,5 @@ private fun LocalDate.minusKDays(days: Long): LocalDate {
   val javaDate = toJavaLocalDate().minusDays(days)
   return LocalDate(javaDate.year, javaDate.monthValue, javaDate.dayOfMonth)
 }
+
+private fun JLocalDate.toKotlin(): LocalDate = LocalDate(year, monthValue, dayOfMonth)
