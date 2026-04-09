@@ -11,6 +11,7 @@ interface AppPlaybackRepositoryPort {
   fun deleteAllByTrackIds(trackIds: Set<String>)
   fun deleteByUserAndPlayedAts(userId: UserId, playedAts: Set<Instant>)
   fun findMostRecentPlayedAt(userId: UserId): Instant?
+  fun findOldestPlayedAt(): Instant?
   fun findExistingPlayedAts(userId: UserId, playedAts: Set<Instant>): Set<Instant>
   fun countAll(userId: UserId): Long
   fun countSince(userId: UserId, since: Instant): Long

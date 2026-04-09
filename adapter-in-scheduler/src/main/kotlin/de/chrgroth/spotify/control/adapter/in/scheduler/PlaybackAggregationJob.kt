@@ -6,8 +6,6 @@ import io.quarkus.scheduler.Scheduled
 import jakarta.enterprise.context.ApplicationScoped
 import java.time.LocalDate
 import java.time.ZoneOffset
-import java.time.temporal.TemporalAdjusters
-import java.time.DayOfWeek
 import kotlinx.datetime.LocalDate as KLocalDate
 import mu.KLogging
 
@@ -26,7 +24,7 @@ class PlaybackAggregationJob(
 
   @Scheduled(cron = "0 30 1 ? * MON", skipExecutionIf = ScheduledSkipPredicate::class)
   fun aggregateWeekly() {
-    val previousMonday = LocalDate.now(ZoneOffset.UTC).minusWeeks(1).with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+    val previousMonday = LocalDate.now(ZoneOffset.UTC).minusWeeks(1)
     logger.info { "Triggering week aggregation starting $previousMonday" }
     aggregation.enqueueAggregateWeek(previousMonday.toKotlin())
   }

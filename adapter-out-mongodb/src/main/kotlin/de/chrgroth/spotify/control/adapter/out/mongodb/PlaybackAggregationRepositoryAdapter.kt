@@ -51,6 +51,7 @@ class PlaybackAggregationRepositoryAdapter(
     periodStart = this@toDocument.periodStart.toString()
     totalPlaybackSeconds = this@toDocument.totalPlaybackSeconds
     distinctArtistCount = this@toDocument.distinctArtistCount
+    distinctTrackCount = this@toDocument.distinctTrackCount
     artistEntries = this@toDocument.artistEntries.map { it.toEntryDocument() }
     trackEntries = this@toDocument.trackEntries.map { it.toEntryDocument() }
     activityEntries = this@toDocument.activityEntries.map { it.toActivityDocument() }
@@ -74,6 +75,7 @@ class PlaybackAggregationRepositoryAdapter(
     periodStart = LocalDate.parse(periodStart),
     totalPlaybackSeconds = totalPlaybackSeconds,
     distinctArtistCount = distinctArtistCount,
+    distinctTrackCount = distinctTrackCount,
     artistEntries = artistEntries.map { it.toDomain() },
     trackEntries = trackEntries.map { it.toDomain() },
     activityEntries = activityEntries.map { it.toDomain() },

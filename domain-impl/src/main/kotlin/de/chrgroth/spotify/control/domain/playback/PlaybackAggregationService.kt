@@ -104,7 +104,8 @@ class PlaybackAggregationService(
 
     val items = appPlaybackRepository.findAllBetween(userId, from, to)
     if (items.isEmpty()) {
-      logger.info { "No playback data for $date, user: ${userId.value} — skipping aggregation" }
+      logger.info { "No playback data for $date, user: ${userId.value} — saving empty aggregation" }
+      aggregationRepository.save(emptyAggregation(userId, AggregationPeriodType.DAY, date))
       return
     }
 
@@ -145,6 +146,7 @@ class PlaybackAggregationService(
       periodStart = date,
       totalPlaybackSeconds = items.sumOf { it.secondsPlayed },
       distinctArtistCount = artistEntries.size,
+      distinctTrackCount = trackEntries.size,
       artistEntries = artistEntries,
       trackEntries = trackEntries,
       activityEntries = activityEntries,
@@ -158,7 +160,8 @@ class PlaybackAggregationService(
 
     val dailyAggregations = aggregationRepository.findByUserTypeAndPeriodRange(userId, AggregationPeriodType.DAY, from, to)
     if (dailyAggregations.isEmpty()) {
-      logger.info { "No daily aggregations found for $from to $to, user: ${userId.value} — skipping $type aggregation" }
+      logger.info { "No daily aggregations found for $from to $to, user: ${userId.value} — saving empty $type aggregation" }
+      aggregationRepository.save(emptyAggregation(userId, type, from))
       return
     }
 
@@ -182,6 +185,7 @@ class PlaybackAggregationService(
       periodStart = from,
       totalPlaybackSeconds = dailyAggregations.sumOf { it.totalPlaybackSeconds },
       distinctArtistCount = mergedArtistEntries.size,
+      distinctTrackCount = mergedTrackEntries.size,
       artistEntries = mergedArtistEntries,
       trackEntries = mergedTrackEntries,
       activityEntries = mergedActivityEntries,
@@ -189,6 +193,18 @@ class PlaybackAggregationService(
     aggregationRepository.save(aggregation)
     logger.info { "Saved $type aggregation for $from, user: ${userId.value}" }
   }
+
+  private fun emptyAggregation(userId: UserId, type: AggregationPeriodType, periodStart: LocalDate): PlaybackAggregation = PlaybackAggregation(
+    userId = userId,
+    type = type,
+    periodStart = periodStart,
+    totalPlaybackSeconds = 0L,
+    distinctArtistCount = 0,
+    distinctTrackCount = 0,
+    artistEntries = emptyList(),
+    trackEntries = emptyList(),
+    activityEntries = emptyList(),
+  )
 
   companion object : KLogging() {
     private const val UNKNOWN_ARTIST_ID = "unknown"

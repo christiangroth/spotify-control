@@ -16,6 +16,7 @@ class PlaybackAggregationDocument {
   lateinit var periodStart: String
   var totalPlaybackSeconds: Long = 0L
   var distinctArtistCount: Int = 0
+  var distinctTrackCount: Int = 0
   var artistEntries: List<PlaybackAggregationEntryDocument> = emptyList()
   var trackEntries: List<PlaybackAggregationEntryDocument> = emptyList()
   var activityEntries: List<PlaybackAggregationActivityEntryDocument> = emptyList()

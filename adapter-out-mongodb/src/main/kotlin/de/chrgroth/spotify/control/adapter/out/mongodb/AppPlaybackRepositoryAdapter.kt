@@ -71,6 +71,13 @@ class AppPlaybackRepositoryAdapter(
         ?.playedAt?.toKotlinInstant()
     }
 
+  override fun findOldestPlayedAt(): Instant? =
+    mongoQueryMetrics.timed("app_playback.findOldestPlayedAt") {
+      appPlaybackDocumentRepository
+        .findAll(Sort.by("playedAt").ascending())
+        .firstResult()
+        ?.playedAt?.toKotlinInstant()
+    }
   override fun findExistingPlayedAts(userId: UserId, playedAts: Set<Instant>): Set<Instant> {
     if (playedAts.isEmpty()) return emptySet()
     val javaPlayedAts = playedAts.map { it.toJavaInstant() }
