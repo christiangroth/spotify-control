@@ -1,3 +1,13 @@
+# 0.84.0 (2026.04.09)
+
+## New Features
+* Playback data is now aggregated nightly (daily), weekly, monthly, quarterly, and yearly.
+* Aggregations capture total playback duration, distinct artist count, top artist and track rankings, per-artist and per-track durations, and activity times by weekday and time window.
+
+
+
+---
+
 # 0.83.0 (2026.04.09)
 
 ## New Features
