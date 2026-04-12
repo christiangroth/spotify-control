@@ -18,37 +18,6 @@
 
         <div id="status-banner" class="alert d-none mb-3" role="alert"></div>
 
-        {#if !result.artists.empty}
-        <div class="app-card mb-4 p-3">
-            <h2 class="fs-6 fw-semibold mb-2 app-section-label">Artists on this day</h2>
-            <div class="d-flex flex-wrap gap-2">
-                {#for artist in result.artists}
-                <div class="d-flex align-items-center gap-2 px-2 py-1"
-                     style="background-color:var(--color-bg-nested);border:1px solid var(--color-border);border-radius:4px;">
-                    {#if artist.imageLink}
-                    <img src="{artist.imageLink}" alt="{artist.artistName}" width="24" height="24"
-                         style="border-radius:50%;object-fit:cover;">
-                    {/if}
-                    <span style="font-size:.85rem;color:{#if artist.blockedFromAggregation}#e07070{#else}var(--color-text-primary){/if};">
-                        {artist.artistName}
-                    </span>
-                    {#if artist.blockedFromAggregation}
-                    <button class="btn btn-sm py-0 px-1 unblock-artist-btn"
-                            style="font-size:.72rem;border-color:#4caf50;color:#4caf50;"
-                            data-artist-id="{artist.artistId}"
-                            aria-label="Unblock {artist.artistName}">Unblock</button>
-                    {#else}
-                    <button class="btn btn-sm py-0 px-1 block-artist-btn"
-                            style="font-size:.72rem;border-color:var(--color-danger);color:var(--color-danger);"
-                            data-artist-id="{artist.artistId}"
-                            aria-label="Block {artist.artistName}">Block</button>
-                    {/if}
-                </div>
-                {/for}
-            </div>
-        </div>
-        {/if}
-
         {#if result.events.empty}
         <p class="text-secondary">No playback events found for {result.date}.</p>
         {#else}
@@ -57,39 +26,39 @@
         {#for event in result.events}
 
         {#if event.type.name() == "RECENTLY_PLAYED"}
-        <div class="mb-3" style="border:1px solid #2a5c2a;border-radius:4px;overflow:hidden;">
+        <div class="mb-2" style="border:1px solid #2a5c2a;border-radius:4px;overflow:hidden;">
             <div class="d-flex align-items-center px-3 py-2" style="background-color:#1e2a1e;border-bottom:1px solid #2a5c2a;">
                 <span class="fw-semibold me-3" style="color:#4caf50;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;">recently_played</span>
-                <span style="color:#888;font-size:.78rem;">{event.timestamp}</span>
+                <span style="color:#888;font-size:.78rem;">{event.timestamp.formatted}</span>
             </div>
-            <pre style="background-color:#161e16;margin:0;padding:.75rem 1rem;font-size:.75rem;color:#ccc;overflow-x:auto;border:none;">{event.json}</pre>
+            {#playback-event-details event=event/}
         </div>
         {#else if event.type.name() == "RECENTLY_PARTIAL_PLAYED"}
-        <div class="mb-3" style="border:1px solid #5c5a2a;border-radius:4px;overflow:hidden;">
+        <div class="mb-2" style="border:1px solid #5c5a2a;border-radius:4px;overflow:hidden;">
             <div class="d-flex align-items-center px-3 py-2" style="background-color:#2a2a1e;border-bottom:1px solid #5c5a2a;">
                 <span class="fw-semibold me-3" style="color:#e0c040;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;">recently_partial_played</span>
-                <span style="color:#888;font-size:.78rem;">{event.timestamp}</span>
+                <span style="color:#888;font-size:.78rem;">{event.timestamp.formatted}</span>
             </div>
-            <pre style="background-color:#1e1e16;margin:0;padding:.75rem 1rem;font-size:.75rem;color:#ccc;overflow-x:auto;border:none;">{event.json}</pre>
+            {#playback-event-details event=event/}
         </div>
         {#else if event.type.name() == "CURRENTLY_PLAYING"}
         {#if event.isWarning}
-        <div class="mb-3" style="border:1px solid #884444;border-radius:4px;overflow:hidden;">
+        <div class="mb-2" style="border:1px solid #884444;border-radius:4px;overflow:hidden;">
             <div class="d-flex align-items-center px-3 py-2" style="background-color:#2a1e1e;border-bottom:1px solid #884444;">
                 <span class="fw-semibold me-3" style="color:#e07070;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;">currently_playing</span>
                 <span class="badge me-2" style="background-color:#884444;color:#fdd;font-size:.68rem;font-weight:400;">orphaned</span>
-                <span style="color:#888;font-size:.78rem;">{event.timestamp}</span>
+                <span style="color:#888;font-size:.78rem;">{event.timestamp.formatted}</span>
             </div>
-            <pre style="background-color:#1e1616;margin:0;padding:.75rem 1rem;font-size:.75rem;color:#ccc;overflow-x:auto;border:none;">{event.json}</pre>
+            {#playback-event-details event=event/}
         </div>
         {#else}
-        <div class="mb-3" style="border:1px solid #444;border-radius:4px;overflow:hidden;">
+        <div class="mb-2" style="border:1px solid #444;border-radius:4px;overflow:hidden;">
             <div class="d-flex align-items-center px-3 py-2" style="background-color:var(--color-bg-card);border-bottom:1px solid var(--color-border);">
                 <span class="fw-semibold me-3" style="color:#aaa;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;">currently_playing</span>
                 <span class="badge me-2" style="background-color:#333;color:#aaa;font-size:.68rem;font-weight:400;">active</span>
-                <span style="color:#888;font-size:.78rem;">{event.timestamp}</span>
+                <span style="color:#888;font-size:.78rem;">{event.timestamp.formatted}</span>
             </div>
-            <pre style="background-color:var(--color-bg-nested);margin:0;padding:.75rem 1rem;font-size:.75rem;color:#ccc;overflow-x:auto;border:none;">{event.json}</pre>
+            {#playback-event-details event=event/}
         </div>
         {/if}
         {/if}
@@ -98,29 +67,5 @@
         {/if}
 
     </div>
-
-    <script>
-        document.querySelector('.container-fluid').addEventListener('click', function(e) {
-            const blockBtn = e.target.closest('.block-artist-btn');
-            if (blockBtn) {
-                e.stopPropagation();
-                const artistId = blockBtn.dataset.artistId;
-                postWithButton(blockBtn, '/settings/playback/artists/' + encodeURIComponent(artistId) + '/block',
-                    'Artist blocked from aggregation. Aggregations will be rebuilt.', 'Block failed', function() {
-                        location.reload();
-                    });
-                return;
-            }
-            const unblockBtn = e.target.closest('.unblock-artist-btn');
-            if (unblockBtn) {
-                e.stopPropagation();
-                const artistId = unblockBtn.dataset.artistId;
-                postWithButton(unblockBtn, '/settings/playback/artists/' + encodeURIComponent(artistId) + '/unblock',
-                    'Artist unblocked from aggregation. Aggregations will be rebuilt.', 'Unblock failed', function() {
-                        location.reload();
-                    });
-            }
-        });
-    </script>
     {/content}
 {/include}
