@@ -1,3 +1,13 @@
+# 0.88.0 (2026.04.12)
+
+## New Features
+* Removed "Artists on this day" section from the Playback Event Viewer.
+* Playback events in the viewer now show compact structured items with track, artist, album, start time and duration instead of raw JSON.
+
+
+
+---
+
 # 0.87.1 (2026.04.12)
 
 ## Bugfixes / Chore
