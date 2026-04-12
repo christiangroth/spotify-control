@@ -101,6 +101,56 @@ class AppArtistRepositoryTests {
   }
 
   @Test
+  fun `setBlockedFromAggregation blocks an artist`() {
+    val item = artist("block")
+    appArtistRepository.upsertAll(listOf(item))
+
+    appArtistRepository.setBlockedFromAggregation(item.id, true)
+
+    val result = appArtistRepository.findByArtistIds(setOf(item.id))
+    assertThat(result).hasSize(1)
+    assertThat(result[0].blockedFromAggregation).isTrue()
+  }
+
+  @Test
+  fun `setBlockedFromAggregation unblocks an artist`() {
+    val item = artist("unblock")
+    appArtistRepository.upsertAll(listOf(item))
+    appArtistRepository.setBlockedFromAggregation(item.id, true)
+
+    appArtistRepository.setBlockedFromAggregation(item.id, false)
+
+    val result = appArtistRepository.findByArtistIds(setOf(item.id))
+    assertThat(result).hasSize(1)
+    assertThat(result[0].blockedFromAggregation).isFalse()
+  }
+
+  @Test
+  fun `upsertAll does not reset blockedFromAggregation flag`() {
+    val item = artist("preserve-block")
+    appArtistRepository.upsertAll(listOf(item))
+    appArtistRepository.setBlockedFromAggregation(item.id, true)
+
+    val updated = item.copy(artistName = "Updated Name")
+    appArtistRepository.upsertAll(listOf(updated))
+
+    val result = appArtistRepository.findByArtistIds(setOf(item.id))
+    assertThat(result).hasSize(1)
+    assertThat(result[0].artistName).isEqualTo("Updated Name")
+    assertThat(result[0].blockedFromAggregation).isTrue()
+  }
+
+  @Test
+  fun `new artist inserted via upsertAll has blockedFromAggregation false by default`() {
+    val item = artist("default-not-blocked")
+    appArtistRepository.upsertAll(listOf(item))
+
+    val result = appArtistRepository.findByArtistIds(setOf(item.id))
+    assertThat(result).hasSize(1)
+    assertThat(result[0].blockedFromAggregation).isFalse()
+  }
+
+  @Test
   fun `countAll returns total number of artists`() {
     val before = appArtistRepository.countAll()
     val artist1 = artist("count1")

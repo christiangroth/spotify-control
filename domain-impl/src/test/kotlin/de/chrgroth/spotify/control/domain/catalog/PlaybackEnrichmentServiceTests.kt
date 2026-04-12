@@ -35,6 +35,7 @@ class PlaybackEnrichmentServiceTests {
   private val playlistCheckRepository: AppPlaylistCheckRepositoryPort = mockk()
   private val dashboardRefresh: DashboardRefreshPort = mockk(relaxed = true)
   private val syncController: SyncController = mockk(relaxed = true)
+  private val playbackAggregation: de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackAggregationPort = mockk(relaxed = true)
 
   private val adapter = CatalogService(
     spotifyAccessToken,
@@ -48,6 +49,7 @@ class PlaybackEnrichmentServiceTests {
     playlistCheckRepository,
     dashboardRefresh,
     syncController,
+    playbackAggregation,
   )
 
   private val userId = UserId("user-1")

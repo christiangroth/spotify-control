@@ -9,5 +9,6 @@ interface AppArtistRepositoryPort {
   fun findAll(): List<AppArtist>
   fun findByArtistIds(artistIds: Set<ArtistId>): List<AppArtist>
   fun findWithImageLinkAndBlankName(): List<AppArtist>
+  fun setBlockedFromAggregation(artistId: ArtistId, blocked: Boolean)
   fun deleteAll()
 }

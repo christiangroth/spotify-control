@@ -94,5 +94,57 @@ class PlaybackSettingsResource(
     )
   }
 
+  @POST
+  @Authenticated
+  @Path("/artists/{artistId}/block")
+  @Produces(MediaType.APPLICATION_JSON)
+  fun blockArtist(@PathParam("artistId") artistId: String): Response {
+    return catalog.blockArtistFromAggregation(artistId).fold(
+      ifLeft = { error ->
+        when (error) {
+          ArtistSettingsError.ARTIST_NOT_FOUND -> {
+            logger.warn { "Artist $artistId not found for block: ${error.code}" }
+            Response.status(Response.Status.NOT_FOUND)
+              .entity(mapOf("error" to "Artist not found: $artistId"))
+              .build()
+          }
+          else -> {
+            logger.error { "Block artist failed for $artistId: ${error.code}" }
+            Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+              .entity(mapOf("error" to "Block failed: ${error.code}"))
+              .build()
+          }
+        }
+      },
+      ifRight = { Response.ok(mapOf("status" to "ok")).build() },
+    )
+  }
+
+  @POST
+  @Authenticated
+  @Path("/artists/{artistId}/unblock")
+  @Produces(MediaType.APPLICATION_JSON)
+  fun unblockArtist(@PathParam("artistId") artistId: String): Response {
+    return catalog.unblockArtistFromAggregation(artistId).fold(
+      ifLeft = { error ->
+        when (error) {
+          ArtistSettingsError.ARTIST_NOT_FOUND -> {
+            logger.warn { "Artist $artistId not found for unblock: ${error.code}" }
+            Response.status(Response.Status.NOT_FOUND)
+              .entity(mapOf("error" to "Artist not found: $artistId"))
+              .build()
+          }
+          else -> {
+            logger.error { "Unblock artist failed for $artistId: ${error.code}" }
+            Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+              .entity(mapOf("error" to "Unblock failed: ${error.code}"))
+              .build()
+          }
+        }
+      },
+      ifRight = { Response.ok(mapOf("status" to "ok")).build() },
+    )
+  }
+
   companion object : KLogging()
 }

@@ -1,10 +1,15 @@
 package de.chrgroth.spotify.control.domain.playback
 
+import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
+import de.chrgroth.spotify.control.domain.model.catalog.TrackId
 import de.chrgroth.spotify.control.domain.model.playback.PlaybackEventEntry
 import de.chrgroth.spotify.control.domain.model.playback.PlaybackEventType
 import de.chrgroth.spotify.control.domain.model.playback.PlaybackEventViewerResult
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackEventViewerPort
+import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.playback.AppPlaybackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playback.PlaybackEventViewerRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 import kotlin.time.Clock
@@ -19,6 +24,9 @@ import kotlinx.datetime.toLocalDateTime
 @Suppress("Unused")
 class PlaybackEventViewerService(
   private val repository: PlaybackEventViewerRepositoryPort,
+  private val appPlaybackRepository: AppPlaybackRepositoryPort,
+  private val appTrackRepository: AppTrackRepositoryPort,
+  private val appArtistRepository: AppArtistRepositoryPort,
 ) : PlaybackEventViewerPort {
 
   override fun getEvents(userId: UserId, date: LocalDate): PlaybackEventViewerResult {
@@ -46,6 +54,14 @@ class PlaybackEventViewerService(
     }
 
     val allEvents = (recentlyPlayed + partialPlayed + currentlyPlayingEntries).sortedByDescending { it.timestamp }
-    return PlaybackEventViewerResult(date = date, isToday = isToday, events = allEvents)
+
+    val playbackItems = appPlaybackRepository.findAllBetween(userId, from, to)
+    val trackIds = playbackItems.map { TrackId(it.trackId) }.toSet()
+    val tracks = appTrackRepository.findByTrackIds(trackIds)
+    val artistIds = tracks.mapNotNull { it.artistId }.toSet()
+    val artists = appArtistRepository.findByArtistIds(artistIds)
+      .sortedBy { it.artistName.lowercase() }
+
+    return PlaybackEventViewerResult(date = date, isToday = isToday, events = allEvents, artists = artists)
   }
 }

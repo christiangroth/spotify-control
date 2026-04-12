@@ -13,4 +13,5 @@ class AppArtistDocument {
   var imageLink: String? = null
   var type: String? = null
   var lastSync: Instant? = null
+  var blockedFromAggregation: Boolean = false
 }

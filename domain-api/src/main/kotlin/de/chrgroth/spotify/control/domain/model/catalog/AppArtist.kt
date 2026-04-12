@@ -12,4 +12,5 @@ data class AppArtist(
   val imageLink: String? = null,
   val type: String? = null,
   val lastSync: Instant,
+  val blockedFromAggregation: Boolean = false,
 )
