@@ -22,6 +22,7 @@ import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPo
 import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.SpotifyCatalogPort
 import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
+import de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackAggregationPort
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
 
@@ -39,11 +40,30 @@ class CatalogService(
   private val playlistCheckRepository: AppPlaylistCheckRepositoryPort,
   private val dashboardRefresh: DashboardRefreshPort,
   private val syncController: SyncController,
+  private val playbackAggregation: PlaybackAggregationPort,
 ) : CatalogPort {
 
   // --- Artist Settings ---
 
   override fun findAllArtists(): List<AppArtist> = appArtistRepository.findAll()
+
+  override fun blockArtistFromAggregation(artistId: String): Either<DomainError, Unit> {
+    appArtistRepository.findByArtistIds(setOf(ArtistId(artistId))).firstOrNull()
+      ?: return ArtistSettingsError.ARTIST_NOT_FOUND.left()
+    logger.info { "Blocking artist $artistId from aggregation" }
+    appArtistRepository.setBlockedFromAggregation(ArtistId(artistId), true)
+    playbackAggregation.rebuildAllAggregations()
+    return Unit.right()
+  }
+
+  override fun unblockArtistFromAggregation(artistId: String): Either<DomainError, Unit> {
+    appArtistRepository.findByArtistIds(setOf(ArtistId(artistId))).firstOrNull()
+      ?: return ArtistSettingsError.ARTIST_NOT_FOUND.left()
+    logger.info { "Unblocking artist $artistId from aggregation" }
+    appArtistRepository.setBlockedFromAggregation(ArtistId(artistId), false)
+    playbackAggregation.rebuildAllAggregations()
+    return Unit.right()
+  }
 
   // --- Catalog Sync ---
 

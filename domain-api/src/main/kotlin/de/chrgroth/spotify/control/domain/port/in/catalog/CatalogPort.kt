@@ -8,6 +8,8 @@ import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 
 interface CatalogPort {
   fun findAllArtists(): List<AppArtist>
+  fun blockArtistFromAggregation(artistId: String): Either<DomainError, Unit>
+  fun unblockArtistFromAggregation(artistId: String): Either<DomainError, Unit>
   fun syncArtistDetails(artistId: String, userId: UserId): Either<DomainError, Unit>
   fun resyncCatalog(): Either<DomainError, Unit>
   fun resyncArtist(artistId: String): Either<DomainError, Unit>

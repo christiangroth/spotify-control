@@ -212,16 +212,28 @@ class PlaybackAggregationService(
     val trackIds = items.map { TrackId(it.trackId) }.toSet()
     val tracks = appTrackRepository.findByTrackIds(trackIds).associateBy { it.id }
 
-    val durationPerTrackId = items.groupBy { it.trackId }.mapValues { (_, entries) -> entries.sumOf { it.secondsPlayed } }
+    val artistIds = tracks.values.mapNotNull { it.artistId }.toSet()
+    val artists = appArtistRepository.findByArtistIds(artistIds).associateBy { it.id }
+    val blockedArtistIds = artists.values.filter { it.blockedFromAggregation }.map { it.id }.toSet()
+
+    val filteredItems = items.filter { item ->
+      val artistId = tracks[TrackId(item.trackId)]?.artistId
+      artistId == null || artistId !in blockedArtistIds
+    }
+
+    if (filteredItems.isEmpty()) {
+      logger.info { "All playback items for $date, user: ${userId.value} are from blocked artists — saving empty aggregation" }
+      aggregationRepository.save(emptyAggregation(userId, AggregationPeriodType.DAY, date))
+      return
+    }
+
+    val durationPerTrackId = filteredItems.groupBy { it.trackId }.mapValues { (_, entries) -> entries.sumOf { it.secondsPlayed } }
 
     val durationPerArtistId = mutableMapOf<String, Long>()
-    items.forEach { item ->
+    filteredItems.forEach { item ->
       val artistId = tracks[TrackId(item.trackId)]?.artistId?.value ?: UNKNOWN_ARTIST_ID
       durationPerArtistId[artistId] = (durationPerArtistId[artistId] ?: 0L) + item.secondsPlayed
     }
-
-    val artistIds = durationPerArtistId.keys.filter { it != UNKNOWN_ARTIST_ID }.map { ArtistId(it) }.toSet()
-    val artists = appArtistRepository.findByArtistIds(artistIds).associateBy { it.id }
 
     val trackEntries = durationPerTrackId.map { (trackId, seconds) ->
       val name = tracks[TrackId(trackId)]?.title ?: trackId
@@ -233,7 +245,7 @@ class PlaybackAggregationService(
       AggregationRankEntry(id = artistId, name = name, totalSeconds = seconds)
     }.sortedByDescending { it.totalSeconds }
 
-    val activityEntries = items.groupBy { item ->
+    val activityEntries = filteredItems.groupBy { item ->
       val zdt = item.playedAt.toJavaInstant().atZone(ZoneOffset.UTC)
       zdt.dayOfWeek to ActivityTimeWindow.fromHour(zdt.hour)
     }.map { (key, entries) ->
@@ -244,7 +256,7 @@ class PlaybackAggregationService(
       userId = userId,
       type = AggregationPeriodType.DAY,
       periodStart = date,
-      totalPlaybackSeconds = items.sumOf { it.secondsPlayed },
+      totalPlaybackSeconds = filteredItems.sumOf { it.secondsPlayed },
       distinctArtistCount = artistEntries.size,
       distinctTrackCount = trackEntries.size,
       artistEntries = artistEntries,

@@ -32,6 +32,7 @@ class AppArtistRepositoryAdapter(
             Updates.set(IMAGE_LINK_FIELD, item.imageLink),
             Updates.set(TYPE_FIELD, item.type),
             Updates.set(LAST_SYNC_FIELD, now),
+            Updates.setOnInsert(BLOCKED_FROM_AGGREGATION_FIELD, false),
           ),
           upsertOptions,
         )
@@ -76,6 +77,16 @@ class AppArtistRepositoryAdapter(
         .map { it.toDomain() }
     }
 
+  override fun setBlockedFromAggregation(artistId: ArtistId, blocked: Boolean) {
+    mongoQueryMetrics.timed("app_artist.setBlockedFromAggregation") {
+      appArtistDocumentRepository.mongoCollection()
+        .updateOne(
+          Filters.eq(ID_FIELD, artistId.value),
+          Updates.set(BLOCKED_FROM_AGGREGATION_FIELD, blocked),
+        )
+    }
+  }
+
   override fun deleteAll() {
     logger.info { "Deleting all app_artist documents" }
     mongoQueryMetrics.timed("app_artist.deleteAll") {
@@ -89,6 +100,7 @@ class AppArtistRepositoryAdapter(
     imageLink = imageLink,
     type = type,
     lastSync = lastSync?.toKotlinInstant() ?: kotlin.time.Instant.DISTANT_PAST,
+    blockedFromAggregation = blockedFromAggregation,
   )
 
   companion object : KLogging() {
@@ -97,5 +109,6 @@ class AppArtistRepositoryAdapter(
     internal const val IMAGE_LINK_FIELD = "imageLink"
     internal const val TYPE_FIELD = "type"
     internal const val LAST_SYNC_FIELD = "lastSync"
+    internal const val BLOCKED_FROM_AGGREGATION_FIELD = "blockedFromAggregation"
   }
 }

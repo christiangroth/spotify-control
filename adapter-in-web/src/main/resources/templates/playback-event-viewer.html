@@ -1,5 +1,6 @@
 {#include layout.html}
     {#title}SpCtl – Playback Event Viewer{/title}
+    {#scripts}<script src="/settings-utils.js"></script>{/scripts}
     {#content}
     <div class="container-fluid py-4 px-3 px-md-4">
 
@@ -14,6 +15,39 @@
                    {#if result.isToday}aria-disabled="true" tabindex="-1"{/if}>Next →</a>
             </div>
         </div>
+
+        <div id="status-banner" class="alert d-none mb-3" role="alert"></div>
+
+        {#if !result.artists.empty}
+        <div class="app-card mb-4 p-3">
+            <h2 class="fs-6 fw-semibold mb-2 app-section-label">Artists on this day</h2>
+            <div class="d-flex flex-wrap gap-2">
+                {#for artist in result.artists}
+                <div class="d-flex align-items-center gap-2 px-2 py-1"
+                     style="background-color:var(--color-bg-nested);border:1px solid var(--color-border);border-radius:4px;">
+                    {#if artist.imageLink}
+                    <img src="{artist.imageLink}" alt="{artist.artistName}" width="24" height="24"
+                         style="border-radius:50%;object-fit:cover;">
+                    {/if}
+                    <span style="font-size:.85rem;color:{#if artist.blockedFromAggregation}#e07070{#else}var(--color-text-primary){/if};">
+                        {artist.artistName}
+                    </span>
+                    {#if artist.blockedFromAggregation}
+                    <button class="btn btn-sm py-0 px-1 unblock-artist-btn"
+                            style="font-size:.72rem;border-color:#4caf50;color:#4caf50;"
+                            data-artist-id="{artist.id.value}"
+                            aria-label="Unblock {artist.artistName}">Unblock</button>
+                    {#else}
+                    <button class="btn btn-sm py-0 px-1 block-artist-btn"
+                            style="font-size:.72rem;border-color:var(--color-danger);color:var(--color-danger);"
+                            data-artist-id="{artist.id.value}"
+                            aria-label="Block {artist.artistName}">Block</button>
+                    {/if}
+                </div>
+                {/for}
+            </div>
+        </div>
+        {/if}
 
         {#if result.events.empty}
         <p class="text-secondary">No playback events found for {result.date}.</p>
@@ -64,5 +98,29 @@
         {/if}
 
     </div>
+
+    <script>
+        document.querySelector('.container-fluid').addEventListener('click', function(e) {
+            const blockBtn = e.target.closest('.block-artist-btn');
+            if (blockBtn) {
+                e.stopPropagation();
+                const artistId = blockBtn.dataset.artistId;
+                postWithButton(blockBtn, '/settings/playback/artists/' + encodeURIComponent(artistId) + '/block',
+                    'Artist blocked from aggregation. Aggregations will be rebuilt.', 'Block failed', function() {
+                        location.reload();
+                    });
+                return;
+            }
+            const unblockBtn = e.target.closest('.unblock-artist-btn');
+            if (unblockBtn) {
+                e.stopPropagation();
+                const artistId = unblockBtn.dataset.artistId;
+                postWithButton(unblockBtn, '/settings/playback/artists/' + encodeURIComponent(artistId) + '/unblock',
+                    'Artist unblocked from aggregation. Aggregations will be rebuilt.', 'Unblock failed', function() {
+                        location.reload();
+                    });
+            }
+        });
+    </script>
     {/content}
 {/include}

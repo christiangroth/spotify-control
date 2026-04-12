@@ -6,4 +6,5 @@ data class ArtistBrowseItem(
   val imageLink: String?,
   val albumCount: Int,
   val trackCount: Int,
+  val blockedFromAggregation: Boolean = false,
 )
