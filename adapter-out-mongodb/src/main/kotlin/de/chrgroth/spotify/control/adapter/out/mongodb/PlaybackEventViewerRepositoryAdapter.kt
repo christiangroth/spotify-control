@@ -12,10 +12,12 @@ import kotlin.time.Instant
 import kotlin.time.toJavaInstant
 import kotlin.time.toKotlinInstant
 import mu.KLogging
+import org.bson.BsonArray
 import org.bson.BsonDateTime
 import org.bson.BsonDocument
-import org.bson.json.JsonMode
-import org.bson.json.JsonWriterSettings
+import org.bson.BsonInt32
+import org.bson.BsonInt64
+import org.bson.BsonString
 import org.eclipse.microprofile.config.inject.ConfigProperty
 
 @ApplicationScoped
@@ -26,23 +28,20 @@ class PlaybackEventViewerRepositoryAdapter(
   private val databaseName: String,
 ) : PlaybackEventViewerRepositoryPort {
 
-  private val jsonWriterSettings = JsonWriterSettings.builder()
-    .indent(true)
-    .outputMode(JsonMode.RELAXED)
-    .build()
-
   override fun findRecentlyPlayed(userId: UserId, from: Instant, to: Instant): List<RawPlaybackEvent> =
-    queryCollection(RECENTLY_PLAYED_COLLECTION, PLAYED_AT_FIELD, userId, from, to)
+    queryCollection(RECENTLY_PLAYED_COLLECTION, PLAYED_AT_FIELD, DURATION_SECONDS_FIELD, 1L, userId, from, to)
 
   override fun findRecentlyPartialPlayed(userId: UserId, from: Instant, to: Instant): List<RawPlaybackEvent> =
-    queryCollection(RECENTLY_PARTIAL_PLAYED_COLLECTION, PLAYED_AT_FIELD, userId, from, to)
+    queryCollection(RECENTLY_PARTIAL_PLAYED_COLLECTION, PLAYED_AT_FIELD, PLAYED_SECONDS_FIELD, 1L, userId, from, to)
 
   override fun findCurrentlyPlaying(userId: UserId, from: Instant, to: Instant): List<RawPlaybackEvent> =
-    queryCollection(CURRENTLY_PLAYING_COLLECTION, OBSERVED_AT_FIELD, userId, from, to)
+    queryCollection(CURRENTLY_PLAYING_COLLECTION, OBSERVED_AT_FIELD, DURATION_MS_FIELD, MS_PER_SECOND, userId, from, to)
 
   private fun queryCollection(
     collectionName: String,
     timestampField: String,
+    durationField: String,
+    durationDivisor: Long,
     userId: UserId,
     from: Instant,
     to: Instant,
@@ -61,7 +60,21 @@ class PlaybackEventViewerRepositoryAdapter(
         } else {
           Instant.DISTANT_PAST
         }
-        RawPlaybackEvent(timestamp = ts, json = doc.toJson(jsonWriterSettings))
+        val rawDuration = when (val d = doc[durationField]) {
+          is BsonInt64 -> d.value
+          is BsonInt32 -> d.value.toLong()
+          else -> 0L
+        }
+        RawPlaybackEvent(
+          timestamp = ts,
+          trackId = (doc[TRACK_ID_FIELD] as? BsonString)?.value,
+          trackName = (doc[TRACK_NAME_FIELD] as? BsonString)?.value,
+          artistIds = (doc[ARTIST_IDS_FIELD] as? BsonArray)?.mapNotNull { (it as? BsonString)?.value } ?: emptyList(),
+          artistNames = (doc[ARTIST_NAMES_FIELD] as? BsonArray)?.mapNotNull { (it as? BsonString)?.value } ?: emptyList(),
+          albumId = (doc[ALBUM_ID_FIELD] as? BsonString)?.value,
+          startTime = (doc[START_TIME_FIELD] as? BsonDateTime)?.let { java.time.Instant.ofEpochMilli(it.value).toKotlinInstant() },
+          durationSeconds = if (rawDuration > 0) rawDuration / durationDivisor else null,
+        )
       }.toList()
     } catch (e: MongoException) {
       logger.warn(e) { "Failed to query $collectionName for playback event viewer" }
@@ -76,5 +89,15 @@ class PlaybackEventViewerRepositoryAdapter(
     private const val SPOTIFY_USER_ID_FIELD = "spotifyUserId"
     private const val PLAYED_AT_FIELD = "playedAt"
     private const val OBSERVED_AT_FIELD = "observedAt"
+    private const val TRACK_ID_FIELD = "trackId"
+    private const val TRACK_NAME_FIELD = "trackName"
+    private const val ARTIST_IDS_FIELD = "artistIds"
+    private const val ARTIST_NAMES_FIELD = "artistNames"
+    private const val ALBUM_ID_FIELD = "albumId"
+    private const val START_TIME_FIELD = "startTime"
+    private const val DURATION_SECONDS_FIELD = "durationSeconds"
+    private const val PLAYED_SECONDS_FIELD = "playedSeconds"
+    private const val DURATION_MS_FIELD = "durationMs"
+    private const val MS_PER_SECOND = 1000L
   }
 }

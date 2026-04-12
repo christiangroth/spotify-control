@@ -1,0 +1,31 @@
+<div class="px-3 py-2" style="background-color:var(--color-bg-nested);font-size:.8rem;">
+    <div class="row g-1">
+        <div class="col-12 col-md-4">
+            <span style="color:var(--color-text-muted);">Track:</span>
+            {#if event.trackName}<span style="color:var(--color-text-primary);"> {event.trackName}</span>{/if}
+            {#if event.trackId}<span style="color:#555;font-size:.72rem;"> ({event.trackId})</span>{/if}
+        </div>
+        <div class="col-12 col-md-4">
+            <span style="color:var(--color-text-muted);">Artist:</span>
+            {#if event.artistName}<span style="color:var(--color-text-primary);"> {event.artistName}</span>{/if}
+            {#if event.artistId}<span style="color:#555;font-size:.72rem;"> ({event.artistId})</span>{/if}
+        </div>
+        <div class="col-12 col-md-4">
+            <span style="color:var(--color-text-muted);">Album:</span>
+            {#if event.albumName}<span style="color:var(--color-text-primary);"> {event.albumName}</span>{/if}
+            {#if event.albumId}<span style="color:#555;font-size:.72rem;"> ({event.albumId})</span>{/if}
+        </div>
+        {#if event.startTime}
+        <div class="col-12 col-md-4">
+            <span style="color:var(--color-text-muted);">Start:</span>
+            <span style="color:var(--color-text-primary);"> {event.startTime.formatted}</span>
+        </div>
+        {/if}
+        {#if event.durationSeconds}
+        <div class="col-12 col-md-4">
+            <span style="color:var(--color-text-muted);">Duration:</span>
+            <span style="color:var(--color-text-primary);"> {event.durationSeconds.formattedDuration}</span>
+        </div>
+        {/if}
+    </div>
+</div>

@@ -1,15 +1,13 @@
 package de.chrgroth.spotify.control.domain.playback
 
-import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
-import de.chrgroth.spotify.control.domain.model.catalog.TrackId
+import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
 import de.chrgroth.spotify.control.domain.model.playback.PlaybackEventEntry
 import de.chrgroth.spotify.control.domain.model.playback.PlaybackEventType
 import de.chrgroth.spotify.control.domain.model.playback.PlaybackEventViewerResult
+import de.chrgroth.spotify.control.domain.model.playback.RawPlaybackEvent
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackEventViewerPort
-import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.playback.AppPlaybackRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.catalog.AppAlbumRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playback.PlaybackEventViewerRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 import kotlin.time.Clock
@@ -24,9 +22,7 @@ import kotlinx.datetime.toLocalDateTime
 @Suppress("Unused")
 class PlaybackEventViewerService(
   private val repository: PlaybackEventViewerRepositoryPort,
-  private val appPlaybackRepository: AppPlaybackRepositoryPort,
-  private val appTrackRepository: AppTrackRepositoryPort,
-  private val appArtistRepository: AppArtistRepositoryPort,
+  private val appAlbumRepository: AppAlbumRepositoryPort,
 ) : PlaybackEventViewerPort {
 
   override fun getEvents(userId: UserId, date: LocalDate): PlaybackEventViewerResult {
@@ -36,32 +32,36 @@ class PlaybackEventViewerService(
     val today = Clock.System.now().toLocalDateTime(tz).date
     val isToday = date == today
 
-    val recentlyPlayed = repository.findRecentlyPlayed(userId, from, to)
-      .map { PlaybackEventEntry(PlaybackEventType.RECENTLY_PLAYED, it.timestamp, it.json, false) }
-
-    val partialPlayed = repository.findRecentlyPartialPlayed(userId, from, to)
-      .map { PlaybackEventEntry(PlaybackEventType.RECENTLY_PARTIAL_PLAYED, it.timestamp, it.json, false) }
-
     val rawCurrentlyPlaying = repository.findCurrentlyPlaying(userId, from, to)
     val latestCurrentlyPlayingTimestamp = if (isToday) rawCurrentlyPlaying.maxByOrNull { it.timestamp }?.timestamp else null
-    val currentlyPlayingEntries = rawCurrentlyPlaying.map {
-      PlaybackEventEntry(
-        type = PlaybackEventType.CURRENTLY_PLAYING,
-        timestamp = it.timestamp,
-        json = it.json,
-        isWarning = it.timestamp != latestCurrentlyPlayingTimestamp,
-      )
-    }
 
-    val allEvents = (recentlyPlayed + partialPlayed + currentlyPlayingEntries).sortedByDescending { it.timestamp }
+    val allEvents = (
+      repository.findRecentlyPlayed(userId, from, to).map { it.toEntry(PlaybackEventType.RECENTLY_PLAYED, false) } +
+        repository.findRecentlyPartialPlayed(userId, from, to).map { it.toEntry(PlaybackEventType.RECENTLY_PARTIAL_PLAYED, false) } +
+        rawCurrentlyPlaying.map { it.toEntry(PlaybackEventType.CURRENTLY_PLAYING, it.timestamp != latestCurrentlyPlayingTimestamp) }
+      ).sortedByDescending { it.timestamp }
 
-    val playbackItems = appPlaybackRepository.findAllBetween(userId, from, to)
-    val trackIds = playbackItems.map { TrackId(it.trackId) }.toSet()
-    val tracks = appTrackRepository.findByTrackIds(trackIds)
-    val artistIds = tracks.mapNotNull { it.artistId }.toSet()
-    val artists = appArtistRepository.findByArtistIds(artistIds)
-      .sortedBy { it.artistName.lowercase() }
+    return PlaybackEventViewerResult(date = date, isToday = isToday, events = enrichWithAlbumNames(allEvents))
+  }
 
-    return PlaybackEventViewerResult(date = date, isToday = isToday, events = allEvents, artists = artists)
+  private fun RawPlaybackEvent.toEntry(type: PlaybackEventType, isWarning: Boolean) = PlaybackEventEntry(
+    type = type,
+    timestamp = timestamp,
+    isWarning = isWarning,
+    trackId = trackId,
+    trackName = trackName,
+    artistId = artistIds.firstOrNull(),
+    artistName = artistNames.firstOrNull(),
+    albumId = albumId,
+    albumName = null,
+    startTime = startTime,
+    durationSeconds = durationSeconds,
+  )
+
+  private fun enrichWithAlbumNames(events: List<PlaybackEventEntry>): List<PlaybackEventEntry> {
+    val albumIds = events.mapNotNull { it.albumId }.toSet().map { AlbumId(it) }.toSet()
+    if (albumIds.isEmpty()) return events
+    val albumNameById = appAlbumRepository.findByAlbumIds(albumIds).associate { it.id.value to it.title }
+    return events.map { it.copy(albumName = it.albumId?.let { id -> albumNameById[id] }) }
   }
 }
