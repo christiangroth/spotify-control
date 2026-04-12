@@ -10,7 +10,7 @@ class BackfillPlaybackAggregationsStarter(
   private val playbackAggregation: PlaybackAggregationPort,
 ) : Starter {
 
-  override val id = "BackfillPlaybackAggregationsStarter-v1"
+  override val id = "BackfillPlaybackAggregationsStarter-v2"
 
   override fun execute() {
     playbackAggregation.rebuildAllAggregations()
