@@ -1,5 +1,6 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
+import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
 import io.quarkus.qute.TemplateExtension
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -17,6 +18,10 @@ object TemplateFormattingExtensions {
   private const val MS_PER_SECOND = 1000L
   private const val SECONDS_PER_MINUTE = 60L
   private const val SECONDS_PER_HOUR = 3600L
+
+  /** Returns the plain String value of an artist's ID (avoids Kotlin inline value class getter mangling). */
+  @JvmStatic
+  fun artistId(artist: AppArtist): String = artist.id.value
 
   @JvmStatic
   fun formatted(value: Long): String = String.format(Locale.US, "%,d", value).replace(",", ".")
