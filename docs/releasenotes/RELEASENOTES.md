@@ -1,3 +1,14 @@
+# 0.85.0 (2026.04.12)
+
+## New Features
+* Artists can now be blocked from playback aggregations, so they no longer appear in statistics.
+* Block and unblock actions are available in the Catalog Browser and Playback Event Viewer.
+* Blocking or unblocking an artist automatically triggers a full aggregation rebuild.
+
+
+
+---
+
 # 0.84.0 (2026.04.09)
 
 ## New Features
