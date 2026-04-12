@@ -1,3 +1,12 @@
+# 0.86.0 (2026.04.12)
+
+## New Features
+* Errors and exceptions are now displayed as a full error page with the exception type, message, and stack trace instead of a generic "Internal Server Error".
+
+
+
+---
+
 # 0.85.0 (2026.04.12)
 
 ## New Features
