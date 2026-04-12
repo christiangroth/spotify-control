@@ -51,12 +51,19 @@ class PlaybackAggregationRepositoryAdapter(
       ).map { it.toDomain() }
     }
 
+  override fun sumEventCountByUser(userId: UserId): Long =
+    mongoQueryMetrics.timed("app_playback_aggregation.sumEventCountByUser") {
+      repository.list("$SPOTIFY_USER_ID_FIELD = ?1 and $TYPE_FIELD = ?2", userId.value, AggregationPeriodType.DAY.name)
+        .sumOf { it.eventCount }
+    }
+
   private fun PlaybackAggregation.toDocument(): PlaybackAggregationDocument = PlaybackAggregationDocument().apply {
     id = documentId(this@toDocument.userId, this@toDocument.type, this@toDocument.periodStart)
     spotifyUserId = this@toDocument.userId.value
     type = this@toDocument.type.name
     periodStart = this@toDocument.periodStart.toString()
     totalPlaybackSeconds = this@toDocument.totalPlaybackSeconds
+    eventCount = this@toDocument.eventCount
     distinctArtistCount = this@toDocument.distinctArtistCount
     distinctTrackCount = this@toDocument.distinctTrackCount
     artistEntries = this@toDocument.artistEntries.map { it.toEntryDocument() }
@@ -81,6 +88,7 @@ class PlaybackAggregationRepositoryAdapter(
     type = AggregationPeriodType.valueOf(type),
     periodStart = LocalDate.parse(periodStart),
     totalPlaybackSeconds = totalPlaybackSeconds,
+    eventCount = eventCount,
     distinctArtistCount = distinctArtistCount,
     distinctTrackCount = distinctTrackCount,
     artistEntries = artistEntries.map { it.toDomain() },

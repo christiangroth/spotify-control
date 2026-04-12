@@ -10,4 +10,5 @@ interface PlaybackAggregationRepositoryPort {
   fun deleteAll()
   fun findByUserAndPeriod(userId: UserId, type: AggregationPeriodType, periodStart: LocalDate): PlaybackAggregation?
   fun findByUserTypeAndPeriodRange(userId: UserId, type: AggregationPeriodType, from: LocalDate, to: LocalDate): List<PlaybackAggregation>
+  fun sumEventCountByUser(userId: UserId): Long
 }

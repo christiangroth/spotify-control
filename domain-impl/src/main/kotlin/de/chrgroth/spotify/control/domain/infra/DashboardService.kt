@@ -5,6 +5,7 @@ import de.chrgroth.spotify.control.domain.model.DashboardStats
 import de.chrgroth.spotify.control.domain.model.playback.DayCount
 import de.chrgroth.spotify.control.domain.model.catalog.AppTrack
 import de.chrgroth.spotify.control.domain.model.playback.ListeningStats
+import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationPeriodType
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistCheckStats
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.playback.RecentlyPlayedItem
@@ -16,18 +17,18 @@ import de.chrgroth.spotify.control.domain.port.`in`.infra.DashboardPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppAlbumRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playback.AppPlaybackRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.playback.PlaybackAggregationRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.AppPlaylistCheckRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 import kotlin.time.Clock
-import kotlin.time.Duration.Companion.days
-import kotlin.time.Instant
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.DatePeriod
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.minus
 import kotlinx.datetime.toLocalDateTime
@@ -40,6 +41,7 @@ class DashboardService(
   private val appTrackRepository: AppTrackRepositoryPort,
   private val appArtistRepository: AppArtistRepositoryPort,
   private val appAlbumRepository: AppAlbumRepositoryPort,
+  private val aggregationRepository: PlaybackAggregationRepositoryPort,
   private val catalogBrowser: CatalogBrowserPort,
   private val playlistRepository: PlaylistRepositoryPort,
   private val playlistCheckRepository: AppPlaylistCheckRepositoryPort,
@@ -50,13 +52,12 @@ class DashboardService(
 ) : DashboardPort {
 
   override fun getStats(userId: UserId): DashboardStats {
-    val since = Clock.System.now() - STATS_DAYS.days
     return runBlocking {
-      val playbackStatsAsync = async(Dispatchers.IO) { computePlaybackStats(userId, since) }
+      val playbackStatsAsync = async(Dispatchers.IO) { computePlaybackStats(userId) }
       val playlistMetadataAsync = async(Dispatchers.IO) { computePlaylistMetadata(userId) }
       val playlistCheckStatsAsync = async(Dispatchers.IO) { computePlaylistCheckStats() }
       val recentlyPlayedAsync = async(Dispatchers.IO) { buildRecentlyPlayedTracks(userId) }
-      val listeningStatsAsync = async(Dispatchers.IO) { buildListeningStats(userId, since) }
+      val listeningStatsAsync = async(Dispatchers.IO) { buildListeningStats(userId) }
       val catalogStatsAsync = async(Dispatchers.IO) { catalogBrowser.getCatalogStats() }
       val playbackStats = playbackStatsAsync.await()
       val playlistMetadata = playlistMetadataAsync.await()
@@ -74,20 +75,15 @@ class DashboardService(
     }
   }
 
-  override fun getPlaybackStats(userId: UserId): DashboardStats {
-    val since = Clock.System.now() - STATS_DAYS.days
-    return computePlaybackStats(userId, since)
-  }
+  override fun getPlaybackStats(userId: UserId): DashboardStats = computePlaybackStats(userId)
 
   override fun getPlaylistMetadata(userId: UserId): DashboardStats = computePlaylistMetadata(userId)
 
   override fun getRecentlyPlayed(userId: UserId): DashboardStats =
     DashboardStats.EMPTY.copy(recentlyPlayedTracks = runBlocking { buildRecentlyPlayedTracks(userId) })
 
-  override fun getListeningStats(userId: UserId): DashboardStats {
-    val since = Clock.System.now() - STATS_DAYS.days
-    return DashboardStats.EMPTY.copy(listeningStats = runBlocking { buildListeningStats(userId, since) })
-  }
+  override fun getListeningStats(userId: UserId): DashboardStats =
+    DashboardStats.EMPTY.copy(listeningStats = runBlocking { buildListeningStats(userId) })
 
   override fun getPlaylistCheckStats(): DashboardStats =
     DashboardStats.EMPTY.copy(playlistCheckStats = runBlocking { computePlaylistCheckStats() })
@@ -95,13 +91,14 @@ class DashboardService(
   override fun getCatalogStats(): DashboardStats =
     DashboardStats.EMPTY.copy(catalogStats = catalogBrowser.getCatalogStats())
 
-  private fun computePlaybackStats(userId: UserId, since: Instant): DashboardStats {
-    val total = appPlaybackRepository.countAll(userId)
-    val last30Days = appPlaybackRepository.countSince(userId, since)
-    val rawPerDay = appPlaybackRepository.countPerDaySince(userId, since)
+  private fun computePlaybackStats(userId: UserId): DashboardStats {
+    val today = Clock.System.now().toLocalDateTime(TimeZone.UTC).date
+    val from = today - DatePeriod(days = STATS_DAYS - 1)
+    val dailyAggs = aggregationRepository.findByUserTypeAndPeriodRange(userId, AggregationPeriodType.DAY, from, today)
+    val total = aggregationRepository.sumEventCountByUser(userId)
+    val last30Days = dailyAggs.sumOf { it.eventCount }
 
-    val countByDate = rawPerDay.toMap()
-    val today = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
+    val countByDate = dailyAggs.associate { it.periodStart to it.eventCount }
     val allDays = ((STATS_DAYS - 1) downTo 0).map { today - DatePeriod(days = it) }
     val maxCount = countByDate.values.maxOrNull() ?: 1L
     val perDay = allDays.map { date ->
@@ -174,33 +171,34 @@ class DashboardService(
     }
   }
 
-  private suspend fun buildListeningStats(userId: UserId, since: Instant): ListeningStats {
-    val secondsByTrackId = appPlaybackRepository.sumSecondsPlayedByTrackIdSince(userId, since)
+  private suspend fun buildListeningStats(userId: UserId): ListeningStats {
+    val today = Clock.System.now().toLocalDateTime(TimeZone.UTC).date
+    val from = today - DatePeriod(days = STATS_DAYS - 1)
+    val dailyAggs = aggregationRepository.findByUserTypeAndPeriodRange(userId, AggregationPeriodType.DAY, from, today)
 
-    val allTrackIds = secondsByTrackId.keys.toSet()
-    val statsTrackMap = appTrackRepository.findByTrackIds(allTrackIds.map { TrackId(it) }.toSet()).associateBy { it.id.value }
+    val secondsByTrackId = dailyAggs.flatMap { it.trackEntries }
+      .groupBy { it.id }
+      .mapValues { (_, entries) -> entries.sumOf { it.totalSeconds } }
+    val secondsByArtistId = dailyAggs.flatMap { it.artistEntries }
+      .groupBy { it.id }
+      .mapValues { (_, entries) -> entries.sumOf { it.totalSeconds } }
+    val listenedMinutes = dailyAggs.sumOf { it.totalPlaybackSeconds } / SECONDS_PER_MINUTE
 
-    val listenedMinutes = secondsByTrackId.values.sum() / SECONDS_PER_MINUTE
+    val allTrackIds = secondsByTrackId.keys.map { TrackId(it) }.toSet()
+    val statsTrackMap = appTrackRepository.findByTrackIds(allTrackIds).associateBy { it.id.value }
     val statsAlbumIds = statsTrackMap.values.mapNotNull { it.albumId }.toSet()
-    val statsArtistIds = statsTrackMap.values.flatMap { it.allArtistIds() }.toSet()
+    val statsArtistIds = secondsByArtistId.keys.map { ArtistId(it) }.toSet()
+
     return coroutineScope {
       val statsAlbumMapAsync = async(Dispatchers.IO) { appAlbumRepository.findByAlbumIds(statsAlbumIds).associateBy { it.id.value } }
       val statsArtistMapAsync = async(Dispatchers.IO) {
-        appArtistRepository.findByArtistIds(statsArtistIds.map { ArtistId(it) }.toSet()).associateBy { it.id.value }
+        appArtistRepository.findByArtistIds(statsArtistIds).associateBy { it.id.value }
       }
       val statsAlbumMap = statsAlbumMapAsync.await()
       val statsArtistMap = statsArtistMapAsync.await()
 
       val topTracks = buildTopEntries(secondsByTrackId, { statsTrackMap[it]?.title ?: it }) { id ->
         statsTrackMap[id]?.albumId?.let { statsAlbumMap[it.value]?.imageLink }
-      }
-
-      val secondsByArtistId = mutableMapOf<String, Long>()
-      for ((trackId, seconds) in secondsByTrackId) {
-        val track = statsTrackMap[trackId] ?: continue
-        for (artistId in track.allArtistIds()) {
-          secondsByArtistId.merge(artistId, seconds, Long::plus)
-        }
       }
       val topArtists = buildTopEntries(secondsByArtistId, { statsArtistMap[it]?.artistName ?: it }) { id ->
         statsArtistMap[id]?.imageLink
