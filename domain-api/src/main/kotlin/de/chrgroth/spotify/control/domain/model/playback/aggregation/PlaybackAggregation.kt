@@ -8,6 +8,7 @@ data class PlaybackAggregation(
   val type: AggregationPeriodType,
   val periodStart: LocalDate,
   val totalPlaybackSeconds: Long,
+  val eventCount: Long,
   val distinctArtistCount: Int,
   val distinctTrackCount: Int,
   val artistEntries: List<AggregationRankEntry>,

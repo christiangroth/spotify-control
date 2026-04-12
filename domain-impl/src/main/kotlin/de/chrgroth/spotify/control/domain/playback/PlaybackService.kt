@@ -9,6 +9,7 @@ import de.chrgroth.spotify.control.domain.model.playback.CurrentlyPlayingItem
 import de.chrgroth.spotify.control.domain.model.playback.RecentlyPartialPlayedItem
 import de.chrgroth.spotify.control.domain.model.playback.RecentlyPlayedItem
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
+import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationPeriodType
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackPort
@@ -25,8 +26,11 @@ import de.chrgroth.spotify.control.domain.catalog.CatalogSyncRequest
 import de.chrgroth.spotify.control.domain.port.out.playback.SpotifyPlaybackPort
 import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
+import java.time.ZoneOffset
+import java.time.LocalDate as JLocalDate
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Instant
+import kotlinx.datetime.toKotlinLocalDate
 import mu.KLogging
 import org.eclipse.microprofile.config.inject.ConfigProperty
 
@@ -264,6 +268,9 @@ class PlaybackService(
 
     logger.info { "Persisting ${newPlaybackItems.size} new app_playback items for user: ${userId.value}" }
     appPlaybackRepository.saveAll(newPlaybackItems)
+
+    val today = JLocalDate.now(ZoneOffset.UTC)
+    outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(userId, AggregationPeriodType.DAY, today.toKotlinLocalDate()))
 
     val catalogRequests = (
       recentlyPlayed.map { CatalogSyncRequest(it.trackId.value, it.artistIds.map { a -> a.value }) } +
