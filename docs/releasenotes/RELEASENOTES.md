@@ -1,3 +1,13 @@
+# 0.87.0 (2026.04.12)
+
+## New Features
+* Dashboard statistics (playback counts, listened minutes, top tracks and artists) are now derived from pre-computed aggregations for faster and more consistent display.
+* Today's aggregation is automatically updated after each playback data refresh, keeping current-day stats up to date.
+
+
+
+---
+
 # 0.86.0 (2026.04.12)
 
 ## New Features
