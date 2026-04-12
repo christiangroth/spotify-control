@@ -1,6 +1,8 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
+import arrow.core.Either
 import de.chrgroth.spotify.control.domain.error.ArtistSettingsError
+import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogPort
 import de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackPort
@@ -98,53 +100,36 @@ class PlaybackSettingsResource(
   @Authenticated
   @Path("/artists/{artistId}/block")
   @Produces(MediaType.APPLICATION_JSON)
-  fun blockArtist(@PathParam("artistId") artistId: String): Response {
-    return catalog.blockArtistFromAggregation(artistId).fold(
-      ifLeft = { error ->
-        when (error) {
-          ArtistSettingsError.ARTIST_NOT_FOUND -> {
-            logger.warn { "Artist $artistId not found for block: ${error.code}" }
-            Response.status(Response.Status.NOT_FOUND)
-              .entity(mapOf("error" to "Artist not found: $artistId"))
-              .build()
-          }
-          else -> {
-            logger.error { "Block artist failed for $artistId: ${error.code}" }
-            Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-              .entity(mapOf("error" to "Block failed: ${error.code}"))
-              .build()
-          }
-        }
-      },
-      ifRight = { Response.ok(mapOf("status" to "ok")).build() },
-    )
-  }
+  fun blockArtist(@PathParam("artistId") artistId: String): Response =
+    handleArtistAction(artistId, "block") { catalog.blockArtistFromAggregation(artistId) }
 
   @POST
   @Authenticated
   @Path("/artists/{artistId}/unblock")
   @Produces(MediaType.APPLICATION_JSON)
-  fun unblockArtist(@PathParam("artistId") artistId: String): Response {
-    return catalog.unblockArtistFromAggregation(artistId).fold(
+  fun unblockArtist(@PathParam("artistId") artistId: String): Response =
+    handleArtistAction(artistId, "unblock") { catalog.unblockArtistFromAggregation(artistId) }
+
+  private fun handleArtistAction(artistId: String, action: String, block: () -> Either<DomainError, Unit>): Response =
+    block().fold(
       ifLeft = { error ->
         when (error) {
           ArtistSettingsError.ARTIST_NOT_FOUND -> {
-            logger.warn { "Artist $artistId not found for unblock: ${error.code}" }
+            logger.warn { "Artist $artistId not found for $action: ${error.code}" }
             Response.status(Response.Status.NOT_FOUND)
               .entity(mapOf("error" to "Artist not found: $artistId"))
               .build()
           }
           else -> {
-            logger.error { "Unblock artist failed for $artistId: ${error.code}" }
+            logger.error { "Artist $action failed for $artistId: ${error.code}" }
             Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-              .entity(mapOf("error" to "Unblock failed: ${error.code}"))
+              .entity(mapOf("error" to "${action.replaceFirstChar { it.uppercase() }} failed: ${error.code}"))
               .build()
           }
         }
       },
       ifRight = { Response.ok(mapOf("status" to "ok")).build() },
     )
-  }
 
   companion object : KLogging()
 }
