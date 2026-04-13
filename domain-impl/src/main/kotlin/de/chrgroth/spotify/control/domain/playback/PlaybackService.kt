@@ -185,6 +185,12 @@ class PlaybackService(
       logger.info { "Removing ${duplicatePlayedAts.size} duplicate partial play(s) superseded by recently played for user: ${userId.value}" }
       recentlyPartialPlayedRepository.deleteByPlayedAts(userId, duplicatePlayedAts)
       appPlaybackRepository.deleteByUserAndPlayedAts(userId, duplicatePlayedAts)
+      duplicatePlayedAts
+        .map { instant -> JLocalDate.ofInstant(instant.toJavaInstant(), ZoneOffset.UTC).toKotlinLocalDate() }
+        .toSet()
+        .forEach { day ->
+          outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(userId, AggregationPeriodType.DAY, day))
+        }
     }
   }
 
