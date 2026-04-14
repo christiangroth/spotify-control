@@ -162,7 +162,15 @@ class AppPlaybackRepositoryAdapter(
   override fun findAllBetween(userId: UserId, from: Instant, to: Instant): List<AppPlaybackItem> =
     mongoQueryMetrics.timed("app_playback.findAllBetween") {
       appPlaybackDocumentRepository
-        .list("spotifyUserId = ?1 and playedAt >= ?2 and playedAt < ?3", userId.value, from.toJavaInstant(), to.toJavaInstant())
+        .mongoCollection()
+        .find(
+          Filters.and(
+            Filters.eq(SPOTIFY_USER_ID_FIELD, userId.value),
+            Filters.gte(PLAYED_AT_FIELD, from.toJavaInstant()),
+            Filters.lt(PLAYED_AT_FIELD, to.toJavaInstant()),
+          ),
+        )
+        .toList()
         .map { doc ->
           AppPlaybackItem(
             userId = UserId(doc.spotifyUserId),

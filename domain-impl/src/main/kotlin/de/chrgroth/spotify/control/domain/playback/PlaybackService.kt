@@ -30,6 +30,7 @@ import java.time.ZoneOffset
 import java.time.LocalDate as JLocalDate
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Instant
+import kotlin.time.toJavaInstant
 import kotlinx.datetime.toKotlinLocalDate
 import mu.KLogging
 import org.eclipse.microprofile.config.inject.ConfigProperty
@@ -184,6 +185,12 @@ class PlaybackService(
       logger.info { "Removing ${duplicatePlayedAts.size} duplicate partial play(s) superseded by recently played for user: ${userId.value}" }
       recentlyPartialPlayedRepository.deleteByPlayedAts(userId, duplicatePlayedAts)
       appPlaybackRepository.deleteByUserAndPlayedAts(userId, duplicatePlayedAts)
+      duplicatePlayedAts
+        .map { instant -> JLocalDate.ofInstant(instant.toJavaInstant(), ZoneOffset.UTC).toKotlinLocalDate() }
+        .toSet()
+        .forEach { day ->
+          outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(userId, AggregationPeriodType.DAY, day))
+        }
     }
   }
 
@@ -269,8 +276,12 @@ class PlaybackService(
     logger.info { "Persisting ${newPlaybackItems.size} new app_playback items for user: ${userId.value}" }
     appPlaybackRepository.saveAll(newPlaybackItems)
 
-    val today = JLocalDate.now(ZoneOffset.UTC)
-    outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(userId, AggregationPeriodType.DAY, today.toKotlinLocalDate()))
+    newPlaybackItems
+      .map { item -> JLocalDate.ofInstant(item.playedAt.toJavaInstant(), ZoneOffset.UTC).toKotlinLocalDate() }
+      .toSet()
+      .forEach { day ->
+        outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(userId, AggregationPeriodType.DAY, day))
+      }
 
     val catalogRequests = (
       recentlyPlayed.map { CatalogSyncRequest(it.trackId.value, it.artistIds.map { a -> a.value }) } +
