@@ -1,3 +1,14 @@
+# 0.88.1 (2026.04.14)
+
+## Bugfixes / Chore
+* Fixed daily playback aggregations reporting inflated event counts by correcting the time-window query used for each day's data.
+* Fixed playback aggregations incorrectly not including data from days with late-arriving items.
+* Aggregations are rebuilt to correct historical data.
+
+
+
+---
+
 # 0.88.0 (2026.04.12)
 
 ## New Features
