@@ -166,4 +166,20 @@ class AppPlaybackRepositoryTests {
     assertThat(result["track-b"]).isEqualTo(90L)
     assertThat(result).doesNotContainKey("track-c")
   }
+
+  @Test
+  fun `findAllBetween returns only items within the given time window`() {
+    val inside1 = AppPlaybackItem(userId = userId, playedAt = now - 2.hours, trackId = "inside-1", secondsPlayed = 60L)
+    val inside2 = AppPlaybackItem(userId = userId, playedAt = now - 3.hours, trackId = "inside-2", secondsPlayed = 90L)
+    val tooEarly = AppPlaybackItem(userId = userId, playedAt = now - 6.hours, trackId = "too-early", secondsPlayed = 30L)
+    val tooLate = AppPlaybackItem(userId = userId, playedAt = now, trackId = "too-late", secondsPlayed = 30L)
+    appPlaybackRepository.saveAll(listOf(inside1, inside2, tooEarly, tooLate))
+
+    val from = now - 4.hours
+    val to = now - 1.hours
+    val result = appPlaybackRepository.findAllBetween(userId, from, to)
+
+    assertThat(result.map { it.trackId }).containsExactlyInAnyOrder("inside-1", "inside-2")
+  }
 }
+
