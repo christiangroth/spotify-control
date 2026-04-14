@@ -153,8 +153,8 @@
                         <div class="card-body">
                             <p class="card-subtitle mb-3 app-section-label">Listening Stats (Last 30 Days)</p>
                             <p class="mb-3" style="color:#fff;font-size:.85rem;" data-testid="listened-minutes">
-                                <span style="color:var(--spotify-green);font-weight:600;">{stats.listeningStats.listenedMinutesLast30Days.formatted}</span>
-                                <span style="color:#888;"> minutes listened</span>
+                                <span style="color:var(--spotify-green);font-weight:600;">{stats.listeningStats.listenedMinutesLast30Days.formattedListeningDuration}</span>
+                                <span style="color:#888;"> listened</span>
                             </p>
                             <div class="mb-3">
                                 <p class="mb-1" style="color:#888;font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;">Top Tracks</p>
@@ -175,7 +175,7 @@
                                         {/if}
                                         <div style="overflow:hidden;flex:1;">
                                             <div class="text-truncate" style="color:#fff;font-size:.82rem;">{entry.name}</div>
-                                            <div style="color:#888;font-size:.75rem;white-space:nowrap;">{entry.totalMinutes.formatted} min</div>
+                                            <div style="color:#888;font-size:.75rem;white-space:nowrap;">{entry.totalMinutes.formattedListeningDuration}</div>
                                         </div>
                                     </li>
                                     {/for}
@@ -199,7 +199,7 @@
                                         {/if}
                                         <div style="overflow:hidden;flex:1;">
                                             <div class="text-truncate" style="color:#fff;font-size:.82rem;">{entry.name}</div>
-                                            <div style="color:#888;font-size:.75rem;white-space:nowrap;">{entry.totalMinutes.formatted} min</div>
+                                            <div style="color:#888;font-size:.75rem;white-space:nowrap;">{entry.totalMinutes.formattedListeningDuration}</div>
                                         </div>
                                     </li>
                                     {/for}
