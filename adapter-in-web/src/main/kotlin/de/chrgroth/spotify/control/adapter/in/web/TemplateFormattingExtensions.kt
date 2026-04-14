@@ -18,6 +18,7 @@ object TemplateFormattingExtensions {
   private const val MS_PER_SECOND = 1000L
   private const val SECONDS_PER_MINUTE = 60L
   private const val SECONDS_PER_HOUR = 3600L
+  private const val MINUTES_PER_HOUR = 60L
 
   /** Returns the plain String value of an artist's ID (avoids Kotlin inline value class getter mangling). */
   @JvmStatic
@@ -60,5 +61,13 @@ object TemplateFormattingExtensions {
     val minutes = durationSeconds / SECONDS_PER_MINUTE
     val seconds = durationSeconds % SECONDS_PER_MINUTE
     return "%d:%02d".format(minutes, seconds)
+  }
+
+  /** Formats a listening duration given in minutes as `X h Y min` (when ≥60 min) or `X min` (when <60 min). */
+  @JvmStatic
+  fun formattedListeningDuration(minutes: Long): String {
+    val hours = minutes / MINUTES_PER_HOUR
+    val remainingMinutes = minutes % MINUTES_PER_HOUR
+    return if (hours > 0) "%d h %d min".format(hours, remainingMinutes) else "%d min".format(minutes)
   }
 }
