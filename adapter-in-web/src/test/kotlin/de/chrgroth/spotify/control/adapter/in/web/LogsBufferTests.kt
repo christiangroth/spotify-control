@@ -2,6 +2,7 @@ package de.chrgroth.spotify.control.adapter.`in`.web
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import java.time.Instant
 import java.util.logging.Level
 import java.util.logging.LogRecord
 
@@ -56,6 +57,6 @@ class LogsBufferTests {
   ): LogRecord =
     LogRecord(level, message).apply {
       this.loggerName = loggerName
-      this.millis = millis
+      this.instant = Instant.ofEpochMilli(millis)
     }
 }
