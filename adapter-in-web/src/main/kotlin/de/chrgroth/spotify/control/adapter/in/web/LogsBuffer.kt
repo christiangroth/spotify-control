@@ -50,10 +50,11 @@ class LogsBuffer(
   companion object {
     const val MAX_ENTRIES = 500
     const val RETENTION_MILLIS = 2 * 60 * 60 * 1000L
+    private const val SIMPLIFY_PREFIX = "de.chrgroth."
 
     fun simplifyClassName(loggerName: String?): String {
       if (loggerName.isNullOrBlank()) return "-"
-      if (!loggerName.startsWith("de.chrgroth.")) return loggerName
+      if (!loggerName.startsWith(SIMPLIFY_PREFIX)) return loggerName
       return loggerName.substringAfterLast('.')
     }
   }
