@@ -2,6 +2,9 @@ package de.chrgroth.spotify.control.adapter.`in`.web
 
 import java.util.logging.Level
 import java.util.logging.LogRecord
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 class LogsBuffer(
   private val nowMillisProvider: () -> Long = { System.currentTimeMillis() },
@@ -22,6 +25,7 @@ class LogsBuffer(
     entries.addLast(
       LogUiEntry(
         timestampEpochMillis = record.millis,
+        time = formatTime(record.millis),
         level = if (record.level.intValue() >= Level.SEVERE.intValue()) "ERROR" else "WARN",
         className = simplifyClassName(record.loggerName),
         message = record.message.orEmpty(),
@@ -51,17 +55,21 @@ class LogsBuffer(
     const val MAX_ENTRIES = 500
     const val RETENTION_MILLIS = 2 * 60 * 60 * 1000L
     private const val SIMPLIFY_PREFIX = "de.chrgroth."
+    private val TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
 
     fun simplifyClassName(loggerName: String?): String {
       if (loggerName.isNullOrBlank()) return "-"
       if (!loggerName.startsWith(SIMPLIFY_PREFIX)) return loggerName
       return loggerName.substringAfterLast('.')
     }
+
+    fun formatTime(epochMillis: Long): String = TIME_FORMATTER.format(Instant.ofEpochMilli(epochMillis).atZone(ZoneId.systemDefault()))
   }
 }
 
 data class LogUiEntry(
   val timestampEpochMillis: Long,
+  val time: String,
   val level: String,
   val className: String,
   val message: String,
