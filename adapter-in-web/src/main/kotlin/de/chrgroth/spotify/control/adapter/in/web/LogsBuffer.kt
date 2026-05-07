@@ -3,7 +3,7 @@ package de.chrgroth.spotify.control.adapter.`in`.web
 import java.util.logging.Level
 import java.util.logging.LogRecord
 import java.time.Instant
-import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
 class LogsBuffer(
@@ -25,7 +25,7 @@ class LogsBuffer(
     entries.addLast(
       LogUiEntry(
         timestampEpochMillis = record.millis,
-        time = formatTime(record.millis),
+        time = formatUtcTime(record.millis),
         level = if (record.level.intValue() >= Level.SEVERE.intValue()) "ERROR" else "WARN",
         className = simplifyClassName(record.loggerName),
         message = record.message.orEmpty(),
@@ -63,7 +63,7 @@ class LogsBuffer(
       return loggerName.substringAfterLast('.')
     }
 
-    fun formatTime(epochMillis: Long): String = TIME_FORMATTER.format(Instant.ofEpochMilli(epochMillis).atZone(ZoneId.systemDefault()))
+    fun formatUtcTime(epochMillis: Long): String = TIME_FORMATTER.format(Instant.ofEpochMilli(epochMillis).atZone(ZoneOffset.UTC))
   }
 }
 
