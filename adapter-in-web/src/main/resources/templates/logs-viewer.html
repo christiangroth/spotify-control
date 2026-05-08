@@ -3,9 +3,60 @@
     {#content}
     <div class="container-fluid py-4 px-3 px-md-4">
         <h1 class="mb-4 fs-4 fw-semibold">Logs (last 2 hours)</h1>
+        <div class="btn-group btn-group-sm mb-3" role="group" aria-label="Logs view mode">
+            <a href="/logs-viewer" class="btn {#if viewMode == 'chronological'}btn-spotify{#else}btn-outline-secondary{/if}" data-testid="logs-view-chronological">Chronological</a>
+            <a href="/logs-viewer?view=grouped" class="btn {#if viewMode == 'grouped'}btn-spotify{#else}btn-outline-secondary{/if}" data-testid="logs-view-grouped">Grouped by class/type</a>
+        </div>
 
         {#if logs.empty}
         <p class="text-secondary">No WARN or ERROR logs in the last 2 hours.</p>
+        {#else}
+        {#if viewMode == "grouped"}
+        <p class="text-secondary small mb-3">Groups are sorted by level (ERROR before WARN), then by entry count (highest first). Newest entries first within each group.</p>
+        {#for group in groups}
+        <div class="mb-4">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <h2 class="mb-0 fs-6 fw-semibold" style="color:#ccc;">{group.className}</h2>
+                {#if group.level == "WARN"}
+                <span class="badge" style="background-color:#fd7e14;color:#111;">WARN</span>
+                {#else}
+                <span class="badge" style="background-color:#dc3545;color:#fff;">ERROR</span>
+                {/if}
+                <span class="text-secondary small">({group.count})</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-dark table-hover align-middle">
+                    <thead>
+                    <tr class="app-section-label" style="font-size:.8rem;">
+                        <th>Time</th>
+                        <th>Message</th>
+                        <th>Stacktrace</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {#for log in group.entries}
+                    <tr>
+                        <td class="tabular-nums">
+                            <span class="log-time" data-epoch-ms="{log.timestampEpochMillis}">{log.time}</span>
+                        </td>
+                        <td style="word-break:break-word;">{log.message}</td>
+                        <td>
+                            {#if log.stacktrace}
+                            <details>
+                                <summary style="cursor:pointer;">Show</summary>
+                                <pre class="mb-0 mt-2" style="background-color:var(--color-bg-nested);border:1px solid var(--color-border);border-radius:4px;padding:.5rem .75rem;font-size:.74rem;color:#ccc;white-space:pre-wrap;">{log.stacktrace}</pre>
+                            </details>
+                            {#else}
+                            <span class="text-secondary">-</span>
+                            {/if}
+                        </td>
+                    </tr>
+                    {/for}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {/for}
         {#else}
         <p class="text-secondary small mb-3">Showing newest first. Maximum 500 entries.</p>
         <div class="table-responsive">
@@ -49,6 +100,7 @@
                 </tbody>
             </table>
         </div>
+        {/if}
         {/if}
     </div>
     {/content}
