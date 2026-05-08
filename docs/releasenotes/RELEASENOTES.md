@@ -1,3 +1,12 @@
+# 0.90.1 (2026.05.08)
+
+## Bugfixes / Chore
+* Fixed Logs UI entries so the time is visible even if client-side formatting does not run.
+
+
+
+---
+
 # 0.90.0 (2026.05.07)
 
 ## New Features
