@@ -23,7 +23,7 @@
                 {#for log in logs}
                 <tr>
                     <td class="tabular-nums">
-                        <span class="log-time" data-epoch-ms="{log.timestampEpochMillis}"></span>
+                        <span class="log-time" data-epoch-ms="{log.timestampEpochMillis}">{log.time}</span>
                     </td>
                     <td>
                         {#if log.level == "WARN"}

@@ -49,6 +49,17 @@ class LogsBufferTests {
     assertThat(recent[0].className).isEqualTo("org.example.Remote")
   }
 
+  @Test
+  fun `sets fallback formatted time for ui rendering`() {
+    val buffer = LogsBuffer(nowMillisProvider = { 10_000L }, retentionMillis = 100_000L, maxEntries = 10)
+    buffer.append(createRecord(level = Level.WARNING, message = "warn", millis = 9_100L))
+
+    val recent = buffer.getRecent()
+
+    assertThat(recent).hasSize(1)
+    assertThat(recent.first().time).matches("""\d{2}:\d{2}:\d{2}""")
+  }
+
   private fun createRecord(
     level: Level,
     message: String,
