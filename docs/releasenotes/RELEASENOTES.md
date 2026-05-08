@@ -1,3 +1,13 @@
+# 0.91.0 (2026.05.08)
+
+## New Features
+* Logs UI now offers an additional grouped view by class and log type.
+* The default Logs UI view remains chronological.
+
+
+
+---
+
 # 0.90.1 (2026.05.08)
 
 ## Bugfixes / Chore
