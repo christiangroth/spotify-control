@@ -9,6 +9,7 @@ import jakarta.inject.Inject
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.Produces
+import jakarta.ws.rs.QueryParam
 import jakarta.ws.rs.core.MediaType
 
 @Path("/logs-viewer")
@@ -26,5 +27,39 @@ class LogsViewerResource {
   @GET
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun viewer(): TemplateInstance = template.data("logs", logsCollector.getRecentLogs())
+  fun viewer(@QueryParam("view") view: String?): TemplateInstance {
+    val logs = logsCollector.getRecentLogs()
+    val viewMode = if (view?.equals("grouped", ignoreCase = true) == true) "grouped" else "chronological"
+    return template
+      .data("logs", logs)
+      .data("groups", groupLogsByClassAndType(logs))
+      .data("viewMode", viewMode)
+  }
+
+  internal fun groupLogsByClassAndType(logs: List<LogUiEntry>): List<LogUiGroup> =
+    logs
+      .groupBy { it.className to it.level }
+      .map { (key, entries) ->
+        LogUiGroup(
+          className = key.first,
+          level = key.second,
+          entries = entries.sortedByDescending { it.timestampEpochMillis },
+        )
+      }
+      .sortedWith(
+        compareBy<LogUiGroup>(
+          { if (it.level == "ERROR") 0 else 1 },
+          { -it.entries.size },
+          { it.className },
+        ),
+      )
+}
+
+data class LogUiGroup(
+  val className: String,
+  val level: String,
+  val entries: List<LogUiEntry>,
+) {
+  val count: Int
+    get() = entries.size
 }

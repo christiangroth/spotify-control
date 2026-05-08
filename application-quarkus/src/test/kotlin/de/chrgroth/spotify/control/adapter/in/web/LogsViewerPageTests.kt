@@ -29,4 +29,23 @@ class LogsViewerPageTests {
     assertThat(body).contains("logs-viewer-time-test")
     assertThat(Regex("""class="log-time" data-epoch-ms="\d+">\d{2}:\d{2}:\d{2}</span>""").containsMatchIn(body)).isTrue()
   }
+
+  @Test
+  fun `logs viewer supports grouped view mode`() {
+    Logger.getLogger("de.chrgroth.spotify.control.TestGroupedViewClass").severe("logs-viewer-grouped-test")
+
+    val body = given()
+      .`when`()
+      .get("/logs-viewer?view=grouped")
+      .then()
+      .statusCode(200)
+      .contentType(containsString("text/html"))
+      .extract()
+      .body()
+      .asString()
+
+    assertThat(body).contains("Grouped by class/type")
+    assertThat(body).contains("logs-viewer-grouped-test")
+    assertThat(body).contains("TestGroupedViewClass")
+  }
 }
