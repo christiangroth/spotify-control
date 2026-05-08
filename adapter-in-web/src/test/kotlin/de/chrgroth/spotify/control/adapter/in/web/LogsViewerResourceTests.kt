@@ -6,6 +6,13 @@ import org.junit.jupiter.api.Test
 class LogsViewerResourceTests {
 
   @Test
+  fun `returns no groups for empty input`() {
+    val resource = LogsViewerResource()
+
+    assertThat(resource.groupLogsByClassAndType(emptyList())).isEmpty()
+  }
+
+  @Test
   fun `groups logs by class and level and sorts by level then group size`() {
     val resource = LogsViewerResource()
     val groups = resource.groupLogsByClassAndType(
