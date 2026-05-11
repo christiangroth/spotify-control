@@ -160,7 +160,7 @@ class CatalogService(
     syncArtistDetails(event.artistId, event.userId)
 
   override fun handle(event: DomainOutboxEvent.SyncArtistAlbums): Either<DomainError, Unit> =
-    syncArtistAlbums(event.artistId, event.userId)
+    syncArtistAlbums(event.artistId, event.userId, event.nextUrl)
 
   override fun handle(event: DomainOutboxEvent.SyncAlbumDetails): Either<DomainError, Unit> =
     syncAlbumDetails(event.albumId).map { Unit }
@@ -182,18 +182,24 @@ class CatalogService(
     }
   }
 
-  private fun syncArtistAlbums(artistId: String, userId: UserId): Either<DomainError, Unit> {
-    logger.info { "Syncing all album ids for artist $artistId (user ${userId.value})" }
+  private fun syncArtistAlbums(artistId: String, userId: UserId, nextUrl: String?): Either<DomainError, Unit> {
+    logger.info { "Syncing album ids page for artist $artistId (user ${userId.value}, nextUrl=$nextUrl)" }
     val accessToken = spotifyAccessToken.getValidAccessToken(userId)
-    return spotifyCatalog.getArtistAlbumIds(userId, accessToken, artistId)
-      .flatMap { albumIds ->
-        val existingAlbumIds = appAlbumRepository.findByAlbumIds(albumIds.map { AlbumId(it) }.toSet()).map { it.id.value }.toSet()
-        val newAlbumIds = albumIds.filter { it !in existingAlbumIds }
+    return spotifyCatalog.getArtistAlbumsPage(userId, accessToken, artistId, nextUrl)
+      .flatMap { page ->
+        val existingAlbumIds = appAlbumRepository.findByAlbumIds(page.albumIds.map { AlbumId(it) }.toSet()).map { it.id.value }.toSet()
+        val newAlbumIds = page.albumIds.filter { it !in existingAlbumIds }
         if (newAlbumIds.isNotEmpty()) {
           logger.info { "Enqueueing SyncAlbumDetails for ${newAlbumIds.size} new album(s) of artist $artistId" }
           newAlbumIds.forEach { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails(it)) }
         } else {
-          logger.debug { "All ${albumIds.size} album(s) for artist $artistId already in catalog" }
+          logger.debug { "All ${page.albumIds.size} album(s) on this page for artist $artistId already in catalog" }
+        }
+        if (page.nextUrl != null) {
+          logger.info { "Enqueueing next SyncArtistAlbums page for artist $artistId (user ${userId.value})" }
+          outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums(artistId, userId, page.nextUrl))
+        } else {
+          logger.info { "Completed all album pages for artist $artistId (user ${userId.value})" }
         }
         Unit.right()
       }

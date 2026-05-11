@@ -14,6 +14,7 @@ import de.chrgroth.spotify.control.domain.model.user.AccessToken
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumSyncResult
 import de.chrgroth.spotify.control.domain.model.catalog.AppAlbum
+import de.chrgroth.spotify.control.domain.model.catalog.ArtistAlbumsPage
 import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
 import de.chrgroth.spotify.control.domain.model.catalog.AppTrack
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
@@ -120,31 +121,27 @@ class SpotifyCatalogAdapter(
     }
   }
 
-  override fun getArtistAlbumIds(
+  override fun getArtistAlbumsPage(
     userId: UserId,
     accessToken: AccessToken,
     artistId: String,
-  ): Either<DomainError, List<String>> {
+    nextUrl: String?,
+  ): Either<DomainError, ArtistAlbumsPage> {
     return try {
-      val albumIds = mutableListOf<String>()
-      var nextUrl: String? = "$apiBaseUrl/v1/artists/$artistId/albums?limit=10"
-      while (nextUrl != null) {
-        throttler.throttle(DomainOutboxPartition.ToSpotify.key)
-        val request = HttpRequest.newBuilder()
-          .uri(URI.create(nextUrl))
-          .header("Authorization", "Bearer ${accessToken.value}")
-          .GET()
-          .build()
-        val response = httpMetrics.timed("/v1/artists/{id}/albums") {
-          httpClient.send(request, HttpResponse.BodyHandlers.ofString())
-        }
-        val errorResult = response.checkRateLimitOrError(logger, SyncError.ARTIST_DETAILS_FETCH_FAILED)
-        if (errorResult != null) return errorResult
-        val page = spotifyJson.decodeFromString<SpotifyArtistAlbumsPage>(response.body())
-        albumIds.addAll(page.items.map { it.id })
-        nextUrl = page.next
+      val url = nextUrl ?: "$apiBaseUrl/v1/artists/$artistId/albums?limit=50"
+      throttler.throttle(DomainOutboxPartition.ToSpotify.key)
+      val request = HttpRequest.newBuilder()
+        .uri(URI.create(url))
+        .header("Authorization", "Bearer ${accessToken.value}")
+        .GET()
+        .build()
+      val response = httpMetrics.timed("/v1/artists/{id}/albums") {
+        httpClient.send(request, HttpResponse.BodyHandlers.ofString())
       }
-      albumIds.right()
+      val errorResult = response.checkRateLimitOrError(logger, SyncError.ARTIST_DETAILS_FETCH_FAILED)
+      if (errorResult != null) return errorResult
+      val page = spotifyJson.decodeFromString<SpotifyArtistAlbumsPage>(response.body())
+      ArtistAlbumsPage(albumIds = page.items.map { it.id }, nextUrl = page.next).right()
     } catch (e: Exception) {
       logger.error(e) { "Unexpected error fetching album ids for artist $artistId (user ${userId.value})" }
       SyncError.ARTIST_DETAILS_FETCH_FAILED.left()

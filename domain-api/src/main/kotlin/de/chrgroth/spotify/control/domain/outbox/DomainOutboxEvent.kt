@@ -161,24 +161,37 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
   /**
    * Syncs all album IDs for a single artist from the Spotify API and enqueues
    * SyncAlbumDetails for any albums not yet in the catalog.
-   * Deduplication is by artistId only (album data is shared across users).
-   * payload = "$artistId:${userId.value}"
+   * Each page is fetched in a separate outbox task to avoid rate limit bursts.
+   * Deduplication is by artistId and nextUrl so that each page can be queued independently.
+   * payload: "$artistId:${userId.value}" for the first page;
+   *          "$artistId:${userId.value}\n$nextUrl" for subsequent pages.
    */
-  data class SyncArtistAlbums(val artistId: String, val userId: UserId) : DomainOutboxEvent {
+  data class SyncArtistAlbums(val artistId: String, val userId: UserId, val nextUrl: String? = null) : DomainOutboxEvent {
     override val key = KEY
-    override val deduplicationKey = "$KEY:$artistId"
+    override val deduplicationKey = "$KEY:$artistId:${nextUrl ?: ""}"
     override val partition = DomainOutboxPartition.ToSpotify
-    override val serializePayload = "$artistId:${userId.value}"
+    override val serializePayload = when {
+      nextUrl == null -> "$artistId:${userId.value}"
+      else -> "$artistId:${userId.value}\n$nextUrl"
+    }
 
     companion object {
       const val KEY = "SyncArtistAlbums"
       fun fromPayload(payload: String): SyncArtistAlbums {
         val colonIndex = payload.indexOf(':')
         require(colonIndex > 0 && colonIndex < payload.length - 1) { "Invalid SyncArtistAlbums payload: $payload" }
-        return SyncArtistAlbums(
-          artistId = payload.substring(0, colonIndex),
-          userId = UserId(payload.substring(colonIndex + 1)),
-        )
+        val artistId = payload.substring(0, colonIndex)
+        val rest = payload.substring(colonIndex + 1)
+        val newlineIndex = rest.indexOf('\n')
+        return if (newlineIndex < 0) {
+          SyncArtistAlbums(artistId = artistId, userId = UserId(rest))
+        } else {
+          SyncArtistAlbums(
+            artistId = artistId,
+            userId = UserId(rest.substring(0, newlineIndex)),
+            nextUrl = rest.substring(newlineIndex + 1),
+          )
+        }
       }
     }
   }
