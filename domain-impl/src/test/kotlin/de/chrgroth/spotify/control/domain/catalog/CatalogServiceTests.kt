@@ -9,6 +9,7 @@ import de.chrgroth.spotify.control.domain.model.catalog.AlbumSyncResult
 import de.chrgroth.spotify.control.domain.model.catalog.AppAlbum
 import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
 import de.chrgroth.spotify.control.domain.model.catalog.AppTrack
+import de.chrgroth.spotify.control.domain.model.catalog.ArtistAlbumsPage
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
 import de.chrgroth.spotify.control.domain.model.user.UserId
@@ -271,6 +272,82 @@ class CatalogServiceTests {
     val result = adapter.handle(DomainOutboxEvent.SyncAlbumDetails("album-1"))
 
     assertThat(result.isLeft()).isTrue()
+  }
+
+  // --- handle(SyncArtistAlbums) tests ---
+
+  @Test
+  fun `handle SyncArtistAlbums enqueues SyncAlbumDetails for new albums and completes when no next page`() {
+    val page = ArtistAlbumsPage(albumIds = listOf("album-1", "album-2"), nextUrl = null)
+    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyCatalog.getArtistAlbumsPage(userId, accessToken, "artist-1", null) } returns page.right()
+    every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"), AlbumId("album-2"))) } returns emptyList()
+    every { outboxPort.enqueue(any()) } just runs
+
+    val result = adapter.handle(DomainOutboxEvent.SyncArtistAlbums("artist-1", userId))
+
+    assertThat(result.isRight()).isTrue()
+    verify { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails("album-1")) }
+    verify { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails("album-2")) }
+    verify(exactly = 0) { outboxPort.enqueue(match { it is DomainOutboxEvent.SyncArtistAlbums }) }
+  }
+
+  @Test
+  fun `handle SyncArtistAlbums enqueues next page via outbox when nextUrl is present`() {
+    val nextPageUrl = "https://api.spotify.com/v1/artists/artist-1/albums?offset=50&limit=50"
+    val page = ArtistAlbumsPage(albumIds = listOf("album-1"), nextUrl = nextPageUrl)
+    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyCatalog.getArtistAlbumsPage(userId, accessToken, "artist-1", null) } returns page.right()
+    every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"))) } returns emptyList()
+    every { outboxPort.enqueue(any()) } just runs
+
+    val result = adapter.handle(DomainOutboxEvent.SyncArtistAlbums("artist-1", userId))
+
+    assertThat(result.isRight()).isTrue()
+    verify { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails("album-1")) }
+    verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums("artist-1", userId, nextPageUrl)) }
+  }
+
+  @Test
+  fun `handle SyncArtistAlbums processes subsequent page and fetches using nextUrl`() {
+    val nextPageUrl = "https://api.spotify.com/v1/artists/artist-1/albums?offset=50&limit=50"
+    val page = ArtistAlbumsPage(albumIds = listOf("album-2"), nextUrl = null)
+    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyCatalog.getArtistAlbumsPage(userId, accessToken, "artist-1", nextPageUrl) } returns page.right()
+    every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-2"))) } returns emptyList()
+    every { outboxPort.enqueue(any()) } just runs
+
+    val result = adapter.handle(DomainOutboxEvent.SyncArtistAlbums("artist-1", userId, nextPageUrl))
+
+    assertThat(result.isRight()).isTrue()
+    verify { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails("album-2")) }
+    verify(exactly = 0) { outboxPort.enqueue(match { it is DomainOutboxEvent.SyncArtistAlbums }) }
+  }
+
+  @Test
+  fun `handle SyncArtistAlbums enqueues only new albums and skips existing ones`() {
+    val page = ArtistAlbumsPage(albumIds = listOf("album-1", "album-2"), nextUrl = null)
+    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyCatalog.getArtistAlbumsPage(userId, accessToken, "artist-1", null) } returns page.right()
+    every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"), AlbumId("album-2"))) } returns listOf(album1)
+    every { outboxPort.enqueue(any()) } just runs
+
+    val result = adapter.handle(DomainOutboxEvent.SyncArtistAlbums("artist-1", userId))
+
+    assertThat(result.isRight()).isTrue()
+    verify { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails("album-2")) }
+    verify(exactly = 0) { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails("album-1")) }
+  }
+
+  @Test
+  fun `handle SyncArtistAlbums returns error when artist albums page fetch fails`() {
+    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyCatalog.getArtistAlbumsPage(userId, accessToken, "artist-1", null) } returns SyncError.ARTIST_DETAILS_FETCH_FAILED.left()
+
+    val result = adapter.handle(DomainOutboxEvent.SyncArtistAlbums("artist-1", userId))
+
+    assertThat(result.isLeft()).isTrue()
+    verify(exactly = 0) { outboxPort.enqueue(any()) }
   }
 
   // --- wipeCatalog tests ---
