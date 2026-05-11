@@ -325,7 +325,7 @@ class CatalogServiceTests {
   }
 
   @Test
-  fun `handle SyncArtistAlbums skips already synced albums`() {
+  fun `handle SyncArtistAlbums enqueues only new albums and skips existing ones`() {
     val page = ArtistAlbumsPage(albumIds = listOf("album-1", "album-2"), nextUrl = null)
     every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
     every { spotifyCatalog.getArtistAlbumsPage(userId, accessToken, "artist-1", null) } returns page.right()
@@ -340,7 +340,7 @@ class CatalogServiceTests {
   }
 
   @Test
-  fun `handle SyncArtistAlbums returns error when album page fetch fails`() {
+  fun `handle SyncArtistAlbums returns error when artist albums page fetch fails`() {
     every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
     every { spotifyCatalog.getArtistAlbumsPage(userId, accessToken, "artist-1", null) } returns SyncError.ARTIST_DETAILS_FETCH_FAILED.left()
 
