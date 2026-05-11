@@ -1,3 +1,13 @@
+# 0.91.1 (2026.05.11)
+
+## Bugfixes / Chore
+* Catalog sync no longer hammers all album pages in a single burst for artists with many albums.
+* Each page of the artist albums sync is now processed as a separate outbox task, respecting rate limit delays.
+
+
+
+---
+
 # 0.91.0 (2026.05.08)
 
 ## New Features
