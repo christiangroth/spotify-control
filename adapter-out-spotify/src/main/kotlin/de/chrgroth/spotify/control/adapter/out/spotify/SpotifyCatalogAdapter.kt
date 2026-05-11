@@ -128,7 +128,7 @@ class SpotifyCatalogAdapter(
     nextUrl: String?,
   ): Either<DomainError, ArtistAlbumsPage> {
     return try {
-      val url = nextUrl ?: "$apiBaseUrl/v1/artists/$artistId/albums?limit=50"
+      val url = nextUrl ?: "$apiBaseUrl/v1/artists/$artistId/albums?limit=10"
       throttler.throttle(DomainOutboxPartition.ToSpotify.key)
       val request = HttpRequest.newBuilder()
         .uri(URI.create(url))
