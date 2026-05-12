@@ -1,3 +1,13 @@
+# 0.94.0 (2026.05.12)
+
+## New Features
+* Added aggregation stats content on the Stats page with day, week, month, quarter, and year views.
+* Added compact period cards per aggregation view including top artists, albums, tracks, and activity details.
+
+
+
+---
+
 # 0.93.0 (2026.05.12)
 
 ## New Features
