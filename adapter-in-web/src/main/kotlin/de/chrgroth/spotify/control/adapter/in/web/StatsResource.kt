@@ -53,7 +53,7 @@ class StatsResource(
           AggregationView(
             periodLabel = periodLabel(index, periodStart),
             periodStart = periodStart.toString(),
-          data = aggregationsByStart[periodStart],
+            data = aggregationsByStart[periodStart],
           )
         },
       )
@@ -96,7 +96,7 @@ class StatsResource(
     val albumNames = mutableMapOf<String, String>()
     aggregation.trackEntries.forEach { trackEntry ->
       val track = tracksById[TrackId(trackEntry.id)]
-      val albumKey = track?.albumId?.value ?: "fallback:${track?.albumName ?: trackEntry.id}"
+      val albumKey = track?.albumId?.value ?: "$FALLBACK_ALBUM_KEY_PREFIX${track?.albumName ?: trackEntry.id}"
       val albumTitle = track?.albumId?.let { albumsById[it]?.title } ?: track?.albumName ?: trackEntry.name
       albumNames.putIfAbsent(albumKey, albumTitle)
       byAlbum[albumKey] = (byAlbum[albumKey] ?: 0L) + trackEntry.totalSeconds
@@ -114,19 +114,19 @@ class StatsResource(
 
   private fun currentPeriodStart(type: AggregationPeriodType): LocalDate {
     val today = Clock.System.now().toLocalDateTime(TimeZone.UTC).date
-    val javaDate = java.time.LocalDate.of(today.year, today.month.ordinal + 1, today.day)
+    val javaDate = toJavaLocalDate(today)
     val periodStart = when (type) {
       AggregationPeriodType.DAY -> javaDate
       AggregationPeriodType.WEEK -> javaDate.minusDays((javaDate.dayOfWeek.value - DayOfWeek.MONDAY.value).toLong())
       AggregationPeriodType.MONTH -> javaDate.withDayOfMonth(1)
-      AggregationPeriodType.QUARTER -> javaDate.withDayOfMonth(1).withMonth(((javaDate.monthValue - 1) / MONTHS_PER_QUARTER) * MONTHS_PER_QUARTER + 1)
+      AggregationPeriodType.QUARTER -> javaDate.withDayOfMonth(1).withMonth(calculateQuarterStartMonth(javaDate.monthValue))
       AggregationPeriodType.YEAR -> javaDate.withDayOfYear(1)
     }
-    return LocalDate(periodStart.year, periodStart.monthValue, periodStart.dayOfMonth)
+    return toKotlinLocalDate(periodStart)
   }
 
   private fun previousPeriodStart(type: AggregationPeriodType, current: LocalDate): LocalDate {
-    val javaDate = java.time.LocalDate.of(current.year, current.month.ordinal + 1, current.day)
+    val javaDate = toJavaLocalDate(current)
     val previousStart = when (type) {
       AggregationPeriodType.DAY -> javaDate.minusDays(1)
       AggregationPeriodType.WEEK -> javaDate.minusWeeks(1)
@@ -134,7 +134,7 @@ class StatsResource(
       AggregationPeriodType.QUARTER -> javaDate.minusMonths(MONTHS_PER_QUARTER.toLong()).withDayOfMonth(1)
       AggregationPeriodType.YEAR -> javaDate.minusYears(1).withDayOfYear(1)
     }
-    return LocalDate(previousStart.year, previousStart.monthValue, previousStart.dayOfMonth)
+    return toKotlinLocalDate(previousStart)
   }
 
   private fun tabLabel(type: AggregationPeriodType): String = when (type) {
@@ -164,8 +164,18 @@ class StatsResource(
 
   data class RankEntryView(val name: String, val totalSeconds: Long)
 
+  private fun toJavaLocalDate(date: LocalDate): java.time.LocalDate {
+    val monthValue = java.time.Month.valueOf(date.month.name).value
+    return java.time.LocalDate.of(date.year, monthValue, date.day)
+  }
+
+  private fun calculateQuarterStartMonth(monthValue: Int): Int = ((monthValue - 1) / MONTHS_PER_QUARTER) * MONTHS_PER_QUARTER + 1
+
+  private fun toKotlinLocalDate(date: java.time.LocalDate): LocalDate = LocalDate(date.year, date.monthValue, date.dayOfMonth)
+
   companion object {
     private const val TOP_ENTRIES_LIMIT = 3
     private const val MONTHS_PER_QUARTER = 3
+    private const val FALLBACK_ALBUM_KEY_PREFIX = "fallback:"
   }
 }
