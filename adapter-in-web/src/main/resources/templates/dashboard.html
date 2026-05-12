@@ -6,87 +6,51 @@
         <h1 class="mb-4 fs-4 fw-semibold" data-testid="welcome-message">Hej {displayName}!</h1>
 
         <div id="stats-section">
-            <div class="row g-3 mb-4">
-                <div class="col-12 col-sm-6">
-                    <div class="row g-3 h-100">
-                        <div id="snippet-playlist-metadata" class="col-6">
-                            {#fragment id="snippet_playlist_metadata"}
-                            <a href="/settings/playlist" class="text-decoration-none" data-testid="playlist-settings-link" aria-label="View playlist settings">
-                            <div class="card h-100 app-card">
-                                <div class="card-body">
-                                    <p class="card-subtitle mb-1 app-section-label">Playlists synced</p>
-                                    <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.syncedPlaylists.formatted} / {stats.totalPlaylists.formatted}</p>
-                                </div>
-                            </div>
-                            </a>
-                            {/fragment}
-                        </div>
-                        <div id="snippet-playlist-checks" class="col-6">
-                            {#fragment id="snippet_playlist_checks"}
-                            <a href="/playlist-checks" class="text-decoration-none" data-testid="playlist-checks-link" aria-label="View playlist checks">
-                            <div class="card h-100 app-card">
-                                <div class="card-body">
-                                    <p class="card-subtitle mb-1 app-section-label">Playlist checks</p>
-                                    {#if stats.playlistCheckStats.allSucceeded}
-                                    <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);" data-testid="playlist-checks-count">{stats.playlistCheckStats.succeededChecks.formatted} / {stats.playlistCheckStats.totalChecks.formatted}</p>
-                                    {#else}
-                                    <p class="card-text fs-3 fw-bold mb-0" style="color:#dc3545;" data-testid="playlist-checks-count">{stats.playlistCheckStats.succeededChecks.formatted} / {stats.playlistCheckStats.totalChecks.formatted}</p>
-                                    {/if}
-                                </div>
-                            </div>
-                            </a>
-                            {/fragment}
-                        </div>
-                        <div id="snippet-playback-data" class="col-12">
-                            {#fragment id="snippet_playback_data"}
-                            <div class="row g-3">
-                                <div class="col-6">
-                                    <a href="/settings/playback" class="text-decoration-none">
-                                    <div class="card h-100 app-card">
-                                        <div class="card-body">
-                                            <p class="card-subtitle mb-1 app-section-label">Playback Events (Last 30 Days)</p>
-                                            <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.playbackEventsLast30Days.formatted}</p>
-                                        </div>
-                                    </div>
-                                    </a>
-                                </div>
-                                <div class="col-6">
-                                    <a href="/settings/playback" class="text-decoration-none">
-                                    <div class="card h-100 app-card">
-                                        <div class="card-body">
-                                            <p class="card-subtitle mb-1 app-section-label">Total Playback Events</p>
-                                            <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.totalPlaybackEvents.formatted}</p>
-                                        </div>
-                                    </div>
-                                    </a>
-                                </div>
-                            </div>
-                            {/fragment}
+            <div class="row g-2 mb-4" data-testid="nav-tiles">
+                <div class="col-6 col-sm">
+                    <a href="/stats" class="text-decoration-none" data-testid="nav-tile-stats">
+                    <div class="card app-card h-100">
+                        <div class="card-body py-2 px-3 d-flex align-items-center justify-content-center">
+                            <span class="fw-semibold" style="color:var(--color-text-primary);font-size:.9rem;">Stats</span>
                         </div>
                     </div>
-                </div>
-                <div id="snippet-catalog-stats" class="col-12 col-sm-6">
-                    {#fragment id="snippet_catalog_stats"}
-                    <a href="/catalog" class="text-decoration-none h-100 d-block" aria-label="Catalog statistics">
-                        <div class="card h-100 app-card">
-                            <div class="card-body">
-                                <p class="card-subtitle mb-3 app-section-label">Catalog</p>
-                                <div class="mb-3">
-                                    <p class="card-subtitle mb-1 app-section-label">Artists</p>
-                                    <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.catalogStats.artistCount.formatted}</p>
-                                </div>
-                                <div class="mb-3">
-                                    <p class="card-subtitle mb-1 app-section-label">Albums</p>
-                                    <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.catalogStats.albumCount.formatted}</p>
-                                </div>
-                                <div>
-                                    <p class="card-subtitle mb-1 app-section-label">Tracks</p>
-                                    <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.catalogStats.trackCount.formatted}</p>
-                                </div>
-                            </div>
-                        </div>
                     </a>
-                    {/fragment}
+                </div>
+                <div class="col-6 col-sm">
+                    <a href="/playlists/settings" class="text-decoration-none" data-testid="nav-tile-playlists">
+                    <div class="card app-card h-100">
+                        <div class="card-body py-2 px-3 d-flex align-items-center justify-content-center">
+                            <span class="fw-semibold" style="color:var(--color-text-primary);font-size:.9rem;">Playlists</span>
+                        </div>
+                    </div>
+                    </a>
+                </div>
+                <div class="col-6 col-sm">
+                    <a href="/playlists/checks" class="text-decoration-none" data-testid="nav-tile-checks">
+                    <div class="card app-card h-100">
+                        <div class="card-body py-2 px-3 d-flex align-items-center justify-content-center">
+                            <span class="fw-semibold" style="color:var(--color-text-primary);font-size:.9rem;">Checks</span>
+                        </div>
+                    </div>
+                    </a>
+                </div>
+                <div class="col-6 col-sm">
+                    <a href="/catalog" class="text-decoration-none" data-testid="nav-tile-catalog">
+                    <div class="card app-card h-100">
+                        <div class="card-body py-2 px-3 d-flex align-items-center justify-content-center">
+                            <span class="fw-semibold" style="color:var(--color-text-primary);font-size:.9rem;">Catalog</span>
+                        </div>
+                    </div>
+                    </a>
+                </div>
+                <div class="col-6 col-sm">
+                    <a href="/playback" class="text-decoration-none" data-testid="nav-tile-playback">
+                    <div class="card app-card h-100">
+                        <div class="card-body py-2 px-3 d-flex align-items-center justify-content-center">
+                            <span class="fw-semibold" style="color:var(--color-text-primary);font-size:.9rem;">Playback</span>
+                        </div>
+                    </div>
+                    </a>
                 </div>
             </div>
 
@@ -243,16 +207,9 @@
     <script>
         connectSse('/dashboard/events', function (event) {
             if (event.data === 'refresh-playback-data') {
-                fadeUpdate('snippet-playback-data', '/dashboard/snippets/playback-data');
                 fadeUpdate('snippet-playback-histogram', '/dashboard/snippets/playback-histogram');
                 fadeUpdate('snippet-recently-played', '/dashboard/snippets/recently-played');
                 fadeUpdate('snippet-listening-stats', '/dashboard/snippets/listening-stats');
-            } else if (event.data === 'refresh-playlist-metadata') {
-                fadeUpdate('snippet-playlist-metadata', '/dashboard/snippets/playlist-metadata');
-            } else if (event.data === 'refresh-playlist-checks') {
-                fadeUpdate('snippet-playlist-checks', '/dashboard/snippets/playlist-checks');
-            } else if (event.data === 'refresh-catalog-data') {
-                fadeUpdate('snippet-catalog-stats', '/dashboard/snippets/catalog-stats');
             }
         });
     </script>

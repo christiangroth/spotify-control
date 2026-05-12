@@ -6,6 +6,33 @@
 
         <h1 class="mb-4 fs-4 fw-semibold">Catalog</h1>
 
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-sm-4">
+                <div class="card app-card">
+                    <div class="card-body">
+                        <p class="card-subtitle mb-1 app-section-label">Artists</p>
+                        <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{catalogStats.artistCount.formatted}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-sm-4">
+                <div class="card app-card">
+                    <div class="card-body">
+                        <p class="card-subtitle mb-1 app-section-label">Albums</p>
+                        <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{catalogStats.albumCount.formatted}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-sm-4">
+                <div class="card app-card">
+                    <div class="card-body">
+                        <p class="card-subtitle mb-1 app-section-label">Tracks</p>
+                        <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{catalogStats.trackCount.formatted}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div id="status-banner" class="alert d-none mb-3" role="alert"></div>
 
         <div class="row g-3 mb-4">

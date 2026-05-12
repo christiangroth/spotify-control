@@ -48,6 +48,26 @@ class DashboardPageTests {
   }
 
   @Test
+  fun `dashboard page displays navigation tiles section`() {
+    given()
+      .`when`()
+      .get("/dashboard")
+      .then()
+      .statusCode(200)
+      .body(containsString("""data-testid="nav-tiles""""))
+      .body(containsString("""data-testid="nav-tile-stats""""))
+      .body(containsString("""data-testid="nav-tile-playlists""""))
+      .body(containsString("""data-testid="nav-tile-checks""""))
+      .body(containsString("""data-testid="nav-tile-catalog""""))
+      .body(containsString("""data-testid="nav-tile-playback""""))
+      .body(containsString("/stats"))
+      .body(containsString("/playlists/settings"))
+      .body(containsString("/playlists/checks"))
+      .body(containsString("/catalog"))
+      .body(containsString("/playback"))
+  }
+
+  @Test
   fun `dashboard page displays stats section`() {
     given()
       .`when`()
@@ -55,8 +75,6 @@ class DashboardPageTests {
       .then()
       .statusCode(200)
       .body(containsString("""id="stats-section""""))
-      .body(containsString("Total Playback Events"))
-      .body(containsString("Playback Events (Last 30 Days)"))
       .body(containsString("""data-testid="histogram""""))
   }
 
@@ -80,7 +98,6 @@ class DashboardPageTests {
       .then()
       .statusCode(200)
       .body(containsString("refresh-playback-data"))
-      .body(containsString("refresh-playlist-metadata"))
       .body(containsString("fadeUpdate"))
   }
 
@@ -104,30 +121,6 @@ class DashboardPageTests {
       .statusCode(200)
       .contentType(containsString("text/html"))
       .body(containsString("Recently Played"))
-  }
-
-  @Test
-  fun `dashboard snippet endpoint for playback data is available`() {
-    given()
-      .`when`()
-      .get("/dashboard/snippets/playback-data")
-      .then()
-      .statusCode(200)
-      .contentType(containsString("text/html"))
-      .body(containsString("Total Playback Events"))
-  }
-
-  @Test
-  fun `dashboard snippet endpoint for playlist metadata is available`() {
-    given()
-      .`when`()
-      .get("/dashboard/snippets/playlist-metadata")
-      .then()
-      .statusCode(200)
-      .contentType(containsString("text/html"))
-      .body(containsString("Playlists synced"))
-      .body(containsString("""data-testid="playlist-settings-link""""))
-      .body(containsString("/settings/playlist"))
   }
 
   @Test
@@ -164,44 +157,6 @@ class DashboardPageTests {
       .statusCode(200)
       .body(containsString("snippet-listening-stats"))
       .body(containsString("/dashboard/snippets/listening-stats"))
-  }
-
-  @Test
-  fun `dashboard page displays catalog stats section with fragment`() {
-    given()
-      .`when`()
-      .get("/dashboard")
-      .then()
-      .statusCode(200)
-      .body(containsString("""id="snippet-catalog-stats""""))
-      .body(containsString("Artists"))
-      .body(containsString("Albums"))
-      .body(containsString("Tracks"))
-  }
-
-  @Test
-  fun `dashboard snippet endpoint for catalog stats is available`() {
-    given()
-      .`when`()
-      .get("/dashboard/snippets/catalog-stats")
-      .then()
-      .statusCode(200)
-      .contentType(containsString("text/html"))
-      .body(containsString("Artists"))
-      .body(containsString("Albums"))
-      .body(containsString("Tracks"))
-  }
-
-  @Test
-  fun `dashboard sse handler refreshes catalog stats on catalog data update`() {
-    given()
-      .`when`()
-      .get("/dashboard")
-      .then()
-      .statusCode(200)
-      .body(containsString("refresh-catalog-data"))
-      .body(containsString("snippet-catalog-stats"))
-      .body(containsString("/dashboard/snippets/catalog-stats"))
   }
 
   @Test
