@@ -1,3 +1,12 @@
+# 0.92.0 (2026.05.12)
+
+## New Features
+* Dashboard listening stats now include Top Albums, showing the top 5 albums by play duration over the last 30 days.
+
+
+
+---
+
 # 0.91.1 (2026.05.11)
 
 ## Bugfixes / Chore
