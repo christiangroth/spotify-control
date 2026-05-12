@@ -189,6 +189,12 @@ class DashboardService(
     val statsAlbumIds = statsTrackMap.values.mapNotNull { it.albumId }.toSet()
     val statsArtistIds = secondsByArtistId.keys.map { ArtistId(it) }.toSet()
 
+    val secondsByAlbumId = mutableMapOf<String, Long>()
+    secondsByTrackId.forEach { (trackId, seconds) ->
+      val albumId = statsTrackMap[trackId]?.albumId?.value ?: return@forEach
+      secondsByAlbumId[albumId] = (secondsByAlbumId[albumId] ?: 0L) + seconds
+    }
+
     return coroutineScope {
       val statsAlbumMapAsync = async(Dispatchers.IO) { appAlbumRepository.findByAlbumIds(statsAlbumIds).associateBy { it.id.value } }
       val statsArtistMapAsync = async(Dispatchers.IO) {
@@ -203,11 +209,15 @@ class DashboardService(
       val topArtists = buildTopEntries(secondsByArtistId, { statsArtistMap[it]?.artistName ?: it }) { id ->
         statsArtistMap[id]?.imageLink
       }
+      val topAlbums = buildTopEntries(secondsByAlbumId, { statsAlbumMap[it]?.title ?: it }) { id ->
+        statsAlbumMap[id]?.imageLink
+      }
 
       ListeningStats(
         listenedMinutesLast30Days = listenedMinutes,
         topTracksLast30Days = topTracks,
         topArtistsLast30Days = topArtists,
+        topAlbumsLast30Days = topAlbums,
       )
     }
   }

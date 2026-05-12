@@ -27,7 +27,7 @@ data class DashboardStats(
       playbackEventsLast30Days = 0L,
       playbackEventsPerDay = emptyList(),
       recentlyPlayedTracks = emptyList(),
-      listeningStats = ListeningStats(listenedMinutesLast30Days = 0L, topTracksLast30Days = emptyList(), topArtistsLast30Days = emptyList()),
+      listeningStats = ListeningStats(listenedMinutesLast30Days = 0L, topTracksLast30Days = emptyList(), topArtistsLast30Days = emptyList(), topAlbumsLast30Days = emptyList()),
       catalogStats = CatalogStats(artistCount = 0L, albumCount = 0L, trackCount = 0L),
     )
   }

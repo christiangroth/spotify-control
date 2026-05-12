@@ -1,6 +1,7 @@
 package de.chrgroth.spotify.control.domain.infra
 
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
+import de.chrgroth.spotify.control.domain.model.catalog.AppAlbum
 import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
 import de.chrgroth.spotify.control.domain.model.playback.AppPlaybackItem
 import de.chrgroth.spotify.control.domain.model.catalog.AppTrack
@@ -115,6 +116,7 @@ class DashboardServiceTests {
     assertThat(stats.listeningStats.listenedMinutesLast30Days).isEqualTo(0L)
     assertThat(stats.listeningStats.topTracksLast30Days).isEmpty()
     assertThat(stats.listeningStats.topArtistsLast30Days).isEmpty()
+    assertThat(stats.listeningStats.topAlbumsLast30Days).isEmpty()
   }
 
   @Test
@@ -146,6 +148,39 @@ class DashboardServiceTests {
     // track-1: 120s, track-2: 180s → total 300s = 5 minutes
     assertThat(stats.listeningStats.listenedMinutesLast30Days).isEqualTo(5L)
     assertThat(stats.listeningStats.topTracksLast30Days).hasSize(2)
+  }
+
+  @Test
+  fun `listening stats compute top albums by aggregating track play times per album`() {
+    setupCommonMocks()
+
+    val album1 = AppAlbum(id = AlbumId("album-1"), title = "Album One", lastSync = syncTimestamp)
+    val album2 = AppAlbum(id = AlbumId("album-2"), title = "Album Two", lastSync = syncTimestamp)
+    val track2 = AppTrack(
+      id = TrackId("track-2"), title = "Track Two",
+      artistId = ArtistId("artist-1"), durationMs = 120_000L,
+      albumId = AlbumId("album-2"), lastSync = syncTimestamp,
+    )
+    val agg = emptyAgg().copy(
+      totalPlaybackSeconds = 480L,
+      trackEntries = listOf(
+        AggregationRankEntry(id = "track-1", name = "Track One", totalSeconds = 300L),
+        AggregationRankEntry(id = "track-2", name = "Track Two", totalSeconds = 180L),
+      ),
+      artistEntries = listOf(AggregationRankEntry(id = "artist-1", name = "Artist One", totalSeconds = 480L)),
+    )
+    every { aggregationRepository.findByUserTypeAndPeriodRange(userId, AggregationPeriodType.DAY, any(), any()) } returns listOf(agg)
+    every { appTrackRepository.findByTrackIds(any()) } returns listOf(track1, track2)
+    every { appArtistRepository.findByArtistIds(any()) } returns listOf(artist1)
+    every { appAlbumRepository.findByAlbumIds(any()) } returns listOf(album1, album2)
+
+    val stats = adapter.getStats(userId)
+
+    assertThat(stats.listeningStats.topAlbumsLast30Days).hasSize(2)
+    assertThat(stats.listeningStats.topAlbumsLast30Days[0].name).isEqualTo("Album One")
+    assertThat(stats.listeningStats.topAlbumsLast30Days[0].totalMinutes).isEqualTo(5L)
+    assertThat(stats.listeningStats.topAlbumsLast30Days[1].name).isEqualTo("Album Two")
+    assertThat(stats.listeningStats.topAlbumsLast30Days[1].totalMinutes).isEqualTo(3L)
   }
 
   @Test

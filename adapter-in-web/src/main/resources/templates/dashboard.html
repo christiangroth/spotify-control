@@ -206,6 +206,32 @@
                                 </ul>
                                 {/if}
                             </div>
+                            <div class="mb-3">
+                                <p class="mb-1" style="color:#888;font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;">Top Albums</p>
+                                {#if stats.listeningStats.topAlbumsLast30Days.empty}
+                                <p style="color:#888;font-size:.8rem;">No data yet – listen to some tracks and check back later.</p>
+                                {#else}
+                                <ul class="list-unstyled mb-0" data-testid="top-albums-list">
+                                    {#for entry in stats.listeningStats.topAlbumsLast30Days}
+                                    <li class="d-flex align-items-center mb-2">
+                                        {#if entry.imageLink}
+                                        <img src="{entry.imageLink}" alt="{entry.name}" width="36" height="36" style="min-width:36px;border-radius:3px;margin-right:10px;object-fit:cover;">
+                                        {#else}
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" style="width:36px;height:36px;min-width:36px;border-radius:3px;margin-right:10px;" aria-label="Album cover placeholder">
+                                            <rect width="36" height="36" fill="#333"/>
+                                            <circle cx="18" cy="18" r="9" fill="#555"/>
+                                            <circle cx="18" cy="18" r="3" fill="#333"/>
+                                        </svg>
+                                        {/if}
+                                        <div style="overflow:hidden;flex:1;">
+                                            <div class="text-truncate" style="color:#fff;font-size:.82rem;">{entry.name}</div>
+                                            <div style="color:#888;font-size:.75rem;white-space:nowrap;">{entry.totalMinutes.formattedListeningDuration}</div>
+                                        </div>
+                                    </li>
+                                    {/for}
+                                </ul>
+                                {/if}
+                            </div>
                         </div>
                     </div>
                     {/fragment}
