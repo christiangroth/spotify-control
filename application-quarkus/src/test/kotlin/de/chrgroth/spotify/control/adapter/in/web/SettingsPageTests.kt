@@ -115,6 +115,25 @@ class SettingsPageTests {
       .statusCode(200)
       .contentType(containsString("text/html"))
       .body(containsString("Stats"))
+      .body(containsString("""data-testid="stats-tabs""""))
+      .body(containsString("Day"))
+      .body(containsString("Week"))
+      .body(containsString("Month"))
+      .body(containsString("Quarter"))
+      .body(containsString("Year"))
+  }
+
+  @Test
+  fun `stats page displays aggregation detail sections`() {
+    given()
+      .`when`()
+      .get("/stats")
+      .then()
+      .statusCode(200)
+      .body(containsString("Top Artists"))
+      .body(containsString("Top Albums"))
+      .body(containsString("Top Tracks"))
+      .body(containsString("Activity by Day and Time Window"))
   }
 
 }
