@@ -52,4 +52,69 @@ class SettingsPageTests {
       .body(containsString("Recreate Playback Data"))
   }
 
+  @Test
+  fun `playlists settings page is available at new url and displays playlists heading`() {
+    given()
+      .`when`()
+      .get("/playlists/settings")
+      .then()
+      .statusCode(200)
+      .contentType(containsString("text/html"))
+      .body(containsString("Playlists"))
+  }
+
+  @Test
+  fun `playlists checks page is available at new url and displays playlist checks heading`() {
+    given()
+      .`when`()
+      .get("/playlists/checks")
+      .then()
+      .statusCode(200)
+      .contentType(containsString("text/html"))
+      .body(containsString("Playlist Checks"))
+  }
+
+  @Test
+  fun `playback page is available at new url and displays playback heading`() {
+    given()
+      .`when`()
+      .get("/playback")
+      .then()
+      .statusCode(200)
+      .contentType(containsString("text/html"))
+      .body(containsString("Playback"))
+  }
+
+  @Test
+  fun `playback page displays playback event stats tiles`() {
+    given()
+      .`when`()
+      .get("/playback")
+      .then()
+      .statusCode(200)
+      .body(containsString("Playback Events (Last 30 Days)"))
+      .body(containsString("Total Playback Events"))
+  }
+
+  @Test
+  fun `playback page displays recreate playback data button`() {
+    given()
+      .`when`()
+      .get("/playback")
+      .then()
+      .statusCode(200)
+      .body(containsString("Recreate Playback Data"))
+  }
+
+  @Test
+  fun `stats page is available and displays stats heading`() {
+    given()
+      .`when`()
+      .get("/stats")
+      .then()
+      .statusCode(200)
+      .contentType(containsString("text/html"))
+      .body(containsString("Stats"))
+  }
+
 }

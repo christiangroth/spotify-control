@@ -5,12 +5,12 @@ import de.chrgroth.spotify.control.domain.model.catalog.ArtistBrowseItem
 import de.chrgroth.spotify.control.domain.model.catalog.TrackBrowseItem
 import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogBrowserPort
 import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogPort
+import de.chrgroth.spotify.control.domain.port.`in`.infra.DashboardPort
 import io.quarkus.qute.Location
 import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
 import io.quarkus.security.Authenticated
 import jakarta.enterprise.context.ApplicationScoped
-import jakarta.inject.Inject
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.POST
 import jakarta.ws.rs.Path
@@ -24,17 +24,13 @@ import mu.KLogging
 @Path("/catalog")
 @ApplicationScoped
 @Suppress("Unused")
-class CatalogResource {
-
-  @Inject
-  @Location("catalog.html")
-  private lateinit var catalogTemplate: Template
-
-  @Inject
-  private lateinit var catalogBrowser: CatalogBrowserPort
-
-  @Inject
-  private lateinit var catalog: CatalogPort
+class CatalogResource(
+  @param:Location("catalog.html")
+  private val catalogTemplate: Template,
+  private val catalogBrowser: CatalogBrowserPort,
+  private val catalog: CatalogPort,
+  private val dashboard: DashboardPort,
+) {
 
   @GET
   @Authenticated
@@ -42,12 +38,14 @@ class CatalogResource {
   fun catalog(@QueryParam("filter") filter: String?): TemplateInstance {
     val filterActive = !filter.isNullOrBlank()
     val artists = if (filterActive) catalogBrowser.getArtists(filter) else emptyList<ArtistBrowseItem>()
+    val catalogStats = dashboard.getCatalogStats().catalogStats
     return catalogTemplate
       .data("artists", artists)
       .data("filter", filter ?: "")
       .data("filterActive", filterActive)
       .data("albums", emptyList<AlbumBrowseItem>())
       .data("tracks", emptyList<TrackBrowseItem>())
+      .data("catalogStats", catalogStats)
   }
 
   @GET
