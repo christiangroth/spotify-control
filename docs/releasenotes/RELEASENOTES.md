@@ -1,3 +1,13 @@
+# 0.98.0 (2026.05.13)
+
+## New Features
+* Spotify OpenAPI spec is now stored in the project under `adapter-out-spotify/src/main/resources/spotify-openapi.yaml`.
+* A weekly GitHub Actions workflow now detects changes to the Spotify Web API spec and creates a GitHub issue when updates are available.
+
+
+
+---
+
 # 0.97.0 (2026.05.13)
 
 ## New Features
