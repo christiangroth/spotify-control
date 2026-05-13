@@ -23,7 +23,7 @@ openApiGenerate {
   )
   globalProperties = mapOf(
     "apis" to "",
-    "models" to "TrackObject,SimplifiedTrackObject,ArtistObject,SimplifiedArtistObject,ImageObject,PlayHistoryObject,CursorPagingObject,CursorObject,CursorPagingPlayHistoryObject,PagingObject,PagingPlaylistObject,SimplifiedPlaylistObject,PlaylistOwnerObject,PlaylistUserObject,EpisodeObject,EpisodeBase,ContextObject,DeviceObject,DisallowsObject,PrivateUserObject,ExternalUrlObject,FollowersObject,ResumePointObject,ShowObject,ShowBase,SimplifiedShowObject,LinkedTrackObject,TrackRestrictionObject,AlbumRestrictionObject,EpisodeRestrictionObject,ExternalIdObject,CopyrightObject,PlaylistTracksRefObject,ExplicitContentSettingsObject,AlbumBase,AlbumObject,SimplifiedAlbumObject,PagingSimplifiedTrackObject,ArtistDiscographyAlbumObject,PagingArtistDiscographyAlbumObject,CurrentlyPlayingContextObject,PlaylistTrackObject,PagingPlaylistTrackObject",
+    "models" to "TrackObject,SimplifiedTrackObject,ArtistObject,SimplifiedArtistObject,ImageObject,PlayHistoryObject,CursorPagingObject,CursorObject,CursorPagingPlayHistoryObject,PagingObject,PagingPlaylistObject,SimplifiedPlaylistObject,PlaylistOwnerObject,PlaylistUserObject,EpisodeObject,EpisodeBase,ContextObject,DeviceObject,DisallowsObject,PrivateUserObject,ExternalUrlObject,FollowersObject,ResumePointObject,ShowObject,ShowBase,SimplifiedShowObject,LinkedTrackObject,TrackRestrictionObject,AlbumRestrictionObject,EpisodeRestrictionObject,ExternalIdObject,CopyrightObject,PlaylistTracksRefObject,ExplicitContentSettingsObject,AlbumObject,SimplifiedAlbumObject,PagingSimplifiedTrackObject,ArtistDiscographyAlbumObject,PagingArtistDiscographyAlbumObject",
     "supportingFiles" to "",
   )
 }
@@ -34,6 +34,10 @@ sourceSets {
       srcDir(openApiGeneratedDir.resolve("src/main/kotlin"))
       exclude("**/infrastructure/**")
       exclude("**/apis/**")
+      exclude("**/model/CurrentlyPlayingContextObject.kt")
+      exclude("**/model/PlaylistTrackObject.kt")
+      exclude("**/model/PagingPlaylistTrackObject.kt")
+      exclude("**/model/SimplifiedAlbumObject.kt")
     }
   }
 }

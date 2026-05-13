@@ -8,6 +8,7 @@ import de.chrgroth.spotify.control.adapter.out.spotify.model.CursorPagingPlayHis
 import de.chrgroth.spotify.control.adapter.out.spotify.model.TrackObject
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.PlaybackError
+import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
@@ -34,38 +35,39 @@ class SpotifyPlaybackAdapter(
 
   override fun getCurrentlyPlaying(userId: UserId, accessToken: AccessToken): Either<DomainError, CurrentlyPlayingItem?> {
     return try {
-      val response = httpMetrics.timed("/v1/me/player/currently-playing") {
-        apiClient.getCurrentlyPlaying("Bearer ${accessToken.value}")
+      SpotifyApiAuthContext.set(accessToken)
+      val currentlyPlaying = httpMetrics.timed("/v1/me/player/currently-playing") {
+        apiClient.getCurrentlyPlaying()
       }
-      if (response.status == HTTP_NO_CONTENT) {
-        return null.right()
-      }
-      val errorResult = response.checkRateLimitOrError(logger, "/v1/me/player/currently-playing", PlaybackError.CURRENTLY_PLAYING_FETCH_FAILED)
-      if (errorResult != null) return errorResult
-      val currentlyPlaying = spotifyJson.decodeFromString<CurrentlyPlayingContextObject>(response.readEntity(String::class.java))
       parseCurrentlyPlayingItem(userId, currentlyPlaying).right()
+    } catch (e: SpotifyNoContentException) {
+      logger.debug(e) { "No currently playing item (204 No Content)" }
+      null.right()
+    } catch (e: SpotifyRateLimitException) {
+      SpotifyRateLimitError(e.retryAfterSeconds.seconds).left()
+    } catch (e: SpotifyApiException) {
+      logger.error { "Spotify currently playing fetch failed: ${e.statusCode}" }
+      PlaybackError.CURRENTLY_PLAYING_FETCH_FAILED.left()
     } catch (e: Exception) {
       logger.error(e) { "Unexpected error during currently playing fetch" }
       PlaybackError.CURRENTLY_PLAYING_FETCH_FAILED.left()
+    } finally {
+      SpotifyApiAuthContext.clear()
     }
   }
 
   private fun parseCurrentlyPlayingItem(userId: UserId, response: CurrentlyPlayingContextObject): CurrentlyPlayingItem? {
-    val itemElement = response.item ?: return null
-    val track = decodeTrack(itemElement) ?: return null
-    if (track.type != TrackObject.Type.TRACK) {
-      logger.info { "Ignoring non-track currently playing event of type '${track.type}'" }
-      return null
-    }
-    if (track.isLocal == true || track.id == null) {
-      logger.info { "Ignoring local or id-less currently playing track '${track.name}'" }
+    val track = response.item?.let { decodeTrack(it) } ?: return null
+    val trackId = track.id
+    if (track.type != TrackObject.Type.TRACK || track.isLocal == true || trackId == null) {
+      logIgnoredCurrentlyPlaying(track)
       return null
     }
     val progressMs = response.progressMs ?: 0L
     val observedAt = Clock.System.now()
     return CurrentlyPlayingItem(
       spotifyUserId = userId,
-      trackId = TrackId(track.id),
+      trackId = TrackId(trackId),
       trackName = track.name ?: "",
       artistIds = track.artists?.mapNotNull { it.id?.let { id -> ArtistId(id) } } ?: emptyList(),
       artistNames = track.artists?.map { it.name ?: "" } ?: emptyList(),
@@ -78,18 +80,24 @@ class SpotifyPlaybackAdapter(
     )
   }
 
+  private fun logIgnoredCurrentlyPlaying(track: TrackObject) {
+    if (track.type != TrackObject.Type.TRACK) {
+      logger.info { "Ignoring non-track currently playing event of type '${track.type}'" }
+    } else {
+      logger.info { "Ignoring local or id-less currently playing track '${track.name}'" }
+    }
+  }
+
   override fun getRecentlyPlayed(userId: UserId, accessToken: AccessToken, after: Instant?): Either<DomainError, List<RecentlyPlayedItem>> {
     return try {
+      SpotifyApiAuthContext.set(accessToken)
       val allItems = mutableListOf<RecentlyPlayedItem>()
       var afterParam: Long? = after?.toEpochMilliseconds()
       var hasNext = true
       while (hasNext) {
-        val response = httpMetrics.timed("/v1/me/player/recently-played") {
-          apiClient.getRecentlyPlayed("Bearer ${accessToken.value}", 50, afterParam)
+        val recentlyPlayed = httpMetrics.timed("/v1/me/player/recently-played") {
+          apiClient.getRecentlyPlayed(RECENTLY_PLAYED_LIMIT, afterParam)
         }
-        val errorResult = response.checkRateLimitOrError(logger, "/v1/me/player/recently-played", PlaybackError.RECENTLY_PLAYED_FETCH_FAILED)
-        if (errorResult != null) return errorResult
-        val recentlyPlayed = spotifyJson.decodeFromString<CursorPagingPlayHistoryObject>(response.readEntity(String::class.java))
         recentlyPlayed.items?.mapNotNullTo(allItems) { item ->
           val track = item.track ?: return@mapNotNullTo null
           parseRecentlyPlayedItem(userId, track, item.playedAt ?: return@mapNotNullTo null)
@@ -103,9 +111,16 @@ class SpotifyPlaybackAdapter(
         }
       }
       allItems.right()
+    } catch (e: SpotifyRateLimitException) {
+      SpotifyRateLimitError(e.retryAfterSeconds.seconds).left()
+    } catch (e: SpotifyApiException) {
+      logger.error { "Spotify recently played fetch failed: ${e.statusCode}" }
+      PlaybackError.RECENTLY_PLAYED_FETCH_FAILED.left()
     } catch (e: Exception) {
       logger.error(e) { "Unexpected error during recently played fetch" }
       PlaybackError.RECENTLY_PLAYED_FETCH_FAILED.left()
+    } finally {
+      SpotifyApiAuthContext.clear()
     }
   }
 
@@ -138,5 +153,6 @@ class SpotifyPlaybackAdapter(
 
   companion object : KLogging() {
     private const val MS_PER_SECOND = 1_000L
+    private const val RECENTLY_PLAYED_LIMIT = 50
   }
 }
