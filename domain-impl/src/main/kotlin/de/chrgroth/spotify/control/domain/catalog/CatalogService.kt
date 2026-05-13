@@ -196,8 +196,12 @@ class CatalogService(
           logger.debug { "All ${page.albumIds.size} album(s) on this page for artist $artistId already in catalog" }
         }
         if (page.nextUrl != null) {
-          logger.info { "Enqueueing next SyncArtistAlbums page for artist $artistId (user ${userId.value})" }
-          outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums(artistId, userId, page.nextUrl))
+          if (newAlbumIds.isEmpty()) {
+            logger.info { "All albums on current page for artist $artistId already in catalog, skipping remaining pages" }
+          } else {
+            logger.info { "Enqueueing next SyncArtistAlbums page for artist $artistId (user ${userId.value})" }
+            outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums(artistId, userId, page.nextUrl))
+          }
         } else {
           logger.info { "Completed all album pages for artist $artistId (user ${userId.value})" }
         }
