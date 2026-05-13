@@ -340,6 +340,38 @@ class CatalogServiceTests {
   }
 
   @Test
+  fun `handle SyncArtistAlbums skips next page when all albums on current page are already in catalog`() {
+    val nextPageUrl = "https://api.spotify.com/v1/artists/artist-1/albums?offset=50&limit=50"
+    val album2 = AppAlbum(id = AlbumId("album-2"), lastSync = syncTimestamp)
+    val page = ArtistAlbumsPage(albumIds = listOf("album-1", "album-2"), nextUrl = nextPageUrl)
+    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyCatalog.getArtistAlbumsPage(userId, accessToken, "artist-1", null) } returns page.right()
+    every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"), AlbumId("album-2"))) } returns listOf(album1, album2)
+    every { outboxPort.enqueue(any()) } just runs
+
+    val result = adapter.handle(DomainOutboxEvent.SyncArtistAlbums("artist-1", userId))
+
+    assertThat(result.isRight()).isTrue()
+    verify(exactly = 0) { outboxPort.enqueue(any()) }
+  }
+
+  @Test
+  fun `handle SyncArtistAlbums enqueues next page when some albums on current page are new`() {
+    val nextPageUrl = "https://api.spotify.com/v1/artists/artist-1/albums?offset=50&limit=50"
+    val page = ArtistAlbumsPage(albumIds = listOf("album-1", "album-2"), nextUrl = nextPageUrl)
+    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyCatalog.getArtistAlbumsPage(userId, accessToken, "artist-1", null) } returns page.right()
+    every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"), AlbumId("album-2"))) } returns listOf(album1)
+    every { outboxPort.enqueue(any()) } just runs
+
+    val result = adapter.handle(DomainOutboxEvent.SyncArtistAlbums("artist-1", userId))
+
+    assertThat(result.isRight()).isTrue()
+    verify { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails("album-2")) }
+    verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums("artist-1", userId, nextPageUrl)) }
+  }
+
+  @Test
   fun `handle SyncArtistAlbums returns error when artist albums page fetch fails`() {
     every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
     every { spotifyCatalog.getArtistAlbumsPage(userId, accessToken, "artist-1", null) } returns SyncError.ARTIST_DETAILS_FETCH_FAILED.left()
