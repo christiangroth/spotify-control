@@ -307,7 +307,7 @@ class PlaybackAggregationService(
     filteredItems.forEach { item ->
       val track = tracks[TrackId(item.trackId)]
       val artistId = track?.artistId?.value ?: UNKNOWN_ARTIST_ID
-      val albumId = track?.albumId?.value ?: "${FALLBACK_ALBUM_ID_PREFIX}${track?.albumName ?: item.trackId}"
+      val albumId = track.albumAggregationId(item.trackId)
       val albumName = track?.albumName ?: track?.title ?: albumId
       durationPerArtistId[artistId] = (durationPerArtistId[artistId] ?: 0L) + item.secondsPlayed
       durationPerAlbumId[albumId] = (durationPerAlbumId[albumId] ?: 0L) + item.secondsPlayed
@@ -361,6 +361,14 @@ class PlaybackAggregationService(
     val artistEntries: List<AggregationRankEntry>,
     val albumEntries: List<AggregationRankEntry>,
   )
+
+  private fun de.chrgroth.spotify.control.domain.model.catalog.AppTrack?.albumAggregationId(itemTrackId: String): String {
+    val rawAlbumId = this?.albumId?.value
+    if (rawAlbumId != null) {
+      return rawAlbumId
+    }
+    return "${FALLBACK_ALBUM_ID_PREFIX}${this?.albumName ?: itemTrackId}"
+  }
 }
 
 private fun LocalDate.endOfMonth(): LocalDate {
