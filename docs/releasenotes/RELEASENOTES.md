@@ -1,3 +1,13 @@
+# 0.95.0 (2026.05.13)
+
+## New Features
+* Added album-based playback aggregation entries and distinct album counts.
+* Updated aggregation backfill starter so all periods are recalculated with album metrics.
+
+
+
+---
+
 # 0.94.1 (2026.05.13)
 
 ## Bugfixes / Chore
