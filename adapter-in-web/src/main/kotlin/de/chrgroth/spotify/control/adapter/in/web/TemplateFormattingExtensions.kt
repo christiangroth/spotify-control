@@ -70,4 +70,8 @@ object TemplateFormattingExtensions {
     val remainingMinutes = minutes % MINUTES_PER_HOUR
     return if (hours > 0) "%d h %d min".format(hours, remainingMinutes) else "%d min".format(minutes)
   }
+
+  /** Formats a listening duration given in seconds as `X h Y min` (when ≥60 min) or `X min` (when <60 min). */
+  @JvmStatic
+  fun formattedListeningDurationFromSeconds(durationSeconds: Long): String = formattedListeningDuration(durationSeconds / SECONDS_PER_MINUTE)
 }

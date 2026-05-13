@@ -41,7 +41,7 @@ class StatsResource(
   @Produces(MediaType.TEXT_HTML)
   fun stats(): TemplateInstance {
     val userId = UserId(securityIdentity.principal.name)
-    val tabs = AggregationPeriodType.entries.map { type ->
+    val tabs = AggregationPeriodType.entries.mapIndexed { index, type ->
       val periodStarts = threePeriodStarts(type)
       val aggregationsByStart = periodStarts.associateWith { periodStart ->
         aggregationRepository.findByUserAndPeriod(userId, type, periodStart)
@@ -49,9 +49,10 @@ class StatsResource(
       AggregationTab(
         id = type.name.lowercase(),
         label = tabLabel(type),
-        aggregations = periodStarts.mapIndexed { index, periodStart ->
+        first = index == 0,
+        aggregations = periodStarts.mapIndexed { periodIndex, periodStart ->
           AggregationView(
-            periodLabel = periodLabel(index, periodStart),
+            periodLabel = periodLabel(periodIndex, periodStart),
             periodStart = periodStart.toString(),
             data = aggregationsByStart[periodStart],
           )
@@ -151,7 +152,7 @@ class StatsResource(
     else -> "Two periods ago"
   } + " ($periodStart)"
 
-  data class AggregationTab(val id: String, val label: String, val aggregations: List<AggregationView>)
+  data class AggregationTab(val id: String, val label: String, val first: Boolean, val aggregations: List<AggregationView>)
 
   data class AggregationView(
     val periodLabel: String,
@@ -174,7 +175,7 @@ class StatsResource(
   private fun toKotlinLocalDate(date: java.time.LocalDate): LocalDate = LocalDate(date.year, date.monthValue, date.dayOfMonth)
 
   companion object {
-    private const val TOP_ENTRIES_LIMIT = 3
+    private const val TOP_ENTRIES_LIMIT = 5
     private const val MONTHS_PER_QUARTER = 3
     private const val FALLBACK_ALBUM_KEY_PREFIX = "fallback:"
   }
