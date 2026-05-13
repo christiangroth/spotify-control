@@ -6,18 +6,6 @@ plugins {
 
 val openApiGeneratedDir = layout.buildDirectory.dir("generated/openapi").get().asFile
 
-val handWrittenModels = listOf(
-  "CurrentlyPlayingContextObject",
-  "PlaylistTrackObject",
-  "PagingPlaylistTrackObject",
-  "AlbumBase",
-  "AlbumObject",
-  "SimplifiedAlbumObject",
-  "PagingSimplifiedTrackObject",
-  "ArtistDiscographyAlbumObject",
-  "PagingArtistDiscographyAlbumObject",
-)
-
 openApiGenerate {
   generatorName = "kotlin"
   inputSpec = "$projectDir/src/main/resources/spotify-openapi.yaml"
@@ -35,7 +23,7 @@ openApiGenerate {
   )
   globalProperties = mapOf(
     "apis" to "",
-    "models" to "TrackObject,SimplifiedTrackObject,ArtistObject,SimplifiedArtistObject,ImageObject,PlayHistoryObject,CursorPagingObject,CursorObject,CursorPagingPlayHistoryObject,PagingObject,PagingPlaylistObject,SimplifiedPlaylistObject,PlaylistOwnerObject,PlaylistUserObject,EpisodeObject,EpisodeBase,ContextObject,DeviceObject,DisallowsObject,PrivateUserObject,ExternalUrlObject,FollowersObject,ResumePointObject,ShowObject,ShowBase,SimplifiedShowObject,LinkedTrackObject,TrackRestrictionObject,AlbumRestrictionObject,EpisodeRestrictionObject,ExternalIdObject,CopyrightObject,PlaylistTracksRefObject,ExplicitContentSettingsObject",
+    "models" to "TrackObject,SimplifiedTrackObject,ArtistObject,SimplifiedArtistObject,ImageObject,PlayHistoryObject,CursorPagingObject,CursorObject,CursorPagingPlayHistoryObject,PagingObject,PagingPlaylistObject,SimplifiedPlaylistObject,PlaylistOwnerObject,PlaylistUserObject,EpisodeObject,EpisodeBase,ContextObject,DeviceObject,DisallowsObject,PrivateUserObject,ExternalUrlObject,FollowersObject,ResumePointObject,ShowObject,ShowBase,SimplifiedShowObject,LinkedTrackObject,TrackRestrictionObject,AlbumRestrictionObject,EpisodeRestrictionObject,ExternalIdObject,CopyrightObject,PlaylistTracksRefObject,ExplicitContentSettingsObject,AlbumBase,AlbumObject,SimplifiedAlbumObject,PagingSimplifiedTrackObject,ArtistDiscographyAlbumObject,PagingArtistDiscographyAlbumObject,CurrentlyPlayingContextObject,PlaylistTrackObject,PagingPlaylistTrackObject",
     "supportingFiles" to "",
   )
 }
@@ -44,7 +32,6 @@ sourceSets {
   main {
     kotlin {
       srcDir(openApiGeneratedDir.resolve("src/main/kotlin"))
-      exclude(handWrittenModels.map { "**/model/$it.kt" })
       exclude("**/infrastructure/**")
       exclude("**/apis/**")
     }
