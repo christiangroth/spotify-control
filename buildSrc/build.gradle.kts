@@ -13,4 +13,5 @@ dependencies {
   implementation(libs.kotlinGradleSerializationPlugin)
   implementation(libs.detekt)
   implementation(libs.kover)
+  implementation("org.openapitools:openapi-generator-gradle-plugin:7.9.0")
 }

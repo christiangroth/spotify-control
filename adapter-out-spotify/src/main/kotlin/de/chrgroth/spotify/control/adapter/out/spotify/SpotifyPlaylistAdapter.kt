@@ -3,140 +3,152 @@ package de.chrgroth.spotify.control.adapter.out.spotify
 import arrow.core.Either
 import arrow.core.left
 import arrow.core.right
+import de.chrgroth.spotify.control.adapter.out.spotify.model.PagingPlaylistObject
+import de.chrgroth.spotify.control.adapter.out.spotify.model.PagingPlaylistTrackObject
+import de.chrgroth.spotify.control.adapter.out.spotify.model.PlaylistTrackObject
 import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyAddPlaylistTracksRequest
-import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyPlaylistTrackObject
-import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyPlaylistTracksResponse
 import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyRemovePlaylistTrackAtPositionRequest
 import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyRemovePlaylistTracksRequest
 import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyRemoveTrackAtPositionObject
 import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyRemoveTrackObject
-import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyUserPlaylistsResponse
+import de.chrgroth.spotify.control.adapter.out.spotify.model.TrackObject
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.PlaylistFixError
 import de.chrgroth.spotify.control.domain.error.PlaylistSyncError
-import de.chrgroth.spotify.control.domain.model.user.AccessToken
+import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
+import de.chrgroth.spotify.control.domain.model.catalog.TrackId
 import de.chrgroth.spotify.control.domain.model.playlist.Playlist
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistTrack
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistTracksPage
 import de.chrgroth.spotify.control.domain.model.playlist.SpotifyPlaylistItem
-import de.chrgroth.spotify.control.domain.model.catalog.TrackId
+import de.chrgroth.spotify.control.domain.model.user.AccessToken
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
 import de.chrgroth.spotify.control.domain.port.out.playlist.SpotifyPlaylistPort
 import jakarta.enterprise.context.ApplicationScoped
+import kotlinx.serialization.json.JsonElement
 import mu.KLogging
-import org.eclipse.microprofile.config.inject.ConfigProperty
-import java.net.URI
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
+import org.eclipse.microprofile.rest.client.inject.RestClient
+import kotlin.time.Duration.Companion.seconds
 
 @ApplicationScoped
 @Suppress("Unused", "TooGenericExceptionCaught")
 class SpotifyPlaylistAdapter(
-  @param:ConfigProperty(name = "spotify.api.base-url")
-  private val apiBaseUrl: String,
   private val httpMetrics: SpotifyHttpMetrics,
   private val throttler: SpotifyRequestThrottler,
+  @param:RestClient private val apiClient: SpotifyApiRestClient,
 ) : SpotifyPlaylistPort {
-
-  private val httpClient = HttpClient.newHttpClient()
 
   override fun getPlaylists(userId: UserId, accessToken: AccessToken): Either<DomainError, List<SpotifyPlaylistItem>> {
     return try {
+      SpotifyApiAuthContext.set(accessToken)
       val items = mutableListOf<SpotifyPlaylistItem>()
-      var nextUrl: String? = "$apiBaseUrl/v1/me/playlists?limit=50"
-      while (nextUrl != null) {
+      var offset: Int? = null
+      var hasNext = true
+      while (hasNext) {
         throttler.throttle(DomainOutboxPartition.ToSpotify.key)
-        val request = HttpRequest.newBuilder()
-          .uri(URI.create(nextUrl))
-          .header("Authorization", "Bearer ${accessToken.value}")
-          .GET()
-          .build()
-        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
-        val errorResult = response.checkRateLimitOrError(logger, PlaylistSyncError.PLAYLIST_FETCH_FAILED)
-        if (errorResult != null) return errorResult
-        val playlistsResponse = spotifyJson.decodeFromString<SpotifyUserPlaylistsResponse>(response.body())
+        val playlistsResponse = apiClient.getUserPlaylists(PLAYLISTS_PAGE_SIZE, offset)
         items += playlistsResponse.items.map { playlist ->
           SpotifyPlaylistItem(
-            id = playlist.id,
-            name = playlist.name,
-            snapshotId = playlist.snapshotId,
-            ownerId = playlist.owner.id,
+            id = playlist.id ?: "",
+            name = playlist.name ?: "",
+            snapshotId = playlist.snapshotId ?: "",
+            ownerId = playlist.owner?.id ?: "",
           )
         }
-        nextUrl = playlistsResponse.next
+        val nextUrl = playlistsResponse.next
+        if (nextUrl == null) {
+          hasNext = false
+        } else {
+          offset = nextUrl.queryParamInt("offset")
+          if (offset == null) hasNext = false
+        }
       }
       items.right()
+    } catch (e: SpotifyRateLimitException) {
+      SpotifyRateLimitError(e.retryAfterSeconds.seconds).left()
+    } catch (e: SpotifyApiException) {
+      logger.error { "Spotify playlist fetch failed: ${e.statusCode}" }
+      PlaylistSyncError.PLAYLIST_FETCH_FAILED.left()
     } catch (e: Exception) {
       logger.error(e) { "Unexpected error during playlist fetch for user ${userId.value}" }
       PlaylistSyncError.PLAYLIST_FETCH_FAILED.left()
+    } finally {
+      SpotifyApiAuthContext.clear()
     }
   }
 
   override fun getPlaylistTracks(userId: UserId, accessToken: AccessToken, playlistId: String): Either<DomainError, Playlist> {
     return try {
+      SpotifyApiAuthContext.set(accessToken)
       val tracks = mutableListOf<PlaylistTrack>()
-      var nextUrl: String? = "$apiBaseUrl/v1/playlists/$playlistId/items?limit=50"
-      while (nextUrl != null) {
+      var offset: Int? = null
+      var hasNext = true
+      while (hasNext) {
         throttler.throttle(DomainOutboxPartition.ToSpotify.key)
-        val request = HttpRequest.newBuilder()
-          .uri(URI.create(nextUrl))
-          .header("Authorization", "Bearer ${accessToken.value}")
-          .GET()
-          .build()
-        val response = httpMetrics.timed("/v1/playlists/{id}/items") {
-          httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        val tracksResponse = httpMetrics.timed("/v1/playlists/{id}/items") {
+          apiClient.getPlaylistItems(playlistId, PLAYLIST_TRACKS_PAGE_SIZE, offset)
         }
-        val errorResult = response.checkRateLimitOrError(logger, PlaylistSyncError.PLAYLIST_TRACKS_FETCH_FAILED)
-        if (errorResult != null) return errorResult
-        val tracksResponse = spotifyJson.decodeFromString<SpotifyPlaylistTracksResponse>(response.body())
         tracks += parsePlaylistTracks(tracksResponse.items)
-        nextUrl = tracksResponse.next
+        val nextUrl = tracksResponse.next
+        if (nextUrl == null) {
+          hasNext = false
+        } else {
+          offset = nextUrl.queryParamInt("offset")
+          if (offset == null) hasNext = false
+        }
       }
       Playlist(
         spotifyPlaylistId = playlistId,
         tracks = tracks,
       ).right()
+    } catch (e: SpotifyRateLimitException) {
+      SpotifyRateLimitError(e.retryAfterSeconds.seconds).left()
+    } catch (e: SpotifyApiException) {
+      logger.error { "Spotify playlist tracks fetch failed for $playlistId: ${e.statusCode}" }
+      PlaylistSyncError.PLAYLIST_TRACKS_FETCH_FAILED.left()
     } catch (e: Exception) {
       logger.error(e) { "Unexpected error during playlist tracks fetch for playlist $playlistId (user ${userId.value})" }
       PlaylistSyncError.PLAYLIST_TRACKS_FETCH_FAILED.left()
+    } finally {
+      SpotifyApiAuthContext.clear()
     }
   }
 
   override fun getPlaylistTracksPage(userId: UserId, accessToken: AccessToken, playlistId: String, pageUrl: String?): Either<DomainError, PlaylistTracksPage> {
     return try {
-      val url = pageUrl ?: "$apiBaseUrl/v1/playlists/$playlistId/items?limit=50"
+      SpotifyApiAuthContext.set(accessToken)
+      val offset = pageUrl?.queryParamInt("offset")
       throttler.throttle(DomainOutboxPartition.ToSpotify.key)
-      val request = HttpRequest.newBuilder()
-        .uri(URI.create(url))
-        .header("Authorization", "Bearer ${accessToken.value}")
-        .GET()
-        .build()
-      val response = httpMetrics.timed("/v1/playlists/{id}/items") {
-        httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+      val tracksResponse = httpMetrics.timed("/v1/playlists/{id}/items") {
+        apiClient.getPlaylistItems(playlistId, PLAYLIST_TRACKS_PAGE_SIZE, offset)
       }
-      val errorResult = response.checkRateLimitOrError(logger, PlaylistSyncError.PLAYLIST_TRACKS_FETCH_FAILED)
-      if (errorResult != null) return errorResult
-      val tracksResponse = spotifyJson.decodeFromString<SpotifyPlaylistTracksResponse>(response.body())
       PlaylistTracksPage(
         snapshotId = tracksResponse.snapshotId ?: "",
         tracks = parsePlaylistTracks(tracksResponse.items),
         nextUrl = tracksResponse.next,
       ).right()
+    } catch (e: SpotifyRateLimitException) {
+      SpotifyRateLimitError(e.retryAfterSeconds.seconds).left()
+    } catch (e: SpotifyApiException) {
+      logger.error { "Spotify playlist tracks page fetch failed for $playlistId: ${e.statusCode}" }
+      PlaylistSyncError.PLAYLIST_TRACKS_FETCH_FAILED.left()
     } catch (e: Exception) {
       logger.error(e) { "Unexpected error during playlist tracks page fetch for playlist $playlistId (user ${userId.value})" }
       PlaylistSyncError.PLAYLIST_TRACKS_FETCH_FAILED.left()
+    } finally {
+      SpotifyApiAuthContext.clear()
     }
   }
 
-  private fun parsePlaylistTracks(items: List<SpotifyPlaylistTrackObject?>): List<PlaylistTrack> =
+  private fun parsePlaylistTracks(items: List<PlaylistTrackObject?>): List<PlaylistTrack> =
     items.mapNotNull { item ->
       if (item == null) return@mapNotNull null
-      val track = item.track ?: return@mapNotNull null
-      if (track.type != "track") {
+      val itemElement = item.item ?: return@mapNotNull null
+      val track = decodeTrack(itemElement) ?: return@mapNotNull null
+      if (track.type != TrackObject.Type.TRACK) {
         logger.info { "Ignoring non-track playlist item of type '${track.type}'" }
         return@mapNotNull null
       }
@@ -148,7 +160,7 @@ class SpotifyPlaylistAdapter(
       if (albumId == null) {
         logger.warn { "Track ${track.id} has no albumId in playlist, saving track without album" }
       }
-      val artistIds = track.artists.mapNotNull { artist ->
+      val artistIds = (track.artists ?: emptyList()).mapNotNull { artist ->
         if (artist.id == null) {
           logger.warn { "Artist '${artist.name}' has no id in track ${track.id}, skipping artist" }
           null
@@ -170,24 +182,24 @@ class SpotifyPlaylistAdapter(
     trackIds: List<String>,
   ): Either<DomainError, Unit> {
     return try {
+      SpotifyApiAuthContext.set(accessToken)
       val allItems = trackIds.map { trackId -> SpotifyRemoveTrackObject(uri = "spotify:track:$trackId") }
       allItems.chunked(REMOVE_TRACKS_BATCH_SIZE).forEach { batch ->
         throttler.throttle(DomainOutboxPartition.ToSpotify.key)
         val requestBody = spotifyJson.encodeToString(SpotifyRemovePlaylistTracksRequest(items = batch))
-        val request = HttpRequest.newBuilder()
-          .uri(URI.create("$apiBaseUrl/v1/playlists/$playlistId/items"))
-          .header("Authorization", "Bearer ${accessToken.value}")
-          .header("Content-Type", "application/json")
-          .method("DELETE", HttpRequest.BodyPublishers.ofString(requestBody))
-          .build()
-        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
-        val errorResult = response.checkRateLimitOrError(logger, PlaylistFixError.FIX_FAILED)
-        if (errorResult != null) return errorResult
+        apiClient.removePlaylistItems(playlistId, requestBody)
       }
       Unit.right()
+    } catch (e: SpotifyRateLimitException) {
+      SpotifyRateLimitError(e.retryAfterSeconds.seconds).left()
+    } catch (e: SpotifyApiException) {
+      logger.error { "Spotify track removal failed for playlist $playlistId: ${e.statusCode}" }
+      PlaylistFixError.FIX_FAILED.left()
     } catch (e: Exception) {
       logger.error(e) { "Unexpected error during track removal from playlist $playlistId (user ${userId.value})" }
       PlaylistFixError.FIX_FAILED.left()
+    } finally {
+      SpotifyApiAuthContext.clear()
     }
   }
 
@@ -198,24 +210,24 @@ class SpotifyPlaylistAdapter(
     trackIds: List<String>,
   ): Either<DomainError, Unit> {
     return try {
+      SpotifyApiAuthContext.set(accessToken)
       val uris = trackIds.map { "spotify:track:$it" }
       uris.chunked(ADD_TRACKS_BATCH_SIZE).forEach { batch ->
         throttler.throttle(DomainOutboxPartition.ToSpotify.key)
         val requestBody = spotifyJson.encodeToString(SpotifyAddPlaylistTracksRequest(uris = batch))
-        val request = HttpRequest.newBuilder()
-          .uri(URI.create("$apiBaseUrl/v1/playlists/$playlistId/items"))
-          .header("Authorization", "Bearer ${accessToken.value}")
-          .header("Content-Type", "application/json")
-          .POST(HttpRequest.BodyPublishers.ofString(requestBody))
-          .build()
-        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
-        val errorResult = response.checkRateLimitOrError(logger, PlaylistFixError.FIX_FAILED)
-        if (errorResult != null) return errorResult
+        apiClient.addPlaylistItems(playlistId, requestBody)
       }
       Unit.right()
+    } catch (e: SpotifyRateLimitException) {
+      SpotifyRateLimitError(e.retryAfterSeconds.seconds).left()
+    } catch (e: SpotifyApiException) {
+      logger.error { "Spotify track addition failed for playlist $playlistId: ${e.statusCode}" }
+      PlaylistFixError.FIX_FAILED.left()
     } catch (e: Exception) {
       logger.error(e) { "Unexpected error during track addition to playlist $playlistId (user ${userId.value})" }
       PlaylistFixError.FIX_FAILED.left()
+    } finally {
+      SpotifyApiAuthContext.clear()
     }
   }
 
@@ -228,42 +240,39 @@ class SpotifyPlaylistAdapter(
     position: Int,
   ): Either<DomainError, Unit> {
     return try {
+      SpotifyApiAuthContext.set(accessToken)
       throttler.throttle(DomainOutboxPartition.ToSpotify.key)
       val removeBody = spotifyJson.encodeToString(
         SpotifyRemovePlaylistTrackAtPositionRequest(
           items = listOf(SpotifyRemoveTrackAtPositionObject(uri = "spotify:track:$oldTrackId", positions = listOf(position))),
         ),
       )
-      val removeRequest = HttpRequest.newBuilder()
-        .uri(URI.create("$apiBaseUrl/v1/playlists/$playlistId/tracks"))
-        .header("Authorization", "Bearer ${accessToken.value}")
-        .header("Content-Type", "application/json")
-        .method("DELETE", HttpRequest.BodyPublishers.ofString(removeBody))
-        .build()
-      val removeResponse = httpClient.send(removeRequest, HttpResponse.BodyHandlers.ofString())
-      val removeError = removeResponse.checkRateLimitOrError(logger, PlaylistFixError.FIX_FAILED)
-      if (removeError != null) return removeError
+      apiClient.removePlaylistItemsByPosition(playlistId, removeBody)
 
       throttler.throttle(DomainOutboxPartition.ToSpotify.key)
       val addBody = spotifyJson.encodeToString(SpotifyAddPlaylistTracksRequest(uris = listOf("spotify:track:$newTrackId"), position = position))
-      val addRequest = HttpRequest.newBuilder()
-        .uri(URI.create("$apiBaseUrl/v1/playlists/$playlistId/tracks"))
-        .header("Authorization", "Bearer ${accessToken.value}")
-        .header("Content-Type", "application/json")
-        .POST(HttpRequest.BodyPublishers.ofString(addBody))
-        .build()
-      val addResponse = httpClient.send(addRequest, HttpResponse.BodyHandlers.ofString())
-      val addError = addResponse.checkRateLimitOrError(logger, PlaylistFixError.FIX_FAILED)
-      if (addError != null) return addError
+      apiClient.addPlaylistItemsToTracks(playlistId, addBody)
 
       Unit.right()
+    } catch (e: SpotifyRateLimitException) {
+      SpotifyRateLimitError(e.retryAfterSeconds.seconds).left()
+    } catch (e: SpotifyApiException) {
+      logger.error { "Spotify track replacement failed for playlist $playlistId: ${e.statusCode}" }
+      PlaylistFixError.FIX_FAILED.left()
     } catch (e: Exception) {
       logger.error(e) { "Unexpected error during track replacement in playlist $playlistId (user ${userId.value})" }
       PlaylistFixError.FIX_FAILED.left()
+    } finally {
+      SpotifyApiAuthContext.clear()
     }
   }
 
+  private fun decodeTrack(element: JsonElement): TrackObject? =
+    runCatching { spotifyJson.decodeFromJsonElement(TrackObject.serializer(), element) }.getOrNull()
+
   companion object : KLogging() {
+    private const val PLAYLISTS_PAGE_SIZE = 50
+    private const val PLAYLIST_TRACKS_PAGE_SIZE = 50
     private const val REMOVE_TRACKS_BATCH_SIZE = 100
     private const val ADD_TRACKS_BATCH_SIZE = 100
   }

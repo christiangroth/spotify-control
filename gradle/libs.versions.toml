@@ -13,6 +13,7 @@ kotlinxSerialization = "1.7.3"
 kover = "0.9.7"
 marked = "17.0.3"
 mockk = "1.14.9"
+openApiGenerator = "7.9.0"
 quarkus = "3.32.1"
 quarkusOutbox = "0.8.0"
 quarkusStarters = "0.6.1"
@@ -49,6 +50,7 @@ quarkusStartersAdapterOutPersistenceMongodb = { module = "de.chrgroth.quarkus.st
 allopen = { id = "org.jetbrains.kotlin.plugin.allopen", version.ref = "kotlin" }
 buildTimeTracker = { id = "com.asarkar.gradle.build-time-tracker", version.ref = "buildTimeTracker" }
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+openApiGenerator = { id = "org.openapi.generator", version.ref = "openApiGenerator" }
 quarkus = { id = "io.quarkus", version.ref = "quarkus" }
 release = { id = "net.researchgate.release", version.ref = "release" }
 versionCatalogUpdate = { id = "nl.littlerobots.version-catalog-update", version.ref = "versionCatalogUpdate" }

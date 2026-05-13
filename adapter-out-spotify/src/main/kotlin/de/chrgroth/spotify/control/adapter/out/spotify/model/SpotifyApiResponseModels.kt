@@ -1,0 +1,41 @@
+package de.chrgroth.spotify.control.adapter.out.spotify.model
+
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
+
+@Serializable
+data class CurrentlyPlayingContextObject(
+  val item: JsonElement? = null,
+  @SerialName("progress_ms") val progressMs: Long? = null,
+  @SerialName("is_playing") val isPlaying: Boolean = false,
+)
+
+@Serializable
+data class PlaylistTrackObject(
+  val item: JsonElement? = null,
+)
+
+@Serializable
+data class PagingPlaylistTrackObject(
+  val items: List<PlaylistTrackObject?> = emptyList(),
+  val next: String? = null,
+  @SerialName("snapshot_id") val snapshotId: String? = null,
+)
+
+/**
+ * Lenient replacement for the generated SimplifiedAlbumObject.
+ * All fields are optional so that partial API responses don't cause MissingFieldException.
+ */
+@Serializable
+data class SimplifiedAlbumObject(
+  val id: String? = null,
+  val name: String? = null,
+  val images: List<ImageObject> = emptyList(),
+  @SerialName("release_date") val releaseDate: String? = null,
+  @SerialName("release_date_precision") val releaseDatePrecision: String? = null,
+  @SerialName("album_type") val albumType: String? = null,
+  @SerialName("total_tracks") val totalTracks: Int? = null,
+  val artists: List<SimplifiedArtistObject> = emptyList(),
+  @SerialName("external_urls") val externalUrls: ExternalUrlObject? = null,
+)
