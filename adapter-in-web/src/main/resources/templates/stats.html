@@ -5,17 +5,27 @@
 
         <h1 class="mb-3 fs-4 fw-semibold">Stats</h1>
 
-        <div class="d-flex gap-2 mb-3" style="overflow-x:auto;scrollbar-width:thin;" data-testid="stats-tabs">
+        <ul class="nav nav-tabs mb-3" id="statsTabNav" role="tablist" data-testid="stats-tabs" style="border-bottom:1px solid #333;">
             {#for tab in tabs}
-            <a href="#agg-{tab.id}" class="text-decoration-none">
-                <span class="badge rounded-pill px-3 py-2" style="background:#1f1f1f;color:#fff;border:1px solid #333;">{tab.label}</span>
-            </a>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link {#if tab.first}active{/if}"
+                        id="tab-{tab.id}-btn"
+                        data-bs-toggle="tab"
+                        data-bs-target="#agg-{tab.id}"
+                        type="button"
+                        role="tab"
+                        aria-controls="agg-{tab.id}"
+                        aria-selected="{tab.first}"
+                        style="color:#aaa;background:transparent;border-color:transparent;">
+                    {tab.label}
+                </button>
+            </li>
             {/for}
-        </div>
+        </ul>
 
+        <div class="tab-content" id="statsTabContent">
         {#for tab in tabs}
-        <section id="agg-{tab.id}" class="mb-4">
-            <h2 class="mb-2 fs-6 text-uppercase" style="letter-spacing:.04em;color:#888;">{tab.label}</h2>
+        <div class="tab-pane fade {#if tab.first}show active{/if}" id="agg-{tab.id}" role="tabpanel" aria-labelledby="tab-{tab.id}-btn">
             <div class="row g-2">
                 {#for aggregation in tab.aggregations}
                 <div class="col-12">
@@ -23,64 +33,61 @@
                         <div class="card-body py-3 px-3">
                             <p class="mb-2 fw-semibold" style="font-size:.85rem;color:#fff;">{aggregation.periodLabel}</p>
                             {#if aggregation.data}
-                            <div class="d-grid gap-1 mb-3" style="grid-template-columns:repeat(2,minmax(0,1fr));">
-                                <div>
-                                    <div style="color:#666;font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;">Playback</div>
-                                    <div style="font-size:.8rem;color:#fff;">{aggregation.data.totalPlaybackSeconds.formattedDuration}</div>
-                                </div>
-                                <div>
-                                    <div style="color:#666;font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;">Events</div>
-                                    <div style="font-size:.8rem;color:#fff;">{aggregation.data.eventCount.formatted}</div>
-                                </div>
-                                <div>
-                                    <div style="color:#666;font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;">Distinct Artists</div>
-                                    <div style="font-size:.8rem;color:#fff;">{aggregation.data.distinctArtistCount.formatted}</div>
-                                </div>
-                                <div>
-                                    <div style="color:#666;font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;">Distinct Tracks</div>
-                                    <div style="font-size:.8rem;color:#fff;">{aggregation.data.distinctTrackCount.formatted}</div>
-                                </div>
-                                <div>
-                                    <div style="color:#666;font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;">Distinct Albums</div>
-                                    <div style="font-size:.8rem;color:#fff;">{aggregation.data.distinctAlbumCount.formatted}</div>
-                                </div>
-                            </div>
+                            <p class="mb-3" style="color:#fff;font-size:.85rem;">
+                                <span style="color:var(--spotify-green);font-weight:600;">{aggregation.data.totalPlaybackSeconds.formattedListeningDurationFromSeconds}</span>
+                                <span style="color:#888;"> listened ({aggregation.data.eventCount.formatted} Events)</span>
+                            </p>
 
-                            <div class="row g-2">
+                            <div class="row g-2 mb-3">
                                 <div class="col-12 col-md-4">
-                                    <p class="mb-1" style="color:#888;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;">Top Artists</p>
-                                    {#if aggregation.topArtists.empty}
-                                    <p class="mb-0" style="color:#666;font-size:.8rem;">No data</p>
-                                    {#else}
-                                    <ol class="mb-0 ps-3" style="font-size:.8rem;">
-                                        {#for entry in aggregation.topArtists}
-                                        <li style="color:#fff;"><span class="text-truncate d-inline-block align-bottom" style="max-width:70%;">{entry.name}</span> <span style="color:#888;">{entry.totalSeconds.formattedDuration}</span></li>
-                                        {/for}
-                                    </ol>
-                                    {/if}
-                                </div>
-                                <div class="col-12 col-md-4">
-                                    <p class="mb-1" style="color:#888;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;">Top Albums</p>
-                                    {#if aggregation.topAlbums.empty}
-                                    <p class="mb-0" style="color:#666;font-size:.8rem;">No data</p>
-                                    {#else}
-                                    <ol class="mb-0 ps-3" style="font-size:.8rem;">
-                                        {#for entry in aggregation.topAlbums}
-                                        <li style="color:#fff;"><span class="text-truncate d-inline-block align-bottom" style="max-width:70%;">{entry.name}</span> <span style="color:#888;">{entry.totalSeconds.formattedDuration}</span></li>
-                                        {/for}
-                                    </ol>
-                                    {/if}
-                                </div>
-                                <div class="col-12 col-md-4">
-                                    <p class="mb-1" style="color:#888;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;">Top Tracks</p>
+                                    <p class="mb-1" style="color:#888;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;">Top Tracks ({aggregation.topTracks.size}/{aggregation.data.distinctTrackCount})</p>
                                     {#if aggregation.topTracks.empty}
                                     <p class="mb-0" style="color:#666;font-size:.8rem;">No data</p>
                                     {#else}
-                                    <ol class="mb-0 ps-3" style="font-size:.8rem;">
+                                    <ul class="list-unstyled mb-0">
                                         {#for entry in aggregation.topTracks}
-                                        <li style="color:#fff;"><span class="text-truncate d-inline-block align-bottom" style="max-width:70%;">{entry.name}</span> <span style="color:#888;">{entry.totalSeconds.formattedDuration}</span></li>
+                                        <li class="d-flex align-items-center mb-2">
+                                            <div style="overflow:hidden;flex:1;">
+                                                <div class="text-truncate" style="color:#fff;font-size:.82rem;">{entry.name}</div>
+                                                <div style="color:#888;font-size:.75rem;white-space:nowrap;">{entry.totalSeconds.formattedListeningDurationFromSeconds}</div>
+                                            </div>
+                                        </li>
                                         {/for}
-                                    </ol>
+                                    </ul>
+                                    {/if}
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <p class="mb-1" style="color:#888;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;">Top Albums ({aggregation.topAlbums.size}/{aggregation.data.distinctAlbumCount})</p>
+                                    {#if aggregation.topAlbums.empty}
+                                    <p class="mb-0" style="color:#666;font-size:.8rem;">No data</p>
+                                    {#else}
+                                    <ul class="list-unstyled mb-0">
+                                        {#for entry in aggregation.topAlbums}
+                                        <li class="d-flex align-items-center mb-2">
+                                            <div style="overflow:hidden;flex:1;">
+                                                <div class="text-truncate" style="color:#fff;font-size:.82rem;">{entry.name}</div>
+                                                <div style="color:#888;font-size:.75rem;white-space:nowrap;">{entry.totalSeconds.formattedListeningDurationFromSeconds}</div>
+                                            </div>
+                                        </li>
+                                        {/for}
+                                    </ul>
+                                    {/if}
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <p class="mb-1" style="color:#888;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;">Top Artists ({aggregation.topArtists.size}/{aggregation.data.distinctArtistCount})</p>
+                                    {#if aggregation.topArtists.empty}
+                                    <p class="mb-0" style="color:#666;font-size:.8rem;">No data</p>
+                                    {#else}
+                                    <ul class="list-unstyled mb-0">
+                                        {#for entry in aggregation.topArtists}
+                                        <li class="d-flex align-items-center mb-2">
+                                            <div style="overflow:hidden;flex:1;">
+                                                <div class="text-truncate" style="color:#fff;font-size:.82rem;">{entry.name}</div>
+                                                <div style="color:#888;font-size:.75rem;white-space:nowrap;">{entry.totalSeconds.formattedListeningDurationFromSeconds}</div>
+                                            </div>
+                                        </li>
+                                        {/for}
+                                    </ul>
                                     {/if}
                                 </div>
                             </div>
@@ -104,7 +111,7 @@
                             <p class="mb-2" style="color:#666;font-size:.82rem;">No aggregation data available yet for this period.</p>
                             <div class="row g-2">
                                 <div class="col-12 col-md-4">
-                                    <p class="mb-1" style="color:#888;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;">Top Artists</p>
+                                    <p class="mb-1" style="color:#888;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;">Top Tracks</p>
                                     <p class="mb-0" style="color:#666;font-size:.8rem;">No data</p>
                                 </div>
                                 <div class="col-12 col-md-4">
@@ -112,7 +119,7 @@
                                     <p class="mb-0" style="color:#666;font-size:.8rem;">No data</p>
                                 </div>
                                 <div class="col-12 col-md-4">
-                                    <p class="mb-1" style="color:#888;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;">Top Tracks</p>
+                                    <p class="mb-1" style="color:#888;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;">Top Artists</p>
                                     <p class="mb-0" style="color:#666;font-size:.8rem;">No data</p>
                                 </div>
                             </div>
@@ -126,8 +133,9 @@
                 </div>
                 {/for}
             </div>
-        </section>
+        </div>
         {/for}
+        </div>
 
     </div>
     {/content}
