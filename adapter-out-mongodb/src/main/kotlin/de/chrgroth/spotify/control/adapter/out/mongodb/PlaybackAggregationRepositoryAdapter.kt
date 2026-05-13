@@ -66,7 +66,9 @@ class PlaybackAggregationRepositoryAdapter(
     eventCount = this@toDocument.eventCount
     distinctArtistCount = this@toDocument.distinctArtistCount
     distinctTrackCount = this@toDocument.distinctTrackCount
+    distinctAlbumCount = this@toDocument.distinctAlbumCount
     artistEntries = this@toDocument.artistEntries.map { it.toEntryDocument() }
+    albumEntries = this@toDocument.albumEntries.map { it.toEntryDocument() }
     trackEntries = this@toDocument.trackEntries.map { it.toEntryDocument() }
     activityEntries = this@toDocument.activityEntries.map { it.toActivityDocument() }
   }
@@ -91,7 +93,9 @@ class PlaybackAggregationRepositoryAdapter(
     eventCount = eventCount,
     distinctArtistCount = distinctArtistCount,
     distinctTrackCount = distinctTrackCount,
+    distinctAlbumCount = distinctAlbumCount,
     artistEntries = artistEntries.map { it.toDomain() },
+    albumEntries = albumEntries.map { it.toDomain() },
     trackEntries = trackEntries.map { it.toDomain() },
     activityEntries = activityEntries.map { it.toDomain() },
   )

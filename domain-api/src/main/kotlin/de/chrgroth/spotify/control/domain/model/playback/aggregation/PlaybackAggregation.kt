@@ -11,7 +11,9 @@ data class PlaybackAggregation(
   val eventCount: Long,
   val distinctArtistCount: Int,
   val distinctTrackCount: Int,
+  val distinctAlbumCount: Int,
   val artistEntries: List<AggregationRankEntry>,
+  val albumEntries: List<AggregationRankEntry>,
   val trackEntries: List<AggregationRankEntry>,
   val activityEntries: List<ActivityEntry>,
 )

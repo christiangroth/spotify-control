@@ -69,7 +69,9 @@ class DashboardServiceTests {
     eventCount = 0L,
     distinctArtistCount = 0,
     distinctTrackCount = 0,
+    distinctAlbumCount = 0,
     artistEntries = emptyList(),
+    albumEntries = emptyList(),
     trackEntries = emptyList(),
     activityEntries = emptyList(),
   )

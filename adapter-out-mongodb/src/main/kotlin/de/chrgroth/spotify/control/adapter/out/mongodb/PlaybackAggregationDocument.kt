@@ -18,7 +18,9 @@ class PlaybackAggregationDocument {
   var eventCount: Long = 0L
   var distinctArtistCount: Int = 0
   var distinctTrackCount: Int = 0
+  var distinctAlbumCount: Int = 0
   var artistEntries: List<PlaybackAggregationEntryDocument> = emptyList()
+  var albumEntries: List<PlaybackAggregationEntryDocument> = emptyList()
   var trackEntries: List<PlaybackAggregationEntryDocument> = emptyList()
   var activityEntries: List<PlaybackAggregationActivityEntryDocument> = emptyList()
 }
