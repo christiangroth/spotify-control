@@ -1,11 +1,14 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
+import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
+import de.chrgroth.spotify.control.domain.model.playback.aggregation.ActivityTimeWindow
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationPeriodType
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.PlaybackAggregation
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppAlbumRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playback.PlaybackAggregationRepositoryPort
 import io.quarkus.qute.Location
@@ -34,6 +37,7 @@ class StatsResource(
   private val aggregationRepository: PlaybackAggregationRepositoryPort,
   private val appTrackRepository: AppTrackRepositoryPort,
   private val appAlbumRepository: AppAlbumRepositoryPort,
+  private val appArtistRepository: AppArtistRepositoryPort,
 ) {
 
   @GET
@@ -60,13 +64,15 @@ class StatsResource(
       )
     }
     val tracksById = loadTracksById(tabs)
-    val albumsById = loadAlbumsById(tracksById)
+    val albumsById = loadAlbumsById(tabs, tracksById)
+    val artistsById = loadArtistsById(tabs)
     val renderedTabs = tabs.map { tab ->
       tab.copy(aggregations = tab.aggregations.map { aggregation ->
         aggregation.copy(
-          topArtists = aggregation.data?.artistEntries?.take(TOP_ENTRIES_LIMIT)?.map { RankEntryView(name = it.name, totalSeconds = it.totalSeconds) } ?: emptyList(),
-          topAlbums = topAlbums(aggregation.data, tracksById, albumsById),
-          topTracks = aggregation.data?.trackEntries?.take(TOP_ENTRIES_LIMIT)?.map { RankEntryView(name = it.name, totalSeconds = it.totalSeconds) } ?: emptyList(),
+          topArtists = topArtists(aggregation.data, artistsById),
+          topAlbums = topAlbums(aggregation.data, albumsById),
+          topTracks = topTracks(aggregation.data, tracksById, albumsById),
+          activityBars = activityBars(aggregation.data),
         )
       })
     }
@@ -81,11 +87,59 @@ class StatsResource(
     }.toSet(),
   ).associateBy { it.id }
 
-  private fun loadAlbumsById(tracksById: Map<TrackId, de.chrgroth.spotify.control.domain.model.catalog.AppTrack>) = appAlbumRepository.findByAlbumIds(
-    tracksById.values.mapNotNull { it.albumId }.toSet(),
+  private fun loadAlbumsById(
+    tabs: List<AggregationTab>,
+    tracksById: Map<TrackId, de.chrgroth.spotify.control.domain.model.catalog.AppTrack>,
+  ) = appAlbumRepository.findByAlbumIds(
+    (
+      tracksById.values.mapNotNull { it.albumId } +
+        tabs.flatMap { tab ->
+          tab.aggregations.flatMap { aggregation ->
+            aggregation.data?.albumEntries?.map { AlbumId(it.id) } ?: emptyList()
+          }
+        }
+      ).toSet(),
   ).associateBy { it.id }
 
+  private fun loadArtistsById(tabs: List<AggregationTab>) = appArtistRepository.findByArtistIds(
+    tabs.flatMap { tab ->
+      tab.aggregations.flatMap { aggregation ->
+        aggregation.data?.artistEntries?.map { ArtistId(it.id) } ?: emptyList()
+      }
+    }.toSet(),
+  ).associateBy { it.id }
+
+  private fun topArtists(
+    aggregation: PlaybackAggregation?,
+    artistsById: Map<ArtistId, de.chrgroth.spotify.control.domain.model.catalog.AppArtist>,
+  ): List<RankEntryView> {
+    if (aggregation == null) {
+      return emptyList()
+    }
+    return aggregation.artistEntries
+      .take(TOP_ENTRIES_LIMIT)
+      .map { entry ->
+        val artist = artistsById[ArtistId(entry.id)]
+        RankEntryView(name = artist?.artistName ?: entry.name, totalSeconds = entry.totalSeconds, imageLink = artist?.imageLink)
+      }
+  }
+
   private fun topAlbums(
+    aggregation: PlaybackAggregation?,
+    albumsById: Map<AlbumId, de.chrgroth.spotify.control.domain.model.catalog.AppAlbum>,
+  ): List<RankEntryView> {
+    if (aggregation == null) {
+      return emptyList()
+    }
+    return aggregation.albumEntries
+      .take(TOP_ENTRIES_LIMIT)
+      .map { entry ->
+        val album = albumsById[AlbumId(entry.id)]
+        RankEntryView(name = album?.title ?: entry.name, totalSeconds = entry.totalSeconds, imageLink = album?.imageLink)
+      }
+  }
+
+  private fun topTracks(
     aggregation: PlaybackAggregation?,
     tracksById: Map<TrackId, de.chrgroth.spotify.control.domain.model.catalog.AppTrack>,
     albumsById: Map<AlbumId, de.chrgroth.spotify.control.domain.model.catalog.AppAlbum>,
@@ -93,19 +147,44 @@ class StatsResource(
     if (aggregation == null) {
       return emptyList()
     }
-    val byAlbum = linkedMapOf<String, Long>()
-    val albumNames = mutableMapOf<String, String>()
-    aggregation.trackEntries.forEach { trackEntry ->
-      val track = tracksById[TrackId(trackEntry.id)]
-      val albumKey = track?.albumId?.value ?: "$FALLBACK_ALBUM_KEY_PREFIX${track?.albumName ?: trackEntry.id}"
-      val albumTitle = track?.albumId?.let { albumsById[it]?.title } ?: track?.albumName ?: trackEntry.name
-      albumNames.putIfAbsent(albumKey, albumTitle)
-      byAlbum[albumKey] = (byAlbum[albumKey] ?: 0L) + trackEntry.totalSeconds
-    }
-    return byAlbum.entries
-      .sortedByDescending { it.value }
+    return aggregation.trackEntries
       .take(TOP_ENTRIES_LIMIT)
-      .map { RankEntryView(name = albumNames[it.key] ?: it.key, totalSeconds = it.value) }
+      .map { entry ->
+        val track = tracksById[TrackId(entry.id)]
+        RankEntryView(
+          name = track?.title ?: entry.name,
+          totalSeconds = entry.totalSeconds,
+          imageLink = track?.albumId?.let { albumsById[it]?.imageLink },
+        )
+      }
+  }
+
+  private fun activityBars(aggregation: PlaybackAggregation?): List<ActivityBarEntryView> {
+    if (aggregation == null) {
+      return emptyList()
+    }
+    val byKey = aggregation.activityEntries.associate { (it.dayOfWeek to it.timeWindow) to it.totalSeconds }
+    val orderedEntries = DayOfWeek.values().flatMap { day ->
+      ActivityTimeWindow.entries.map { window ->
+        val totalSeconds = byKey[day to window] ?: 0L
+        ActivityBarEntryView(
+          label = "${day.shortLabel} ${window.label}",
+          tooltip = "${day.name} ${window.label} • ${TemplateFormattingExtensions.formattedDuration(totalSeconds)}",
+          totalSeconds = totalSeconds,
+        )
+      }
+    }
+    val maxSeconds = orderedEntries.maxOfOrNull { it.totalSeconds } ?: 0L
+    return orderedEntries.map { entry ->
+      val heightPercent = when {
+        maxSeconds <= 0L -> 0
+        else -> ((entry.totalSeconds * PERCENT_SCALE) / maxSeconds).toInt()
+      }
+      entry.copy(
+        minHeightPx = if (entry.totalSeconds > 0L) 2 else 0,
+        heightPercent = if (entry.totalSeconds > 0L) maxOf(heightPercent, 2) else 0,
+      )
+    }
   }
 
   private fun threePeriodStarts(type: AggregationPeriodType): List<LocalDate> {
@@ -161,9 +240,18 @@ class StatsResource(
     val topArtists: List<RankEntryView> = emptyList(),
     val topAlbums: List<RankEntryView> = emptyList(),
     val topTracks: List<RankEntryView> = emptyList(),
+    val activityBars: List<ActivityBarEntryView> = emptyList(),
   )
 
-  data class RankEntryView(val name: String, val totalSeconds: Long)
+  data class RankEntryView(val name: String, val totalSeconds: Long, val imageLink: String? = null)
+
+  data class ActivityBarEntryView(
+    val label: String,
+    val tooltip: String,
+    val totalSeconds: Long,
+    val minHeightPx: Int = 0,
+    val heightPercent: Int = 0,
+  )
 
   private fun toJavaLocalDate(date: LocalDate): java.time.LocalDate {
     val monthValue = java.time.Month.valueOf(date.month.name).value
@@ -177,6 +265,25 @@ class StatsResource(
   companion object {
     private const val TOP_ENTRIES_LIMIT = 5
     private const val MONTHS_PER_QUARTER = 3
-    private const val FALLBACK_ALBUM_KEY_PREFIX = "fallback:"
+    private const val PERCENT_SCALE = 100L
   }
 }
+
+private val DayOfWeek.shortLabel: String
+  get() = when (this) {
+    DayOfWeek.MONDAY -> "Mon"
+    DayOfWeek.TUESDAY -> "Tue"
+    DayOfWeek.WEDNESDAY -> "Wed"
+    DayOfWeek.THURSDAY -> "Thu"
+    DayOfWeek.FRIDAY -> "Fri"
+    DayOfWeek.SATURDAY -> "Sat"
+    DayOfWeek.SUNDAY -> "Sun"
+  }
+
+private val ActivityTimeWindow.label: String
+  get() = when (this) {
+    ActivityTimeWindow.H00_06 -> "0-6"
+    ActivityTimeWindow.H06_12 -> "6-12"
+    ActivityTimeWindow.H12_18 -> "12-18"
+    ActivityTimeWindow.H18_24 -> "18-0"
+  }
