@@ -9,9 +9,3 @@ internal data class SpotifyTokenResponse(
   @SerialName("refresh_token") val refreshToken: String? = null,
   @SerialName("expires_in") val expiresIn: Int,
 )
-
-@Serializable
-internal data class SpotifyUserProfileResponse(
-  val id: String,
-  @SerialName("display_name") val displayName: String,
-)

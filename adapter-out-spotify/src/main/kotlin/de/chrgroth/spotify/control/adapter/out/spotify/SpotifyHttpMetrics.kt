@@ -10,7 +10,7 @@ import jakarta.annotation.PostConstruct
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.enterprise.inject.Any
 import jakarta.enterprise.inject.Instance
-import java.net.http.HttpResponse
+import jakarta.ws.rs.core.Response
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedDeque
@@ -32,11 +32,11 @@ class SpotifyHttpMetrics(
       .register(meterRegistry)
   }
 
-  fun <T> timed(urlTemplate: String, block: () -> HttpResponse<T>): HttpResponse<T> {
+  fun timed(urlTemplate: String, block: () -> Response): Response {
     val startMs = System.currentTimeMillis()
     val response = block()
     val durationMs = System.currentTimeMillis() - startMs
-    record(urlTemplate, response.statusCode(), durationMs)
+    record(urlTemplate, response.status, durationMs)
     return response
   }
 

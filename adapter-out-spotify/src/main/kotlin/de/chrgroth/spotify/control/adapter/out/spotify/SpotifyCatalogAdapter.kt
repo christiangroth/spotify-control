@@ -3,44 +3,37 @@ package de.chrgroth.spotify.control.adapter.out.spotify
 import arrow.core.Either
 import arrow.core.left
 import arrow.core.right
-import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyArtistAlbumsPage
-import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyAlbumResponse
-import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyAlbumTracksPage
-import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifyArtistResponse
-import de.chrgroth.spotify.control.adapter.out.spotify.model.SpotifySimplifiedTrackResponse
+import de.chrgroth.spotify.control.adapter.out.spotify.model.AlbumObject
+import de.chrgroth.spotify.control.adapter.out.spotify.model.ArtistObject
+import de.chrgroth.spotify.control.adapter.out.spotify.model.PagingArtistDiscographyAlbumObject
+import de.chrgroth.spotify.control.adapter.out.spotify.model.PagingSimplifiedTrackObject
+import de.chrgroth.spotify.control.adapter.out.spotify.model.SimplifiedTrackObject
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.SyncError
-import de.chrgroth.spotify.control.domain.model.user.AccessToken
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumSyncResult
 import de.chrgroth.spotify.control.domain.model.catalog.AppAlbum
-import de.chrgroth.spotify.control.domain.model.catalog.ArtistAlbumsPage
 import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
 import de.chrgroth.spotify.control.domain.model.catalog.AppTrack
+import de.chrgroth.spotify.control.domain.model.catalog.ArtistAlbumsPage
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
+import de.chrgroth.spotify.control.domain.model.user.AccessToken
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
 import de.chrgroth.spotify.control.domain.port.out.catalog.SpotifyCatalogPort
 import jakarta.enterprise.context.ApplicationScoped
-import kotlin.time.Clock
 import mu.KLogging
-import org.eclipse.microprofile.config.inject.ConfigProperty
-import java.net.URI
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
+import org.eclipse.microprofile.rest.client.inject.RestClient
+import kotlin.time.Clock
 
 @ApplicationScoped
 @Suppress("Unused", "TooGenericExceptionCaught")
 class SpotifyCatalogAdapter(
-  @param:ConfigProperty(name = "spotify.api.base-url")
-  private val apiBaseUrl: String,
   private val httpMetrics: SpotifyHttpMetrics,
   private val throttler: SpotifyRequestThrottler,
+  @param:RestClient private val apiClient: SpotifyApiRestClient,
 ) : SpotifyCatalogPort {
-
-  private val httpClient = HttpClient.newHttpClient()
 
   override fun getArtist(
     userId: UserId,
@@ -49,17 +42,12 @@ class SpotifyCatalogAdapter(
   ): Either<DomainError, AppArtist?> {
     return try {
       throttler.throttle(DomainOutboxPartition.ToSpotify.key)
-      val request = HttpRequest.newBuilder()
-        .uri(URI.create("$apiBaseUrl/v1/artists/$artistId"))
-        .header("Authorization", "Bearer ${accessToken.value}")
-        .GET()
-        .build()
       val response = httpMetrics.timed("/v1/artists/{id}") {
-        httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        apiClient.getArtist("Bearer ${accessToken.value}", artistId)
       }
-      val errorResult = response.checkRateLimitOrError(logger, SyncError.ARTIST_DETAILS_FETCH_FAILED)
+      val errorResult = response.checkRateLimitOrError(logger, "/v1/artists/{id}", SyncError.ARTIST_DETAILS_FETCH_FAILED)
       if (errorResult != null) return errorResult
-      parseArtist(spotifyJson.decodeFromString<SpotifyArtistResponse>(response.body())).right()
+      parseArtist(spotifyJson.decodeFromString<ArtistObject>(response.readEntity(String::class.java))).right()
     } catch (e: Exception) {
       logger.error(e) { "Unexpected error fetching artist details for artist $artistId (user ${userId.value})" }
       SyncError.ARTIST_DETAILS_FETCH_FAILED.left()
@@ -73,35 +61,25 @@ class SpotifyCatalogAdapter(
   ): Either<DomainError, AlbumSyncResult> {
     return try {
       throttler.throttle(DomainOutboxPartition.ToSpotify.key)
-      val request = HttpRequest.newBuilder()
-        .uri(URI.create("$apiBaseUrl/v1/albums/$albumId"))
-        .header("Authorization", "Bearer ${accessToken.value}")
-        .GET()
-        .build()
       val response = httpMetrics.timed("/v1/albums/{id}") {
-        httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        apiClient.getAlbum("Bearer ${accessToken.value}", albumId)
       }
-      val errorResult = response.checkRateLimitOrError(logger, SyncError.TRACK_DETAILS_FETCH_FAILED)
+      val errorResult = response.checkRateLimitOrError(logger, "/v1/albums/{id}", SyncError.TRACK_DETAILS_FETCH_FAILED)
       if (errorResult != null) return errorResult
-      val albumResponse = spotifyJson.decodeFromString<SpotifyAlbumResponse>(response.body())
-      val appAlbum = parseAlbum(albumResponse)
-      val allTracks = albumResponse.tracks.items.filterNotNull().toMutableList()
-      var nextUrl = albumResponse.tracks.next
-      while (nextUrl != null) {
+      val albumResponse = spotifyJson.decodeFromString<AlbumObject>(response.readEntity(String::class.java))
+      val appAlbum = parseAlbum(albumId, albumResponse)
+      val allTracks = albumResponse.tracks?.items?.filterNotNull()?.toMutableList() ?: mutableListOf()
+      var nextOffset: Int? = albumResponse.tracks?.next?.queryParamInt("offset")
+      while (nextOffset != null) {
         throttler.throttle(DomainOutboxPartition.ToSpotify.key)
-        val nextRequest = HttpRequest.newBuilder()
-          .uri(URI.create(nextUrl))
-          .header("Authorization", "Bearer ${accessToken.value}")
-          .GET()
-          .build()
         val nextResponse = httpMetrics.timed("/v1/albums/{id}/tracks") {
-          httpClient.send(nextRequest, HttpResponse.BodyHandlers.ofString())
+          apiClient.getAlbumTracks("Bearer ${accessToken.value}", albumId, 50, nextOffset)
         }
-        val nextError = nextResponse.checkRateLimitOrError(logger, SyncError.TRACK_DETAILS_FETCH_FAILED)
+        val nextError = nextResponse.checkRateLimitOrError(logger, "/v1/albums/{id}/tracks", SyncError.TRACK_DETAILS_FETCH_FAILED)
         if (nextError != null) return nextError
-        val nextPage = spotifyJson.decodeFromString<SpotifyAlbumTracksPage>(nextResponse.body())
+        val nextPage = spotifyJson.decodeFromString<PagingSimplifiedTrackObject>(nextResponse.readEntity(String::class.java))
         allTracks.addAll(nextPage.items.filterNotNull())
-        nextUrl = nextPage.next
+        nextOffset = nextPage.next?.queryParamInt("offset")
       }
       val parsedTracks = allTracks.mapNotNull { parseAlbumTrack(it, appAlbum) }
       val droppedCount = allTracks.size - parsedTracks.size
@@ -128,40 +106,35 @@ class SpotifyCatalogAdapter(
     nextUrl: String?,
   ): Either<DomainError, ArtistAlbumsPage> {
     return try {
-      val url = nextUrl ?: "$apiBaseUrl/v1/artists/$artistId/albums?limit=10"
+      val offset = nextUrl?.queryParamInt("offset")
       throttler.throttle(DomainOutboxPartition.ToSpotify.key)
-      val request = HttpRequest.newBuilder()
-        .uri(URI.create(url))
-        .header("Authorization", "Bearer ${accessToken.value}")
-        .GET()
-        .build()
       val response = httpMetrics.timed("/v1/artists/{id}/albums") {
-        httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        apiClient.getArtistAlbums("Bearer ${accessToken.value}", artistId, 10, offset)
       }
-      val errorResult = response.checkRateLimitOrError(logger, SyncError.ARTIST_DETAILS_FETCH_FAILED)
+      val errorResult = response.checkRateLimitOrError(logger, "/v1/artists/{id}/albums", SyncError.ARTIST_DETAILS_FETCH_FAILED)
       if (errorResult != null) return errorResult
-      val page = spotifyJson.decodeFromString<SpotifyArtistAlbumsPage>(response.body())
-      ArtistAlbumsPage(albumIds = page.items.map { it.id }, nextUrl = page.next).right()
+      val page = spotifyJson.decodeFromString<PagingArtistDiscographyAlbumObject>(response.readEntity(String::class.java))
+      ArtistAlbumsPage(albumIds = page.items.mapNotNull { it.id }, nextUrl = page.next).right()
     } catch (e: Exception) {
       logger.error(e) { "Unexpected error fetching album ids for artist $artistId (user ${userId.value})" }
       SyncError.ARTIST_DETAILS_FETCH_FAILED.left()
     }
   }
 
-  private fun parseArtist(artist: SpotifyArtistResponse): AppArtist =
+  private fun parseArtist(artist: ArtistObject): AppArtist =
     AppArtist(
-      id = ArtistId(artist.id),
-      artistName = artist.name,
-      imageLink = artist.images.firstOrNull()?.url,
-      type = artist.type,
+      id = ArtistId(artist.id ?: ""),
+      artistName = artist.name ?: "",
+      imageLink = artist.images?.firstOrNull()?.url,
+      type = artist.type?.value,
       lastSync = Clock.System.now(),
     )
 
-  private fun parseAlbum(album: SpotifyAlbumResponse): AppAlbum =
+  private fun parseAlbum(albumId: String, album: AlbumObject): AppAlbum =
     AppAlbum(
-      id = AlbumId(album.id),
+      id = AlbumId(album.id ?: albumId),
       totalTracks = album.totalTracks,
-      title = album.name,
+      title = album.name ?: "",
       imageLink = album.images.firstOrNull()?.url,
       releaseDate = album.releaseDate,
       releaseDatePrecision = album.releaseDatePrecision,
@@ -169,26 +142,26 @@ class SpotifyCatalogAdapter(
       artistId = album.artists.firstOrNull()?.id?.let { ArtistId(it) },
       artistName = album.artists.firstOrNull()?.name,
       additionalArtistIds = album.artists.additionalItems { id?.let { ArtistId(it) } }?.filterNotNull(),
-      additionalArtistNames = album.artists.additionalItems { name },
+      additionalArtistNames = album.artists.additionalItems { name }?.filterNotNull(),
       lastSync = Clock.System.now(),
     )
 
-  private fun parseAlbumTrack(track: SpotifySimplifiedTrackResponse, album: AppAlbum): AppTrack? {
+  private fun parseAlbumTrack(track: SimplifiedTrackObject, album: AppAlbum): AppTrack? {
     val trackId = track.id ?: return null
-    val (primaryArtistId, primaryArtistName) = track.artists.firstOrNull()
+    val (primaryArtistId, primaryArtistName) = (track.artists ?: emptyList()).firstOrNull()
       ?.let { artist -> artist.id?.let { id -> id to artist.name } }
       ?: return null
     return AppTrack(
       id = TrackId(trackId),
-      title = track.name,
+      title = track.name ?: "",
       albumId = album.id,
       albumName = album.title,
       artistId = ArtistId(primaryArtistId),
-      artistName = primaryArtistName,
-      additionalArtistIds = track.artists.additionalItems { id?.let { ArtistId(it) } }?.filterNotNull() ?: emptyList(),
-      additionalArtistNames = track.artists.additionalItems { name },
+      artistName = primaryArtistName ?: "",
+      additionalArtistIds = (track.artists ?: emptyList()).additionalItems { id?.let { ArtistId(it) } }?.filterNotNull() ?: emptyList(),
+      additionalArtistNames = (track.artists ?: emptyList()).additionalItems { name }?.filterNotNull(),
       discNumber = track.discNumber,
-      durationMs = track.durationMs,
+      durationMs = track.durationMs?.toLong(),
       trackNumber = track.trackNumber,
       type = track.type,
       lastSync = album.lastSync,
@@ -200,4 +173,3 @@ class SpotifyCatalogAdapter(
 
   companion object : KLogging()
 }
-
