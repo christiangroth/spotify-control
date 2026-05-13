@@ -7,10 +7,10 @@
         <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
             <h1 class="fs-4 fw-semibold mb-0">Playback Events</h1>
             <div class="d-flex align-items-center gap-2">
-                <a href="/playback-event-viewer?date={prevDate}"
+                <a href="/playback/events?date={prevDate}"
                    class="btn btn-sm btn-outline-secondary">← Prev</a>
                 <span class="fw-semibold" style="color:#e0e0e0;min-width:110px;text-align:center;">{result.date}</span>
-                <a href="/playback-event-viewer?date={nextDate}"
+                <a href="/playback/events?date={nextDate}"
                    class="btn btn-sm btn-outline-secondary {#if result.isToday}disabled{/if}"
                    {#if result.isToday}aria-disabled="true" tabindex="-1"{/if}>Next →</a>
             </div>

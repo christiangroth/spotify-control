@@ -107,6 +107,17 @@ class SettingsPageTests {
   }
 
   @Test
+  fun `playback events page is available and displays heading`() {
+    given()
+      .`when`()
+      .get("/playback/events")
+      .then()
+      .statusCode(200)
+      .contentType(containsString("text/html"))
+      .body(containsString("Playback Events"))
+  }
+
+  @Test
   fun `stats page is available and displays stats heading`() {
     given()
       .`when`()

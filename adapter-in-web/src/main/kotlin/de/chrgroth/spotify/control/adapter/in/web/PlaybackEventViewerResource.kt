@@ -22,7 +22,7 @@ import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
 
-@Path("/playback-event-viewer")
+@Path("/playback/events")
 @ApplicationScoped
 @Suppress("Unused")
 class PlaybackEventViewerResource {
