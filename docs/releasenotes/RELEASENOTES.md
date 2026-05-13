@@ -1,3 +1,12 @@
+# 0.94.1 (2026.05.13)
+
+## Bugfixes / Chore
+* Catalog sync stops fetching additional album pages for an artist when all albums on the current page are already known, avoiding unnecessary Spotify API calls during re-syncs.
+
+
+
+---
+
 # 0.94.0 (2026.05.12)
 
 ## New Features
