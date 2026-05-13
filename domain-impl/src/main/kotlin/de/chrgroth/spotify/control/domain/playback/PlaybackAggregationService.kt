@@ -227,30 +227,8 @@ class PlaybackAggregationService(
       return
     }
 
-    val durationPerTrackId = filteredItems.groupBy { it.trackId }.mapValues { (_, entries) -> entries.sumOf { it.secondsPlayed } }
-
-    val durationPerArtistId = mutableMapOf<String, Long>()
-    filteredItems.forEach { item ->
-      val artistId = tracks[TrackId(item.trackId)]?.artistId?.value ?: UNKNOWN_ARTIST_ID
-      durationPerArtistId[artistId] = (durationPerArtistId[artistId] ?: 0L) + item.secondsPlayed
-    }
-
-    val trackEntries = durationPerTrackId.map { (trackId, seconds) ->
-      val name = tracks[TrackId(trackId)]?.title ?: trackId
-      AggregationRankEntry(id = trackId, name = name, totalSeconds = seconds)
-    }.sortedByDescending { it.totalSeconds }
-
-    val artistEntries = durationPerArtistId.map { (artistId, seconds) ->
-      val name = artists[ArtistId(artistId)]?.artistName ?: artistId
-      AggregationRankEntry(id = artistId, name = name, totalSeconds = seconds)
-    }.sortedByDescending { it.totalSeconds }
-
-    val activityEntries = filteredItems.groupBy { item ->
-      val zdt = item.playedAt.toJavaInstant().atZone(ZoneOffset.UTC)
-      zdt.dayOfWeek to ActivityTimeWindow.fromHour(zdt.hour)
-    }.map { (key, entries) ->
-      ActivityEntry(dayOfWeek = key.first, timeWindow = key.second, totalSeconds = entries.sumOf { it.secondsPlayed })
-    }
+    val rankings = buildRankings(filteredItems, tracks, artists)
+    val activityEntries = buildActivityEntries(filteredItems)
 
     val aggregation = PlaybackAggregation(
       userId = userId,
@@ -258,10 +236,12 @@ class PlaybackAggregationService(
       periodStart = date,
       totalPlaybackSeconds = filteredItems.sumOf { it.secondsPlayed },
       eventCount = filteredItems.size.toLong(),
-      distinctArtistCount = artistEntries.size,
-      distinctTrackCount = trackEntries.size,
-      artistEntries = artistEntries,
-      trackEntries = trackEntries,
+      distinctArtistCount = rankings.artistEntries.size,
+      distinctTrackCount = rankings.trackEntries.size,
+      distinctAlbumCount = rankings.albumEntries.size,
+      artistEntries = rankings.artistEntries,
+      albumEntries = rankings.albumEntries,
+      trackEntries = rankings.trackEntries,
       activityEntries = activityEntries,
     )
     aggregationRepository.save(aggregation)
@@ -288,6 +268,11 @@ class PlaybackAggregationService(
       .map { (id, entries) -> AggregationRankEntry(id = id, name = entries.first().name, totalSeconds = entries.sumOf { it.totalSeconds }) }
       .sortedByDescending { it.totalSeconds }
 
+    val mergedAlbumEntries = dailyAggregations.flatMap { it.albumEntries }
+      .groupBy { it.id }
+      .map { (id, entries) -> AggregationRankEntry(id = id, name = entries.first().name, totalSeconds = entries.sumOf { it.totalSeconds }) }
+      .sortedByDescending { it.totalSeconds }
+
     val mergedActivityEntries = dailyAggregations.flatMap { it.activityEntries }
       .groupBy { it.dayOfWeek to it.timeWindow }
       .map { (key, entries) -> ActivityEntry(dayOfWeek = key.first, timeWindow = key.second, totalSeconds = entries.sumOf { it.totalSeconds }) }
@@ -300,13 +285,53 @@ class PlaybackAggregationService(
       eventCount = dailyAggregations.sumOf { it.eventCount },
       distinctArtistCount = mergedArtistEntries.size,
       distinctTrackCount = mergedTrackEntries.size,
+      distinctAlbumCount = mergedAlbumEntries.size,
       artistEntries = mergedArtistEntries,
+      albumEntries = mergedAlbumEntries,
       trackEntries = mergedTrackEntries,
       activityEntries = mergedActivityEntries,
     )
     aggregationRepository.save(aggregation)
     logger.info { "Saved $type aggregation for $from, user: ${userId.value}" }
   }
+
+  private fun buildRankings(
+    filteredItems: List<de.chrgroth.spotify.control.domain.model.playback.AppPlaybackItem>,
+    tracks: Map<TrackId, de.chrgroth.spotify.control.domain.model.catalog.AppTrack>,
+    artists: Map<ArtistId, de.chrgroth.spotify.control.domain.model.catalog.AppArtist>,
+  ): Rankings {
+    val durationPerTrackId = filteredItems.groupBy { it.trackId }.mapValues { (_, entries) -> entries.sumOf { it.secondsPlayed } }
+    val durationPerArtistId = mutableMapOf<String, Long>()
+    val durationPerAlbumId = mutableMapOf<String, Long>()
+    val albumNamesById = mutableMapOf<String, String>()
+    filteredItems.forEach { item ->
+      val track = tracks[TrackId(item.trackId)]
+      val artistId = track?.artistId?.value ?: UNKNOWN_ARTIST_ID
+      val albumId = track.albumAggregationId(item.trackId)
+      val albumName = track?.albumName ?: track?.title ?: albumId
+      durationPerArtistId[artistId] = (durationPerArtistId[artistId] ?: 0L) + item.secondsPlayed
+      durationPerAlbumId[albumId] = (durationPerAlbumId[albumId] ?: 0L) + item.secondsPlayed
+      albumNamesById.putIfAbsent(albumId, albumName)
+    }
+    val trackEntries = durationPerTrackId.map { (trackId, seconds) ->
+      AggregationRankEntry(id = trackId, name = tracks[TrackId(trackId)]?.title ?: trackId, totalSeconds = seconds)
+    }.sortedByDescending { it.totalSeconds }
+    val artistEntries = durationPerArtistId.map { (artistId, seconds) ->
+      AggregationRankEntry(id = artistId, name = artists[ArtistId(artistId)]?.artistName ?: artistId, totalSeconds = seconds)
+    }.sortedByDescending { it.totalSeconds }
+    val albumEntries = durationPerAlbumId.map { (albumId, seconds) ->
+      AggregationRankEntry(id = albumId, name = albumNamesById[albumId] ?: albumId, totalSeconds = seconds)
+    }.sortedByDescending { it.totalSeconds }
+    return Rankings(trackEntries = trackEntries, artistEntries = artistEntries, albumEntries = albumEntries)
+  }
+
+  private fun buildActivityEntries(filteredItems: List<de.chrgroth.spotify.control.domain.model.playback.AppPlaybackItem>): List<ActivityEntry> =
+    filteredItems.groupBy { item ->
+      val zdt = item.playedAt.toJavaInstant().atZone(ZoneOffset.UTC)
+      zdt.dayOfWeek to ActivityTimeWindow.fromHour(zdt.hour)
+    }.map { (key, entries) ->
+      ActivityEntry(dayOfWeek = key.first, timeWindow = key.second, totalSeconds = entries.sumOf { it.secondsPlayed })
+    }
 
   private fun emptyAggregation(userId: UserId, type: AggregationPeriodType, periodStart: LocalDate): PlaybackAggregation = PlaybackAggregation(
     userId = userId,
@@ -316,16 +341,33 @@ class PlaybackAggregationService(
     eventCount = 0L,
     distinctArtistCount = 0,
     distinctTrackCount = 0,
+    distinctAlbumCount = 0,
     artistEntries = emptyList(),
+    albumEntries = emptyList(),
     trackEntries = emptyList(),
     activityEntries = emptyList(),
   )
 
   companion object : KLogging() {
     private const val UNKNOWN_ARTIST_ID = "unknown"
+    private const val FALLBACK_ALBUM_ID_PREFIX = "fallback:"
     private const val DAYS_IN_WEEK = 6L
     private const val MONTHS_PER_QUARTER = 3L
     private const val MONTHS_PER_YEAR = 12L
+  }
+
+  private data class Rankings(
+    val trackEntries: List<AggregationRankEntry>,
+    val artistEntries: List<AggregationRankEntry>,
+    val albumEntries: List<AggregationRankEntry>,
+  )
+
+  private fun de.chrgroth.spotify.control.domain.model.catalog.AppTrack?.albumAggregationId(itemTrackId: String): String {
+    val rawAlbumId = this?.albumId?.value
+    if (rawAlbumId != null) {
+      return rawAlbumId
+    }
+    return "${FALLBACK_ALBUM_ID_PREFIX}${this?.albumName ?: itemTrackId}"
   }
 }
 
