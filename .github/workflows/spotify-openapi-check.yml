@@ -1,0 +1,59 @@
+name: Spotify OpenAPI Spec Update Check
+
+on:
+  schedule:
+    - cron: '0 8 * * 1'  # Every Monday at 8 AM UTC
+  workflow_dispatch:
+
+jobs:
+  check-spec-update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download latest Spotify OpenAPI spec
+        run: curl -s -f -o /tmp/spotify-openapi-latest.yaml "https://developer.spotify.com/reference/web-api/open-api-schema.yaml"
+      - name: Compare specs
+        id: compare
+        run: |
+          if diff -q "adapter-out-spotify/src/main/resources/spotify-openapi.yaml" "/tmp/spotify-openapi-latest.yaml" > /dev/null 2>&1; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "No changes detected in Spotify OpenAPI spec"
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "Changes detected in Spotify OpenAPI spec!"
+          fi
+      - name: Create GitHub issue if spec changed
+        if: steps.compare.outputs.changed == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'spotify-api-update'
+            });
+            const alreadyOpen = issues.some(issue => issue.title === 'Spotify OpenAPI spec has been updated');
+            if (alreadyOpen) {
+              console.log('Issue already exists, skipping creation');
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: 'Spotify OpenAPI spec has been updated',
+                body: [
+                  'The Spotify Web API OpenAPI specification has changed since our last stored copy.',
+                  '',
+                  'Please review the changes and:',
+                  '1. Update `adapter-out-spotify/src/main/resources/spotify-openapi.yaml` with the latest spec',
+                  '2. Review whether any new or changed API models affect `adapter-out-spotify/src/main/kotlin/.../model/`',
+                  '3. Update the adapter code if necessary',
+                  '',
+                  'Spec URL: https://developer.spotify.com/reference/web-api/open-api-schema.yaml'
+                ].join('\n'),
+                labels: ['spotify-api-update']
+              });
+            }
