@@ -30,20 +30,18 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const { data: issues } = await github.rest.issues.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'open',
-              labels: 'spotify-api-update'
+            const title = 'Spotify OpenAPI spec has been updated';
+            const { data: results } = await github.rest.search.issuesAndPullRequests({
+              q: `repo:${context.repo.owner}/${context.repo.repo} is:issue is:open in:title "${title}"`
             });
-            const alreadyOpen = issues.some(issue => issue.title === 'Spotify OpenAPI spec has been updated');
+            const alreadyOpen = results.total_count > 0;
             if (alreadyOpen) {
               console.log('Issue already exists, skipping creation');
             } else {
               await github.rest.issues.create({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                title: 'Spotify OpenAPI spec has been updated',
+                title: title,
                 body: [
                   'The Spotify Web API OpenAPI specification has changed since our last stored copy.',
                   '',
@@ -54,6 +52,6 @@ jobs:
                   '',
                   'Spec URL: https://developer.spotify.com/reference/web-api/open-api-schema.yaml'
                 ].join('\n'),
-                labels: ['spotify-api-update']
+                assignees: ['copilot']
               });
             }
