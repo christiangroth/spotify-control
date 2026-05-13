@@ -1,0 +1,14 @@
+<div style="overflow-x:auto;">
+    <div class="d-flex align-items-end" style="height:80px;gap:2px;" data-testid="{dataTestId}">
+        {#for entry in entries}
+        <div style="flex:1;min-width:6px;height:100%;display:flex;align-items:flex-end;text-decoration:none;" title="{entry.tooltip}" aria-label="{entry.tooltip}">
+            <div style="height:{entry.heightPercent}%;min-height:{entry.minHeightPx}px;width:100%;background-color:var(--spotify-green);border-radius:2px 2px 0 0;" class="histogram-bar"></div>
+        </div>
+        {/for}
+    </div>
+    <div class="d-none d-lg-flex" style="gap:2px;margin-top:3px;">
+        {#for entry in entries}
+        <div style="flex:1;min-width:6px;text-align:center;color:#888;font-size:.65rem;overflow:hidden;">{entry.label}</div>
+        {/for}
+    </div>
+</div>
