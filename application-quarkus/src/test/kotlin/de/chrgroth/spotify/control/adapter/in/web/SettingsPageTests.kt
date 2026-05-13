@@ -107,7 +107,7 @@ class SettingsPageTests {
   }
 
   @Test
-  fun `playback events page is available at new url and displays heading`() {
+  fun `playback events page is available and displays heading`() {
     given()
       .`when`()
       .get("/playback/events")
