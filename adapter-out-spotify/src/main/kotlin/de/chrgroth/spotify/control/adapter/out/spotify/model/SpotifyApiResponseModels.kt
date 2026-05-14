@@ -39,3 +39,32 @@ data class SimplifiedAlbumObject(
   val artists: List<SimplifiedArtistObject> = emptyList(),
   @SerialName("external_urls") val externalUrls: ExternalUrlObject? = null,
 )
+
+/**
+ * Lenient replacement for the generated ArtistDiscographyAlbumObject.
+ * All fields are optional so that partial API responses don't cause MissingFieldException.
+ */
+@Serializable
+data class ArtistDiscographyAlbumObject(
+  val id: String? = null,
+  val name: String? = null,
+  val images: List<ImageObject>? = emptyList(),
+  @SerialName("release_date") val releaseDate: String? = null,
+  @SerialName("release_date_precision") val releaseDatePrecision: String? = null,
+  @SerialName("album_type") val albumType: String? = null,
+  @SerialName("total_tracks") val totalTracks: Int? = null,
+  val artists: List<SimplifiedArtistObject>? = emptyList(),
+  @SerialName("external_urls") val externalUrls: ExternalUrlObject? = null,
+  @SerialName("available_markets") val availableMarkets: List<String>? = emptyList(),
+  @SerialName("album_group") val albumGroup: String? = null,
+)
+
+/**
+ * Lenient replacement for the generated PagingArtistDiscographyAlbumObject.
+ * All fields are optional so that partial API responses don't cause MissingFieldException.
+ */
+@Serializable
+data class PagingArtistDiscographyAlbumObject(
+  val items: List<ArtistDiscographyAlbumObject>? = emptyList(),
+  val next: String? = null,
+)
