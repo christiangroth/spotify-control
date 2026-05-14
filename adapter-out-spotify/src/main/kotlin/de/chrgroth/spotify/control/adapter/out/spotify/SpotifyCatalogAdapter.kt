@@ -118,7 +118,7 @@ class SpotifyCatalogAdapter(
       val page = httpMetrics.timed("/v1/artists/{id}/albums") {
         apiClient.getArtistAlbums(artistId, ARTIST_ALBUMS_PAGE_SIZE, offset)
       }
-      ArtistAlbumsPage(albumIds = page.items.map { it.id }, nextUrl = page.next).right()
+      ArtistAlbumsPage(albumIds = page.items.mapNotNull { it.id }, nextUrl = page.next).right()
     } catch (e: SpotifyRateLimitException) {
       SpotifyRateLimitError(e.retryAfterSeconds.seconds).left()
     } catch (e: SpotifyApiException) {
