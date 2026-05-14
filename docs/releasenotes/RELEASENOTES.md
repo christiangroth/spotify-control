@@ -1,3 +1,12 @@
+# 0.98.1 (2026.05.14)
+
+## Bugfixes / Chore
+* Fix album sync failing when Spotify omits `available_markets` or `album_group` fields in artist discography responses.
+
+
+
+---
+
 # 0.98.0 (2026.05.13)
 
 ## New Features
