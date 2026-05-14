@@ -98,6 +98,7 @@ Adapters translate between the domain model and infrastructure types:
 - Adapters catch exceptions at their boundary and convert them to `Either.Left<DomainError>`
 - Adapters do not contain business logic – only translation and infrastructure calls
 - Use **constructor injection** for all dependencies and configuration properties – never `@Inject lateinit var` field injection. Use `@param:ConfigProperty` (with the use-site target) for `@ConfigProperty` constructor parameters.
+- Never modify `adapter-out-spotify/src/main/resources/spotify-openapi.yaml` manually. Treat it as immutable upstream source input.
 
 ```kotlin
 // Good: constructor injection with correct use-site target
