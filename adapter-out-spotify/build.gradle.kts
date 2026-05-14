@@ -39,6 +39,8 @@ sourceSets {
       exclude("**/model/PlaylistTrackObject.kt")
       exclude("**/model/PagingPlaylistTrackObject.kt")
       exclude("**/model/SimplifiedAlbumObject.kt")
+      exclude("**/model/ArtistDiscographyAlbumObject.kt")
+      exclude("**/model/PagingArtistDiscographyAlbumObject.kt")
     }
   }
 }
