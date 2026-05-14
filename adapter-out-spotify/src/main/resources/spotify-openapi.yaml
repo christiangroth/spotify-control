@@ -5852,14 +5852,14 @@ components:
     PagingArtistDiscographyAlbumObject:
       type: object
       x-spotify-docs-type: PagingArtistDiscographyAlbumObject
-      allOf:
-        - $ref: '#/components/schemas/PagingObject'
-        - type: object
-          properties:
-            items:
-              type: array
-              items:
-                $ref: '#/components/schemas/ArtistDiscographyAlbumObject'
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ArtistDiscographyAlbumObject'
+        next:
+          type: string
+          nullable: true
 
     PagingSimplifiedAlbumObject:
       type: object
@@ -6982,19 +6982,51 @@ components:
 
     ArtistDiscographyAlbumObject:
       x-spotify-docs-type: ArtistDiscographyAlbumObject
-      allOf:
-        - $ref: '#/components/schemas/SimplifiedAlbumObject'
-        - type: object
-          required:
-            - album_group
-          properties:
-            album_group:
-              deprecated: true
-              type: string
-              enum: [album, single, compilation, appears_on]
-              example: compilation
-              description: |
-                This field describes the relationship between the artist and the album.
+      type: object
+      properties:
+        id:
+          type: string
+          nullable: true
+        name:
+          type: string
+          nullable: true
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImageObject'
+        release_date:
+          type: string
+          nullable: true
+        release_date_precision:
+          type: string
+          nullable: true
+          enum: [year, month, day]
+        album_type:
+          type: string
+          nullable: true
+          enum: [album, single, compilation]
+        total_tracks:
+          type: integer
+          nullable: true
+        artists:
+          type: array
+          items:
+            $ref: '#/components/schemas/SimplifiedArtistObject'
+        external_urls:
+          $ref: '#/components/schemas/ExternalUrlObject'
+        available_markets:
+          deprecated: true
+          type: array
+          items:
+            type: string
+        album_group:
+          deprecated: true
+          type: string
+          nullable: true
+          enum: [album, single, compilation, appears_on]
+          example: compilation
+          description: |
+            This field describes the relationship between the artist and the album.
 
     ChapterObject:
       x-spotify-docs-type: ChapterObject
