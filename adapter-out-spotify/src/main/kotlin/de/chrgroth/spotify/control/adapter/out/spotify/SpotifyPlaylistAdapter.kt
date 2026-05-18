@@ -48,7 +48,7 @@ class SpotifyPlaylistAdapter(
       var offset: Int? = null
       var hasNext = true
       while (hasNext) {
-        throttler.throttle(DomainOutboxPartition.ToSpotify.key)
+        throttler.throttle(DomainOutboxPartition.ToSpotifyPlaylist.key)
         val playlistsResponse = apiClient.getUserPlaylists(PLAYLISTS_PAGE_SIZE, offset)
         items += playlistsResponse.items.map { playlist ->
           SpotifyPlaylistItem(
@@ -87,7 +87,7 @@ class SpotifyPlaylistAdapter(
       var offset: Int? = null
       var hasNext = true
       while (hasNext) {
-        throttler.throttle(DomainOutboxPartition.ToSpotify.key)
+        throttler.throttle(DomainOutboxPartition.ToSpotifyPlaylist.key)
         val tracksResponse = httpMetrics.timed("/v1/playlists/{id}/items") {
           apiClient.getPlaylistItems(playlistId, PLAYLIST_TRACKS_PAGE_SIZE, offset)
         }
@@ -121,7 +121,7 @@ class SpotifyPlaylistAdapter(
     return try {
       SpotifyApiAuthContext.set(accessToken)
       val offset = pageUrl?.queryParamInt("offset")
-      throttler.throttle(DomainOutboxPartition.ToSpotify.key)
+      throttler.throttle(DomainOutboxPartition.ToSpotifyPlaylist.key)
       val tracksResponse = httpMetrics.timed("/v1/playlists/{id}/items") {
         apiClient.getPlaylistItems(playlistId, PLAYLIST_TRACKS_PAGE_SIZE, offset)
       }
@@ -185,7 +185,7 @@ class SpotifyPlaylistAdapter(
       SpotifyApiAuthContext.set(accessToken)
       val allItems = trackIds.map { trackId -> SpotifyRemoveTrackObject(uri = "spotify:track:$trackId") }
       allItems.chunked(REMOVE_TRACKS_BATCH_SIZE).forEach { batch ->
-        throttler.throttle(DomainOutboxPartition.ToSpotify.key)
+        throttler.throttle(DomainOutboxPartition.ToSpotifyPlaylist.key)
         val requestBody = spotifyJson.encodeToString(SpotifyRemovePlaylistTracksRequest(items = batch))
         apiClient.removePlaylistItems(playlistId, requestBody)
       }
@@ -213,7 +213,7 @@ class SpotifyPlaylistAdapter(
       SpotifyApiAuthContext.set(accessToken)
       val uris = trackIds.map { "spotify:track:$it" }
       uris.chunked(ADD_TRACKS_BATCH_SIZE).forEach { batch ->
-        throttler.throttle(DomainOutboxPartition.ToSpotify.key)
+        throttler.throttle(DomainOutboxPartition.ToSpotifyPlaylist.key)
         val requestBody = spotifyJson.encodeToString(SpotifyAddPlaylistTracksRequest(uris = batch))
         apiClient.addPlaylistItems(playlistId, requestBody)
       }
@@ -241,7 +241,7 @@ class SpotifyPlaylistAdapter(
   ): Either<DomainError, Unit> {
     return try {
       SpotifyApiAuthContext.set(accessToken)
-      throttler.throttle(DomainOutboxPartition.ToSpotify.key)
+      throttler.throttle(DomainOutboxPartition.ToSpotifyPlaylist.key)
       val removeBody = spotifyJson.encodeToString(
         SpotifyRemovePlaylistTrackAtPositionRequest(
           items = listOf(SpotifyRemoveTrackAtPositionObject(uri = "spotify:track:$oldTrackId", positions = listOf(position))),
@@ -249,7 +249,7 @@ class SpotifyPlaylistAdapter(
       )
       apiClient.removePlaylistItemsByPosition(playlistId, removeBody)
 
-      throttler.throttle(DomainOutboxPartition.ToSpotify.key)
+      throttler.throttle(DomainOutboxPartition.ToSpotifyPlaylist.key)
       val addBody = spotifyJson.encodeToString(SpotifyAddPlaylistTracksRequest(uris = listOf("spotify:track:$newTrackId"), position = position))
       apiClient.addPlaylistItemsToTracks(playlistId, addBody)
 

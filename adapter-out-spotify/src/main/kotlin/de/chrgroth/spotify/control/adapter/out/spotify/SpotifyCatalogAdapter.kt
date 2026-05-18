@@ -44,7 +44,7 @@ class SpotifyCatalogAdapter(
   ): Either<DomainError, AppArtist?> {
     return try {
       SpotifyApiAuthContext.set(accessToken)
-      throttler.throttle(DomainOutboxPartition.ToSpotify.key)
+      throttler.throttle(DomainOutboxPartition.ToSpotifyCatalog.key)
       val artist = httpMetrics.timed("/v1/artists/{id}") { apiClient.getArtist(artistId) }
       parseArtist(artist).right()
     } catch (e: SpotifyRateLimitException) {
@@ -67,13 +67,13 @@ class SpotifyCatalogAdapter(
   ): Either<DomainError, AlbumSyncResult> {
     return try {
       SpotifyApiAuthContext.set(accessToken)
-      throttler.throttle(DomainOutboxPartition.ToSpotify.key)
+      throttler.throttle(DomainOutboxPartition.ToSpotifyCatalog.key)
       val albumResponse = httpMetrics.timed("/v1/albums/{id}") { apiClient.getAlbum(albumId) }
       val appAlbum = parseAlbum(albumResponse)
       val allTracks = albumResponse.tracks.items.toMutableList()
       var nextOffset: Int? = albumResponse.tracks.next?.queryParamInt("offset")
       while (nextOffset != null) {
-        throttler.throttle(DomainOutboxPartition.ToSpotify.key)
+        throttler.throttle(DomainOutboxPartition.ToSpotifyCatalog.key)
         val nextPage = httpMetrics.timed("/v1/albums/{id}/tracks") {
           apiClient.getAlbumTracks(albumId, ALBUM_TRACKS_PAGE_SIZE, nextOffset)
         }
@@ -114,7 +114,7 @@ class SpotifyCatalogAdapter(
     return try {
       SpotifyApiAuthContext.set(accessToken)
       val offset = nextUrl?.queryParamInt("offset")
-      throttler.throttle(DomainOutboxPartition.ToSpotify.key)
+      throttler.throttle(DomainOutboxPartition.ToSpotifyCatalog.key)
       val page = httpMetrics.timed("/v1/artists/{id}/albums") {
         apiClient.getArtistAlbums(artistId, ARTIST_ALBUMS_PAGE_SIZE, offset)
       }
