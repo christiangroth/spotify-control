@@ -71,7 +71,7 @@ class StatsResource(
         aggregation.copy(
           topArtists = topArtists(aggregation.data, artistsById),
           topAlbums = topAlbums(aggregation.data, albumsById),
-          topTracks = topTracks(aggregation.data, tracksById, albumsById),
+          topTracks = topTracks(aggregation.data, tracksById, albumsById, artistsById),
           activityBars = activityBars(aggregation.data),
         )
       })
@@ -135,7 +135,12 @@ class StatsResource(
       .take(TOP_ENTRIES_LIMIT)
       .map { entry ->
         val album = albumsById[AlbumId(entry.id)]
-        RankEntryView(name = album?.title ?: entry.name, totalSeconds = entry.totalSeconds, imageLink = album?.imageLink)
+        RankEntryView(
+          name = album?.title ?: entry.name,
+          totalSeconds = entry.totalSeconds,
+          imageLink = album?.imageLink,
+          artistName = album?.artistName,
+        )
       }
   }
 
@@ -143,6 +148,7 @@ class StatsResource(
     aggregation: PlaybackAggregation?,
     tracksById: Map<TrackId, de.chrgroth.spotify.control.domain.model.catalog.AppTrack>,
     albumsById: Map<AlbumId, de.chrgroth.spotify.control.domain.model.catalog.AppAlbum>,
+    artistsById: Map<ArtistId, de.chrgroth.spotify.control.domain.model.catalog.AppArtist>,
   ): List<RankEntryView> {
     if (aggregation == null) {
       return emptyList()
@@ -155,8 +161,25 @@ class StatsResource(
           name = track?.title ?: entry.name,
           totalSeconds = entry.totalSeconds,
           imageLink = track?.albumId?.let { albumsById[it]?.imageLink },
+          artistName = trackArtistName(track, artistsById),
+          albumName = track?.albumName ?: track?.albumId?.let { albumsById[it]?.title },
+          trackDurationMs = track?.durationMs,
         )
       }
+  }
+
+  private fun trackArtistName(
+    track: de.chrgroth.spotify.control.domain.model.catalog.AppTrack?,
+    artistsById: Map<ArtistId, de.chrgroth.spotify.control.domain.model.catalog.AppArtist>,
+  ): String? {
+    if (track == null) {
+      return null
+    }
+    val names = listOfNotNull(track.artistName) + (track.additionalArtistNames ?: emptyList())
+    if (names.isNotEmpty()) {
+      return names.distinct().joinToString(", ")
+    }
+    return artistsById[track.artistId]?.artistName
   }
 
   private fun activityBars(aggregation: PlaybackAggregation?): List<ActivityBarEntryView> {
@@ -243,7 +266,14 @@ class StatsResource(
     val activityBars: List<ActivityBarEntryView> = emptyList(),
   )
 
-  data class RankEntryView(val name: String, val totalSeconds: Long, val imageLink: String? = null)
+  data class RankEntryView(
+    val name: String,
+    val totalSeconds: Long,
+    val imageLink: String? = null,
+    val artistName: String? = null,
+    val albumName: String? = null,
+    val trackDurationMs: Long? = null,
+  )
 
   data class ActivityBarEntryView(
     val label: String,

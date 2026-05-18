@@ -57,7 +57,7 @@ class DashboardServiceTests {
 
   private val track1 = AppTrack(
     id = TrackId("track-1"), title = "Track One",
-    artistId = ArtistId("artist-1"), durationMs = 300_000L,
+    artistId = ArtistId("artist-1"), artistName = "Artist One", durationMs = 300_000L,
     albumId = AlbumId("album-1"), lastSync = syncTimestamp,
   )
 
@@ -150,14 +150,16 @@ class DashboardServiceTests {
     // track-1: 120s, track-2: 180s → total 300s = 5 minutes
     assertThat(stats.listeningStats.listenedMinutesLast30Days).isEqualTo(5L)
     assertThat(stats.listeningStats.topTracksLast30Days).hasSize(2)
+    assertThat(stats.listeningStats.topTracksLast30Days[0].artistName).isEqualTo("Artist One")
+    assertThat(stats.listeningStats.topTracksLast30Days[0].trackDurationMs).isEqualTo(240_000L)
   }
 
   @Test
   fun `listening stats compute top albums by aggregating track play times per album`() {
     setupCommonMocks()
 
-    val album1 = AppAlbum(id = AlbumId("album-1"), title = "Album One", lastSync = syncTimestamp)
-    val album2 = AppAlbum(id = AlbumId("album-2"), title = "Album Two", lastSync = syncTimestamp)
+    val album1 = AppAlbum(id = AlbumId("album-1"), title = "Album One", artistName = "Artist One", lastSync = syncTimestamp)
+    val album2 = AppAlbum(id = AlbumId("album-2"), title = "Album Two", artistName = "Artist One", lastSync = syncTimestamp)
     val track2 = AppTrack(
       id = TrackId("track-2"), title = "Track Two",
       artistId = ArtistId("artist-1"), durationMs = 120_000L,
@@ -181,8 +183,11 @@ class DashboardServiceTests {
     assertThat(stats.listeningStats.topAlbumsLast30Days).hasSize(2)
     assertThat(stats.listeningStats.topAlbumsLast30Days[0].name).isEqualTo("Album One")
     assertThat(stats.listeningStats.topAlbumsLast30Days[0].totalMinutes).isEqualTo(5L)
+    assertThat(stats.listeningStats.topAlbumsLast30Days[0].artistName).isEqualTo("Artist One")
     assertThat(stats.listeningStats.topAlbumsLast30Days[1].name).isEqualTo("Album Two")
     assertThat(stats.listeningStats.topAlbumsLast30Days[1].totalMinutes).isEqualTo(3L)
+    assertThat(stats.listeningStats.topTracksLast30Days[0].albumName).isEqualTo("Album One")
+    assertThat(stats.listeningStats.topTracksLast30Days[0].artistName).isEqualTo("Artist One")
   }
 
   @Test
