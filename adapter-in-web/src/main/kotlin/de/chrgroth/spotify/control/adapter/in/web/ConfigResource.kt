@@ -7,7 +7,6 @@ import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
 import io.quarkus.security.Authenticated
 import jakarta.enterprise.context.ApplicationScoped
-import jakarta.inject.Inject
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.Produces
@@ -21,17 +20,12 @@ import kotlin.coroutines.CoroutineContext
 @Path("/config")
 @ApplicationScoped
 @Suppress("Unused")
-class ConfigResource {
-
-  @Inject
-  @Location("config.html")
-  private lateinit var configTemplate: Template
-
-  @Inject
-  private lateinit var configurationInfo: ConfigurationInfoPort
-
-  @Inject
-  private lateinit var runtimeConfig: RuntimeConfigPort
+class ConfigResource(
+  @param:Location("config.html")
+  private val configTemplate: Template,
+  private val configurationInfo: ConfigurationInfoPort,
+  private val runtimeConfig: RuntimeConfigPort,
+) {
 
   @GET
   @Authenticated

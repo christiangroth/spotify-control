@@ -6,7 +6,6 @@ import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
 import io.quarkus.security.Authenticated
 import jakarta.enterprise.context.ApplicationScoped
-import jakarta.inject.Inject
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.Produces
@@ -15,14 +14,11 @@ import jakarta.ws.rs.core.MediaType
 @Path("/health")
 @ApplicationScoped
 @Suppress("Unused")
-class HealthResource {
-
-  @Inject
-  @Location("health.html")
-  private lateinit var healthTemplate: Template
-
-  @Inject
-  private lateinit var health: HealthPort
+class HealthResource(
+  @param:Location("health.html")
+  private val healthTemplate: Template,
+  private val health: HealthPort,
+) {
 
   @GET
   @Authenticated

@@ -5,7 +5,6 @@ import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
 import io.quarkus.security.Authenticated
 import jakarta.enterprise.context.ApplicationScoped
-import jakarta.inject.Inject
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.NotFoundException
 import jakarta.ws.rs.Path
@@ -18,11 +17,10 @@ import java.nio.charset.StandardCharsets
 @Path("/docs/{subdir}/{filename}")
 @ApplicationScoped
 @Suppress("Unused")
-class DocsFileResource {
-
-  @Inject
-  @Location("docs.html")
-  private lateinit var docsTemplate: Template
+class DocsFileResource(
+  @param:Location("docs.html")
+  private val docsTemplate: Template,
+) {
 
   private val allowedSubdirs = setOf("arc42", "adr", "coding-guidelines", "releasenotes")
 

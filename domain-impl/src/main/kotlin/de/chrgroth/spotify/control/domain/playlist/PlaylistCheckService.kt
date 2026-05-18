@@ -7,6 +7,7 @@ import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.PlaylistFixError
 import de.chrgroth.spotify.control.domain.playlist.check.PlaylistCheckRunner
 import de.chrgroth.spotify.control.domain.model.playlist.AppPlaylistCheck
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistCheckDashboard
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistCheckPort
@@ -16,6 +17,7 @@ import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistCheckNotificationPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAccessTokenPort
+import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Timer
 import jakarta.enterprise.context.ApplicationScoped
@@ -33,6 +35,7 @@ class PlaylistCheckService(
   private val checkRunners: Instance<PlaylistCheckRunner>,
   private val playlistRepository: PlaylistRepositoryPort,
   private val playlistCheckRepository: AppPlaylistCheckRepositoryPort,
+  private val userRepository: UserRepositoryPort,
   private val dashboardRefresh: DashboardRefreshPort,
   private val notification: PlaylistCheckNotificationPort,
   private val spotifyAccessToken: SpotifyAccessTokenPort,
@@ -74,6 +77,24 @@ class PlaylistCheckService(
     logger.info { "Ran playlist checks for playlist ${event.playlistId} (user ${event.userId.value}): $status" }
     dashboardRefresh.notifyUserPlaylistChecks(event.userId)
     return Unit.right()
+  }
+
+  override fun getCheckDashboard(userId: UserId): PlaylistCheckDashboard {
+    val (displayName, playlistNameById, checks) = runBlocking {
+      val userAsync = async(Dispatchers.IO) { userRepository.findById(userId)?.displayName ?: userId.value }
+      val playlistNamesAsync = async(Dispatchers.IO) {
+        playlistRepository.findByUserId(userId).associateBy({ it.spotifyPlaylistId }, { it.name })
+      }
+      val checksAsync = async(Dispatchers.IO) { playlistCheckRepository.findAll() }
+      Triple(userAsync.await(), playlistNamesAsync.await(), checksAsync.await())
+    }
+    return PlaylistCheckDashboard(
+      displayName = displayName,
+      checks = checks,
+      playlistNameById = playlistNameById,
+      displayNames = getDisplayNames(),
+      fixableCheckIds = getFixableCheckIds(),
+    )
   }
 
   override fun getDisplayNames(): Map<String, String> =

@@ -71,9 +71,9 @@ class TrackFromLatestReleaseCheckRunner(
         userId, accessToken, playlistId,
         violation.oldTrackId, violation.newTrackId, violation.position,
       )
-      if (result.isLeft()) {
+      result.onLeft { error ->
         logger.error { "Failed to replace track at position ${violation.position} in playlist $playlistId" }
-        return (result as Either.Left).value.left()
+        return error.left()
       }
     }
     return Unit.right()
@@ -161,7 +161,16 @@ class TrackFromLatestReleaseCheckRunner(
       dateA == null && dateB == null -> 0
       dateA == null -> -1
       dateB == null -> 1
-      else -> dateA.compareTo(dateB)
+      else -> padReleaseDate(dateA).compareTo(padReleaseDate(dateB))
     }
+
+    private fun padReleaseDate(date: String): String = when (date.length) {
+      YEAR_ONLY_DATE_LENGTH -> "$date-01-01"
+      YEAR_MONTH_DATE_LENGTH -> "$date-01"
+      else -> date
+    }
+
+    private const val YEAR_ONLY_DATE_LENGTH = 4
+    private const val YEAR_MONTH_DATE_LENGTH = 7
   }
 }

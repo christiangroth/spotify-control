@@ -3,7 +3,6 @@ package de.chrgroth.spotify.control.adapter.`in`.web
 import de.chrgroth.spotify.control.domain.port.`in`.user.RuntimeConfigPort
 import io.quarkus.security.Authenticated
 import jakarta.enterprise.context.ApplicationScoped
-import jakarta.inject.Inject
 import jakarta.ws.rs.Consumes
 import jakarta.ws.rs.POST
 import jakarta.ws.rs.Path
@@ -15,10 +14,9 @@ import mu.KLogging
 @Path("/settings/runtime-config")
 @ApplicationScoped
 @Suppress("Unused")
-class RuntimeConfigResource {
-
-  @Inject
-  private lateinit var runtimeConfig: RuntimeConfigPort
+class RuntimeConfigResource(
+  private val runtimeConfig: RuntimeConfigPort,
+) {
 
   @POST
   @Authenticated

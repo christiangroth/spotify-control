@@ -6,7 +6,6 @@ import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
 import io.quarkus.security.Authenticated
 import jakarta.enterprise.context.ApplicationScoped
-import jakarta.inject.Inject
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.Produces
@@ -15,14 +14,11 @@ import jakarta.ws.rs.core.MediaType
 @Path("/outbox-viewer")
 @ApplicationScoped
 @Suppress("Unused")
-class OutboxViewerResource {
-
-  @Inject
-  @Location("outbox-viewer.html")
-  private lateinit var template: Template
-
-  @Inject
-  private lateinit var outboxViewer: OutboxViewerPort
+class OutboxViewerResource(
+  @param:Location("outbox-viewer.html")
+  private val template: Template,
+  private val outboxViewer: OutboxViewerPort,
+) {
 
   @GET
   @Authenticated

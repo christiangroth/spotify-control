@@ -5,7 +5,6 @@ import io.quarkus.security.Authenticated
 import io.quarkus.security.identity.SecurityIdentity
 import io.smallrye.mutiny.Multi
 import jakarta.enterprise.context.ApplicationScoped
-import jakarta.inject.Inject
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.Produces
@@ -17,10 +16,8 @@ import org.jboss.resteasy.reactive.RestStreamElementType
 @Suppress("Unused")
 class HealthSseResource(
   private val sseAdapter: HealthSseAdapter,
+  private val securityIdentity: SecurityIdentity,
 ) {
-
-  @Inject
-  private lateinit var securityIdentity: SecurityIdentity
 
   @GET
   @Authenticated

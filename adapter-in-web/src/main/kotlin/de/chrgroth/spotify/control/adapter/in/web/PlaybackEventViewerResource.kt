@@ -8,7 +8,6 @@ import io.quarkus.qute.TemplateInstance
 import io.quarkus.security.Authenticated
 import io.quarkus.security.identity.SecurityIdentity
 import jakarta.enterprise.context.ApplicationScoped
-import jakarta.inject.Inject
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.Produces
@@ -25,17 +24,12 @@ import kotlinx.datetime.toLocalDateTime
 @Path("/playback/events")
 @ApplicationScoped
 @Suppress("Unused")
-class PlaybackEventViewerResource {
-
-  @Inject
-  @Location("playback-event-viewer.html")
-  private lateinit var template: Template
-
-  @Inject
-  private lateinit var securityIdentity: SecurityIdentity
-
-  @Inject
-  private lateinit var playbackEventViewer: PlaybackEventViewerPort
+class PlaybackEventViewerResource(
+  @param:Location("playback-event-viewer.html")
+  private val template: Template,
+  private val securityIdentity: SecurityIdentity,
+  private val playbackEventViewer: PlaybackEventViewerPort,
+) {
 
   @GET
   @Authenticated

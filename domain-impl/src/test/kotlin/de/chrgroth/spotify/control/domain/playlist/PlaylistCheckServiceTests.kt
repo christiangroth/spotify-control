@@ -13,6 +13,7 @@ import de.chrgroth.spotify.control.domain.model.playlist.PlaylistId
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistTrack
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
 import de.chrgroth.spotify.control.domain.model.user.AccessToken
+import de.chrgroth.spotify.control.domain.model.user.User
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.out.playlist.AppPlaylistCheckRepositoryPort
@@ -21,6 +22,7 @@ import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistCheckNotificationPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAccessTokenPort
+import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.mockk.every
 import io.mockk.just
@@ -40,6 +42,7 @@ class PlaylistCheckServiceTests {
   private val playlistCheckRepository: AppPlaylistCheckRepositoryPort = mockk()
   private val dashboardRefresh: DashboardRefreshPort = mockk()
   private val notification: PlaylistCheckNotificationPort = mockk()
+  private val userRepository: UserRepositoryPort = mockk()
   private val spotifyAccessToken: SpotifyAccessTokenPort = mockk()
   private val outboxPort: OutboxPort = mockk()
   private val meterRegistry = SimpleMeterRegistry()
@@ -48,6 +51,7 @@ class PlaylistCheckServiceTests {
     checkRunners,
     playlistRepository,
     playlistCheckRepository,
+    userRepository,
     dashboardRefresh,
     notification,
     spotifyAccessToken,
@@ -229,6 +233,47 @@ class PlaylistCheckServiceTests {
 
     assertThat(result.isRight()).isTrue()
     verify(exactly = 0) { playlistCheckRepository.save(any()) }
+  }
+
+  @Test
+  fun `getCheckDashboard returns dashboard with user display name, checks and metadata`() {
+    val user = User(
+      spotifyUserId = userId,
+      displayName = "John Doe",
+      encryptedAccessToken = "",
+      encryptedRefreshToken = "",
+      tokenExpiresAt = Clock.System.now(),
+      lastLoginAt = Clock.System.now(),
+    )
+    val check = buildCheck(succeeded = true)
+    val playlistInfo = buildPlaylistInfo()
+    every { userRepository.findById(userId) } returns user
+    every { playlistRepository.findByUserId(userId) } returns listOf(playlistInfo)
+    every { playlistCheckRepository.findAll() } returns listOf(check)
+    every { checkRunners.iterator() } answers { mutableListOf(checkRunner).iterator() }
+    every { checkRunner.checkId } returns checkId
+    every { checkRunner.displayName } returns "Test Check"
+    every { checkRunner.canFix() } returns true
+
+    val dashboard = adapter.getCheckDashboard(userId)
+
+    assertThat(dashboard.displayName).isEqualTo("John Doe")
+    assertThat(dashboard.checks).containsExactly(check)
+    assertThat(dashboard.playlistNameById).containsEntry(playlistId, "Playlist $playlistId")
+    assertThat(dashboard.displayNames).containsEntry(checkId, "Test Check")
+    assertThat(dashboard.fixableCheckIds).containsExactly(checkId)
+  }
+
+  @Test
+  fun `getCheckDashboard falls back to userId when user not found`() {
+    every { userRepository.findById(userId) } returns null
+    every { playlistRepository.findByUserId(userId) } returns emptyList()
+    every { playlistCheckRepository.findAll() } returns emptyList()
+    every { checkRunners.iterator() } answers { mutableListOf<PlaylistCheckRunner>().iterator() }
+
+    val dashboard = adapter.getCheckDashboard(userId)
+
+    assertThat(dashboard.displayName).isEqualTo(userId.value)
   }
 
   @Test

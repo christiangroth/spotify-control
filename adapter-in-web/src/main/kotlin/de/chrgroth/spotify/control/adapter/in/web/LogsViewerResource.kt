@@ -5,7 +5,6 @@ import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
 import io.quarkus.security.Authenticated
 import jakarta.enterprise.context.ApplicationScoped
-import jakarta.inject.Inject
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.Produces
@@ -15,14 +14,11 @@ import jakarta.ws.rs.core.MediaType
 @Path("/logs-viewer")
 @ApplicationScoped
 @Suppress("Unused")
-class LogsViewerResource {
-
-  @Inject
-  @Location("logs-viewer.html")
-  private lateinit var template: Template
-
-  @Inject
-  private lateinit var logsCollector: LogsCollector
+class LogsViewerResource(
+  @param:Location("logs-viewer.html")
+  private val template: Template,
+  private val logsCollector: LogsCollector,
+) {
 
   @GET
   @Authenticated

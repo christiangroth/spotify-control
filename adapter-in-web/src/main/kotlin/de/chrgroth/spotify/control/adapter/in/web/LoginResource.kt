@@ -8,7 +8,6 @@ import io.quarkus.qute.Template
 import io.quarkus.security.identity.SecurityIdentity
 import jakarta.annotation.security.PermitAll
 import jakarta.enterprise.context.ApplicationScoped
-import jakarta.inject.Inject
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.Produces
@@ -20,14 +19,11 @@ import java.net.URI
 @Path("/")
 @ApplicationScoped
 @Suppress("Unused")
-class LoginResource {
-
-  @Inject
-  @Location("login.html")
-  private lateinit var loginTemplate: Template
-
-  @Inject
-  private lateinit var securityIdentity: SecurityIdentity
+class LoginResource(
+  @param:Location("login.html")
+  private val loginTemplate: Template,
+  private val securityIdentity: SecurityIdentity,
+) {
 
   @GET
   @PermitAll

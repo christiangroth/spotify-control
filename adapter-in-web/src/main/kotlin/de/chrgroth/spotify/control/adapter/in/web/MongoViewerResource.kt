@@ -8,7 +8,6 @@ import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
 import io.quarkus.security.Authenticated
 import jakarta.enterprise.context.ApplicationScoped
-import jakarta.inject.Inject
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.Produces
@@ -20,14 +19,11 @@ import jakarta.ws.rs.core.UriInfo
 @Path("/mongodb-viewer")
 @ApplicationScoped
 @Suppress("Unused")
-class MongoViewerResource {
-
-  @Inject
-  @Location("mongodb-viewer.html")
-  private lateinit var viewerTemplate: Template
-
-  @Inject
-  private lateinit var mongoViewer: MongoViewerPort
+class MongoViewerResource(
+  @param:Location("mongodb-viewer.html")
+  private val viewerTemplate: Template,
+  private val mongoViewer: MongoViewerPort,
+) {
 
   @GET
   @Authenticated
