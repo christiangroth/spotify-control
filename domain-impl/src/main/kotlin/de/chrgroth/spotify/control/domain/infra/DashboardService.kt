@@ -3,8 +3,8 @@ package de.chrgroth.spotify.control.domain.infra
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.model.DashboardStats
 import de.chrgroth.spotify.control.domain.model.playback.DayCount
-import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
 import de.chrgroth.spotify.control.domain.model.catalog.AppTrack
+import de.chrgroth.spotify.control.domain.model.catalog.displayArtistName
 import de.chrgroth.spotify.control.domain.model.playback.ListeningStats
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationPeriodType
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistCheckStats
@@ -210,7 +210,7 @@ class DashboardService(
         val track = statsTrackMap[entry.id]
         val album = track?.albumId?.let { statsAlbumMap[it.value] }
         entry.topEntry.copy(
-          artistName = trackArtistName(track, statsArtistMap),
+          artistName = track?.displayArtistName { artistId -> statsArtistMap[artistId.value]?.artistName },
           albumName = track?.albumName ?: album?.title,
           trackDurationMs = track?.durationMs,
         )
@@ -247,17 +247,6 @@ class DashboardService(
           topEntry = TopEntry(name = nameResolver(id), totalMinutes = seconds / SECONDS_PER_MINUTE, imageLink = imageResolver?.invoke(id)),
         )
       }
-
-  private fun trackArtistName(track: AppTrack?, artistsById: Map<String, AppArtist>): String? {
-    if (track == null) {
-      return null
-    }
-    val names = listOfNotNull(track.artistName) + (track.additionalArtistNames ?: emptyList())
-    if (names.isNotEmpty()) {
-      return names.distinct().joinToString(", ")
-    }
-    return artistsById[track.artistId.value]?.artistName
-  }
 
   private data class TopEntryView(val id: String, val topEntry: TopEntry)
 

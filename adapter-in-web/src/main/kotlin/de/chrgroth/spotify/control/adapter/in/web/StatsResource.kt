@@ -3,6 +3,7 @@ package de.chrgroth.spotify.control.adapter.`in`.web
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
+import de.chrgroth.spotify.control.domain.model.catalog.displayArtistName
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.ActivityTimeWindow
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationPeriodType
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.PlaybackAggregation
@@ -161,25 +162,11 @@ class StatsResource(
           name = track?.title ?: entry.name,
           totalSeconds = entry.totalSeconds,
           imageLink = track?.albumId?.let { albumsById[it]?.imageLink },
-          artistName = trackArtistName(track, artistsById),
+          artistName = track?.displayArtistName { artistId -> artistsById[artistId]?.artistName },
           albumName = track?.albumName ?: track?.albumId?.let { albumsById[it]?.title },
           trackDurationMs = track?.durationMs,
         )
       }
-  }
-
-  private fun trackArtistName(
-    track: de.chrgroth.spotify.control.domain.model.catalog.AppTrack?,
-    artistsById: Map<ArtistId, de.chrgroth.spotify.control.domain.model.catalog.AppArtist>,
-  ): String? {
-    if (track == null) {
-      return null
-    }
-    val names = listOfNotNull(track.artistName) + (track.additionalArtistNames ?: emptyList())
-    if (names.isNotEmpty()) {
-      return names.distinct().joinToString(", ")
-    }
-    return artistsById[track.artistId]?.artistName
   }
 
   private fun activityBars(aggregation: PlaybackAggregation?): List<ActivityBarEntryView> {
