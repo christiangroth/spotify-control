@@ -1,3 +1,12 @@
+# 0.99.3 (2026.05.18)
+
+## Bugfixes / Chore
+* Optimized playlist track append: replaced slow read-then-write with a single atomic MongoDB push operation.
+
+
+
+---
+
 # 0.99.1 (2026.05.18)
 
 ## Bugfixes / Chore
