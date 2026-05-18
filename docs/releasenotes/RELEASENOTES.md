@@ -1,3 +1,14 @@
+# 0.100.0 (2026.05.18)
+
+## New Features
+* Spotify artist album sync now includes singles in addition to albums.
+* Catalog outbox split into separate artist and album partitions with dedicated rate limits.
+* Artist catalog requests are throttled at 60 seconds; album catalog requests use the default 10 second interval.
+
+
+
+---
+
 # 0.99.3 (2026.05.18)
 
 ## Bugfixes / Chore
