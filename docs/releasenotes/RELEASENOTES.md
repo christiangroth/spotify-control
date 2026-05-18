@@ -1,3 +1,18 @@
+# 0.99.0 (2026.05.18)
+
+## New Features
+* Outbox playlist sync events now run on a dedicated partition, separate from catalog sync events.
+* User profile updates now run on their own dedicated outbox partition.
+
+## Bugfixes / Chore
+* Improved aggregation stats cards by using richer catalog entries with artwork and metadata for tracks, albums, and artists.
+* Top tracks now include album and artist information in the Stats and Dashboard listening sections.
+* Daily aggregation cards no longer show the day/time-window activity chart.
+
+
+
+---
+
 # 0.98.1 (2026.05.14)
 
 ## Bugfixes / Chore
