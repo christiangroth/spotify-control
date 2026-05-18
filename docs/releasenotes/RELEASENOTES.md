@@ -1,3 +1,12 @@
+# 0.99.1 (2026.05.18)
+
+## Bugfixes / Chore
+* Fixed the main branch build after the logs viewer test setup fell out of sync with the resource constructor.
+
+
+
+---
+
 # 0.99.0 (2026.05.18)
 
 ## New Features
