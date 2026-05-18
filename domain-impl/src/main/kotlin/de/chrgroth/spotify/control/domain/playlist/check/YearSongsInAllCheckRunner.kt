@@ -82,7 +82,6 @@ class YearSongsInAllCheckRunner(
         .distinctBy { it.trackId }
         .map { it.trackId.value }
       if (missingTrackIds.isEmpty()) {
-        logger.info { "No missing tracks found in all playlist for year playlist $playlistId, nothing to fix" }
         Unit.right()
       } else {
         logger.info { "Adding ${missingTrackIds.size} track(s) to all playlist ${allPlaylistInfo.spotifyPlaylistId} (user ${userId.value})" }

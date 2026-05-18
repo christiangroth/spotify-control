@@ -40,7 +40,6 @@ class UserProfileService(
     val accessToken = spotifyAccessToken.getValidAccessToken(userId)
     return spotifyAuth.getUserProfile(accessToken).map { profile ->
       if (profile.displayName != user.displayName) {
-        logger.info { "Updating displayName for user ${userId.value}" }
         userRepository.upsert(user.copy(displayName = profile.displayName))
       }
     }

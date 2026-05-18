@@ -8,7 +8,6 @@ import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPo
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
 import jakarta.enterprise.context.ApplicationScoped
-import mu.KLogging
 
 @ApplicationScoped
 class SyncController(
@@ -27,7 +26,6 @@ class SyncController(
     val existingTrackIds = appTrackRepository.findByTrackIds(trackIds).map { it.id }.toSet()
     val missingTracks = tracks.filter { TrackId(it.trackId) !in existingTrackIds }
     if (missingTracks.isEmpty()) return
-    logger.info { "Found ${missingTracks.size} missing track(s) in catalog, triggering sync" }
     val artistIds = missingTracks.flatMap { it.artistIds }.distinct()
     syncArtists(artistIds, userId)
   }
@@ -40,10 +38,7 @@ class SyncController(
     val existingArtistIds = appArtistRepository.findByArtistIds(artistIds.map { ArtistId(it) }.toSet()).map { it.id.value }.toSet()
     val newArtistIds = artistIds.filter { it !in existingArtistIds }.distinct()
     if (newArtistIds.isNotEmpty()) {
-      logger.info { "Enqueueing SyncArtistDetails for ${newArtistIds.size} new artist(s)" }
       newArtistIds.forEach { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails(it, userId)) }
     }
   }
-
-  companion object : KLogging()
 }

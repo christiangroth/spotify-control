@@ -73,13 +73,11 @@ class CatalogService(
       logger.debug { "Artist $artistId already synced, skipping" }
       return Unit.right()
     }
-    logger.info { "Fetching details for artist $artistId (user ${userId.value})" }
     val accessToken = spotifyAccessToken.getValidAccessToken(userId)
     return spotifyCatalog.getArtist(userId, accessToken, artistId)
       .flatMap { detail ->
         if (detail != null) {
           appArtistRepository.upsertAll(listOf(detail))
-          logger.info { "Updated sync data for artist '${detail.artistName}' ($artistId), enqueueing album sync" }
           outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums(artistId, userId))
           dashboardRefresh.notifyCatalogData()
         } else {
@@ -106,7 +104,6 @@ class CatalogService(
       logger.warn { "No users available for artist resync, skipping $artistId" }
       return Unit.right()
     }
-    logger.info { "Re-syncing artist $artistId and all their albums" }
     outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums(artistId, userId))
     return Unit.right()
   }
@@ -128,7 +125,6 @@ class CatalogService(
       logger.debug { "No users available, skipping syncAlbumDetails" }
       return 0.right()
     }
-    logger.info { "Syncing album $albumId" }
     val accessToken = spotifyAccessToken.getValidAccessToken(userId)
     val result = spotifyCatalog.getAlbum(userId, accessToken, albumId)
     return when (result) {
@@ -176,34 +172,26 @@ class CatalogService(
       return
     }
     val partitioned = allArtists.filterIndexed { idx, _ -> idx % totalPartitions == partition }
-    logger.info { "Enqueueing artist album syncs for ${partitioned.size} artist(s) (partition $partition/$totalPartitions)" }
     partitioned.forEach { artist ->
       outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums(artist.id.value, userId))
     }
   }
 
   private fun syncArtistAlbums(artistId: String, userId: UserId, nextUrl: String?): Either<DomainError, Unit> {
-    logger.info { "Syncing album ids page for artist $artistId (user ${userId.value}, nextUrl=$nextUrl)" }
     val accessToken = spotifyAccessToken.getValidAccessToken(userId)
     return spotifyCatalog.getArtistAlbumsPage(userId, accessToken, artistId, nextUrl)
       .flatMap { page ->
         val existingAlbumIds = appAlbumRepository.findByAlbumIds(page.albumIds.map { AlbumId(it) }.toSet()).map { it.id.value }.toSet()
         val newAlbumIds = page.albumIds.filter { it !in existingAlbumIds }
         if (newAlbumIds.isNotEmpty()) {
-          logger.info { "Enqueueing SyncAlbumDetails for ${newAlbumIds.size} new album(s) of artist $artistId" }
           newAlbumIds.forEach { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails(it)) }
         } else {
           logger.debug { "All ${page.albumIds.size} album(s) on this page for artist $artistId already in catalog" }
         }
         if (page.nextUrl != null) {
-          if (newAlbumIds.isEmpty()) {
-            logger.info { "All albums on current page for artist $artistId already in catalog, skipping remaining pages" }
-          } else {
-            logger.info { "Enqueueing next SyncArtistAlbums page for artist $artistId (user ${userId.value})" }
+          if (newAlbumIds.isNotEmpty()) {
             outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums(artistId, userId, page.nextUrl))
           }
-        } else {
-          logger.info { "Completed all album pages for artist $artistId (user ${userId.value})" }
         }
         Unit.right()
       }

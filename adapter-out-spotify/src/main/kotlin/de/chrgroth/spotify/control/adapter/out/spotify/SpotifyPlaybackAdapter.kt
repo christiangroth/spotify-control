@@ -60,7 +60,6 @@ class SpotifyPlaybackAdapter(
     val track = response.item?.let { decodeTrack(it) } ?: return null
     val trackId = track.id
     if (track.type != TrackObject.Type.TRACK || track.isLocal == true || trackId == null) {
-      logIgnoredCurrentlyPlaying(track)
       return null
     }
     val progressMs = response.progressMs ?: 0L
@@ -78,14 +77,6 @@ class SpotifyPlaybackAdapter(
       startTime = observedAt - progressMs.milliseconds,
       albumId = track.album?.id?.let { AlbumId(it) },
     )
-  }
-
-  private fun logIgnoredCurrentlyPlaying(track: TrackObject) {
-    if (track.type != TrackObject.Type.TRACK) {
-      logger.info { "Ignoring non-track currently playing event of type '${track.type}'" }
-    } else {
-      logger.info { "Ignoring local or id-less currently playing track '${track.name}'" }
-    }
   }
 
   override fun getRecentlyPlayed(userId: UserId, accessToken: AccessToken, after: Instant?): Either<DomainError, List<RecentlyPlayedItem>> {
@@ -126,11 +117,9 @@ class SpotifyPlaybackAdapter(
 
   private fun parseRecentlyPlayedItem(userId: UserId, track: TrackObject, playedAt: String): RecentlyPlayedItem? {
     if (track.type != TrackObject.Type.TRACK) {
-      logger.info { "Ignoring non-track playback event of type '${track.type}'" }
       return null
     }
     if (track.isLocal == true || track.id == null) {
-      logger.info { "Ignoring local or id-less recently played track '${track.name}'" }
       return null
     }
     val durationSeconds = track.durationMs?.let { it.toLong() / MS_PER_SECOND }

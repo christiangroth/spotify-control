@@ -68,7 +68,6 @@ class PlaylistService(
           type = existing?.type,
         )
       }
-      logger.info { "Synced ${updatedPlaylists.size} playlist(s) for user ${userDisplayName(userId)}" }
       playlistRepository.replaceAll(userId, updatedPlaylists)
       if (updatedPlaylists.size != existingById.size) {
         dashboardRefresh.notifyUserPlaylistMetadata(userId)
@@ -82,7 +81,6 @@ class PlaylistService(
             playlistRepository.findByUserIdAndPlaylistId(userId, playlist.spotifyPlaylistId) == null
         }
         .forEach { playlist ->
-          logger.info { "Enqueueing SyncPlaylistData for active playlist '${playlist.name}' (${playlist.spotifyPlaylistId}, user ${userDisplayName(userId)})" }
           outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, playlist.spotifyPlaylistId))
         }
     }

@@ -16,6 +16,7 @@ import jakarta.enterprise.context.ApplicationScoped
 import kotlin.time.toJavaInstant
 import kotlin.time.toKotlinInstant
 import mu.KLogging
+
 import org.bson.Document
 
 @ApplicationScoped
@@ -139,7 +140,6 @@ class PlaylistRepositoryAdapter(
   }
 
   override fun setAllSyncInactive() {
-    logger.info { "Setting all playlist sync statuses to inactive" }
     mongoQueryMetrics.timed("spotify_playlist_metadata.setAllSyncInactive") {
       playlistMetadataDocumentRepository.mongoCollection().updateMany(
         Document(),
