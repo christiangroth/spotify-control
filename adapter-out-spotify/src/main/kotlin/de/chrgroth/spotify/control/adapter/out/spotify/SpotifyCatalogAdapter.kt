@@ -44,7 +44,7 @@ class SpotifyCatalogAdapter(
   ): Either<DomainError, AppArtist?> {
     return try {
       SpotifyApiAuthContext.set(accessToken)
-      throttler.throttle(DomainOutboxPartition.ToSpotifyCatalog.key)
+      throttler.throttle(DomainOutboxPartition.ToSpotifyCatalogArtist.key)
       val artist = httpMetrics.timed("/v1/artists/{id}") { apiClient.getArtist(artistId) }
       parseArtist(artist).right()
     } catch (e: SpotifyRateLimitException) {
@@ -67,13 +67,13 @@ class SpotifyCatalogAdapter(
   ): Either<DomainError, AlbumSyncResult> {
     return try {
       SpotifyApiAuthContext.set(accessToken)
-      throttler.throttle(DomainOutboxPartition.ToSpotifyCatalog.key)
+      throttler.throttle(DomainOutboxPartition.ToSpotifyCatalogAlbum.key)
       val albumResponse = httpMetrics.timed("/v1/albums/{id}") { apiClient.getAlbum(albumId) }
       val appAlbum = parseAlbum(albumResponse)
       val allTracks = albumResponse.tracks.items.toMutableList()
       var nextOffset: Int? = albumResponse.tracks.next?.queryParamInt("offset")
       while (nextOffset != null) {
-        throttler.throttle(DomainOutboxPartition.ToSpotifyCatalog.key)
+        throttler.throttle(DomainOutboxPartition.ToSpotifyCatalogAlbum.key)
         val nextPage = httpMetrics.timed("/v1/albums/{id}/tracks") {
           apiClient.getAlbumTracks(albumId, ALBUM_TRACKS_PAGE_SIZE, nextOffset)
         }
@@ -114,9 +114,9 @@ class SpotifyCatalogAdapter(
     return try {
       SpotifyApiAuthContext.set(accessToken)
       val offset = nextUrl?.queryParamInt("offset")
-      throttler.throttle(DomainOutboxPartition.ToSpotifyCatalog.key)
+      throttler.throttle(DomainOutboxPartition.ToSpotifyCatalogArtist.key)
       val page = httpMetrics.timed("/v1/artists/{id}/albums") {
-        apiClient.getArtistAlbums(artistId, ARTIST_ALBUMS_PAGE_SIZE, offset)
+        apiClient.getArtistAlbums(artistId, ARTIST_ALBUMS_PAGE_SIZE, offset, ARTIST_ALBUMS_INCLUDE_GROUPS)
       }
       ArtistAlbumsPage(albumIds = page.items.mapNotNull { it.id }, nextUrl = page.next).right()
     } catch (e: SpotifyRateLimitException) {
@@ -185,5 +185,6 @@ class SpotifyCatalogAdapter(
   companion object : KLogging() {
     private const val ALBUM_TRACKS_PAGE_SIZE = 50
     private const val ARTIST_ALBUMS_PAGE_SIZE = 10
+    private const val ARTIST_ALBUMS_INCLUDE_GROUPS = "album,single"
   }
 }

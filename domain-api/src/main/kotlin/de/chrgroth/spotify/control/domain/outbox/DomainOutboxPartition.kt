@@ -3,8 +3,12 @@ package de.chrgroth.spotify.control.domain.outbox
 import de.chrgroth.quarkus.outbox.domain.ApplicationOutboxPartition
 
 sealed interface DomainOutboxPartition : ApplicationOutboxPartition {
-  data object ToSpotifyCatalog : DomainOutboxPartition {
-    override val key = "to-spotify-catalog"
+  data object ToSpotifyCatalogArtist : DomainOutboxPartition {
+    override val key = "to-spotify-catalog-artist"
+  }
+
+  data object ToSpotifyCatalogAlbum : DomainOutboxPartition {
+    override val key = "to-spotify-catalog-album"
   }
 
   data object ToSpotifyPlayback : DomainOutboxPartition {
@@ -24,6 +28,6 @@ sealed interface DomainOutboxPartition : ApplicationOutboxPartition {
   }
 
   companion object {
-    val all: List<DomainOutboxPartition> = listOf(ToSpotifyCatalog, ToSpotifyPlayback, ToSpotifyPlaylist, ToSpotifyUser, Domain)
+    val all: List<DomainOutboxPartition> = listOf(ToSpotifyCatalogArtist, ToSpotifyCatalogAlbum, ToSpotifyPlayback, ToSpotifyPlaylist, ToSpotifyUser, Domain)
   }
 }
