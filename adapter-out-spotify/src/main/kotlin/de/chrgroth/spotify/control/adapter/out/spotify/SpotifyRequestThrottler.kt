@@ -15,9 +15,13 @@ class SpotifyRequestThrottler(
 
   private val lastRequestTimeByPartition = ConcurrentHashMap<String, Long>()
   private val throttleIntervalMs = AtomicLong(defaultThrottleIntervalMs)
+  private val throttledPartitions = setOf(
+    DomainOutboxPartition.ToSpotifyCatalog.key,
+    DomainOutboxPartition.ToSpotifyPlaylist.key,
+  )
 
   fun throttle(partitionKey: String) {
-    if (partitionKey != DomainOutboxPartition.ToSpotify.key) return
+    if (partitionKey !in throttledPartitions) return
     val lastTime = lastRequestTimeByPartition[partitionKey] ?: 0L
     val elapsed = System.currentTimeMillis() - lastTime
     val remaining = throttleIntervalMs.get() - elapsed
