@@ -392,11 +392,14 @@ All Spotify API operations and domain-level async tasks are routed through a per
 
 **Partitions and event types:**
 
-| Partition             | Throttle | Rate limit pause | Event Types                                                                                            |
-|-----------------------|----------|------------------|--------------------------------------------------------------------------------------------------------|
-| `to-spotify`          | 10s      | yes              | `UpdateUserProfile`, `SyncPlaylistInfo`, `SyncPlaylistData`, `SyncArtistDetails`, `SyncTrackDetails`, `SyncMissingArtists`, `SyncMissingTracks`, `SyncMissingAlbums`, `ResyncCatalog` |
-| `to-spotify-playback` | none     | no               | `FetchCurrentlyPlaying`, `FetchRecentlyPlayed`                                                         |
-| `domain`              | none     | no               | `RebuildPlaybackData`, `AppendPlaybackData`                                                             |
+| Partition                     | Throttle | Rate limit pause | Event Types                                                                                            |
+|-------------------------------|----------|------------------|--------------------------------------------------------------------------------------------------------|
+| `to-spotify-catalog-artist`   | 60s      | yes              | `SyncArtistDetails`, `SyncArtistAlbums`                                                                |
+| `to-spotify-catalog-album`    | 10s      | yes              | `SyncAlbumDetails`                                                                                     |
+| `to-spotify-playlist`         | 10s      | yes              | `SyncPlaylistInfo`, `SyncPlaylistData`                                                                 |
+| `to-spotify-user`             | none     | no               | `UpdateUserProfile`                                                                                    |
+| `to-spotify-playback`         | none     | no               | `FetchCurrentlyPlaying`, `FetchRecentlyPlayed`                                                         |
+| `domain`                      | none     | no               | `RebuildPlaybackData`, `AppendPlaybackData`, `ResyncCatalog`, `RunPlaylistChecks`, `AggregatePlaybackData` |
 
 Successfully processed events are moved to `outbox_archive` (audit log). Internal triggers between services use CDI events (not the outbox).
 

@@ -59,6 +59,7 @@ interface SpotifyApiRestClient {
     @PathParam("artistId") artistId: String,
     @QueryParam("limit") limit: Int,
     @QueryParam("offset") offset: Int?,
+    @QueryParam("include_groups") includeGroups: String?,
   ): PagingArtistDiscographyAlbumObject
 
   @GET
