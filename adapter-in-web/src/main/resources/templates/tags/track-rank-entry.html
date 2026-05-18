@@ -1,1 +1,5 @@
-{#rank-entry entry=entry kind='track' showDuration=showDuration/}
+{#if showDuration}
+{#catalog-rank-entry entry=entry kind='track' listenedDuration=entry.totalSeconds.formattedListeningDurationFromSeconds/}
+{#else}
+{#catalog-rank-entry entry=entry kind='track'/}
+{/if}

@@ -1,1 +1,5 @@
-{#rank-entry entry=entry kind='artist' showDuration=showDuration/}
+{#if showDuration}
+{#catalog-rank-entry entry=entry kind='artist' listenedDuration=entry.totalSeconds.formattedListeningDurationFromSeconds/}
+{#else}
+{#catalog-rank-entry entry=entry kind='artist'/}
+{/if}
