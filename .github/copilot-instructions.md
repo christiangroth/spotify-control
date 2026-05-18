@@ -40,6 +40,36 @@ Always format new and edited files according to `.editorconfig` before committin
 - **Backend developer role guidelines:** [docs/coding-guidelines/role-backend-developer.md](../docs/coding-guidelines/role-backend-developer.md)
 - **Frontend developer role guidelines:** [docs/coding-guidelines/role-frontend-developer.md](../docs/coding-guidelines/role-frontend-developer.md)
 
+## Logging
+
+### General principles
+
+- **Log at INFO only for meaningful state transitions** — scheduled job triggers, explicit user actions (rebuild, sync enqueue), and non-trivial outcomes (new data persisted, catalog enriched). Do not log routine adapter operations (every repository save/delete/upsert).
+- **No per-item or per-poll logs at INFO** — operations that fire on every poll cycle (e.g. playback fetch every ~30 s) or for every individual record during a batch/backfill must not produce INFO output. Remove such log statements entirely rather than downgrading to DEBUG.
+- **Repository adapters do not log** — the domain layer already provides context-rich logs for every meaningful operation. Adapter-level save/persist/update logs duplicate this without adding value and must not be added.
+- **Guard-clause exits are silent** — early returns triggered by "user not found", "playlist not active", and similar expected guard conditions must not emit WARN or INFO. These are normal control flow in a single-user system.
+
+### Names, not IDs
+
+Whenever a human-readable name is available on the domain object being logged, include it alongside the ID:
+- Tracks: `'${item.trackName}' by ${item.artistNames.joinToString()} (${item.trackId.value})`
+- Artists: `'${artist.artistName}' ($artistId)`
+- Albums: `'${album.title ?: albumId}' ($albumId)`
+- Playlists: `'${playlist.name}' ($playlistId, user ${userId.value})`
+
+Do not add a database lookup solely to obtain a name for a log message.
+
+### What to keep at INFO
+
+| Pattern | Example |
+|---------|---------|
+| Scheduled job triggers one meaningful outcome | `"Scheduling playback data fetch for ${users.size} user(s)"` |
+| Explicit rebuild / resync initiated | `"Rebuilding playback data for user: ${userId.value}"` |
+| New catalog entity synced with name | `"Synced album '${title}' ($id): ${n} track(s)"` |
+| Outbox pagination completed | `"Completed all pages for playlist '${name}' ($id, user $userId)"` |
+| Batch rebuild summary | `"Enqueued daily aggregations from $from to $to"` |
+| User-visible state change | `"Updated sync status for playlist '${name}' ($id, user $userId) to $syncStatus"` |
+
 ## Release Note Snippets
 
 **Snippet filename:** `docs/releasenotes/snippets/{branch-last-segment}-{type}.md` where `{type}` is one of `bugfix` or `feature`.

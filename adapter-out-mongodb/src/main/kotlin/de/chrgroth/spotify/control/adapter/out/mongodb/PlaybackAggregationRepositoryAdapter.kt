@@ -20,7 +20,6 @@ class PlaybackAggregationRepositoryAdapter(
 
   override fun save(aggregation: PlaybackAggregation) {
     val doc = aggregation.toDocument()
-    logger.info { "Saving playback aggregation: ${doc.id}" }
     mongoQueryMetrics.timed("app_playback_aggregation.save") {
       repository.persistOrUpdate(doc)
     }

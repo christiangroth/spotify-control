@@ -45,7 +45,6 @@ class PlaybackAggregationService(
 
   override fun enqueueAggregateDay(date: LocalDate) {
     val users = userRepository.findAll()
-    logger.info { "Enqueuing day aggregation for $date for ${users.size} user(s)" }
     users.forEach { user ->
       outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(user.spotifyUserId, AggregationPeriodType.DAY, date))
     }
@@ -53,7 +52,6 @@ class PlaybackAggregationService(
 
   override fun enqueueAggregateWeek(weekStart: LocalDate) {
     val users = userRepository.findAll()
-    logger.info { "Enqueuing week aggregation for $weekStart for ${users.size} user(s)" }
     users.forEach { user ->
       outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(user.spotifyUserId, AggregationPeriodType.WEEK, weekStart))
     }
@@ -61,7 +59,6 @@ class PlaybackAggregationService(
 
   override fun enqueueAggregateMonth(monthStart: LocalDate) {
     val users = userRepository.findAll()
-    logger.info { "Enqueuing month aggregation for $monthStart for ${users.size} user(s)" }
     users.forEach { user ->
       outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(user.spotifyUserId, AggregationPeriodType.MONTH, monthStart))
     }
@@ -69,7 +66,6 @@ class PlaybackAggregationService(
 
   override fun enqueueAggregateQuarter(quarterStart: LocalDate) {
     val users = userRepository.findAll()
-    logger.info { "Enqueuing quarter aggregation for $quarterStart for ${users.size} user(s)" }
     users.forEach { user ->
       outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(user.spotifyUserId, AggregationPeriodType.QUARTER, quarterStart))
     }
@@ -77,7 +73,6 @@ class PlaybackAggregationService(
 
   override fun enqueueAggregateYear(yearStart: LocalDate) {
     val users = userRepository.findAll()
-    logger.info { "Enqueuing year aggregation for $yearStart for ${users.size} user(s)" }
     users.forEach { user ->
       outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(user.spotifyUserId, AggregationPeriodType.YEAR, yearStart))
     }
@@ -196,15 +191,12 @@ class PlaybackAggregationService(
   // --- Aggregation logic ---
 
   private fun aggregateDay(userId: UserId, date: LocalDate) {
-    logger.info { "Aggregating day $date for user: ${userId.value}" }
-
     val javaDate = date.toJavaLocalDate()
     val from = Instant.fromEpochMilliseconds(javaDate.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli())
     val to = Instant.fromEpochMilliseconds(javaDate.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli())
 
     val items = appPlaybackRepository.findAllBetween(userId, from, to)
     if (items.isEmpty()) {
-      logger.info { "No playback data for $date, user: ${userId.value} — saving empty aggregation" }
       aggregationRepository.save(emptyAggregation(userId, AggregationPeriodType.DAY, date))
       return
     }
@@ -222,7 +214,6 @@ class PlaybackAggregationService(
     }
 
     if (filteredItems.isEmpty()) {
-      logger.info { "All playback items for $date, user: ${userId.value} are from blocked artists — saving empty aggregation" }
       aggregationRepository.save(emptyAggregation(userId, AggregationPeriodType.DAY, date))
       return
     }
@@ -245,15 +236,11 @@ class PlaybackAggregationService(
       activityEntries = activityEntries,
     )
     aggregationRepository.save(aggregation)
-    logger.info { "Saved day aggregation for $date, user: ${userId.value}" }
   }
 
   private fun aggregateFromDailyAggregations(userId: UserId, type: AggregationPeriodType, from: LocalDate, to: LocalDate) {
-    logger.info { "Aggregating $type from $from to $to for user: ${userId.value}" }
-
     val dailyAggregations = aggregationRepository.findByUserTypeAndPeriodRange(userId, AggregationPeriodType.DAY, from, to)
     if (dailyAggregations.isEmpty()) {
-      logger.info { "No daily aggregations found for $from to $to, user: ${userId.value} — saving empty $type aggregation" }
       aggregationRepository.save(emptyAggregation(userId, type, from))
       return
     }
@@ -292,7 +279,6 @@ class PlaybackAggregationService(
       activityEntries = mergedActivityEntries,
     )
     aggregationRepository.save(aggregation)
-    logger.info { "Saved $type aggregation for $from, user: ${userId.value}" }
   }
 
   private fun buildRankings(

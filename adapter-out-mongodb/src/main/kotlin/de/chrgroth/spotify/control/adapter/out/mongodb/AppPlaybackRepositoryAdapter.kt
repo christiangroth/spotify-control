@@ -33,7 +33,6 @@ class AppPlaybackRepositoryAdapter(
         secondsPlayed = item.secondsPlayed
       }
     }
-    logger.info { "Saving ${documents.size} app_playback documents" }
     mongoQueryMetrics.timed("app_playback.saveAll") {
       appPlaybackDocumentRepository.persistOrUpdate(documents)
     }

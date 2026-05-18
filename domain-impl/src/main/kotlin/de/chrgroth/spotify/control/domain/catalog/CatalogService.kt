@@ -79,7 +79,7 @@ class CatalogService(
       .flatMap { detail ->
         if (detail != null) {
           appArtistRepository.upsertAll(listOf(detail))
-          logger.info { "Updated sync data for artist $artistId, enqueueing album sync" }
+          logger.info { "Updated sync data for artist '${detail.artistName}' ($artistId), enqueueing album sync" }
           outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums(artistId, userId))
           dashboardRefresh.notifyCatalogData()
         } else {
@@ -144,11 +144,11 @@ class CatalogService(
           syncController.syncArtists(artistIds, userId)
           val expectedTracks = albumResult.album.totalTracks
           if (expectedTracks != null && albumResult.tracks.size < expectedTracks) {
-            logger.warn { "Album $albumId: synced ${albumResult.tracks.size} track(s) but album reports $expectedTracks total" }
+            logger.warn { "Album '${albumResult.album.title ?: albumId}' ($albumId): synced ${albumResult.tracks.size} track(s) but album reports $expectedTracks total" }
           }
           dashboardRefresh.notifyCatalogData()
         }
-        logger.info { "Synced album $albumId: ${albumResult.tracks.size} track(s)" }
+        logger.info { "Synced album '${albumResult.album.title ?: albumId}' ($albumId): ${albumResult.tracks.size} track(s)" }
         1.right()
       }
     }

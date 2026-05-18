@@ -9,7 +9,6 @@ import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
 import jakarta.enterprise.context.ApplicationScoped
-import mu.KLogging
 import kotlin.time.toKotlinInstant
 
 @ApplicationScoped
@@ -20,7 +19,6 @@ class OutboxPortAdapter(
 
   override fun enqueue(event: DomainOutboxEvent) {
     outbox.enqueue(event)
-    logger.info { "Enqueued outbox event ${event.key} in partition ${event.partition.key}" }
   }
 
   override fun getPartitionStats(): List<OutboxPartitionStats> {
@@ -57,5 +55,4 @@ class OutboxPortAdapter(
     }
   }
 
-  companion object : KLogging()
 }

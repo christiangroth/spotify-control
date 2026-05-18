@@ -35,7 +35,7 @@ class CurrentlyPlayingRepositoryAdapter(
       startTime = item.startTime.toJavaInstant()
       albumId = item.albumId?.value
     }
-    logger.info { "Saving currently playing document for user ${item.spotifyUserId.value}, track ${item.trackId.value}" }
+    logger.info { "Saving currently playing document for user ${item.spotifyUserId.value}, track '${item.trackName}' by ${item.artistNames.joinToString()} (${item.trackId.value})" }
     mongoQueryMetrics.timed("spotify_currently_playing.save") {
       currentlyPlayingDocumentRepository.persist(document)
     }
@@ -65,7 +65,6 @@ class CurrentlyPlayingRepositoryAdapter(
     }
 
   override fun updateProgress(item: CurrentlyPlayingItem) {
-    logger.info { "Updating currently playing progress for user ${item.spotifyUserId.value}, track ${item.trackId.value}, progressMs=${item.progressMs}" }
     mongoQueryMetrics.timed("spotify_currently_playing.updateProgress") {
       currentlyPlayingDocumentRepository.mongoCollection().findOneAndUpdate(
         Filters.and(

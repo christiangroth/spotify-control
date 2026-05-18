@@ -11,7 +11,6 @@ import jakarta.enterprise.context.ApplicationScoped
 import kotlin.time.Instant
 import kotlin.time.toJavaInstant
 import kotlin.time.toKotlinInstant
-import mu.KLogging
 
 @ApplicationScoped
 class RecentlyPlayedRepositoryAdapter(
@@ -79,7 +78,6 @@ class RecentlyPlayedRepositoryAdapter(
         durationSeconds = item.durationSeconds ?: 0L
       }
     }
-    logger.info { "Saving ${documents.size} recently played documents" }
     mongoQueryMetrics.timed("spotify_recently_played.saveAll") {
       recentlyPlayedDocumentRepository.persist(documents)
     }
@@ -90,6 +88,5 @@ class RecentlyPlayedRepositoryAdapter(
       recentlyPlayedDocumentRepository.delete("artistIds = ?1 and artistNames = ?2", emptyList<String>(), emptyList<String>())
     }
 
-  companion object : KLogging()
 }
 

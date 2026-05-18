@@ -82,21 +82,16 @@ class PlaybackService(
       if (item != null) {
         val existing = currentlyPlayingRepository.findMostRecentByUserAndTrack(userId, item.trackId)
         if (existing != null && !isTrackRestart(item, existing)) {
-          logger.info { "Updating currently playing item for user: ${userId.value}, track: ${item.trackId}" }
           currentlyPlayingRepository.updateProgress(item.copy(startTime = existing.startTime))
         } else {
           if (existing != null) {
-            logger.info { "Track restart detected for user: ${userId.value}, track: ${item.trackId} — replacing existing entry" }
             currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, setOf(item.trackId.value))
           }
-          logger.info { "Persisting currently playing item for user: ${userId.value}, track: ${item.trackId}" }
           currentlyPlayingRepository.save(item)
         }
-        logger.info { "Removing orphaned currently playing entries for user: ${userId.value}, except track: ${item.trackId}" }
         convertAndDeleteOrphanedItems(userId, item.trackId)
         dashboardRefresh.notifyUserPlaybackData(userId)
       } else {
-        logger.info { "No currently playing item for user: ${userId.value}, removing any orphaned entries" }
         convertAndDeleteOrphanedItems(userId, null)
       }
       Unit.right()
@@ -130,7 +125,6 @@ class PlaybackService(
       val existingPlayedAts = recentlyPartialPlayedRepository.findExistingPlayedAts(userId, partialItems.map { it.playedAt }.toSet())
       val newPartial = partialItems.filter { it.playedAt !in existingPlayedAts }
       if (newPartial.isNotEmpty()) {
-        logger.info { "Persisting ${newPartial.size} orphaned partial play(s) for user: ${userId.value}" }
         recentlyPartialPlayedRepository.saveAll(newPartial)
       }
     }
@@ -149,7 +143,6 @@ class PlaybackService(
       val existingPlayedAts = recentlyPlayedRepository.findExistingPlayedAts(userId, playedAts)
       val newItems = tracks.filter { it.playedAt !in existingPlayedAts }
       if (newItems.isNotEmpty()) {
-        logger.info { "Persisting ${newItems.size} new recently played items for user: ${userId.value}" }
         recentlyPlayedRepository.saveAll(newItems)
         deduplicateWithPartialPlays(userId, newItems)
       }
@@ -182,7 +175,6 @@ class PlaybackService(
     }
 
     if (duplicatePlayedAts.isNotEmpty()) {
-      logger.info { "Removing ${duplicatePlayedAts.size} duplicate partial play(s) superseded by recently played for user: ${userId.value}" }
       recentlyPartialPlayedRepository.deleteByPlayedAts(userId, duplicatePlayedAts)
       appPlaybackRepository.deleteByUserAndPlayedAts(userId, duplicatePlayedAts)
       duplicatePlayedAts
@@ -223,7 +215,6 @@ class PlaybackService(
       val existingPlayedAts = recentlyPartialPlayedRepository.findExistingPlayedAts(userId, partialItems.map { it.playedAt }.toSet())
       val newPartial = partialItems.filter { it.playedAt !in existingPlayedAts }
       if (newPartial.isNotEmpty()) {
-        logger.info { "Persisting ${newPartial.size} recently partial played items for user: ${userId.value}" }
         recentlyPartialPlayedRepository.saveAll(newPartial)
       }
       newPartial.size
@@ -258,22 +249,15 @@ class PlaybackService(
     val partialPlayed = recentlyPartialPlayedRepository.findSince(userId, since)
 
     val allPlaybackItems = buildPlaybackItems(recentlyPlayed, partialPlayed)
-    if (allPlaybackItems.isEmpty()) {
-      logger.info { "No new playback items to append for user: ${userId.value}" }
-      return
-    }
+    if (allPlaybackItems.isEmpty()) return
 
     val existingPlayedAts = appPlaybackRepository.findExistingPlayedAts(
       userId = userId,
       playedAts = allPlaybackItems.map { it.playedAt }.toSet(),
     )
     val newPlaybackItems = allPlaybackItems.filter { it.playedAt !in existingPlayedAts }
-    if (newPlaybackItems.isEmpty()) {
-      logger.info { "All playback items already exist for user: ${userId.value}" }
-      return
-    }
+    if (newPlaybackItems.isEmpty()) return
 
-    logger.info { "Persisting ${newPlaybackItems.size} new app_playback items for user: ${userId.value}" }
     appPlaybackRepository.saveAll(newPlaybackItems)
 
     newPlaybackItems

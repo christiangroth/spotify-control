@@ -68,7 +68,6 @@ class RecentlyPartialPlayedRepositoryAdapter(
         albumId = item.albumId?.value
       }
     }
-    logger.info { "Saving ${documents.size} recently partial played documents" }
     mongoQueryMetrics.timed("recently_partial_played.saveAll") {
       recentlyPartialPlayedDocumentRepository.persist(documents)
     }

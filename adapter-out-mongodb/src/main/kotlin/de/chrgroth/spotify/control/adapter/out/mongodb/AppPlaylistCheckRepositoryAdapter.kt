@@ -15,7 +15,6 @@ class AppPlaylistCheckRepositoryAdapter(
 ) : AppPlaylistCheckRepositoryPort {
 
   override fun save(check: AppPlaylistCheck) {
-    logger.info { "Saving playlist check ${check.checkId} for playlist ${check.playlistId}" }
     val document = check.toDocument()
     mongoQueryMetrics.timed("app_playlist_check.save") {
       appPlaylistCheckDocumentRepository.persistOrUpdate(document)

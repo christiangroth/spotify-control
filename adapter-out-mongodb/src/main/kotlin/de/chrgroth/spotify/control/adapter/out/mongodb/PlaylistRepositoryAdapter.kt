@@ -32,7 +32,6 @@ class PlaylistRepositoryAdapter(
     }
 
   override fun replaceAll(userId: UserId, playlists: List<PlaylistInfo>) {
-    logger.info { "Saving ${playlists.size} playlist metadata document(s) for user ${userId.value}" }
     mongoQueryMetrics.timed("spotify_playlist_metadata.deleteByUserId") {
       playlistMetadataDocumentRepository.delete("spotifyUserId = ?1", userId.value)
     }
@@ -57,7 +56,6 @@ class PlaylistRepositoryAdapter(
     }
 
   override fun save(userId: UserId, playlist: Playlist) {
-    logger.info { "Saving playlist document for playlist ${playlist.spotifyPlaylistId} (user ${userId.value}) with ${playlist.tracks.size} track(s)" }
     val document = playlist.toDocument(userId)
     mongoQueryMetrics.timed("spotify_playlist.save") {
       playlistDocumentRepository.persistOrUpdate(document)
@@ -66,7 +64,6 @@ class PlaylistRepositoryAdapter(
 
   override fun appendTracks(userId: UserId, playlistId: String, tracks: List<PlaylistTrack>) {
     val docId = "${userId.value}:$playlistId"
-    logger.info { "Appending ${tracks.size} track(s) to playlist document $playlistId (user ${userId.value})" }
     mongoQueryMetrics.timed("spotify_playlist.appendTracks") {
       val existing = playlistDocumentRepository.findById(docId)
       if (existing != null) {
