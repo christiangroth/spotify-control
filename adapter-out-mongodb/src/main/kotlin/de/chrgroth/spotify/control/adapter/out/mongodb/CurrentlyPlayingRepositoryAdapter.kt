@@ -13,7 +13,6 @@ import de.chrgroth.spotify.control.domain.port.out.playback.CurrentlyPlayingRepo
 import jakarta.enterprise.context.ApplicationScoped
 import kotlin.time.toJavaInstant
 import kotlin.time.toKotlinInstant
-import mu.KLogging
 
 @ApplicationScoped
 class CurrentlyPlayingRepositoryAdapter(
@@ -35,7 +34,6 @@ class CurrentlyPlayingRepositoryAdapter(
       startTime = item.startTime.toJavaInstant()
       albumId = item.albumId?.value
     }
-    logger.info { "Saving currently playing document for user ${item.spotifyUserId.value}, track '${item.trackName}' by ${item.artistNames.joinToString()} (${item.trackId.value})" }
     mongoQueryMetrics.timed("spotify_currently_playing.save") {
       currentlyPlayingDocumentRepository.persist(document)
     }
@@ -114,7 +112,7 @@ class CurrentlyPlayingRepositoryAdapter(
     }
   }
 
-  companion object : KLogging() {
+  companion object {
     internal const val SPOTIFY_USER_ID_FIELD = "spotifyUserId"
     internal const val TRACK_ID_FIELD = "trackId"
     internal const val OBSERVED_AT_FIELD = "observedAt"

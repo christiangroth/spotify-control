@@ -59,7 +59,6 @@ class PlaybackService(
 
   override fun enqueueFetchPlaybackData() {
     val users = userRepository.findAll()
-    logger.info { "Scheduling playback data fetch for ${users.size} user(s)" }
     users.forEach { user ->
       outboxPort.enqueue(DomainOutboxEvent.FetchPlaybackData(user.spotifyUserId))
     }
@@ -232,18 +231,18 @@ class PlaybackService(
   // --- Playback Data ---
 
   override fun enqueueRebuildPlaybackData(userId: UserId) {
-    logger.info { "Enqueuing playback data rebuild for user: ${userId.value}" }
+    logger.info { "Enqueuing playback data rebuild for user: ${userDisplayName(userId)}" }
     outboxPort.enqueue(DomainOutboxEvent.RebuildPlaybackData(userId))
   }
 
   override fun rebuildPlaybackData(userId: UserId) {
-    logger.info { "Rebuilding playback data for user: ${userId.value}" }
+    logger.info { "Rebuilding playback data for user: ${userDisplayName(userId)}" }
     appPlaybackRepository.deleteAllByUserId(userId)
     appendPlaybackData(userId)
   }
 
   override fun appendPlaybackData(userId: UserId) {
-    logger.info { "Appending playback data for user: ${userId.value}" }
+    logger.info { "Appending playback data for user: ${userDisplayName(userId)}" }
     val since = appPlaybackRepository.findMostRecentPlayedAt(userId)
     val recentlyPlayed = recentlyPlayedRepository.findSince(userId, since)
     val partialPlayed = recentlyPartialPlayedRepository.findSince(userId, since)
@@ -307,6 +306,8 @@ class PlaybackService(
     appendPlaybackData(event.userId)
     return Unit.right()
   }
+
+  private fun userDisplayName(userId: UserId) = userRepository.findById(userId)?.displayName ?: userId.value
 
   companion object : KLogging() {
     private const val MS_PER_SECOND = 1_000L

@@ -68,7 +68,7 @@ class PlaylistService(
           type = existing?.type,
         )
       }
-      logger.info { "Synced ${updatedPlaylists.size} playlist(s) for user ${userId.value}" }
+      logger.info { "Synced ${updatedPlaylists.size} playlist(s) for user ${userDisplayName(userId)}" }
       playlistRepository.replaceAll(userId, updatedPlaylists)
       if (updatedPlaylists.size != existingById.size) {
         dashboardRefresh.notifyUserPlaylistMetadata(userId)
@@ -82,7 +82,7 @@ class PlaylistService(
             playlistRepository.findByUserIdAndPlaylistId(userId, playlist.spotifyPlaylistId) == null
         }
         .forEach { playlist ->
-          logger.info { "Enqueueing SyncPlaylistData for active playlist '${playlist.name}' (${playlist.spotifyPlaylistId}, user ${userId.value})" }
+          logger.info { "Enqueueing SyncPlaylistData for active playlist '${playlist.name}' (${playlist.spotifyPlaylistId}, user ${userDisplayName(userId)})" }
           outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, playlist.spotifyPlaylistId))
         }
     }
@@ -93,7 +93,6 @@ class PlaylistService(
     val accessToken = spotifyAccessToken.getValidAccessToken(userId)
     val isFirstPage = nextUrl == null
     return spotifyPlaylist.getPlaylistTracksPage(userId, accessToken, playlistId, nextUrl).map { page ->
-      logger.info { "Synced page of ${page.tracks.size} track(s) for playlist $playlistId (user ${userId.value})" }
       if (snapshotId != null && page.snapshotId != snapshotId) {
         logger.warn { "Snapshot changed for playlist $playlistId (expected $snapshotId, got ${page.snapshotId}), restarting sync from first page" }
         outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, playlistId))
@@ -109,10 +108,9 @@ class PlaylistService(
       syncController.syncForTracks(catalogRequests, userId)
 
       if (page.nextUrl != null) {
-        logger.info { "Enqueueing next SyncPlaylistData page for playlist $playlistId (user ${userId.value})" }
         outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, playlistId, page.nextUrl, page.snapshotId))
       } else {
-        logger.info { "Completed all pages for playlist $playlistId (user ${userId.value})" }
+        logger.info { "Completed all pages for playlist $playlistId (user ${userDisplayName(userId)})" }
         playlistRepository.updateLastSyncTime(userId, playlistId, Clock.System.now())
         outboxPort.enqueue(DomainOutboxEvent.RunPlaylistChecks(userId, playlistId))
       }
@@ -139,14 +137,14 @@ class PlaylistService(
         it
       }
     }
-    logger.info { "Updated sync status for playlist '${playlist.name}' ($playlistId, user ${userId.value}) to $syncStatus" }
+    logger.info { "Updated sync status for playlist '${playlist.name}' ($playlistId, user ${userDisplayName(userId)}) to $syncStatus" }
     playlistRepository.replaceAll(userId, updatedPlaylists)
     dashboardRefresh.notifyUserPlaylistMetadata(userId)
     if (syncStatus == PlaylistSyncStatus.PASSIVE) {
-      logger.info { "Deleting checks for deactivated playlist '${playlist.name}' ($playlistId, user ${userId.value})" }
+      logger.info { "Deleting checks for deactivated playlist '${playlist.name}' ($playlistId, user ${userDisplayName(userId)})" }
       playlistCheckRepository.deleteByPlaylistId(playlistId)
     } else if (syncStatus == PlaylistSyncStatus.ACTIVE) {
-      logger.info { "Enqueueing SyncPlaylistData for activated playlist '${playlist.name}' ($playlistId, user ${userId.value})" }
+      logger.info { "Enqueueing SyncPlaylistData for activated playlist '${playlist.name}' ($playlistId, user ${userDisplayName(userId)})" }
       outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, playlistId))
     }
     return Unit.right()
@@ -160,7 +158,7 @@ class PlaylistService(
       if (it.spotifyPlaylistId == playlistId) it.copy(type = type) else it
     }
     val playlistName = playlists.find { it.spotifyPlaylistId == playlistId }?.name ?: playlistId
-    logger.info { "Updated type for playlist '$playlistName' ($playlistId, user ${userId.value}) to $type" }
+    logger.info { "Updated type for playlist '$playlistName' ($playlistId, user ${userDisplayName(userId)}) to $type" }
     playlistRepository.replaceAll(userId, updatedPlaylists)
     dashboardRefresh.notifyUserPlaylistMetadata(userId)
     return Unit.right()
@@ -189,7 +187,7 @@ class PlaylistService(
     return if (playlist.syncStatus != PlaylistSyncStatus.ACTIVE) {
       PlaylistSyncError.PLAYLIST_SYNC_INACTIVE.left()
     } else {
-      logger.info { "Enqueueing SyncPlaylistData for playlist '${playlist.name}' ($playlistId, user ${userId.value})" }
+      logger.info { "Enqueueing SyncPlaylistData for playlist '${playlist.name}' ($playlistId, user ${userDisplayName(userId)})" }
       outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, playlistId))
       Unit.right()
     }
@@ -200,6 +198,8 @@ class PlaylistService(
 
   override fun handle(event: DomainOutboxEvent.SyncPlaylistData): Either<DomainError, Unit> =
     syncPlaylistData(event.userId, event.playlistId, event.nextUrl, event.snapshotId)
+
+  private fun userDisplayName(userId: UserId) = userRepository.findById(userId)?.displayName ?: userId.value
 
   companion object : KLogging() {
     private val YEAR_NAME_REGEX = Regex("\\d{4}")
