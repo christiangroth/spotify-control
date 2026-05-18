@@ -77,7 +77,8 @@
                                 </div>
                             </div>
 
-                            <div class="mt-3">
+                            {#if tab.id != 'day'}
+                            <div class="mt-3" data-testid="stats-activity-section-{tab.id}">
                                 <p class="mb-1" style="color:#888;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;">Activity by Day and Time Window</p>
                                 {#if aggregation.data.activityEntries.empty}
                                 <p class="mb-0" style="color:#666;font-size:.8rem;">No data</p>
@@ -85,6 +86,7 @@
                                 {#bar-chart entries=aggregation.activityBars dataTestId='stats-activity-chart'/}
                                 {/if}
                             </div>
+                            {/if}
                             {#else}
                             <p class="mb-2" style="color:#666;font-size:.82rem;">No aggregation data available yet for this period.</p>
                             <div class="row g-2">
@@ -101,10 +103,12 @@
                                     <p class="mb-0" style="color:#666;font-size:.8rem;">No data</p>
                                 </div>
                             </div>
-                            <div class="mt-3">
+                            {#if tab.id != 'day'}
+                            <div class="mt-3" data-testid="stats-activity-section-{tab.id}">
                                 <p class="mb-1" style="color:#888;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;">Activity by Day and Time Window</p>
                                 <p class="mb-0" style="color:#666;font-size:.8rem;">No data</p>
                             </div>
+                            {/if}
                             {/if}
                         </div>
                     </div>

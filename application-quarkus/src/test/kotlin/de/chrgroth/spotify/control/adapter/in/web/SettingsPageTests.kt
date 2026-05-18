@@ -4,6 +4,7 @@ import io.quarkus.test.junit.QuarkusTest
 import io.quarkus.test.security.TestSecurity
 import io.restassured.RestAssured.given
 import org.hamcrest.CoreMatchers.containsString
+import org.hamcrest.CoreMatchers.not
 import org.junit.jupiter.api.Test
 
 @QuarkusTest
@@ -144,7 +145,8 @@ class SettingsPageTests {
       .body(containsString("Top Artists"))
       .body(containsString("Top Albums"))
       .body(containsString("Top Tracks"))
-      .body(containsString("Activity by Day and Time Window"))
+      .body(containsString("""data-testid="stats-activity-section-week""""))
+      .body(not(containsString("""data-testid="stats-activity-section-day"""")))
   }
 
 }

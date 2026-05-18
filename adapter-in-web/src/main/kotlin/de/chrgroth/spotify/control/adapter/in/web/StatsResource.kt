@@ -3,6 +3,7 @@ package de.chrgroth.spotify.control.adapter.`in`.web
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
+import de.chrgroth.spotify.control.domain.model.catalog.displayArtistName
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.ActivityTimeWindow
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationPeriodType
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.PlaybackAggregation
@@ -71,7 +72,7 @@ class StatsResource(
         aggregation.copy(
           topArtists = topArtists(aggregation.data, artistsById),
           topAlbums = topAlbums(aggregation.data, albumsById),
-          topTracks = topTracks(aggregation.data, tracksById, albumsById),
+          topTracks = topTracks(aggregation.data, tracksById, albumsById, artistsById),
           activityBars = activityBars(aggregation.data),
         )
       })
@@ -135,7 +136,12 @@ class StatsResource(
       .take(TOP_ENTRIES_LIMIT)
       .map { entry ->
         val album = albumsById[AlbumId(entry.id)]
-        RankEntryView(name = album?.title ?: entry.name, totalSeconds = entry.totalSeconds, imageLink = album?.imageLink)
+        RankEntryView(
+          name = album?.title ?: entry.name,
+          totalSeconds = entry.totalSeconds,
+          imageLink = album?.imageLink,
+          artistName = album?.artistName,
+        )
       }
   }
 
@@ -143,6 +149,7 @@ class StatsResource(
     aggregation: PlaybackAggregation?,
     tracksById: Map<TrackId, de.chrgroth.spotify.control.domain.model.catalog.AppTrack>,
     albumsById: Map<AlbumId, de.chrgroth.spotify.control.domain.model.catalog.AppAlbum>,
+    artistsById: Map<ArtistId, de.chrgroth.spotify.control.domain.model.catalog.AppArtist>,
   ): List<RankEntryView> {
     if (aggregation == null) {
       return emptyList()
@@ -155,6 +162,9 @@ class StatsResource(
           name = track?.title ?: entry.name,
           totalSeconds = entry.totalSeconds,
           imageLink = track?.albumId?.let { albumsById[it]?.imageLink },
+          artistName = track?.displayArtistName { artistId -> artistsById[artistId]?.artistName },
+          albumName = track?.albumName ?: track?.albumId?.let { albumsById[it]?.title },
+          trackDurationMs = track?.durationMs,
         )
       }
   }
@@ -243,7 +253,14 @@ class StatsResource(
     val activityBars: List<ActivityBarEntryView> = emptyList(),
   )
 
-  data class RankEntryView(val name: String, val totalSeconds: Long, val imageLink: String? = null)
+  data class RankEntryView(
+    val name: String,
+    val totalSeconds: Long,
+    val imageLink: String? = null,
+    val artistName: String? = null,
+    val albumName: String? = null,
+    val trackDurationMs: Long? = null,
+  )
 
   data class ActivityBarEntryView(
     val label: String,

@@ -4,6 +4,7 @@ import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.model.DashboardStats
 import de.chrgroth.spotify.control.domain.model.playback.DayCount
 import de.chrgroth.spotify.control.domain.model.catalog.AppTrack
+import de.chrgroth.spotify.control.domain.model.catalog.displayArtistName
 import de.chrgroth.spotify.control.domain.model.playback.ListeningStats
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationPeriodType
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistCheckStats
@@ -205,12 +206,22 @@ class DashboardService(
 
       val topTracks = buildTopEntries(secondsByTrackId, { statsTrackMap[it]?.title ?: it }) { id ->
         statsTrackMap[id]?.albumId?.let { statsAlbumMap[it.value]?.imageLink }
+      }.map { entry ->
+        val track = statsTrackMap[entry.id]
+        val album = track?.albumId?.let { statsAlbumMap[it.value] }
+        entry.topEntry.copy(
+          artistName = track?.displayArtistName { artistId -> statsArtistMap[artistId.value]?.artistName },
+          albumName = track?.albumName ?: album?.title,
+          trackDurationMs = track?.durationMs,
+        )
       }
       val topArtists = buildTopEntries(secondsByArtistId, { statsArtistMap[it]?.artistName ?: it }) { id ->
         statsArtistMap[id]?.imageLink
-      }
+      }.map { it.topEntry }
       val topAlbums = buildTopEntries(secondsByAlbumId, { statsAlbumMap[it]?.title ?: it }) { id ->
         statsAlbumMap[id]?.imageLink
+      }.map { entry ->
+        entry.topEntry.copy(artistName = statsAlbumMap[entry.id]?.artistName)
       }
 
       ListeningStats(
@@ -226,11 +237,18 @@ class DashboardService(
     secondsById: Map<String, Long>,
     nameResolver: (String) -> String,
     imageResolver: ((String) -> String?)? = null,
-  ): List<TopEntry> =
+  ): List<TopEntryView> =
     secondsById.entries
       .sortedByDescending { it.value }
       .take(topEntriesLimit)
-      .map { (id, seconds) -> TopEntry(name = nameResolver(id), totalMinutes = seconds / SECONDS_PER_MINUTE, imageLink = imageResolver?.invoke(id)) }
+      .map { (id, seconds) ->
+        TopEntryView(
+          id = id,
+          topEntry = TopEntry(name = nameResolver(id), totalMinutes = seconds / SECONDS_PER_MINUTE, imageLink = imageResolver?.invoke(id)),
+        )
+      }
+
+  private data class TopEntryView(val id: String, val topEntry: TopEntry)
 
   companion object {
     private const val STATS_DAYS = 30
