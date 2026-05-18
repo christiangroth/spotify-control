@@ -47,7 +47,7 @@ class MigrateCatalogEventsToNewPartitionsStarter(
     private const val LEGACY_CATALOG_PARTITION = "to-spotify-catalog"
     private const val ARTIST_PARTITION = "to-spotify-catalog-artist"
     private const val ALBUM_PARTITION = "to-spotify-catalog-album"
-    private val ARTIST_EVENT_TYPES = listOf("SyncArtistDetails", "EnrichArtistDetails", "SyncArtistAlbums")
+    private val ARTIST_EVENT_TYPES = listOf("SyncArtistDetails", "EnrichArtistDetails", "SyncArtistAlbums") // EnrichArtistDetails is the legacy key for SyncArtistDetails
     private val ALBUM_EVENT_TYPES = listOf("SyncAlbumDetails")
   }
 }
