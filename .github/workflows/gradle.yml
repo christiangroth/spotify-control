@@ -94,7 +94,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - run: ./gradlew release -x test -x testNative -x koverHtmlReport -x koverVerify
+      - run: ./gradlew release -x test -x testNative
         env:
           GHCR_PAT: ${{ secrets.GHCR_PAT }}
       - run: |
