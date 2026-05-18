@@ -18,7 +18,6 @@ class SpotifyRequestThrottler(
   private val throttledPartitions = setOf(
     DomainOutboxPartition.ToSpotifyCatalog.key,
     DomainOutboxPartition.ToSpotifyPlaylist.key,
-    DomainOutboxPartition.ToSpotifyUser.key,
   )
 
   fun throttle(partitionKey: String) {
