@@ -1,5 +1,6 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
+import com.mongodb.client.model.Filters
 import com.mongodb.client.model.Updates
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
@@ -63,13 +64,19 @@ class PlaylistRepositoryAdapter(
   }
 
   override fun appendTracks(userId: UserId, playlistId: String, tracks: List<PlaylistTrack>) {
+    if (tracks.isEmpty()) return
     val docId = "${userId.value}:$playlistId"
     mongoQueryMetrics.timed("spotify_playlist.appendTracks") {
-      val existing = playlistDocumentRepository.findById(docId)
-      if (existing != null) {
-        existing.tracks = existing.tracks + tracks.map { it.toSubdocument() }
-        playlistDocumentRepository.persistOrUpdate(existing)
-      } else {
+      val trackDocuments = tracks.map { track ->
+        Document("trackId", track.trackId.value)
+          .append("artistIds", track.artistIds.map { it.value })
+          .append("albumId", track.albumId?.value)
+      }
+      val result = playlistDocumentRepository.mongoCollection().updateOne(
+        Filters.eq("_id", docId),
+        Updates.pushEach("tracks", trackDocuments),
+      )
+      if (result.matchedCount == 0L) {
         logger.warn { "Playlist document not found for appending tracks: $playlistId (user ${userId.value})" }
       }
     }
