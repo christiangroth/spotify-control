@@ -1,20 +1,23 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
+import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
 class LogsViewerResourceTests {
 
+  private val resource = LogsViewerResource(
+    template = mockk(relaxed = true),
+    logsCollector = mockk(relaxed = true),
+  )
+
   @Test
   fun `returns no groups for empty input`() {
-    val resource = LogsViewerResource()
-
     assertThat(resource.groupLogsByClassAndType(emptyList())).isEmpty()
   }
 
   @Test
   fun `groups logs by class and level and sorts by level then group size`() {
-    val resource = LogsViewerResource()
     val groups = resource.groupLogsByClassAndType(
       listOf(
         createEntry(timestamp = 1_000L, level = "WARN", className = "ClassB", message = "warn-b-old"),
