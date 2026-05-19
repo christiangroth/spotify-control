@@ -242,7 +242,6 @@ class PlaybackService(
   }
 
   override fun appendPlaybackData(userId: UserId) {
-    logger.info { "Appending playback data for user: ${userDisplayName(userId)}" }
     val since = appPlaybackRepository.findMostRecentPlayedAt(userId)
     val recentlyPlayed = recentlyPlayedRepository.findSince(userId, since)
     val partialPlayed = recentlyPartialPlayedRepository.findSince(userId, since)

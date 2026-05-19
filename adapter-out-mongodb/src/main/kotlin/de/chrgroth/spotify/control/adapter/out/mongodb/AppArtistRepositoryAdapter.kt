@@ -10,7 +10,7 @@ import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 import kotlin.time.toKotlinInstant
-import mu.KLogging
+
 
 @ApplicationScoped
 class AppArtistRepositoryAdapter(
@@ -88,7 +88,6 @@ class AppArtistRepositoryAdapter(
   }
 
   override fun deleteAll() {
-    logger.info { "Deleting all app_artist documents" }
     mongoQueryMetrics.timed("app_artist.deleteAll") {
       appArtistDocumentRepository.deleteAll()
     }
@@ -103,7 +102,7 @@ class AppArtistRepositoryAdapter(
     blockedFromAggregation = blockedFromAggregation,
   )
 
-  companion object : KLogging() {
+  companion object {
     internal const val ID_FIELD = "_id"
     internal const val ARTIST_NAME_FIELD = "artistName"
     internal const val IMAGE_LINK_FIELD = "imageLink"

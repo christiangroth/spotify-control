@@ -10,7 +10,6 @@ import jakarta.enterprise.context.ApplicationScoped
 import kotlin.time.Instant
 import kotlin.time.toJavaInstant
 import kotlin.time.toKotlinInstant
-import mu.KLogging
 
 @ApplicationScoped
 class RecentlyPartialPlayedRepositoryAdapter(
@@ -76,7 +75,6 @@ class RecentlyPartialPlayedRepositoryAdapter(
   override fun deleteByPlayedAts(userId: UserId, playedAts: Set<Instant>) {
     if (playedAts.isEmpty()) return
     val javaPlayedAts = playedAts.map { it.toJavaInstant() }
-    logger.info { "Deleting ${playedAts.size} recently partial played document(s) for user: ${userId.value}" }
     mongoQueryMetrics.timed("recently_partial_played.deleteByPlayedAts") {
       recentlyPartialPlayedDocumentRepository.delete("spotifyUserId = ?1 and playedAt in ?2", userId.value, javaPlayedAts)
     }
@@ -94,5 +92,4 @@ class RecentlyPartialPlayedRepositoryAdapter(
     albumId = albumId?.let { AlbumId(it) },
   )
 
-  companion object : KLogging()
 }

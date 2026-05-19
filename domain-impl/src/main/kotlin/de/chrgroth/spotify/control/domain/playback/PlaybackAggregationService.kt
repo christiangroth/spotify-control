@@ -83,7 +83,6 @@ class PlaybackAggregationService(
   override fun rebuildAllAggregations() {
     val oldestInstant = appPlaybackRepository.findOldestPlayedAt()
     if (oldestInstant == null) {
-      logger.info { "No playback data found, skipping aggregation rebuild" }
       return
     }
 

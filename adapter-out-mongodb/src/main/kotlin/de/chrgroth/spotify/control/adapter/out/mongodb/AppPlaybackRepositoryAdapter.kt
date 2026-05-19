@@ -13,7 +13,6 @@ import kotlin.time.Instant
 import kotlin.time.toJavaInstant
 import kotlin.time.toKotlinInstant
 import kotlinx.datetime.LocalDate
-import mu.KLogging
 import org.bson.Document
 
 @ApplicationScoped
@@ -39,7 +38,6 @@ class AppPlaybackRepositoryAdapter(
   }
 
   override fun deleteAllByUserId(userId: UserId) {
-    logger.info { "Deleting all app_playback documents for user: ${userId.value}" }
     mongoQueryMetrics.timed("app_playback.deleteAllByUserId") {
       appPlaybackDocumentRepository.delete("spotifyUserId = ?1", userId.value)
     }
@@ -47,7 +45,6 @@ class AppPlaybackRepositoryAdapter(
 
   override fun deleteAllByTrackIds(trackIds: Set<String>) {
     if (trackIds.isEmpty()) return
-    logger.info { "Deleting all app_playback documents for ${trackIds.size} track(s)" }
     mongoQueryMetrics.timed("app_playback.deleteAllByTrackIds") {
       appPlaybackDocumentRepository.delete("trackId in ?1", trackIds.toList())
     }
@@ -56,7 +53,6 @@ class AppPlaybackRepositoryAdapter(
   override fun deleteByUserAndPlayedAts(userId: UserId, playedAts: Set<Instant>) {
     if (playedAts.isEmpty()) return
     val javaPlayedAts = playedAts.map { it.toJavaInstant() }
-    logger.info { "Deleting ${playedAts.size} app_playback document(s) for user: ${userId.value}" }
     mongoQueryMetrics.timed("app_playback.deleteByUserAndPlayedAts") {
       appPlaybackDocumentRepository.delete("spotifyUserId = ?1 and playedAt in ?2", userId.value, javaPlayedAts)
     }
@@ -210,7 +206,7 @@ class AppPlaybackRepositoryAdapter(
         .toSet()
     }
 
-  companion object : KLogging() {
+  companion object {
     internal const val SPOTIFY_USER_ID_FIELD = "spotifyUserId"
     internal const val PLAYED_AT_FIELD = "playedAt"
     internal const val TRACK_ID_FIELD = "trackId"

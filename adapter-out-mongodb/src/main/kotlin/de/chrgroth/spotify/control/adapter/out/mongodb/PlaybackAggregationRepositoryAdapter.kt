@@ -10,7 +10,7 @@ import de.chrgroth.spotify.control.domain.port.out.playback.PlaybackAggregationR
 import jakarta.enterprise.context.ApplicationScoped
 import java.time.DayOfWeek
 import kotlinx.datetime.LocalDate
-import mu.KLogging
+
 
 @ApplicationScoped
 class PlaybackAggregationRepositoryAdapter(
@@ -26,10 +26,9 @@ class PlaybackAggregationRepositoryAdapter(
   }
 
   override fun deleteAll() {
-    val count = mongoQueryMetrics.timed("app_playback_aggregation.deleteAll") {
+    mongoQueryMetrics.timed("app_playback_aggregation.deleteAll") {
       repository.deleteAll()
     }
-    logger.info { "Deleted $count playback aggregation document(s)" }
   }
 
   override fun findByUserAndPeriod(userId: UserId, type: AggregationPeriodType, periodStart: LocalDate): PlaybackAggregation? {
@@ -111,7 +110,7 @@ class PlaybackAggregationRepositoryAdapter(
     totalSeconds = totalSeconds,
   )
 
-  companion object : KLogging() {
+  companion object {
     internal const val SPOTIFY_USER_ID_FIELD = "spotifyUserId"
     internal const val TYPE_FIELD = "type"
     internal const val PERIOD_START_FIELD = "periodStart"

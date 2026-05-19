@@ -64,7 +64,6 @@ class DuplicateTrackIdsCheckRunner(
     val countByTrackId = playlist.tracks.groupingBy { it.trackId.value }.eachCount()
     val duplicateTrackIds = countByTrackId.entries.filter { it.value > 1 }.map { it.key }
     if (duplicateTrackIds.isEmpty()) {
-      logger.info { "No duplicate tracks found in playlist $playlistId, nothing to fix" }
       return Unit.right()
     }
     logger.info { "Removing all occurrences of ${duplicateTrackIds.size} duplicate track(s) from playlist $playlistId (user ${userId.value}), then re-adding once each" }

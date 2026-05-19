@@ -61,7 +61,6 @@ class TrackFromLatestReleaseCheckRunner(
   ): Either<DomainError, Unit> {
     val violations = findViolations(playlist)
     if (violations.isEmpty()) {
-      logger.info { "No track-from-latest-release violations found in playlist $playlistId, nothing to fix" }
       return Unit.right()
     }
     logger.info { "Replacing ${violations.size} outdated track(s) in playlist $playlistId (user ${userId.value})" }

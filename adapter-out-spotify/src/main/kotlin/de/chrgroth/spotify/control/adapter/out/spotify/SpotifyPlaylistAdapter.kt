@@ -149,11 +149,9 @@ class SpotifyPlaylistAdapter(
       val itemElement = item.item ?: return@mapNotNull null
       val track = decodeTrack(itemElement) ?: return@mapNotNull null
       if (track.type != TrackObject.Type.TRACK) {
-        logger.info { "Ignoring non-track playlist item of type '${track.type}'" }
         return@mapNotNull null
       }
       if (track.id == null) {
-        logger.info { "Ignoring local track '${track.name}' without id in playlist" }
         return@mapNotNull null
       }
       val albumId = track.album?.id

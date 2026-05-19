@@ -6,7 +6,6 @@ import de.chrgroth.spotify.control.domain.port.out.playlist.AppPlaylistCheckRepo
 import jakarta.enterprise.context.ApplicationScoped
 import kotlin.time.toJavaInstant
 import kotlin.time.toKotlinInstant
-import mu.KLogging
 
 @ApplicationScoped
 class AppPlaylistCheckRepositoryAdapter(
@@ -42,14 +41,12 @@ class AppPlaylistCheckRepositoryAdapter(
     }
 
   override fun deleteByPlaylistId(playlistId: String) {
-    logger.info { "Deleting playlist check documents for playlist $playlistId" }
     mongoQueryMetrics.timed("app_playlist_check.deleteByPlaylistId") {
       appPlaylistCheckDocumentRepository.delete("playlistId = ?1", playlistId)
     }
   }
 
   override fun deleteAll() {
-    logger.info { "Deleting all playlist check documents" }
     mongoQueryMetrics.timed("app_playlist_check.deleteAll") {
       appPlaylistCheckDocumentRepository.deleteAll()
     }
@@ -71,5 +68,4 @@ class AppPlaylistCheckRepositoryAdapter(
     violations = this@toDocument.violations
   }
 
-  companion object : KLogging()
 }
