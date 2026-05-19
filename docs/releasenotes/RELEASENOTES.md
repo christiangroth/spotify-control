@@ -1,3 +1,12 @@
+# 0.100.1 (2026.05.19)
+
+## Bugfixes / Chore
+* Cleaned up excessive INFO logging by removing per-poll, per-item, guard-clause, and repository adapter log statements.
+
+
+
+---
+
 # 0.100.0 (2026.05.18)
 
 ## New Features
