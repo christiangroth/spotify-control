@@ -24,6 +24,7 @@ import de.chrgroth.spotify.control.domain.port.out.playlist.AppPlaylistCheckRepo
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.infra.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
+import de.chrgroth.spotify.control.domain.port.out.playback.AppPlaybackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.SpotifyCatalogPort
@@ -43,6 +44,7 @@ class CatalogServiceTests {
   private val appArtistRepository: AppArtistRepositoryPort = mockk()
   private val appTrackRepository: AppTrackRepositoryPort = mockk()
   private val appAlbumRepository: AppAlbumRepositoryPort = mockk()
+  private val appPlaybackRepository: AppPlaybackRepositoryPort = mockk(relaxed = true)
   private val userRepository: UserRepositoryPort = mockk()
   private val outboxPort: OutboxPort = mockk()
   private val playlistRepository: PlaylistRepositoryPort = mockk()
@@ -54,7 +56,7 @@ class CatalogServiceTests {
   private val adapter = CatalogService(
     spotifyAccessToken, spotifyCatalog,
     appArtistRepository, appTrackRepository, appAlbumRepository,
-    userRepository, outboxPort,
+    appPlaybackRepository, userRepository, outboxPort,
     playlistRepository, playlistCheckRepository,
     dashboardRefresh, syncController,
     playbackAggregation,
