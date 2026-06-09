@@ -9,6 +9,7 @@ import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
+import de.chrgroth.spotify.control.domain.model.catalog.TrackId
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogPort
@@ -18,6 +19,7 @@ import de.chrgroth.spotify.control.domain.port.out.playlist.AppPlaylistCheckRepo
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.infra.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
+import de.chrgroth.spotify.control.domain.port.out.playback.AppPlaybackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.SpotifyCatalogPort
@@ -34,6 +36,7 @@ class CatalogService(
   private val appArtistRepository: AppArtistRepositoryPort,
   private val appTrackRepository: AppTrackRepositoryPort,
   private val appAlbumRepository: AppAlbumRepositoryPort,
+  private val appPlaybackRepository: AppPlaybackRepositoryPort,
   private val userRepository: UserRepositoryPort,
   private val outboxPort: OutboxPort,
   private val playlistRepository: PlaylistRepositoryPort,
@@ -175,6 +178,20 @@ class CatalogService(
     partitioned.forEach { artist ->
       outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums(artist.id.value, userId))
     }
+  }
+
+  override fun enqueuePlaybackArtistsForSync() {
+    val userId = userRepository.findAll().firstOrNull()?.spotifyUserId
+    if (userId == null) {
+      logger.warn { "No users available for playback artists sync, skipping" }
+      return
+    }
+    val playbackTrackIds = appPlaybackRepository.findAllDistinctTrackIds().map { TrackId(it) }.toSet()
+    val artistIds = appTrackRepository.findByTrackIds(playbackTrackIds)
+      .flatMap { track -> listOf(track.artistId.value) + track.additionalArtistIds.map { it.value } }
+      .filter { it.isNotBlank() }.distinct()
+    logger.info { "Enqueuing artist sync for ${artistIds.size} artist(s) found in playback data" }
+    syncController.syncArtists(artistIds, userId)
   }
 
   private fun syncArtistAlbums(artistId: String, userId: UserId, nextUrl: String?): Either<DomainError, Unit> {

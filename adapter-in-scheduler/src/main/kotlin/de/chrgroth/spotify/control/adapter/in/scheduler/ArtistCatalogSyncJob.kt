@@ -1,7 +1,6 @@
 package de.chrgroth.spotify.control.adapter.`in`.scheduler
 
 import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogPort
-import de.chrgroth.quarkus.starters.domain.ScheduledSkipPredicate
 import io.quarkus.scheduler.Scheduled
 import jakarta.enterprise.context.ApplicationScoped
 import java.time.LocalDate
@@ -13,7 +12,7 @@ class ArtistCatalogSyncJob(
   private val catalog: CatalogPort,
 ) {
 
-  @Scheduled(cron = "0 0 2 * * ?", skipExecutionIf = ScheduledSkipPredicate::class)
+  @Scheduled(cron = "0 0 2 * * ?", skipExecutionIf = PausedSkipPredicate::class)
   fun run() {
     val partition = LocalDate.now(ZoneOffset.UTC).dayOfYear % TOTAL_PARTITIONS
     catalog.enqueueArtistAlbumsSync(partition, TOTAL_PARTITIONS)

@@ -124,7 +124,7 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
   data class SyncArtistDetails(val artistId: String, val userId: UserId) : DomainOutboxEvent {
     override val key = KEY
     override val deduplicationKey = "$KEY:$artistId"
-    override val partition = DomainOutboxPartition.ToSpotifyCatalogArtist
+    override val partition = DomainOutboxPartition.ToSpotifyCatalog
     override val serializePayload = "$artistId:${userId.value}"
 
     companion object {
@@ -149,7 +149,7 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
   data class SyncAlbumDetails(val albumId: String) : DomainOutboxEvent {
     override val key = KEY
     override val deduplicationKey = "$KEY:$albumId"
-    override val partition = DomainOutboxPartition.ToSpotifyCatalogAlbum
+    override val partition = DomainOutboxPartition.ToSpotifyCatalog
     override val serializePayload = albumId
 
     companion object {
@@ -169,7 +169,7 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
   data class SyncArtistAlbums(val artistId: String, val userId: UserId, val nextUrl: String? = null) : DomainOutboxEvent {
     override val key = KEY
     override val deduplicationKey = "$KEY:$artistId:${nextUrl ?: ""}"
-    override val partition = DomainOutboxPartition.ToSpotifyCatalogArtist
+    override val partition = DomainOutboxPartition.ToSpotifyCatalog
     override val serializePayload = when {
       nextUrl == null -> "$artistId:${userId.value}"
       else -> "$artistId:${userId.value}\n$nextUrl"

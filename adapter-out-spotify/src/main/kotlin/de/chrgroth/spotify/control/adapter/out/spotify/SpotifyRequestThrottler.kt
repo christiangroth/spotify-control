@@ -11,21 +11,18 @@ import java.util.concurrent.atomic.AtomicLong
 class SpotifyRequestThrottler(
   @param:ConfigProperty(name = "spotify.throttle.default-interval-ms")
   private val defaultThrottleIntervalMs: Long,
-  @param:ConfigProperty(name = "spotify.throttle.artist-interval-ms")
-  private val artistThrottleIntervalMs: Long,
 ) : SpotifyThrottlingPort {
 
   private val lastRequestTimeByPartition = ConcurrentHashMap<String, Long>()
   private val throttleIntervalMs = AtomicLong(defaultThrottleIntervalMs)
   private val throttledPartitions = setOf(
-    DomainOutboxPartition.ToSpotifyCatalogArtist.key,
-    DomainOutboxPartition.ToSpotifyCatalogAlbum.key,
+    DomainOutboxPartition.ToSpotifyCatalog.key,
     DomainOutboxPartition.ToSpotifyPlaylist.key,
   )
 
   fun throttle(partitionKey: String) {
     if (partitionKey !in throttledPartitions) return
-    val intervalMs = if (partitionKey == DomainOutboxPartition.ToSpotifyCatalogArtist.key) artistThrottleIntervalMs else throttleIntervalMs.get()
+    val intervalMs = throttleIntervalMs.get()
     val lastTime = lastRequestTimeByPartition[partitionKey] ?: 0L
     val elapsed = System.currentTimeMillis() - lastTime
     val remaining = intervalMs - elapsed
