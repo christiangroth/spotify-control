@@ -3,19 +3,21 @@ package de.chrgroth.spotify.control.adapter.`in`.starter
 import com.mongodb.client.MongoClient
 import com.mongodb.client.model.Filters
 import de.chrgroth.quarkus.starters.domain.Starter
+import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogPort
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
 import org.eclipse.microprofile.config.inject.ConfigProperty
 
 @ApplicationScoped
 @Suppress("Unused")
-class WipeCatalogArtistAlbumOutboxPartitionsStarter(
+class WipeCatalogArtistAlbumOutboxPartitionsAndEnqueuePlaybackArtistsForSyncStarter(
   private val mongoClient: MongoClient,
   @param:ConfigProperty(name = "quarkus.mongodb.database")
   private val databaseName: String,
+  private val catalog: CatalogPort,
 ) : Starter {
 
-  override val id = "WipeCatalogArtistAlbumOutboxPartitionsStarter-v1"
+  override val id = "WipeCatalogArtistAlbumOutboxPartitionsAndEnqueuePlaybackArtistsForSyncStarter-v1"
 
   override fun execute() {
     val db = mongoClient.getDatabase(databaseName)
@@ -29,6 +31,8 @@ class WipeCatalogArtistAlbumOutboxPartitionsStarter(
         .deleteOne(Filters.eq(ID_FIELD, partition))
       logger.info { "Removed old outbox partition document '$partition': deleted=${partitionResult.deletedCount}" }
     }
+
+    catalog.enqueuePlaybackArtistsForSync()
   }
 
   companion object : KLogging() {
