@@ -1,3 +1,13 @@
+# 0.100.3 (2026.06.10)
+
+## Bugfixes / Chore
+* Improved album track sync robustness for incomplete Spotify API album payloads.
+* Added clearer error details in logs when album sync requests fail.
+
+
+
+---
+
 # 0.100.2 (2026.06.09)
 
 ## Bugfixes / Chore
