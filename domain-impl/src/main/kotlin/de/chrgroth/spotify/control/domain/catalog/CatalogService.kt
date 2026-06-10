@@ -138,7 +138,7 @@ class CatalogService(
           appTrackRepository.upsertAll(albumResult.tracks)
           appAlbumRepository.upsertAll(listOf(albumResult.album))
           val artistIds = albumResult.tracks
-            .flatMap { t -> (listOf(t.artistId) + t.additionalArtistIds).map { it.value } }
+            .map { t -> t.artistId.value }
             .filter { it.isNotBlank() }.distinct()
           syncController.syncArtists(artistIds, userId)
           val expectedTracks = albumResult.album.totalTracks
@@ -188,7 +188,7 @@ class CatalogService(
     }
     val playbackTrackIds = appPlaybackRepository.findAllDistinctTrackIds().map { TrackId(it) }.toSet()
     val artistIds = appTrackRepository.findByTrackIds(playbackTrackIds)
-      .flatMap { track -> listOf(track.artistId.value) + track.additionalArtistIds.map { it.value } }
+      .map { track -> track.artistId.value }
       .filter { it.isNotBlank() }.distinct()
     logger.info { "Enqueuing artist sync for ${artistIds.size} artist(s) found in playback data" }
     syncController.syncArtists(artistIds, userId)
