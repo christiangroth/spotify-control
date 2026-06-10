@@ -1,3 +1,12 @@
+# 0.100.6 (2026.06.10)
+
+## Bugfixes / Chore
+* Catalog re-sync now rebuilds an empty catalog from existing playback history.
+
+
+
+---
+
 # 0.100.5 (2026.06.10)
 
 ## Bugfixes / Chore
