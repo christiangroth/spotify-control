@@ -105,21 +105,21 @@ class CatalogServiceTests {
     lastLoginAt = Instant.fromEpochSeconds(0),
   )
 
-  private fun recentlyPlayedItem(trackId: String, artistId: String) = RecentlyPlayedItem(
+  private fun recentlyPlayedItem(trackId: String, vararg artistIds: String) = RecentlyPlayedItem(
     spotifyUserId = userId,
     trackId = TrackId(trackId),
     trackName = "Track $trackId",
-    artistIds = listOf(ArtistId(artistId)),
-    artistNames = listOf("Artist $artistId"),
+    artistIds = artistIds.map { ArtistId(it) },
+    artistNames = artistIds.map { "Artist $it" },
     playedAt = Instant.fromEpochSeconds(10),
   )
 
-  private fun recentlyPartialPlayedItem(trackId: String, artistId: String) = RecentlyPartialPlayedItem(
+  private fun recentlyPartialPlayedItem(trackId: String, vararg artistIds: String) = RecentlyPartialPlayedItem(
     spotifyUserId = userId,
     trackId = TrackId(trackId),
     trackName = "Track $trackId",
-    artistIds = listOf(ArtistId(artistId)),
-    artistNames = listOf("Artist $artistId"),
+    artistIds = artistIds.map { ArtistId(it) },
+    artistNames = artistIds.map { "Artist $it" },
     playedAt = Instant.fromEpochSeconds(20),
     startTime = Instant.fromEpochSeconds(15),
     playedSeconds = 42,
@@ -167,7 +167,7 @@ class CatalogServiceTests {
   fun `resyncCatalog enqueues playback-based sync when catalog is empty`() {
     every { appArtistRepository.findAll() } returns emptyList()
     every { userRepository.findAll() } returns listOf(buildUser())
-    every { recentlyPlayedRepository.findSince(userId, null) } returns listOf(recentlyPlayedItem("track-1", "artist-1"))
+    every { recentlyPlayedRepository.findSince(userId, null) } returns listOf(recentlyPlayedItem("track-1", "artist-1", "artist-1b"))
     every { recentlyPartialPlayedRepository.findSince(userId, null) } returns listOf(recentlyPartialPlayedItem("track-2", "artist-2"))
 
     val result = adapter.resyncCatalog()
@@ -178,7 +178,7 @@ class CatalogServiceTests {
       syncController.syncForTracks(
         match { requests ->
           requests.size == 2 &&
-            requests.any { it == CatalogSyncRequest("track-1", listOf("artist-1")) } &&
+            requests.any { it == CatalogSyncRequest("track-1", listOf("artist-1", "artist-1b")) } &&
             requests.any { it == CatalogSyncRequest("track-2", listOf("artist-2")) }
         },
         userId,
@@ -448,7 +448,7 @@ class CatalogServiceTests {
   @Test
   fun `enqueuePlaybackArtistsForSync delegates playback tracks to syncController`() {
     every { userRepository.findAll() } returns listOf(buildUser())
-    every { recentlyPlayedRepository.findSince(userId, null) } returns listOf(recentlyPlayedItem("track-1", "artist-1"))
+    every { recentlyPlayedRepository.findSince(userId, null) } returns listOf(recentlyPlayedItem("track-1", "artist-1", "artist-1b"))
     every { recentlyPartialPlayedRepository.findSince(userId, null) } returns listOf(recentlyPartialPlayedItem("track-2", "artist-2"))
 
     adapter.enqueuePlaybackArtistsForSync()
@@ -457,7 +457,7 @@ class CatalogServiceTests {
       syncController.syncForTracks(
         match { requests ->
           requests.size == 2 &&
-            requests.any { it == CatalogSyncRequest("track-1", listOf("artist-1")) } &&
+            requests.any { it == CatalogSyncRequest("track-1", listOf("artist-1", "artist-1b")) } &&
             requests.any { it == CatalogSyncRequest("track-2", listOf("artist-2")) }
         },
         userId,

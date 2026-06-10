@@ -197,10 +197,15 @@ class CatalogService(
     val recentlyPlayed = recentlyPlayedRepository.findSince(userId, null)
     val partialPlayed = recentlyPartialPlayedRepository.findSince(userId, null)
     return (
-      recentlyPlayed.map { CatalogSyncRequest(it.trackId.value, listOfNotNull(it.artistIds.firstOrNull()?.value)) } +
-        partialPlayed.map { CatalogSyncRequest(it.trackId.value, listOfNotNull(it.artistIds.firstOrNull()?.value)) }
+      recentlyPlayed.map { buildCatalogSyncRequest(it.trackId.value, it.artistIds) } +
+        partialPlayed.map { buildCatalogSyncRequest(it.trackId.value, it.artistIds) }
     ).distinctBy { it.trackId }
   }
+
+  private fun buildCatalogSyncRequest(trackId: String, artistIds: List<ArtistId>) = CatalogSyncRequest(
+    trackId = trackId,
+    artistIds = artistIds.map { it.value }.filter { it.isNotBlank() }.distinct(),
+  )
 
   private fun syncArtistAlbums(artistId: String, userId: UserId, nextUrl: String?): Either<DomainError, Unit> {
     val accessToken = spotifyAccessToken.getValidAccessToken(userId)
