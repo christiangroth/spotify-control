@@ -12,6 +12,8 @@ import de.chrgroth.spotify.control.domain.model.catalog.AppTrack
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistAlbumsPage
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
+import de.chrgroth.spotify.control.domain.model.playback.RecentlyPartialPlayedItem
+import de.chrgroth.spotify.control.domain.model.playback.RecentlyPlayedItem
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.model.user.User
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
@@ -24,7 +26,8 @@ import de.chrgroth.spotify.control.domain.port.out.playlist.AppPlaylistCheckRepo
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.infra.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
-import de.chrgroth.spotify.control.domain.port.out.playback.AppPlaybackRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.playback.RecentlyPartialPlayedRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.playback.RecentlyPlayedRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.SpotifyCatalogPort
@@ -44,7 +47,8 @@ class CatalogServiceTests {
   private val appArtistRepository: AppArtistRepositoryPort = mockk()
   private val appTrackRepository: AppTrackRepositoryPort = mockk()
   private val appAlbumRepository: AppAlbumRepositoryPort = mockk()
-  private val appPlaybackRepository: AppPlaybackRepositoryPort = mockk(relaxed = true)
+  private val recentlyPlayedRepository: RecentlyPlayedRepositoryPort = mockk(relaxed = true)
+  private val recentlyPartialPlayedRepository: RecentlyPartialPlayedRepositoryPort = mockk(relaxed = true)
   private val userRepository: UserRepositoryPort = mockk()
   private val outboxPort: OutboxPort = mockk()
   private val playlistRepository: PlaylistRepositoryPort = mockk()
@@ -56,7 +60,8 @@ class CatalogServiceTests {
   private val adapter = CatalogService(
     spotifyAccessToken, spotifyCatalog,
     appArtistRepository, appTrackRepository, appAlbumRepository,
-    appPlaybackRepository, userRepository, outboxPort,
+    recentlyPlayedRepository, recentlyPartialPlayedRepository,
+    userRepository, outboxPort,
     playlistRepository, playlistCheckRepository,
     dashboardRefresh, syncController,
     playbackAggregation,
@@ -100,6 +105,26 @@ class CatalogServiceTests {
     lastLoginAt = Instant.fromEpochSeconds(0),
   )
 
+  private fun recentlyPlayedItem(trackId: String, artistId: String) = RecentlyPlayedItem(
+    spotifyUserId = userId,
+    trackId = TrackId(trackId),
+    trackName = "Track $trackId",
+    artistIds = listOf(ArtistId(artistId)),
+    artistNames = listOf("Artist $artistId"),
+    playedAt = Instant.fromEpochSeconds(10),
+  )
+
+  private fun recentlyPartialPlayedItem(trackId: String, artistId: String) = RecentlyPartialPlayedItem(
+    spotifyUserId = userId,
+    trackId = TrackId(trackId),
+    trackName = "Track $trackId",
+    artistIds = listOf(ArtistId(artistId)),
+    artistNames = listOf("Artist $artistId"),
+    playedAt = Instant.fromEpochSeconds(20),
+    startTime = Instant.fromEpochSeconds(15),
+    playedSeconds = 42,
+  )
+
   // --- resyncArtist tests ---
 
   @Test
@@ -139,14 +164,26 @@ class CatalogServiceTests {
   // --- resyncCatalog tests ---
 
   @Test
-  fun `resyncCatalog does nothing when catalog is empty`() {
+  fun `resyncCatalog enqueues playback-based sync when catalog is empty`() {
     every { appArtistRepository.findAll() } returns emptyList()
     every { userRepository.findAll() } returns listOf(buildUser())
+    every { recentlyPlayedRepository.findSince(userId, null) } returns listOf(recentlyPlayedItem("track-1", "artist-1"))
+    every { recentlyPartialPlayedRepository.findSince(userId, null) } returns listOf(recentlyPartialPlayedItem("track-2", "artist-2"))
 
     val result = adapter.resyncCatalog()
 
     assertThat(result.isRight()).isTrue()
     verify(exactly = 0) { outboxPort.enqueue(any()) }
+    verify {
+      syncController.syncForTracks(
+        match { requests ->
+          requests.size == 2 &&
+            requests.any { it == CatalogSyncRequest("track-1", listOf("artist-1")) } &&
+            requests.any { it == CatalogSyncRequest("track-2", listOf("artist-2")) }
+        },
+        userId,
+      )
+    }
   }
 
   @Test
@@ -154,6 +191,8 @@ class CatalogServiceTests {
     every { appArtistRepository.findAll() } returns listOf(artist1, artist2)
     every { userRepository.findAll() } returns listOf(buildUser())
     every { outboxPort.enqueue(any()) } just runs
+    every { recentlyPlayedRepository.findSince(userId, null) } returns emptyList()
+    every { recentlyPartialPlayedRepository.findSince(userId, null) } returns emptyList()
 
     val result = adapter.resyncCatalog()
 
@@ -180,6 +219,8 @@ class CatalogServiceTests {
     every { appArtistRepository.findAll() } returns listOf(artist1)
     every { userRepository.findAll() } returns listOf(buildUser())
     every { outboxPort.enqueue(any()) } just runs
+    every { recentlyPlayedRepository.findSince(userId, null) } returns emptyList()
+    every { recentlyPartialPlayedRepository.findSince(userId, null) } returns emptyList()
 
     val result = adapter.handle(DomainOutboxEvent.ResyncCatalog())
 
@@ -402,5 +443,25 @@ class CatalogServiceTests {
     verify { appTrackRepository.deleteAll() }
     verify { playlistRepository.setAllSyncInactive() }
     verify { playlistCheckRepository.deleteAll() }
+  }
+
+  @Test
+  fun `enqueuePlaybackArtistsForSync delegates playback tracks to syncController`() {
+    every { userRepository.findAll() } returns listOf(buildUser())
+    every { recentlyPlayedRepository.findSince(userId, null) } returns listOf(recentlyPlayedItem("track-1", "artist-1"))
+    every { recentlyPartialPlayedRepository.findSince(userId, null) } returns listOf(recentlyPartialPlayedItem("track-2", "artist-2"))
+
+    adapter.enqueuePlaybackArtistsForSync()
+
+    verify {
+      syncController.syncForTracks(
+        match { requests ->
+          requests.size == 2 &&
+            requests.any { it == CatalogSyncRequest("track-1", listOf("artist-1")) } &&
+            requests.any { it == CatalogSyncRequest("track-2", listOf("artist-2")) }
+        },
+        userId,
+      )
+    }
   }
 }
