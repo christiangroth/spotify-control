@@ -1,16 +1,5 @@
 {#include layout.html}
     {#title}SpCtl – Outbox{/title}
-    {#scripts}
-    <script>
-        (function () {
-            connectSse('/health/events', function (event) {
-                if (event.data === 'refresh-outbox-partitions') {
-                    fadeUpdate('snippet-outbox-tasks', '/outbox-viewer/snippets/tasks');
-                }
-            });
-        })();
-    </script>
-    {/scripts}
     {#content}
     <div class="container-fluid py-4 px-3 px-md-4">
 
@@ -72,5 +61,15 @@
         </div>
 
     </div>
+
+    <script>
+        connectSse('/health/events', function (event) {
+            if (event.data === 'refresh-outbox-partitions') {
+                fadeUpdate('snippet-outbox-tasks', '/outbox-viewer/snippets/tasks');
+            }
+        }, function () {
+            fadeUpdate('snippet-outbox-tasks', '/outbox-viewer/snippets/tasks');
+        });
+    </script>
     {/content}
 {/include}
