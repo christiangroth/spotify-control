@@ -1,3 +1,12 @@
+# 0.100.5 (2026.06.10)
+
+## Bugfixes / Chore
+* Disabled sync of additional artist IDs on tracks to prevent excessive artist and album syncing.
+
+
+
+---
+
 # 0.100.4 (2026.06.10)
 
 ## Bugfixes / Chore
