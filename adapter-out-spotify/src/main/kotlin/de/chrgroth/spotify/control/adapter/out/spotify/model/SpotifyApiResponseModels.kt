@@ -24,6 +24,33 @@ data class PagingPlaylistTrackObject(
 )
 
 /**
+ * Lenient replacement for the generated PagingSimplifiedTrackObject.
+ * All fields are optional so that partial API responses don't cause MissingFieldException.
+ */
+@Serializable
+data class PagingSimplifiedTrackObject(
+  val items: List<SimplifiedTrackObject> = emptyList(),
+  val next: String? = null,
+)
+
+/**
+ * Lenient replacement for the generated AlbumObject.
+ * All fields are optional so that partial API responses don't cause MissingFieldException.
+ */
+@Serializable
+data class AlbumObject(
+  val id: String? = null,
+  val name: String? = null,
+  val images: List<ImageObject> = emptyList(),
+  @SerialName("release_date") val releaseDate: String? = null,
+  @SerialName("release_date_precision") val releaseDatePrecision: String? = null,
+  @SerialName("album_type") val albumType: String? = null,
+  @SerialName("total_tracks") val totalTracks: Int? = null,
+  val artists: List<SimplifiedArtistObject> = emptyList(),
+  val tracks: PagingSimplifiedTrackObject = PagingSimplifiedTrackObject(),
+)
+
+/**
  * Lenient replacement for the generated SimplifiedAlbumObject.
  * All fields are optional so that partial API responses don't cause MissingFieldException.
  */
