@@ -1,3 +1,13 @@
+# 0.100.4 (2026.06.10)
+
+## Bugfixes / Chore
+* Outbox viewer UI is now updated in real time via SSE when outbox task counts change.
+* Outbox viewer content is refreshed automatically on SSE reconnect.
+
+
+
+---
+
 # 0.100.3 (2026.06.10)
 
 ## Bugfixes / Chore
