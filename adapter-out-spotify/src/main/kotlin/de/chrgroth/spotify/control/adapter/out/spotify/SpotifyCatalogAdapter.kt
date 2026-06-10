@@ -69,7 +69,7 @@ class SpotifyCatalogAdapter(
       SpotifyApiAuthContext.set(accessToken)
       throttler.throttle(DomainOutboxPartition.ToSpotifyCatalog.key)
       val albumResponse = httpMetrics.timed("/v1/albums/{id}") { apiClient.getAlbum(albumId) }
-      val appAlbum = parseAlbum(albumResponse)
+      val appAlbum = parseAlbum(albumResponse, albumId)
       val allTracks = albumResponse.tracks.items.toMutableList()
       var nextOffset: Int? = albumResponse.tracks.next?.queryParamInt("offset")
       while (nextOffset != null) {
@@ -95,10 +95,12 @@ class SpotifyCatalogAdapter(
     } catch (e: SpotifyRateLimitException) {
       SpotifyRateLimitError(e.retryAfterSeconds.seconds).left()
     } catch (e: SpotifyApiException) {
-      logger.error { "Spotify album fetch failed for $albumId: ${e.statusCode}" }
+      logger.error { "Spotify album fetch failed for $albumId (user ${userId.value}): status=${e.statusCode}, body=${e.body.take(500)}" }
       SyncError.TRACK_DETAILS_FETCH_FAILED.left()
     } catch (e: Exception) {
-      logger.error(e) { "Unexpected error fetching album tracks for album $albumId (user ${userId.value})" }
+      logger.error(e) {
+        "Unexpected error fetching album tracks for album $albumId (user ${userId.value}): ${e::class.simpleName}: ${e.message}"
+      }
       SyncError.TRACK_DETAILS_FETCH_FAILED.left()
     } finally {
       SpotifyApiAuthContext.clear()
@@ -141,15 +143,15 @@ class SpotifyCatalogAdapter(
       lastSync = Clock.System.now(),
     )
 
-  private fun parseAlbum(album: AlbumObject): AppAlbum =
+  private fun parseAlbum(album: AlbumObject, fallbackAlbumId: String): AppAlbum =
     AppAlbum(
-      id = AlbumId(album.id),
+      id = AlbumId(album.id ?: fallbackAlbumId),
       totalTracks = album.totalTracks,
       title = album.name,
       imageLink = album.images.firstOrNull()?.url,
       releaseDate = album.releaseDate,
-      releaseDatePrecision = album.releaseDatePrecision.value,
-      type = album.albumType.value,
+      releaseDatePrecision = album.releaseDatePrecision ?: "",
+      type = album.albumType ?: "",
       artistId = album.artists.firstOrNull()?.id?.let { ArtistId(it) },
       artistName = album.artists.firstOrNull()?.name,
       additionalArtistIds = album.artists.additionalItems { id?.let { ArtistId(it) } }?.filterNotNull(),

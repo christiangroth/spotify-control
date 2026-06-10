@@ -38,6 +38,8 @@ sourceSets {
       exclude("**/model/CurrentlyPlayingContextObject.kt")
       exclude("**/model/PlaylistTrackObject.kt")
       exclude("**/model/PagingPlaylistTrackObject.kt")
+      exclude("**/model/PagingSimplifiedTrackObject.kt")
+      exclude("**/model/AlbumObject.kt")
       exclude("**/model/SimplifiedAlbumObject.kt")
       exclude("**/model/ArtistDiscographyAlbumObject.kt")
       exclude("**/model/PagingArtistDiscographyAlbumObject.kt")
