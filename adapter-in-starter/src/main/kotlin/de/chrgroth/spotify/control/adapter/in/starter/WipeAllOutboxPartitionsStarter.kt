@@ -15,7 +15,7 @@ class WipeAllOutboxPartitionsStarter(
   private val databaseName: String,
 ) : Starter {
 
-  override val id = "WipeAllOutboxPartitionsStarter-v1"
+  override val id = "WipeAllOutboxPartitionsStarter-v2"
 
   override fun execute() {
     val db = mongoClient.getDatabase(databaseName)
