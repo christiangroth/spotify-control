@@ -1,3 +1,12 @@
+# 0.100.8 (2026.06.26)
+
+## Bugfixes / Chore
+* Re-wiped the outbox queue on next startup to clear the backlog caused by the previous catalog sync fanout.
+
+
+
+---
+
 # 0.100.7 (2026.06.26)
 
 ## Bugfixes / Chore
