@@ -143,7 +143,8 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
 
   /**
    * Syncs a single album by fetching all its tracks via GET /v1/albums/{id}.
-   * All returned tracks are upserted. Enqueues SyncArtistDetails for all artists found.
+   * All returned tracks are upserted. Does not enqueue further artist syncs, to avoid
+   * an unbounded fanout into artists without playback events.
    * payload = albumId
    */
   data class SyncAlbumDetails(val albumId: String) : DomainOutboxEvent {

@@ -138,10 +138,6 @@ class CatalogService(
         if (albumResult.tracks.isNotEmpty()) {
           appTrackRepository.upsertAll(albumResult.tracks)
           appAlbumRepository.upsertAll(listOf(albumResult.album))
-          val artistIds = albumResult.tracks
-            .map { t -> t.artistId.value }
-            .filter { it.isNotBlank() }.distinct()
-          syncController.syncArtists(artistIds, userId)
           val expectedTracks = albumResult.album.totalTracks
           if (expectedTracks != null && albumResult.tracks.size < expectedTracks) {
             logger.warn { "Album '${albumResult.album.title ?: albumId}' ($albumId): synced ${albumResult.tracks.size} track(s) but album reports $expectedTracks total" }
