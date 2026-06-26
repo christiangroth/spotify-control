@@ -1,3 +1,12 @@
+# 0.100.7 (2026.06.26)
+
+## Bugfixes / Chore
+* Catalog sync no longer chases down every artist that collaborated on a synced album, which previously caused the sync queue to grow unbounded and hit Spotify rate limits.
+
+
+
+---
+
 # 0.100.6 (2026.06.10)
 
 ## Bugfixes / Chore
