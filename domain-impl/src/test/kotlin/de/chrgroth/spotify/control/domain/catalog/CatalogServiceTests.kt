@@ -267,21 +267,7 @@ class CatalogServiceTests {
   }
 
   @Test
-  fun `handle SyncAlbumDetails enqueues SyncArtistDetails for artists found in album`() {
-    every { userRepository.findAll() } returns listOf(buildUser())
-    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
-    every { spotifyCatalog.getAlbum(userId, accessToken, "album-1") } returns albumSyncResult.right()
-    every { appTrackRepository.upsertAll(any()) } just runs
-    every { appAlbumRepository.upsertAll(any()) } just runs
-    every { outboxPort.enqueue(any()) } just runs
-
-    adapter.handle(DomainOutboxEvent.SyncAlbumDetails("album-1"))
-
-    verify { syncController.syncArtists(listOf("artist-1"), userId) }
-  }
-
-  @Test
-  fun `handle SyncAlbumDetails does not enqueue SyncArtistDetails when artist already exists`() {
+  fun `handle SyncAlbumDetails does not sync artists found in album tracks`() {
     every { userRepository.findAll() } returns listOf(buildUser())
     every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
     every { spotifyCatalog.getAlbum(userId, accessToken, "album-1") } returns albumSyncResult.right()
@@ -290,7 +276,7 @@ class CatalogServiceTests {
 
     adapter.handle(DomainOutboxEvent.SyncAlbumDetails("album-1"))
 
-    verify { syncController.syncArtists(listOf("artist-1"), userId) }
+    verify(exactly = 0) { syncController.syncArtists(any(), any()) }
   }
 
   @Test
