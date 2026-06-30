@@ -80,7 +80,7 @@ class PlaybackEnrichmentServiceTests {
     adapter.syncArtistDetails(artistId, userId)
 
     verify { appArtistRepository.upsertAll(listOf(spotifyArtist)) }
-    verify { outboxPort.enqueue(de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent.SyncArtistAlbums(artistId, userId)) }
+    verify(exactly = 0) { outboxPort.enqueue(any()) }
   }
 
   @Test

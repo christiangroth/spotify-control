@@ -118,6 +118,10 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
 
   /**
    * Syncs genres and images for a single artist from the Spotify API and updates app_artist.
+   * Does not enqueue SyncArtistAlbums - the artist's discography is synced separately, either via
+   * SyncAlbumDetails for the specific album tied to a playback/playlist event, or via the
+   * periodic partitioned backfill job, to avoid crawling a new artist's entire back catalog
+   * on every single track event.
    * Deduplication is by artistId only (artist data is shared across users).
    * payload = "$artistId:${userId.value}"
    */
@@ -162,6 +166,9 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
   /**
    * Syncs all album IDs for a single artist from the Spotify API and enqueues
    * SyncAlbumDetails for any albums not yet in the catalog.
+   * Only enqueued explicitly (manual artist resync, full catalog resync, or the periodic
+   * partitioned backfill job) - never automatically when a new artist is first discovered,
+   * to keep per-event sync volume bounded.
    * Each page is fetched in a separate outbox task to avoid rate limit bursts.
    * Deduplication is by artistId and nextUrl so that each page can be queued independently.
    * payload: "$artistId:${userId.value}" for the first page;

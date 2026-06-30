@@ -266,8 +266,8 @@ class PlaybackService(
       }
 
     val catalogRequests = (
-      recentlyPlayed.map { CatalogSyncRequest(it.trackId.value, listOfNotNull(it.artistIds.firstOrNull()?.value)) } +
-        partialPlayed.map { CatalogSyncRequest(it.trackId.value, listOfNotNull(it.artistIds.firstOrNull()?.value)) }
+      recentlyPlayed.map { CatalogSyncRequest(it.trackId.value, listOfNotNull(it.artistIds.firstOrNull()?.value), it.albumId?.value) } +
+        partialPlayed.map { CatalogSyncRequest(it.trackId.value, listOfNotNull(it.artistIds.firstOrNull()?.value), it.albumId?.value) }
     ).distinctBy { it.trackId }
     syncController.syncForTracks(catalogRequests, userId)
   }

@@ -1,11 +1,14 @@
 package de.chrgroth.spotify.control.domain.catalog
 
+import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
+import de.chrgroth.spotify.control.domain.model.catalog.AppAlbum
 import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
 import de.chrgroth.spotify.control.domain.model.catalog.AppTrack
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
+import de.chrgroth.spotify.control.domain.port.out.catalog.AppAlbumRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
@@ -19,11 +22,13 @@ class SyncControllerTests {
 
   private val appTrackRepository: AppTrackRepositoryPort = mockk(relaxed = true)
   private val appArtistRepository: AppArtistRepositoryPort = mockk(relaxed = true)
+  private val appAlbumRepository: AppAlbumRepositoryPort = mockk(relaxed = true)
   private val outboxPort: OutboxPort = mockk(relaxed = true)
 
   private val controller = SyncController(
     appTrackRepository,
     appArtistRepository,
+    appAlbumRepository,
     outboxPort,
   )
 
@@ -39,6 +44,14 @@ class SyncControllerTests {
 
   private fun artist(id: String) = AppArtist(
     id = ArtistId(id),
+    artistName = "Artist $id",
+    lastSync = syncTime,
+  )
+
+  private fun album(id: String) = AppAlbum(
+    id = AlbumId(id),
+    title = "Album $id",
+    artistId = ArtistId("artist-$id"),
     artistName = "Artist $id",
     lastSync = syncTime,
   )
@@ -122,6 +135,49 @@ class SyncControllerTests {
     verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails("artist-shared", userId)) }
   }
 
+  @Test
+  fun `syncForTracks enqueues SyncAlbumDetails for missing album of a missing track`() {
+    every { appTrackRepository.findByTrackIds(any()) } returns emptyList()
+    every { appArtistRepository.findByArtistIds(any()) } returns listOf(artist("artist-1"))
+    every { appAlbumRepository.findByAlbumIds(any()) } returns emptyList()
+
+    controller.syncForTracks(
+      listOf(CatalogSyncRequest("t1", listOf("artist-1"), "album-1")),
+      userId,
+    )
+
+    verify { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails("album-1")) }
+    verify(exactly = 0) { outboxPort.enqueue(match { it is DomainOutboxEvent.SyncArtistAlbums }) }
+  }
+
+  @Test
+  fun `syncForTracks does not enqueue SyncAlbumDetails when album already in catalog`() {
+    every { appTrackRepository.findByTrackIds(any()) } returns emptyList()
+    every { appArtistRepository.findByArtistIds(any()) } returns listOf(artist("artist-1"))
+    every { appAlbumRepository.findByAlbumIds(any()) } returns listOf(album("album-1"))
+
+    controller.syncForTracks(
+      listOf(CatalogSyncRequest("t1", listOf("artist-1"), "album-1")),
+      userId,
+    )
+
+    verify(exactly = 0) { outboxPort.enqueue(match { it is DomainOutboxEvent.SyncAlbumDetails }) }
+  }
+
+  @Test
+  fun `syncForTracks does not enqueue SyncAlbumDetails when track has no albumId`() {
+    every { appTrackRepository.findByTrackIds(any()) } returns emptyList()
+    every { appArtistRepository.findByArtistIds(any()) } returns listOf(artist("artist-1"))
+
+    controller.syncForTracks(
+      listOf(CatalogSyncRequest("t1", listOf("artist-1"))),
+      userId,
+    )
+
+    verify(exactly = 0) { outboxPort.enqueue(match { it is DomainOutboxEvent.SyncAlbumDetails }) }
+    verify(exactly = 0) { appAlbumRepository.findByAlbumIds(any()) }
+  }
+
   // --- syncArtists ---
 
   @Test
@@ -148,6 +204,35 @@ class SyncControllerTests {
     controller.syncArtists(emptyList(), userId)
 
     verify(exactly = 0) { appArtistRepository.findByArtistIds(any()) }
+    verify(exactly = 0) { outboxPort.enqueue(any()) }
+  }
+
+  // --- syncAlbums ---
+
+  @Test
+  fun `syncAlbums enqueues SyncAlbumDetails for missing albums`() {
+    every { appAlbumRepository.findByAlbumIds(any()) } returns emptyList()
+
+    controller.syncAlbums(listOf("album-1", "album-2"))
+
+    verify { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails("album-1")) }
+    verify { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails("album-2")) }
+  }
+
+  @Test
+  fun `syncAlbums skips albums already in catalog`() {
+    every { appAlbumRepository.findByAlbumIds(any()) } returns listOf(album("album-1"))
+
+    controller.syncAlbums(listOf("album-1"))
+
+    verify(exactly = 0) { outboxPort.enqueue(any()) }
+  }
+
+  @Test
+  fun `syncAlbums with empty list does nothing`() {
+    controller.syncAlbums(emptyList())
+
+    verify(exactly = 0) { appAlbumRepository.findByAlbumIds(any()) }
     verify(exactly = 0) { outboxPort.enqueue(any()) }
   }
 }

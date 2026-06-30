@@ -82,7 +82,6 @@ class CatalogService(
       .flatMap { detail ->
         if (detail != null) {
           appArtistRepository.upsertAll(listOf(detail))
-          outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums(artistId, userId))
           dashboardRefresh.notifyCatalogData()
         } else {
           logger.warn { "No data returned from Spotify for artist $artistId" }
@@ -193,14 +192,15 @@ class CatalogService(
     val recentlyPlayed = recentlyPlayedRepository.findSince(userId, null)
     val partialPlayed = recentlyPartialPlayedRepository.findSince(userId, null)
     return (
-      recentlyPlayed.map { buildCatalogSyncRequest(it.trackId.value, it.artistIds) } +
-        partialPlayed.map { buildCatalogSyncRequest(it.trackId.value, it.artistIds) }
+      recentlyPlayed.map { buildCatalogSyncRequest(it.trackId.value, it.artistIds, it.albumId) } +
+        partialPlayed.map { buildCatalogSyncRequest(it.trackId.value, it.artistIds, it.albumId) }
     ).distinctBy { it.trackId }
   }
 
-  private fun buildCatalogSyncRequest(trackId: String, artistIds: List<ArtistId>) = CatalogSyncRequest(
+  private fun buildCatalogSyncRequest(trackId: String, artistIds: List<ArtistId>, albumId: AlbumId?) = CatalogSyncRequest(
     trackId = trackId,
     artistIds = artistIds.map { it.value }.filter { it.isNotBlank() }.distinct(),
+    albumId = albumId?.value,
   )
 
   private fun syncArtistAlbums(artistId: String, userId: UserId, nextUrl: String?): Either<DomainError, Unit> {

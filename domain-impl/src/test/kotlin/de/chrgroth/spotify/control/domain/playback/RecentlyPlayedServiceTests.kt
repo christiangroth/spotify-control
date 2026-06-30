@@ -701,7 +701,7 @@ class RecentlyPlayedServiceTests {
 
     verify {
       syncController.syncForTracks(
-        listOf(CatalogSyncRequest("track-1", listOf("artist-id-1"))),
+        listOf(CatalogSyncRequest("track-1", listOf("artist-id-1"), "album-1")),
         userId,
       )
     }
