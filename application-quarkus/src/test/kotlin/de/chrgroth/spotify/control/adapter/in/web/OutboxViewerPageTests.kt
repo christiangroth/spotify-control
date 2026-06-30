@@ -4,6 +4,7 @@ import io.quarkus.test.junit.QuarkusTest
 import io.quarkus.test.security.TestSecurity
 import io.restassured.RestAssured.given
 import org.hamcrest.CoreMatchers.containsString
+import org.hamcrest.CoreMatchers.equalTo
 import org.junit.jupiter.api.Test
 
 @QuarkusTest
@@ -76,5 +77,27 @@ class OutboxViewerPageTests {
       .body(containsString("connectSse('/health/events'"))
       .body(containsString("refresh-outbox-partitions"))
       .body(containsString("refresh-playback-state"))
+  }
+
+  @Test
+  fun `outbox-viewer page contains wipe outbox button and confirmation modal`() {
+    given()
+      .`when`()
+      .get("/outbox-viewer")
+      .then()
+      .statusCode(200)
+      .body(containsString("Wipe Outbox"))
+      .body(containsString("wipe-outbox-btn"))
+      .body(containsString("/outbox-viewer/wipe"))
+  }
+
+  @Test
+  fun `outbox-viewer wipe endpoint clears outbox and returns ok status`() {
+    given()
+      .`when`()
+      .post("/outbox-viewer/wipe")
+      .then()
+      .statusCode(200)
+      .body("status", equalTo("ok"))
   }
 }

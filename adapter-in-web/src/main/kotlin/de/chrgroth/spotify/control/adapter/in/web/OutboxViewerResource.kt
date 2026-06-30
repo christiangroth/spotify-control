@@ -7,9 +7,11 @@ import io.quarkus.qute.TemplateInstance
 import io.quarkus.security.Authenticated
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.ws.rs.GET
+import jakarta.ws.rs.POST
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.Produces
 import jakarta.ws.rs.core.MediaType
+import jakarta.ws.rs.core.Response
 
 @Path("/outbox-viewer")
 @ApplicationScoped
@@ -31,4 +33,13 @@ class OutboxViewerResource(
   @Produces(MediaType.TEXT_HTML)
   fun snippetTasks(): TemplateInstance =
     template.getFragment("snippet_tasks").data("partitions", outboxViewer.getPartitions())
+
+  @POST
+  @Path("/wipe")
+  @Authenticated
+  @Produces(MediaType.APPLICATION_JSON)
+  fun wipe(): Response {
+    outboxViewer.wipeAll()
+    return Response.ok(mapOf("status" to "ok")).build()
+  }
 }

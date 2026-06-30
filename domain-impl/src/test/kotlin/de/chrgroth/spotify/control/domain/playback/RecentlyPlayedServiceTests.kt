@@ -7,6 +7,7 @@ import de.chrgroth.spotify.control.domain.model.user.AccessToken
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
 import de.chrgroth.spotify.control.domain.model.playback.AppPlaybackItem
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
+import de.chrgroth.spotify.control.domain.model.catalog.SyncCause
 import de.chrgroth.spotify.control.domain.model.playback.CurrentlyPlayingItem
 import de.chrgroth.spotify.control.domain.model.playback.RecentlyPartialPlayedItem
 import de.chrgroth.spotify.control.domain.model.playback.RecentlyPlayedItem
@@ -701,7 +702,7 @@ class RecentlyPlayedServiceTests {
 
     verify {
       syncController.syncForTracks(
-        listOf(CatalogSyncRequest("track-1", listOf("artist-id-1"))),
+        listOf(CatalogSyncRequest("track-1", listOf("artist-id-1"), SyncCause.Playback("track-1"))),
         userId,
       )
     }
@@ -752,7 +753,7 @@ class RecentlyPlayedServiceTests {
 
     verify {
       syncController.syncForTracks(
-        listOf(CatalogSyncRequest("track-1", listOf("artist-id-1"))),
+        listOf(CatalogSyncRequest("track-1", listOf("artist-id-1"), SyncCause.Playback("track-1"))),
         userId,
       )
     }

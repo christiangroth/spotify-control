@@ -5,11 +5,18 @@ import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistBrowseItem
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.model.catalog.CatalogStats
+import de.chrgroth.spotify.control.domain.model.catalog.SyncCause
+import de.chrgroth.spotify.control.domain.model.catalog.SyncTraceDisplay
+import de.chrgroth.spotify.control.domain.model.catalog.SyncTraceEntityType
 import de.chrgroth.spotify.control.domain.model.catalog.TrackBrowseItem
+import de.chrgroth.spotify.control.domain.model.catalog.TrackId
 import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogBrowserPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppAlbumRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.catalog.SyncTraceRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 
 @ApplicationScoped
@@ -18,6 +25,9 @@ class CatalogBrowserService(
   private val appArtistRepository: AppArtistRepositoryPort,
   private val appAlbumRepository: AppAlbumRepositoryPort,
   private val appTrackRepository: AppTrackRepositoryPort,
+  private val syncTraceRepository: SyncTraceRepositoryPort,
+  private val playlistRepository: PlaylistRepositoryPort,
+  private val userRepository: UserRepositoryPort,
 ) : CatalogBrowserPort {
 
   override fun getCatalogStats(): CatalogStats {
@@ -93,5 +103,41 @@ class CatalogBrowserService(
           durationMs = track.durationMs ?: 0L,
         )
       }
+  }
+
+  override fun getArtistSyncTrace(artistId: String): SyncTraceDisplay? {
+    val trace = syncTraceRepository.find(SyncTraceEntityType.ARTIST, artistId) ?: return null
+    return SyncTraceDisplay(describeCause(trace.cause), trace.triggeredAt)
+  }
+
+  override fun getAlbumSyncTrace(albumId: String): SyncTraceDisplay? {
+    val trace = syncTraceRepository.find(SyncTraceEntityType.ALBUM, albumId) ?: return null
+    var description = describeCause(trace.cause)
+    val cause = trace.cause
+    if (cause is SyncCause.ArtistDiscography) {
+      val artistTrace = syncTraceRepository.find(SyncTraceEntityType.ARTIST, cause.artistId)
+      if (artistTrace != null) {
+        description += " (artist itself was synced because: ${describeCause(artistTrace.cause)})"
+      }
+    }
+    return SyncTraceDisplay(description, trace.triggeredAt)
+  }
+
+  private fun describeCause(cause: SyncCause): String = when (cause) {
+    is SyncCause.Playback -> "Played track '${trackName(cause.trackId)}'"
+    is SyncCause.Playlist -> "Found in playlist '${playlistName(cause.playlistId)}' via track '${trackName(cause.trackId)}'"
+    is SyncCause.ArtistDiscography -> "Synced as part of full discography sync for artist '${artistName(cause.artistId)}'"
+    is SyncCause.ManualResync -> "Manual or scheduled catalog resync"
+  }
+
+  private fun trackName(trackId: String): String =
+    appTrackRepository.findByTrackIds(setOf(TrackId(trackId))).firstOrNull()?.title ?: trackId
+
+  private fun artistName(artistId: String): String =
+    appArtistRepository.findByArtistIds(setOf(ArtistId(artistId))).firstOrNull()?.artistName ?: artistId
+
+  private fun playlistName(playlistId: String): String {
+    val userId = userRepository.findAll().firstOrNull()?.spotifyUserId ?: return playlistId
+    return playlistRepository.findByUserId(userId).firstOrNull { it.spotifyPlaylistId == playlistId }?.name ?: playlistId
   }
 }

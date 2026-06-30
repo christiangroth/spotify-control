@@ -123,6 +123,9 @@
                             <td class="text-end" style="color:#888;font-size:.85rem;">{artist.albumCount.formatted}</td>
                             <td class="text-end" style="color:#888;font-size:.85rem;">{artist.trackCount.formatted}</td>
                             <td style="padding:8px;">
+                                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 sync-trace-btn"
+                                    data-trace-url="/catalog/artists/{artist.artistId}/sync-trace"
+                                    aria-label="Show sync trigger for {artist.artistName}">&#9432;</button>
                                 <button class="btn btn-sm btn-outline-secondary py-0 px-2 resync-artist-btn"
                                     data-artist-id="{artist.artistId}"
                                     aria-label="Re-sync {artist.artistName}">Re-sync</button>
@@ -182,7 +185,12 @@
                             </svg>
                             {/if}
                         </td>
-                        <td style="color:#fff;">{#if album.title}{album.title}{#else}(untitled){/if}</td>
+                        <td style="color:#fff;">
+                            {#if album.title}{album.title}{#else}(untitled){/if}
+                            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1 ms-1 sync-trace-btn"
+                                data-trace-url="/catalog/albums/{album.albumId}/sync-trace"
+                                aria-label="Show sync trigger for {#if album.title}{album.title}{#else}this album{/if}">&#9432;</button>
+                        </td>
                         <td style="color:#888;">{album.releaseDate}</td>
                         <td class="text-end" style="border-color:var(--color-border-depth-albums);color:#888;">{album.trackCount.formatted}</td>
                         <td class="text-end" style="border-color:var(--color-border-depth-albums);color:#888;">{album.durationMs.formattedAlbumDuration}</td>
@@ -304,9 +312,43 @@
             }
         }
 
+        const syncTracePopover = document.createElement('div');
+        syncTracePopover.id = 'sync-trace-popover';
+        syncTracePopover.style.cssText = 'position:absolute;z-index:1080;max-width:320px;display:none;padding:8px 12px;' +
+            'background-color:#222;border:1px solid var(--color-border-muted);border-radius:4px;color:#ddd;font-size:.8rem;box-shadow:0 2px 8px rgba(0,0,0,.5);';
+        document.body.appendChild(syncTracePopover);
+
+        function hideSyncTracePopover() {
+            syncTracePopover.style.display = 'none';
+        }
+
+        function showSyncTracePopover(btn) {
+            const rect = btn.getBoundingClientRect();
+            syncTracePopover.style.left = (rect.left + window.scrollX) + 'px';
+            syncTracePopover.style.top = (rect.bottom + window.scrollY + 4) + 'px';
+            syncTracePopover.textContent = 'Loading…';
+            syncTracePopover.style.display = 'block';
+            fetch(btn.dataset.traceUrl)
+                .then(function(r) { return r.text(); })
+                .then(function(text) { syncTracePopover.textContent = text; })
+                .catch(function() { syncTracePopover.textContent = 'Failed to load sync trigger information.'; });
+        }
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.sync-trace-btn') && !e.target.closest('#sync-trace-popover')) {
+                hideSyncTracePopover();
+            }
+        });
+
         // Event delegation on the main content area: artist rows, re-sync buttons, and
         // dynamically-loaded album rows are all descendants of the catalog container.
         document.querySelector('.container-fluid').addEventListener('click', function(e) {
+            const traceBtn = e.target.closest('.sync-trace-btn');
+            if (traceBtn) {
+                e.stopPropagation();
+                showSyncTracePopover(traceBtn);
+                return;
+            }
             const resyncBtn = e.target.closest('.resync-artist-btn');
             if (resyncBtn) {
                 e.stopPropagation();

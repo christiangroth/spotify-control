@@ -1,9 +1,44 @@
 {#include layout.html}
     {#title}SpCtl – Outbox{/title}
+    {#scripts}<script src="/settings-utils.js"></script>{/scripts}
     {#content}
     <div class="container-fluid py-4 px-3 px-md-4">
 
         <h1 class="mb-4 fs-4 fw-semibold">Outbox</h1>
+
+        <div id="status-banner" class="alert d-none mb-3" role="alert"></div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <h2 class="fs-5 fw-semibold mb-2">Wipe Outbox</h2>
+                <p class="text-secondary small mb-3">Delete all pending outbox events and partitions. Use this to recover operationally, e.g. after wiping the catalog while outbox events referencing it are still queued. This operation cannot be undone.</p>
+                <button id="wipe-outbox-btn" class="btn btn-danger btn-sm">Wipe Outbox</button>
+            </div>
+        </div>
+
+        <!-- Wipe Outbox Confirmation Modal -->
+        <div class="modal fade" id="wipe-outbox-modal" tabindex="-1" aria-labelledby="wipe-outbox-modal-label" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content bg-dark border-secondary">
+                    <div class="modal-header border-secondary">
+                        <h5 class="modal-title" id="wipe-outbox-modal-label" style="color:var(--color-text-primary);">Confirm Outbox Wipe</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p style="color:var(--color-text-muted);font-size:.9rem;">This will permanently delete all pending outbox events and partitions. Type <strong style="color:var(--color-text-primary);">yes</strong> to confirm.</p>
+                        <input type="text" id="wipe-outbox-confirm-input" class="form-control"
+                               style="background-color:#111;border-color:var(--color-border-muted);color:var(--color-text-primary);"
+                               placeholder="Type yes to confirm" autocomplete="off">
+                    </div>
+                    <div class="modal-footer border-secondary">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" id="wipe-outbox-confirm-btn" class="btn btn-danger btn-sm">Wipe Outbox</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <hr class="my-4" style="border-color:var(--color-border);">
 
         <div id="snippet-outbox-tasks">
             {#fragment id="snippet_tasks"}
@@ -70,6 +105,37 @@
         }, function () {
             fadeUpdate('snippet-outbox-tasks', '/outbox-viewer/snippets/tasks');
         });
+
+        (function() {
+            const wipeModalEl = document.getElementById('wipe-outbox-modal');
+            const wipeModal = bootstrap.Modal.getOrCreateInstance(wipeModalEl);
+
+            document.getElementById('wipe-outbox-btn').addEventListener('click', function() {
+                document.getElementById('wipe-outbox-confirm-input').value = '';
+                document.getElementById('wipe-outbox-confirm-input').style.borderColor = '';
+                wipeModal.show();
+            });
+
+            wipeModalEl.addEventListener('shown.bs.modal', function() {
+                document.getElementById('wipe-outbox-confirm-input').focus();
+            });
+
+            document.getElementById('wipe-outbox-confirm-input').addEventListener('input', function() {
+                this.style.borderColor = '';
+            });
+
+            document.getElementById('wipe-outbox-confirm-btn').addEventListener('click', function() {
+                const input = document.getElementById('wipe-outbox-confirm-input').value.trim().toLowerCase();
+                if (input !== 'yes') {
+                    document.getElementById('wipe-outbox-confirm-input').style.borderColor = 'var(--color-danger)';
+                    return;
+                }
+                wipeModal.hide();
+                postWithButton(document.getElementById('wipe-outbox-btn'), '/outbox-viewer/wipe', 'Outbox wiped successfully.', 'Wipe failed', function() {
+                    fadeUpdate('snippet-outbox-tasks', '/outbox-viewer/snippets/tasks');
+                });
+            });
+        })();
     </script>
     {/content}
 {/include}
