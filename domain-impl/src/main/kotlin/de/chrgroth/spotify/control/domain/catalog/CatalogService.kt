@@ -206,7 +206,7 @@ class CatalogService(
 
   private fun buildCatalogSyncRequest(trackId: String, artistIds: List<ArtistId>) = CatalogSyncRequest(
     trackId = trackId,
-    artistIds = artistIds.map { it.value }.filter { it.isNotBlank() }.distinct(),
+    artistIds = listOfNotNull(artistIds.firstOrNull()?.value?.takeIf { it.isNotBlank() }),
     cause = SyncCause.ManualResync,
   )
 
