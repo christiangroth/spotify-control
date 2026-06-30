@@ -9,6 +9,9 @@ import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
+import de.chrgroth.spotify.control.domain.model.catalog.SyncCause
+import de.chrgroth.spotify.control.domain.model.catalog.SyncTrace
+import de.chrgroth.spotify.control.domain.model.catalog.SyncTraceEntityType
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogPort
@@ -16,6 +19,7 @@ import de.chrgroth.spotify.control.domain.port.out.catalog.AppAlbumRepositoryPor
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.AppPlaylistCheckRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.catalog.SyncTraceRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.infra.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.playback.RecentlyPartialPlayedRepositoryPort
@@ -26,6 +30,7 @@ import de.chrgroth.spotify.control.domain.port.out.catalog.SpotifyCatalogPort
 import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
 import de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackAggregationPort
 import jakarta.enterprise.context.ApplicationScoped
+import kotlin.time.Clock
 import mu.KLogging
 
 @ApplicationScoped
@@ -45,6 +50,7 @@ class CatalogService(
   private val dashboardRefresh: DashboardRefreshPort,
   private val syncController: SyncController,
   private val playbackAggregation: PlaybackAggregationPort,
+  private val syncTraceRepository: SyncTraceRepositoryPort,
 ) : CatalogPort {
 
   // --- Artist Settings ---
@@ -201,6 +207,7 @@ class CatalogService(
   private fun buildCatalogSyncRequest(trackId: String, artistIds: List<ArtistId>) = CatalogSyncRequest(
     trackId = trackId,
     artistIds = artistIds.map { it.value }.filter { it.isNotBlank() }.distinct(),
+    cause = SyncCause.ManualResync,
   )
 
   private fun syncArtistAlbums(artistId: String, userId: UserId, nextUrl: String?): Either<DomainError, Unit> {
@@ -210,7 +217,11 @@ class CatalogService(
         val existingAlbumIds = appAlbumRepository.findByAlbumIds(page.albumIds.map { AlbumId(it) }.toSet()).map { it.id.value }.toSet()
         val newAlbumIds = page.albumIds.filter { it !in existingAlbumIds }
         if (newAlbumIds.isNotEmpty()) {
-          newAlbumIds.forEach { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails(it)) }
+          val now = Clock.System.now()
+          newAlbumIds.forEach { albumId ->
+            syncTraceRepository.upsert(SyncTrace(SyncTraceEntityType.ALBUM, albumId, SyncCause.ArtistDiscography(artistId), now))
+            outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails(albumId))
+          }
         } else {
           logger.debug { "All ${page.albumIds.size} album(s) on this page for artist $artistId already in catalog" }
         }

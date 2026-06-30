@@ -3,11 +3,13 @@ package de.chrgroth.spotify.control.domain.catalog
 import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
 import de.chrgroth.spotify.control.domain.model.catalog.AppTrack
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
+import de.chrgroth.spotify.control.domain.model.catalog.SyncCause
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.catalog.SyncTraceRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
 import io.mockk.every
 import io.mockk.mockk
@@ -19,11 +21,13 @@ class SyncControllerTests {
 
   private val appTrackRepository: AppTrackRepositoryPort = mockk(relaxed = true)
   private val appArtistRepository: AppArtistRepositoryPort = mockk(relaxed = true)
+  private val syncTraceRepository: SyncTraceRepositoryPort = mockk(relaxed = true)
   private val outboxPort: OutboxPort = mockk(relaxed = true)
 
   private val controller = SyncController(
     appTrackRepository,
     appArtistRepository,
+    syncTraceRepository,
     outboxPort,
   )
 
@@ -58,7 +62,7 @@ class SyncControllerTests {
     every { appTrackRepository.findByTrackIds(any()) } returns listOf(track("t1"))
 
     controller.syncForTracks(
-      listOf(CatalogSyncRequest("t1", listOf("artist-1"))),
+      listOf(CatalogSyncRequest("t1", listOf("artist-1"), SyncCause.ManualResync)),
       userId,
     )
 
@@ -71,7 +75,7 @@ class SyncControllerTests {
     every { appArtistRepository.findByArtistIds(any()) } returns emptyList()
 
     controller.syncForTracks(
-      listOf(CatalogSyncRequest("t1", listOf("artist-1"))),
+      listOf(CatalogSyncRequest("t1", listOf("artist-1"), SyncCause.ManualResync)),
       userId,
     )
 
@@ -84,7 +88,7 @@ class SyncControllerTests {
     every { appArtistRepository.findByArtistIds(any()) } returns listOf(artist("artist-1"))
 
     controller.syncForTracks(
-      listOf(CatalogSyncRequest("t1", listOf("artist-1"))),
+      listOf(CatalogSyncRequest("t1", listOf("artist-1"), SyncCause.ManualResync)),
       userId,
     )
 
@@ -97,8 +101,8 @@ class SyncControllerTests {
 
     controller.syncForTracks(
       listOf(
-        CatalogSyncRequest("t1", listOf("artist-1")),
-        CatalogSyncRequest("t2", listOf("artist-2")),
+        CatalogSyncRequest("t1", listOf("artist-1"), SyncCause.ManualResync),
+        CatalogSyncRequest("t2", listOf("artist-2"), SyncCause.ManualResync),
       ),
       userId,
     )
@@ -113,8 +117,8 @@ class SyncControllerTests {
 
     controller.syncForTracks(
       listOf(
-        CatalogSyncRequest("t1", listOf("artist-shared")),
-        CatalogSyncRequest("t2", listOf("artist-shared")),
+        CatalogSyncRequest("t1", listOf("artist-shared"), SyncCause.ManualResync),
+        CatalogSyncRequest("t2", listOf("artist-shared"), SyncCause.ManualResync),
       ),
       userId,
     )
@@ -128,7 +132,7 @@ class SyncControllerTests {
   fun `syncArtists enqueues SyncArtistDetails for missing artists`() {
     every { appArtistRepository.findByArtistIds(any()) } returns emptyList()
 
-    controller.syncArtists(listOf("artist-1", "artist-2"), userId)
+    controller.syncArtists(listOf("artist-1", "artist-2"), userId, SyncCause.ManualResync)
 
     verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails("artist-1", userId)) }
     verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails("artist-2", userId)) }
@@ -138,14 +142,14 @@ class SyncControllerTests {
   fun `syncArtists skips artists already in catalog`() {
     every { appArtistRepository.findByArtistIds(any()) } returns listOf(artist("artist-1"))
 
-    controller.syncArtists(listOf("artist-1"), userId)
+    controller.syncArtists(listOf("artist-1"), userId, SyncCause.ManualResync)
 
     verify(exactly = 0) { outboxPort.enqueue(any()) }
   }
 
   @Test
   fun `syncArtists with empty list does nothing`() {
-    controller.syncArtists(emptyList(), userId)
+    controller.syncArtists(emptyList(), userId, SyncCause.ManualResync)
 
     verify(exactly = 0) { appArtistRepository.findByArtistIds(any()) }
     verify(exactly = 0) { outboxPort.enqueue(any()) }

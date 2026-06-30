@@ -98,5 +98,25 @@ class CatalogResource(
     )
   }
 
-  companion object : KLogging()
+  @GET
+  @Path("/artists/{artistId}/sync-trace")
+  @Authenticated
+  @Produces(MediaType.TEXT_PLAIN)
+  fun artistSyncTrace(@PathParam("artistId") artistId: String): Response {
+    val trace = catalogBrowser.getArtistSyncTrace(artistId) ?: return Response.ok(NO_TRACE_AVAILABLE).build()
+    return Response.ok("${trace.description} (${trace.triggeredAt})").build()
+  }
+
+  @GET
+  @Path("/albums/{albumId}/sync-trace")
+  @Authenticated
+  @Produces(MediaType.TEXT_PLAIN)
+  fun albumSyncTrace(@PathParam("albumId") albumId: String): Response {
+    val trace = catalogBrowser.getAlbumSyncTrace(albumId) ?: return Response.ok(NO_TRACE_AVAILABLE).build()
+    return Response.ok("${trace.description} (${trace.triggeredAt})").build()
+  }
+
+  companion object : KLogging() {
+    private const val NO_TRACE_AVAILABLE = "No sync trigger information available."
+  }
 }

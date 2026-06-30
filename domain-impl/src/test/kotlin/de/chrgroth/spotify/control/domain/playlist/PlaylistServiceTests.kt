@@ -9,6 +9,7 @@ import de.chrgroth.spotify.control.domain.model.playlist.Playlist
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
+import de.chrgroth.spotify.control.domain.model.catalog.SyncCause
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistTrack
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSyncStatus
@@ -481,7 +482,7 @@ class PlaylistServiceTests {
 
     verify {
       syncController.syncForTracks(
-        listOf(CatalogSyncRequest("track-1", listOf("artist-1"))),
+        listOf(CatalogSyncRequest("track-1", listOf("artist-1"), SyncCause.Playlist("p1", "track-1"))),
         userId,
       )
     }

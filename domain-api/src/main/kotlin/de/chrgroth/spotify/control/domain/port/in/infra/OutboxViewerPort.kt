@@ -4,4 +4,5 @@ import de.chrgroth.spotify.control.domain.model.infra.OutboxViewerPartition
 
 interface OutboxViewerPort {
   fun getPartitions(): List<OutboxViewerPartition>
+  fun wipeAll()
 }

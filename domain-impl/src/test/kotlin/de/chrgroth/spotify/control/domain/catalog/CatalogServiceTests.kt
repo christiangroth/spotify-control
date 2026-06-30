@@ -11,6 +11,7 @@ import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
 import de.chrgroth.spotify.control.domain.model.catalog.AppTrack
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistAlbumsPage
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
+import de.chrgroth.spotify.control.domain.model.catalog.SyncCause
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
 import de.chrgroth.spotify.control.domain.model.playback.RecentlyPartialPlayedItem
 import de.chrgroth.spotify.control.domain.model.playback.RecentlyPlayedItem
@@ -24,6 +25,7 @@ import de.chrgroth.spotify.control.domain.port.out.catalog.AppAlbumRepositoryPor
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.AppPlaylistCheckRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.catalog.SyncTraceRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.infra.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.playback.RecentlyPartialPlayedRepositoryPort
@@ -56,6 +58,7 @@ class CatalogServiceTests {
   private val dashboardRefresh: DashboardRefreshPort = mockk(relaxed = true)
   private val syncController: SyncController = mockk(relaxed = true)
   private val playbackAggregation: de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackAggregationPort = mockk(relaxed = true)
+  private val syncTraceRepository: SyncTraceRepositoryPort = mockk(relaxed = true)
 
   private val adapter = CatalogService(
     spotifyAccessToken, spotifyCatalog,
@@ -64,7 +67,7 @@ class CatalogServiceTests {
     userRepository, outboxPort,
     playlistRepository, playlistCheckRepository,
     dashboardRefresh, syncController,
-    playbackAggregation,
+    playbackAggregation, syncTraceRepository,
   )
 
   private val syncTimestamp = Instant.fromEpochSeconds(1)
@@ -178,8 +181,8 @@ class CatalogServiceTests {
       syncController.syncForTracks(
         match { requests ->
           requests.size == 2 &&
-            requests.any { it == CatalogSyncRequest("track-1", listOf("artist-1", "artist-1b")) } &&
-            requests.any { it == CatalogSyncRequest("track-2", listOf("artist-2")) }
+            requests.any { it == CatalogSyncRequest("track-1", listOf("artist-1", "artist-1b"), SyncCause.ManualResync) } &&
+            requests.any { it == CatalogSyncRequest("track-2", listOf("artist-2"), SyncCause.ManualResync) }
         },
         userId,
       )
@@ -276,7 +279,7 @@ class CatalogServiceTests {
 
     adapter.handle(DomainOutboxEvent.SyncAlbumDetails("album-1"))
 
-    verify(exactly = 0) { syncController.syncArtists(any(), any()) }
+    verify(exactly = 0) { syncController.syncArtists(any(), any(), any()) }
   }
 
   @Test
@@ -443,8 +446,8 @@ class CatalogServiceTests {
       syncController.syncForTracks(
         match { requests ->
           requests.size == 2 &&
-            requests.any { it == CatalogSyncRequest("track-1", listOf("artist-1", "artist-1b")) } &&
-            requests.any { it == CatalogSyncRequest("track-2", listOf("artist-2")) }
+            requests.any { it == CatalogSyncRequest("track-1", listOf("artist-1", "artist-1b"), SyncCause.ManualResync) } &&
+            requests.any { it == CatalogSyncRequest("track-2", listOf("artist-2"), SyncCause.ManualResync) }
         },
         userId,
       )

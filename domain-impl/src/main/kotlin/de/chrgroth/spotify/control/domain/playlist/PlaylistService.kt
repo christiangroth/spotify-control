@@ -10,6 +10,7 @@ import de.chrgroth.spotify.control.domain.model.playlist.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.playlist.Playlist
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistType
+import de.chrgroth.spotify.control.domain.model.catalog.SyncCause
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistPort
@@ -102,7 +103,9 @@ class PlaylistService(
         playlistRepository.appendTracks(userId, playlistId, page.tracks)
       }
 
-      val catalogRequests = page.tracks.map { CatalogSyncRequest(it.trackId.value, listOfNotNull(it.artistIds.firstOrNull()?.value)) }
+      val catalogRequests = page.tracks.map {
+        CatalogSyncRequest(it.trackId.value, listOfNotNull(it.artistIds.firstOrNull()?.value), SyncCause.Playlist(playlistId, it.trackId.value))
+      }
       syncController.syncForTracks(catalogRequests, userId)
 
       if (page.nextUrl != null) {

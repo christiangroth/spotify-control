@@ -8,6 +8,7 @@ import de.chrgroth.spotify.control.domain.model.playback.AppPlaybackItem
 import de.chrgroth.spotify.control.domain.model.playback.CurrentlyPlayingItem
 import de.chrgroth.spotify.control.domain.model.playback.RecentlyPartialPlayedItem
 import de.chrgroth.spotify.control.domain.model.playback.RecentlyPlayedItem
+import de.chrgroth.spotify.control.domain.model.catalog.SyncCause
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationPeriodType
 import de.chrgroth.spotify.control.domain.model.user.UserId
@@ -266,8 +267,8 @@ class PlaybackService(
       }
 
     val catalogRequests = (
-      recentlyPlayed.map { CatalogSyncRequest(it.trackId.value, listOfNotNull(it.artistIds.firstOrNull()?.value)) } +
-        partialPlayed.map { CatalogSyncRequest(it.trackId.value, listOfNotNull(it.artistIds.firstOrNull()?.value)) }
+      recentlyPlayed.map { CatalogSyncRequest(it.trackId.value, listOfNotNull(it.artistIds.firstOrNull()?.value), SyncCause.Playback(it.trackId.value)) } +
+        partialPlayed.map { CatalogSyncRequest(it.trackId.value, listOfNotNull(it.artistIds.firstOrNull()?.value), SyncCause.Playback(it.trackId.value)) }
     ).distinctBy { it.trackId }
     syncController.syncForTracks(catalogRequests, userId)
   }
