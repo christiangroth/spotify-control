@@ -181,7 +181,7 @@ class CatalogServiceTests {
       syncController.syncForTracks(
         match { requests ->
           requests.size == 2 &&
-            requests.any { it == CatalogSyncRequest("track-1", listOf("artist-1", "artist-1b"), SyncCause.ManualResync) } &&
+            requests.any { it == CatalogSyncRequest("track-1", listOf("artist-1"), SyncCause.ManualResync) } &&
             requests.any { it == CatalogSyncRequest("track-2", listOf("artist-2"), SyncCause.ManualResync) }
         },
         userId,
@@ -435,7 +435,7 @@ class CatalogServiceTests {
   }
 
   @Test
-  fun `enqueuePlaybackArtistsForSync delegates playback tracks to syncController`() {
+  fun `enqueuePlaybackArtistsForSync delegates playback tracks to syncController using only primary artist per track`() {
     every { userRepository.findAll() } returns listOf(buildUser())
     every { recentlyPlayedRepository.findSince(userId, null) } returns listOf(recentlyPlayedItem("track-1", "artist-1", "artist-1b"))
     every { recentlyPartialPlayedRepository.findSince(userId, null) } returns listOf(recentlyPartialPlayedItem("track-2", "artist-2"))
@@ -446,7 +446,7 @@ class CatalogServiceTests {
       syncController.syncForTracks(
         match { requests ->
           requests.size == 2 &&
-            requests.any { it == CatalogSyncRequest("track-1", listOf("artist-1", "artist-1b"), SyncCause.ManualResync) } &&
+            requests.any { it == CatalogSyncRequest("track-1", listOf("artist-1"), SyncCause.ManualResync) } &&
             requests.any { it == CatalogSyncRequest("track-2", listOf("artist-2"), SyncCause.ManualResync) }
         },
         userId,

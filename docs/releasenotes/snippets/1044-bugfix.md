@@ -1,0 +1,1 @@
+* Catalog resync and outbox/catalog wipe recovery now discover artists the same way as live playback and playlist sync, fixing an inconsistency that previously caused far more sync events than expected after a catalog wipe.
