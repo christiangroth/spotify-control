@@ -10,7 +10,7 @@ import de.chrgroth.quarkus.outbox.domain.event.OutboxTaskRetryScheduledEvent
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPartitionObserver
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxTaskCountObserver
 import jakarta.enterprise.context.ApplicationScoped
-import jakarta.enterprise.event.Observes
+import jakarta.enterprise.event.ObservesAsync
 import jakarta.enterprise.inject.Any
 import jakarta.enterprise.inject.Instance
 
@@ -21,37 +21,38 @@ class OutboxPartitionEventAdapter(
   @param:Any private val taskCountObservers: Instance<OutboxTaskCountObserver>,
 ) {
 
-  fun onPartitionPaused(@Observes event: OutboxPartitionPausedEvent) {
+  // the outbox library fires all of these events via Event.fireAsync(), which the CDI spec only delivers to @ObservesAsync observers
+  fun onPartitionPaused(@ObservesAsync event: OutboxPartitionPausedEvent) {
     val reason = event.reason?.takeIf { it.isNotBlank() } ?: "unknown"
     partitionObservers.forEach { it.onPartitionPaused(event.partition.key, reason) }
   }
 
-  fun onPartitionActivated(@Observes event: OutboxPartitionActivatedEvent) {
+  fun onPartitionActivated(@ObservesAsync event: OutboxPartitionActivatedEvent) {
     partitionObservers.forEach { it.onPartitionActivated(event.partition.key) }
   }
 
   @Suppress("UnusedParameter")
-  fun onTaskEnqueued(@Observes event: OutboxTaskEnqueuedEvent) {
+  fun onTaskEnqueued(@ObservesAsync event: OutboxTaskEnqueuedEvent) {
     taskCountObservers.forEach { it.onOutboxTaskCountChanged() }
   }
 
   @Suppress("UnusedParameter")
-  fun onTaskDispatched(@Observes event: OutboxTaskDispatchedEvent) {
+  fun onTaskDispatched(@ObservesAsync event: OutboxTaskDispatchedEvent) {
     taskCountObservers.forEach { it.onOutboxTaskCountChanged() }
   }
 
   @Suppress("UnusedParameter")
-  fun onTaskFailed(@Observes event: OutboxTaskFailedEvent) {
+  fun onTaskFailed(@ObservesAsync event: OutboxTaskFailedEvent) {
     taskCountObservers.forEach { it.onOutboxTaskCountChanged() }
   }
 
   @Suppress("UnusedParameter")
-  fun onTaskRescheduled(@Observes event: OutboxTaskRescheduledEvent) {
+  fun onTaskRescheduled(@ObservesAsync event: OutboxTaskRescheduledEvent) {
     taskCountObservers.forEach { it.onOutboxTaskCountChanged() }
   }
 
   @Suppress("UnusedParameter")
-  fun onTaskRetryScheduled(@Observes event: OutboxTaskRetryScheduledEvent) {
+  fun onTaskRetryScheduled(@ObservesAsync event: OutboxTaskRetryScheduledEvent) {
     taskCountObservers.forEach { it.onOutboxTaskCountChanged() }
   }
 }
