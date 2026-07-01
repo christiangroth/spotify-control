@@ -63,7 +63,7 @@ class HealthPageTests {
   }
 
   @Test
-  fun `health page uses specific sse events with fade updates instead of full reload`() {
+  fun `health page uses specific sse events with patch updates instead of full reload`() {
     given()
       .`when`()
       .get("/health")
@@ -71,7 +71,7 @@ class HealthPageTests {
       .statusCode(200)
       .body(containsString("refresh-outgoing-http-calls"))
       .body(containsString("refresh-outbox-partitions"))
-      .body(containsString("fadeUpdate"))
+      .body(containsString("patchUpdate"))
   }
 
   @Test
@@ -300,7 +300,7 @@ class HealthPageTests {
       .get("/health")
       .then()
       .statusCode(200)
-      .body(containsString("fadeUpdate('snippet-cronjobs', '/health/snippets/cronjobs'"))
+      .body(containsString("patchUpdate('snippet-cronjobs', '/health/snippets/cronjobs'"))
   }
 
   @Test

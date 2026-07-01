@@ -140,6 +140,14 @@
             color: var(--color-text-primary);
             background: transparent;
         }
+        /* Localized highlight for SSE-patched content, applied only to the elements that actually changed */
+        @keyframes sse-flash-pulse {
+            0%   { background-color: rgba(30, 185, 84, 0.35); }
+            100% { background-color: transparent; }
+        }
+        .sse-flash {
+            animation: sse-flash-pulse 1s ease-out;
+        }
     </style>
 </head>
 <body>

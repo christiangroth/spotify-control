@@ -35,14 +35,14 @@ class OutboxViewerPageTests {
   }
 
   @Test
-  fun `outbox-viewer page uses specific sse events with fade updates instead of full reload`() {
+  fun `outbox-viewer page uses specific sse events with patch updates instead of full reload`() {
     given()
       .`when`()
       .get("/outbox-viewer")
       .then()
       .statusCode(200)
       .body(containsString("refresh-outbox-partitions"))
-      .body(containsString("fadeUpdate"))
+      .body(containsString("patchUpdate"))
       .body(containsString("snippet-outbox-tasks"))
   }
 

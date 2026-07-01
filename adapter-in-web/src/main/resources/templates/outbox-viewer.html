@@ -100,10 +100,10 @@
     <script>
         connectSse('/health/events', function (event) {
             if (event.data === 'refresh-outbox-partitions') {
-                fadeUpdate('snippet-outbox-tasks', '/outbox-viewer/snippets/tasks');
+                patchUpdate('snippet-outbox-tasks', '/outbox-viewer/snippets/tasks');
             }
         }, function () {
-            fadeUpdate('snippet-outbox-tasks', '/outbox-viewer/snippets/tasks');
+            patchUpdate('snippet-outbox-tasks', '/outbox-viewer/snippets/tasks');
         });
 
         (function() {
@@ -132,7 +132,7 @@
                 }
                 wipeModal.hide();
                 postWithButton(document.getElementById('wipe-outbox-btn'), '/outbox-viewer/wipe', 'Outbox wiped successfully.', 'Wipe failed', function() {
-                    fadeUpdate('snippet-outbox-tasks', '/outbox-viewer/snippets/tasks');
+                    patchUpdate('snippet-outbox-tasks', '/outbox-viewer/snippets/tasks');
                 });
             });
         })();

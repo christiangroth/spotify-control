@@ -291,7 +291,7 @@
                         row.dataset.pulsing = 'true';
                         row.classList.add('cronjob-pulse');
                         setTimeout(function () {
-                            fadeUpdate('snippet-cronjobs', '/health/snippets/cronjobs', function () {
+                            patchUpdate('snippet-cronjobs', '/health/snippets/cronjobs', function () {
                                 updateCronjobCountdowns();
                             });
                         }, 5000);
@@ -342,15 +342,15 @@
 
             connectSse('/health/events', function (event) {
                 if (event.data === 'refresh-outgoing-http-calls') {
-                    fadeUpdate('snippet-outgoing-http-calls', '/health/snippets/outgoing-http-calls');
+                    patchUpdate('snippet-outgoing-http-calls', '/health/snippets/outgoing-http-calls');
                 } else if (event.data === 'refresh-outbox-partitions') {
                     if (outboxBlockedUntilInterval) {
                         clearInterval(outboxBlockedUntilInterval);
                         outboxBlockedUntilInterval = null;
                     }
-                    fadeUpdate('snippet-outbox-partitions', '/health/snippets/outbox-partitions', startOutboxBlockedUntilInterval);
+                    patchUpdate('snippet-outbox-partitions', '/health/snippets/outbox-partitions', startOutboxBlockedUntilInterval);
                 } else if (event.data === 'refresh-playback-state') {
-                    fadeUpdate('snippet-predicates', '/health/snippets/predicates', updatePredicateLastChecks);
+                    patchUpdate('snippet-predicates', '/health/snippets/predicates', updatePredicateLastChecks);
                 }
             });
         })();

@@ -92,14 +92,14 @@ class DashboardPageTests {
   }
 
   @Test
-  fun `dashboard page uses specific sse events with fade updates instead of full reload`() {
+  fun `dashboard page uses specific sse events with patch updates instead of full reload`() {
     given()
       .`when`()
       .get("/dashboard")
       .then()
       .statusCode(200)
       .body(containsString("refresh-playback-data"))
-      .body(containsString("fadeUpdate"))
+      .body(containsString("patchUpdate"))
   }
 
   @Test

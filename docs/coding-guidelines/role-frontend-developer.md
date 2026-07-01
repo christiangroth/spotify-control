@@ -33,7 +33,7 @@ View-specific calculations and DTO/model classes may live in `adapter-in-web` to
 
 ## Live Updates via SSE
 
-SSE streams deliver named string events (e.g. `refresh-playback-data`) from the backend to the browser. Each page that needs live updates connects to its SSE endpoint using the `connectSse(url, onMessage)` helper from `sse-utils.js`. On receiving an event, the handler calls `fadeUpdate(elementId, snippetUrl)` to fetch and replace the targeted fragment.
+SSE streams deliver named string events (e.g. `refresh-playback-data`) from the backend to the browser. Each page that needs live updates connects to its SSE endpoint using the `connectSse(url, onMessage)` helper from `sse-utils.js`. On receiving an event, the handler calls `patchUpdate(elementId, snippetUrl)` to fetch the targeted fragment and merge it into the existing DOM node-by-node, only touching the text/attributes/elements that actually changed (instead of replacing the whole fragment). Elements that changed get a brief `sse-flash` highlight so updates stay noticeable without the surrounding block fading in and out.
 
 **Available SSE endpoints:**
 
@@ -47,7 +47,7 @@ SSE streams deliver named string events (e.g. `refresh-playback-data`) from the 
 1. Add a named event constant to the SSE adapter (e.g. `DashboardSseAdapter` or `HealthSseAdapter`)
 2. Implement the port method that triggers the event (outbound port `DashboardRefreshPort` or equivalent)
 3. Add a new snippet endpoint in the resource class that returns the HTML fragment
-4. Add a `case` in the page's `connectSse` handler to call `fadeUpdate(elementId, snippetUrl)` on the new event
+4. Add a `case` in the page's `connectSse` handler to call `patchUpdate(elementId, snippetUrl)` on the new event
 5. The fragment template must be independently renderable (no dependency on page-level context)
 
 ## Design Principles
