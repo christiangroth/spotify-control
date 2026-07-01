@@ -230,6 +230,7 @@ class FetchCurrentlyPlayingServiceTests {
     assertThat(savedSlot.captured[0].trackId).isEqualTo(TrackId("track-a"))
     assertThat(savedSlot.captured[0].playedSeconds).isEqualTo(50L)
     verify { currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, setOf("track-a")) }
+    verify { dashboardRefresh.notifyUserPlaybackData(userId) }
   }
 
   @Test
@@ -245,6 +246,7 @@ class FetchCurrentlyPlayingServiceTests {
 
     verify(exactly = 0) { recentlyPartialPlayedRepository.saveAll(any()) }
     verify { currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, setOf("track-a")) }
+    verify(exactly = 0) { dashboardRefresh.notifyUserPlaybackData(any()) }
   }
 
   @Test
@@ -301,6 +303,7 @@ class FetchCurrentlyPlayingServiceTests {
     assertThat(savedSlot.captured[0].trackId).isEqualTo(TrackId("track-a"))
     assertThat(savedSlot.captured[0].playedSeconds).isEqualTo(50L)
     verify { currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, setOf("track-a")) }
+    verify { dashboardRefresh.notifyUserPlaybackData(userId) }
   }
 
   @Test
@@ -314,6 +317,7 @@ class FetchCurrentlyPlayingServiceTests {
 
     verify(exactly = 0) { recentlyPartialPlayedRepository.saveAll(any()) }
     verify { currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, setOf("track-a")) }
+    verify(exactly = 0) { dashboardRefresh.notifyUserPlaybackData(any()) }
   }
 
   // --- playback state and dashboard notifications ---
@@ -343,7 +347,7 @@ class FetchCurrentlyPlayingServiceTests {
   }
 
   @Test
-  fun `fetchCurrentlyPlaying notifies dashboard when track is detected`() {
+  fun `fetchCurrentlyPlaying does not notify dashboard when track is merely still playing`() {
     val item = currentlyPlayingItem("track-1", progressMs = 30_000L)
     every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
     every { spotifyPlayback.getCurrentlyPlaying(userId, accessToken) } returns item.right()
@@ -351,7 +355,7 @@ class FetchCurrentlyPlayingServiceTests {
 
     service.fetchCurrentlyPlaying(userId)
 
-    verify { dashboardRefresh.notifyUserPlaybackData(userId) }
+    verify(exactly = 0) { dashboardRefresh.notifyUserPlaybackData(any()) }
   }
 
   @Test

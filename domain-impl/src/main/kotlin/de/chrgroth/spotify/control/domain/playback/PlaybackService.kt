@@ -79,7 +79,7 @@ class PlaybackService(
       if (item != null && item.isPlaying) {
         playbackState.onPlaybackDetected()
       }
-      if (item != null) {
+      val orphanedItemsConverted = if (item != null) {
         val existing = currentlyPlayingRepository.findMostRecentByUserAndTrack(userId, item.trackId)
         if (existing != null && !isTrackRestart(item, existing)) {
           currentlyPlayingRepository.updateProgress(item.copy(startTime = existing.startTime))
@@ -90,9 +90,11 @@ class PlaybackService(
           currentlyPlayingRepository.save(item)
         }
         convertAndDeleteOrphanedItems(userId, item.trackId)
-        dashboardRefresh.notifyUserPlaybackData(userId)
       } else {
         convertAndDeleteOrphanedItems(userId, null)
+      }
+      if (orphanedItemsConverted) {
+        dashboardRefresh.notifyUserPlaybackData(userId)
       }
       Unit.right()
     }
@@ -101,13 +103,13 @@ class PlaybackService(
   private fun isTrackRestart(newItem: CurrentlyPlayingItem, existingItem: CurrentlyPlayingItem): Boolean =
     newItem.progressMs < RESTART_THRESHOLD_MS && existingItem.progressMs > minimumProgressMs
 
-  private fun convertAndDeleteOrphanedItems(userId: UserId, currentTrackId: TrackId?) {
+  private fun convertAndDeleteOrphanedItems(userId: UserId, currentTrackId: TrackId?): Boolean {
     val orphanedItems = currentlyPlayingRepository.findByUserId(userId)
       .let { items -> if (currentTrackId != null) items.filter { it.trackId != currentTrackId } else items }
-    if (orphanedItems.isEmpty()) return
+    if (orphanedItems.isEmpty()) return false
 
     val convertibleItems = orphanedItems.filter { it.progressMs > minimumProgressMs }
-    if (convertibleItems.isNotEmpty()) {
+    val newPartialSaved = if (convertibleItems.isNotEmpty()) {
       val partialItems = convertibleItems.map { item ->
         val playedMs = minOf(item.progressMs, item.durationMs)
         RecentlyPartialPlayedItem(
@@ -127,10 +129,14 @@ class PlaybackService(
       if (newPartial.isNotEmpty()) {
         recentlyPartialPlayedRepository.saveAll(newPartial)
       }
+      newPartial.isNotEmpty()
+    } else {
+      false
     }
 
     val orphanedTrackIds = orphanedItems.map { it.trackId.value }.toSet()
     currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, orphanedTrackIds)
+    return newPartialSaved
   }
 
   // --- Recently Played ---
