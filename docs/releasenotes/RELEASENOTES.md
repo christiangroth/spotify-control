@@ -1,3 +1,12 @@
+# 0.101.2 (2026.07.01)
+
+## Bugfixes / Chore
+* Fixed the "Outbox Partitions" section on the Config UI (`/health`) not refreshing live via SSE.
+
+
+
+---
+
 # 0.101.1 (2026.06.30)
 
 ## Bugfixes / Chore
