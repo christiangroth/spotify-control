@@ -167,9 +167,9 @@
     <script>
         connectSse('/dashboard/events', function (event) {
             if (event.data === 'refresh-playback-data') {
-                fadeUpdate('snippet-playback-histogram', '/dashboard/snippets/playback-histogram');
-                fadeUpdate('snippet-recently-played', '/dashboard/snippets/recently-played');
-                fadeUpdate('snippet-listening-stats', '/dashboard/snippets/listening-stats');
+                patchUpdate('snippet-playback-histogram', '/dashboard/snippets/playback-histogram');
+                patchUpdate('snippet-recently-played', '/dashboard/snippets/recently-played');
+                patchUpdate('snippet-listening-stats', '/dashboard/snippets/listening-stats');
             }
         });
     </script>

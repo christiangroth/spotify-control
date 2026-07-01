@@ -1,18 +1,70 @@
-function fadeUpdate(elementId, url, callback) {
+function sseFlash(el) {
+    if (!el || el.nodeType !== Node.ELEMENT_NODE) return;
+    el.classList.remove('sse-flash');
+    void el.offsetWidth;
+    el.classList.add('sse-flash');
+}
+
+function sseMorphAttributes(oldEl, newEl) {
+    Array.prototype.slice.call(oldEl.attributes).forEach(function (attr) {
+        if (!newEl.hasAttribute(attr.name)) oldEl.removeAttribute(attr.name);
+    });
+    Array.prototype.slice.call(newEl.attributes).forEach(function (attr) {
+        if (oldEl.getAttribute(attr.name) !== attr.value) oldEl.setAttribute(attr.name, attr.value);
+    });
+}
+
+function sseMorphNode(parent, oldNode, newNode) {
+    if (!newNode) {
+        if (oldNode) parent.removeChild(oldNode);
+        return;
+    }
+    if (!oldNode) {
+        var added = newNode.cloneNode(true);
+        parent.appendChild(added);
+        sseFlash(added);
+        return;
+    }
+    if (oldNode.nodeType !== newNode.nodeType || oldNode.nodeName !== newNode.nodeName) {
+        var replacement = newNode.cloneNode(true);
+        parent.replaceChild(replacement, oldNode);
+        sseFlash(replacement);
+        return;
+    }
+    if (oldNode.nodeType === Node.TEXT_NODE) {
+        if (oldNode.nodeValue !== newNode.nodeValue) {
+            oldNode.nodeValue = newNode.nodeValue;
+            sseFlash(parent);
+        }
+        return;
+    }
+    if (oldNode.nodeType === Node.ELEMENT_NODE) {
+        sseMorphAttributes(oldNode, newNode);
+        sseMorphChildren(oldNode, newNode);
+    }
+}
+
+function sseMorphChildren(oldParent, newParent) {
+    var oldNodes = Array.prototype.slice.call(oldParent.childNodes);
+    var newNodes = Array.prototype.slice.call(newParent.childNodes);
+    var max = Math.max(oldNodes.length, newNodes.length);
+    for (var i = 0; i < max; i++) {
+        sseMorphNode(oldParent, oldNodes[i], newNodes[i]);
+    }
+}
+
+function patchUpdate(elementId, url, callback) {
     var el = document.getElementById(elementId);
     if (!el) return;
-    el.style.transition = 'opacity 0.5s ease';
-    el.style.opacity = '0';
     fetch(url)
         .then(function (r) { return r.text(); })
         .then(function (html) {
-            el.innerHTML = html;
-            el.style.opacity = '1';
+            var parsed = document.createElement('div');
+            parsed.innerHTML = html;
+            sseMorphChildren(el, parsed);
             if (callback) callback();
         })
-        .catch(function () {
-            el.style.opacity = '1';
-        });
+        .catch(function () {});
 }
 
 function connectSse(url, onMessage, onOpen) {
