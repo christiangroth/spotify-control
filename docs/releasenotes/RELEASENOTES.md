@@ -1,3 +1,14 @@
+# 0.101.3 (2026.07.01)
+
+## Bugfixes / Chore
+* Live-updating sections (e.g. Health UI) no longer fade the whole block in and out on every update.
+* Only the parts of the page that actually changed are highlighted briefly, so content stays readable while updates happen in the background.
+* Dashboard no longer fades its playback stats sections on every playback poll while a track is playing; it now only refreshes them when the recently played or listening stats actually change.
+
+
+
+---
+
 # 0.101.2 (2026.07.01)
 
 ## Bugfixes / Chore
