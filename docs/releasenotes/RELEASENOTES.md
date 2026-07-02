@@ -1,3 +1,12 @@
+# 0.101.4 (2026.07.02)
+
+## Bugfixes / Chore
+* Reduced the number of Spotify requests needed during catalog sync, helping avoid rate limiting.
+
+
+
+---
+
 # 0.101.3 (2026.07.01)
 
 ## Bugfixes / Chore
