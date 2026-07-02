@@ -85,6 +85,7 @@ class CatalogServiceTests {
   private val userId = UserId("user-1")
   private val accessToken = AccessToken("token")
   private val album1 = AppAlbum(id = AlbumId("album-1"), title = "Album One", artistId = ArtistId("artist-1"), artistName = "Artist One", lastSync = syncTimestamp)
+  private val album2 = AppAlbum(id = AlbumId("album-2"), title = "Album Two", artistId = ArtistId("artist-2"), artistName = "Artist Two", lastSync = syncTimestamp)
   private val trackWithAlbum1 = AppTrack(
     id = TrackId("track-1"), title = "Track One",
     albumId = AlbumId("album-1"), artistId = ArtistId("artist-1"), lastSync = syncTimestamp,
@@ -253,9 +254,28 @@ class CatalogServiceTests {
   }
 
   @Test
-  fun `handle SyncAlbumDetails syncs album and upserts all tracks`() {
+  fun `handle SyncAlbumDetails fetches only tracks and skips album upsert when album metadata already known`() {
     every { userRepository.findAll() } returns listOf(buildUser())
     every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"))) } returns listOf(album1)
+    every { spotifyCatalog.getAlbumTracks(userId, accessToken, album1) } returns listOf(trackWithAlbum1, trackWithAlbum2).right()
+    every { appTrackRepository.upsertAll(any()) } just runs
+    every { outboxPort.enqueue(any()) } just runs
+
+    val result = adapter.handle(DomainOutboxEvent.SyncAlbumDetails("album-1"))
+
+    assertThat(result.isRight()).isTrue()
+    verify { spotifyCatalog.getAlbumTracks(userId, accessToken, album1) }
+    verify(exactly = 0) { spotifyCatalog.getAlbum(any(), any(), any()) }
+    verify { appTrackRepository.upsertAll(listOf(trackWithAlbum1, trackWithAlbum2)) }
+    verify(exactly = 0) { appAlbumRepository.upsertAll(any()) }
+  }
+
+  @Test
+  fun `handle SyncAlbumDetails falls back to full album fetch and upserts album when metadata not yet known`() {
+    every { userRepository.findAll() } returns listOf(buildUser())
+    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"))) } returns emptyList()
     every { spotifyCatalog.getAlbum(userId, accessToken, "album-1") } returns albumSyncResult.right()
     every { appTrackRepository.upsertAll(any()) } just runs
     every { appAlbumRepository.upsertAll(any()) } just runs
@@ -265,6 +285,7 @@ class CatalogServiceTests {
 
     assertThat(result.isRight()).isTrue()
     verify { spotifyCatalog.getAlbum(userId, accessToken, "album-1") }
+    verify(exactly = 0) { spotifyCatalog.getAlbumTracks(any(), any(), any()) }
     verify { appTrackRepository.upsertAll(listOf(trackWithAlbum1, trackWithAlbum2)) }
     verify { appAlbumRepository.upsertAll(listOf(album1)) }
   }
@@ -273,6 +294,7 @@ class CatalogServiceTests {
   fun `handle SyncAlbumDetails does not sync artists found in album tracks`() {
     every { userRepository.findAll() } returns listOf(buildUser())
     every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"))) } returns emptyList()
     every { spotifyCatalog.getAlbum(userId, accessToken, "album-1") } returns albumSyncResult.right()
     every { appTrackRepository.upsertAll(any()) } just runs
     every { appAlbumRepository.upsertAll(any()) } just runs
@@ -286,6 +308,7 @@ class CatalogServiceTests {
   fun `handle SyncAlbumDetails returns failed when album endpoint returns error`() {
     every { userRepository.findAll() } returns listOf(buildUser())
     every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"))) } returns emptyList()
     every { spotifyCatalog.getAlbum(userId, accessToken, "album-1") } returns SyncError.TRACK_DETAILS_FETCH_FAILED.left()
 
     val result = adapter.handle(DomainOutboxEvent.SyncAlbumDetails("album-1"))
@@ -299,6 +322,7 @@ class CatalogServiceTests {
     val rateLimitError = SpotifyRateLimitError(30.seconds)
     every { userRepository.findAll() } returns listOf(buildUser())
     every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"))) } returns emptyList()
     every { spotifyCatalog.getAlbum(userId, accessToken, "album-1") } returns rateLimitError.left()
 
     val result = adapter.handle(DomainOutboxEvent.SyncAlbumDetails("album-1"))
@@ -310,15 +334,17 @@ class CatalogServiceTests {
 
   @Test
   fun `handle SyncArtistAlbums enqueues SyncAlbumDetails for new albums and completes when no next page`() {
-    val page = ArtistAlbumsPage(albumIds = listOf("album-1", "album-2"), nextUrl = null)
+    val page = ArtistAlbumsPage(albums = listOf(album1, album2), nextUrl = null)
     every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
     every { spotifyCatalog.getArtistAlbumsPage(userId, accessToken, "artist-1", null) } returns page.right()
     every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"), AlbumId("album-2"))) } returns emptyList()
+    every { appAlbumRepository.upsertAll(any()) } just runs
     every { outboxPort.enqueue(any()) } just runs
 
     val result = adapter.handle(DomainOutboxEvent.SyncArtistAlbums("artist-1", userId))
 
     assertThat(result.isRight()).isTrue()
+    verify { appAlbumRepository.upsertAll(listOf(album1, album2)) }
     verify { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails("album-1")) }
     verify { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails("album-2")) }
     verify(exactly = 0) { outboxPort.enqueue(match { it is DomainOutboxEvent.SyncArtistAlbums }) }
@@ -327,10 +353,11 @@ class CatalogServiceTests {
   @Test
   fun `handle SyncArtistAlbums enqueues next page via outbox when nextUrl is present`() {
     val nextPageUrl = "https://api.spotify.com/v1/artists/artist-1/albums?offset=50&limit=50"
-    val page = ArtistAlbumsPage(albumIds = listOf("album-1"), nextUrl = nextPageUrl)
+    val page = ArtistAlbumsPage(albums = listOf(album1), nextUrl = nextPageUrl)
     every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
     every { spotifyCatalog.getArtistAlbumsPage(userId, accessToken, "artist-1", null) } returns page.right()
     every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"))) } returns emptyList()
+    every { appAlbumRepository.upsertAll(any()) } just runs
     every { outboxPort.enqueue(any()) } just runs
 
     val result = adapter.handle(DomainOutboxEvent.SyncArtistAlbums("artist-1", userId))
@@ -343,10 +370,11 @@ class CatalogServiceTests {
   @Test
   fun `handle SyncArtistAlbums processes subsequent page and fetches using nextUrl`() {
     val nextPageUrl = "https://api.spotify.com/v1/artists/artist-1/albums?offset=50&limit=50"
-    val page = ArtistAlbumsPage(albumIds = listOf("album-2"), nextUrl = null)
+    val page = ArtistAlbumsPage(albums = listOf(album2), nextUrl = null)
     every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
     every { spotifyCatalog.getArtistAlbumsPage(userId, accessToken, "artist-1", nextPageUrl) } returns page.right()
     every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-2"))) } returns emptyList()
+    every { appAlbumRepository.upsertAll(any()) } just runs
     every { outboxPort.enqueue(any()) } just runs
 
     val result = adapter.handle(DomainOutboxEvent.SyncArtistAlbums("artist-1", userId, nextPageUrl))
@@ -358,15 +386,17 @@ class CatalogServiceTests {
 
   @Test
   fun `handle SyncArtistAlbums enqueues only new albums and skips existing ones`() {
-    val page = ArtistAlbumsPage(albumIds = listOf("album-1", "album-2"), nextUrl = null)
+    val page = ArtistAlbumsPage(albums = listOf(album1, album2), nextUrl = null)
     every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
     every { spotifyCatalog.getArtistAlbumsPage(userId, accessToken, "artist-1", null) } returns page.right()
     every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"), AlbumId("album-2"))) } returns listOf(album1)
+    every { appAlbumRepository.upsertAll(any()) } just runs
     every { outboxPort.enqueue(any()) } just runs
 
     val result = adapter.handle(DomainOutboxEvent.SyncArtistAlbums("artist-1", userId))
 
     assertThat(result.isRight()).isTrue()
+    verify { appAlbumRepository.upsertAll(listOf(album2)) }
     verify { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails("album-2")) }
     verify(exactly = 0) { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails("album-1")) }
   }
@@ -374,8 +404,7 @@ class CatalogServiceTests {
   @Test
   fun `handle SyncArtistAlbums skips next page when all albums on current page are already in catalog`() {
     val nextPageUrl = "https://api.spotify.com/v1/artists/artist-1/albums?offset=50&limit=50"
-    val album2 = AppAlbum(id = AlbumId("album-2"), lastSync = syncTimestamp)
-    val page = ArtistAlbumsPage(albumIds = listOf("album-1", "album-2"), nextUrl = nextPageUrl)
+    val page = ArtistAlbumsPage(albums = listOf(album1, album2), nextUrl = nextPageUrl)
     every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
     every { spotifyCatalog.getArtistAlbumsPage(userId, accessToken, "artist-1", null) } returns page.right()
     every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"), AlbumId("album-2"))) } returns listOf(album1, album2)
@@ -385,20 +414,23 @@ class CatalogServiceTests {
 
     assertThat(result.isRight()).isTrue()
     verify(exactly = 0) { outboxPort.enqueue(any()) }
+    verify(exactly = 0) { appAlbumRepository.upsertAll(any()) }
   }
 
   @Test
   fun `handle SyncArtistAlbums enqueues next page when some albums on current page are new`() {
     val nextPageUrl = "https://api.spotify.com/v1/artists/artist-1/albums?offset=50&limit=50"
-    val page = ArtistAlbumsPage(albumIds = listOf("album-1", "album-2"), nextUrl = nextPageUrl)
+    val page = ArtistAlbumsPage(albums = listOf(album1, album2), nextUrl = nextPageUrl)
     every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
     every { spotifyCatalog.getArtistAlbumsPage(userId, accessToken, "artist-1", null) } returns page.right()
     every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"), AlbumId("album-2"))) } returns listOf(album1)
+    every { appAlbumRepository.upsertAll(any()) } just runs
     every { outboxPort.enqueue(any()) } just runs
 
     val result = adapter.handle(DomainOutboxEvent.SyncArtistAlbums("artist-1", userId))
 
     assertThat(result.isRight()).isTrue()
+    verify { appAlbumRepository.upsertAll(listOf(album2)) }
     verify { outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails("album-2")) }
     verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums("artist-1", userId, nextPageUrl)) }
   }

@@ -6,6 +6,7 @@ import arrow.core.left
 import arrow.core.right
 import de.chrgroth.spotify.control.domain.error.ArtistSettingsError
 import de.chrgroth.spotify.control.domain.error.DomainError
+import de.chrgroth.spotify.control.domain.model.catalog.AlbumSyncResult
 import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
@@ -136,14 +137,23 @@ class CatalogService(
       return 0.right()
     }
     val accessToken = spotifyAccessToken.getValidAccessToken(userId)
-    val result = spotifyCatalog.getAlbum(userId, accessToken, albumId)
+    val knownAlbum = appAlbumRepository.findByAlbumIds(setOf(AlbumId(albumId))).firstOrNull()
+    val result = if (knownAlbum != null) {
+      // metadata already captured from the artist discography response, only tracks are missing
+      spotifyCatalog.getAlbumTracks(userId, accessToken, knownAlbum).map { tracks -> AlbumSyncResult(knownAlbum, tracks) }
+    } else {
+      // fallback for albums without known metadata, e.g. events enqueued before this album was upserted
+      spotifyCatalog.getAlbum(userId, accessToken, albumId)
+    }
     return when (result) {
       is Either.Left -> result.value.left()
       is Either.Right -> {
         val albumResult = result.value
         if (albumResult.tracks.isNotEmpty()) {
           appTrackRepository.upsertAll(albumResult.tracks)
-          appAlbumRepository.upsertAll(listOf(albumResult.album))
+          if (knownAlbum == null) {
+            appAlbumRepository.upsertAll(listOf(albumResult.album))
+          }
           val expectedTracks = albumResult.album.totalTracks
           if (expectedTracks != null && albumResult.tracks.size < expectedTracks) {
             logger.warn { "Album '${albumResult.album.title ?: albumId}' ($albumId): synced ${albumResult.tracks.size} track(s) but album reports $expectedTracks total" }
@@ -214,19 +224,20 @@ class CatalogService(
     val accessToken = spotifyAccessToken.getValidAccessToken(userId)
     return spotifyCatalog.getArtistAlbumsPage(userId, accessToken, artistId, nextUrl)
       .flatMap { page ->
-        val existingAlbumIds = appAlbumRepository.findByAlbumIds(page.albumIds.map { AlbumId(it) }.toSet()).map { it.id.value }.toSet()
-        val newAlbumIds = page.albumIds.filter { it !in existingAlbumIds }
-        if (newAlbumIds.isNotEmpty()) {
+        val existingAlbumIds = appAlbumRepository.findByAlbumIds(page.albums.map { it.id }.toSet()).map { it.id.value }.toSet()
+        val newAlbums = page.albums.filter { it.id.value !in existingAlbumIds }
+        if (newAlbums.isNotEmpty()) {
+          appAlbumRepository.upsertAll(newAlbums)
           val now = Clock.System.now()
-          newAlbumIds.forEach { albumId ->
-            syncTraceRepository.upsert(SyncTrace(SyncTraceEntityType.ALBUM, albumId, SyncCause.ArtistDiscography(artistId), now))
-            outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails(albumId))
+          newAlbums.forEach { album ->
+            syncTraceRepository.upsert(SyncTrace(SyncTraceEntityType.ALBUM, album.id.value, SyncCause.ArtistDiscography(artistId), now))
+            outboxPort.enqueue(DomainOutboxEvent.SyncAlbumDetails(album.id.value))
           }
         } else {
-          logger.debug { "All ${page.albumIds.size} album(s) on this page for artist $artistId already in catalog" }
+          logger.debug { "All ${page.albums.size} album(s) on this page for artist $artistId already in catalog" }
         }
         if (page.nextUrl != null) {
-          if (newAlbumIds.isNotEmpty()) {
+          if (newAlbums.isNotEmpty()) {
             outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums(artistId, userId, page.nextUrl))
           }
         }
