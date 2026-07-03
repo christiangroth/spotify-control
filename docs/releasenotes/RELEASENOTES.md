@@ -1,3 +1,13 @@
+# 0.103.1 (2026.07.03)
+
+## Bugfixes / Chore
+* Fixed the Album and Album Tracks debug requests on the Spotify Debug page: albums can now be searched directly by title instead of only through an artist search.
+* Spotify Debug page now renders results as a syntax-highlighted, collapsible/expandable JSON tree instead of a plain text dump.
+
+
+
+---
+
 # 0.103.0 (2026.07.03)
 
 ## New Features
