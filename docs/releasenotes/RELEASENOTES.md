@@ -1,3 +1,13 @@
+# 0.102.0 (2026.07.03)
+
+## New Features
+* Added a new "Spotify Debug" page (linked from the Tools menu) for manually triggering the backend's Spotify requests and inspecting the raw JSON result.
+* The debug page lets you pick artists, albums and playlists by name via a search input, instead of typing raw Spotify IDs.
+
+
+
+---
+
 # 0.101.4 (2026.07.02)
 
 ## Bugfixes / Chore
