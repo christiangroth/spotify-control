@@ -7,4 +7,5 @@ data class AlbumBrowseItem(
   val releaseDate: String?,
   val trackCount: Int,
   val durationMs: Long,
+  val artistName: String? = null,
 )

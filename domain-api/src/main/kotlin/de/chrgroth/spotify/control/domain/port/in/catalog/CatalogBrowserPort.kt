@@ -9,6 +9,7 @@ import de.chrgroth.spotify.control.domain.model.catalog.TrackBrowseItem
 interface CatalogBrowserPort {
   fun getCatalogStats(): CatalogStats
   fun getArtists(filter: String?): List<ArtistBrowseItem>
+  fun getAlbums(filter: String?): List<AlbumBrowseItem>
   fun getArtistAlbums(artistId: String): List<AlbumBrowseItem>
   fun getAlbumTracks(albumId: String): List<TrackBrowseItem>
   fun getArtistSyncTrace(artistId: String): SyncTraceDisplay?

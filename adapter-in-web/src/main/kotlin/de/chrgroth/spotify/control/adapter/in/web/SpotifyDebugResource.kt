@@ -2,6 +2,7 @@ package de.chrgroth.spotify.control.adapter.`in`.web
 
 import arrow.core.Either
 import de.chrgroth.spotify.control.domain.error.DomainError
+import de.chrgroth.spotify.control.domain.model.catalog.AlbumBrowseItem
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumSyncResult
 import de.chrgroth.spotify.control.domain.model.catalog.AppAlbum
 import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
@@ -71,11 +72,12 @@ class SpotifyDebugResource(
   }
 
   @GET
-  @Path("/api/artists/{artistId}/albums")
+  @Path("/api/albums")
   @Authenticated
   @Produces(MediaType.APPLICATION_JSON)
-  fun listArtistAlbums(@PathParam("artistId") artistId: String): List<PickerOption> {
-    return catalogBrowser.getArtistAlbums(artistId).map { PickerOption(it.albumId, it.title ?: UNTITLED_ALBUM) }
+  fun searchAlbums(@QueryParam("filter") filter: String?): List<PickerOption> {
+    if (filter.isNullOrBlank()) return emptyList()
+    return catalogBrowser.getAlbums(filter).map { PickerOption(it.albumId, it.toPickerLabel()) }
   }
 
   @GET
@@ -269,6 +271,11 @@ class SpotifyDebugResource(
     "album" to album.toJson(),
     "tracks" to tracks.map { it.toJson() },
   )
+
+  private fun AlbumBrowseItem.toPickerLabel(): String {
+    val albumTitle = title ?: UNTITLED_ALBUM
+    return if (artistName != null) "$albumTitle — $artistName" else albumTitle
+  }
 
   data class PickerOption(val id: String, val name: String)
 

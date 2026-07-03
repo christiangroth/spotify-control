@@ -1,5 +1,7 @@
 package de.chrgroth.spotify.control.domain.catalog
 
+import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
+import de.chrgroth.spotify.control.domain.model.catalog.AppAlbum
 import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
 import de.chrgroth.spotify.control.domain.model.catalog.AppTrack
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
@@ -52,6 +54,29 @@ class CatalogBrowserServiceTests {
     tokenExpiresAt = Instant.DISTANT_FUTURE,
     lastLoginAt = Instant.fromEpochSeconds(0),
   )
+
+  @Test
+  fun `getAlbums returns empty list when filter is blank`() {
+    val result = service.getAlbums(" ")
+
+    assertThat(result).isEmpty()
+  }
+
+  @Test
+  fun `getAlbums matches album title case-insensitively across all artists and includes artist name`() {
+    every { appAlbumRepository.findAll() } returns listOf(
+      AppAlbum(id = AlbumId("album-1"), title = "Greatest Hits", artistName = "Artist One", lastSync = triggeredAt),
+      AppAlbum(id = AlbumId("album-2"), title = "Other Record", artistName = "Artist Two", lastSync = triggeredAt),
+    )
+    every { appTrackRepository.findAll() } returns emptyList()
+
+    val result = service.getAlbums("greatest")
+
+    assertThat(result).hasSize(1)
+    assertThat(result.first().albumId).isEqualTo("album-1")
+    assertThat(result.first().title).isEqualTo("Greatest Hits")
+    assertThat(result.first().artistName).isEqualTo("Artist One")
+  }
 
   @Test
   fun `getArtistSyncTrace returns null when no trace recorded`() {
