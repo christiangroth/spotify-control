@@ -69,6 +69,30 @@ class CatalogBrowserService(
       }
   }
 
+  override fun getAlbums(filter: String?): List<AlbumBrowseItem> {
+    val filterLower = filter?.trim()?.lowercase()
+    if (filterLower.isNullOrBlank()) return emptyList()
+
+    val albums = appAlbumRepository.findAll()
+    val tracksByAlbumId = appTrackRepository.findAll().groupBy { it.albumId?.value }
+
+    return albums
+      .filter { album -> album.title?.lowercase()?.contains(filterLower) ?: false }
+      .sortedBy { it.title?.lowercase() }
+      .map { album ->
+        val albumTracks = tracksByAlbumId[album.id.value] ?: emptyList()
+        AlbumBrowseItem(
+          albumId = album.id.value,
+          title = album.title,
+          imageLink = album.imageLink,
+          releaseDate = album.releaseDate,
+          trackCount = albumTracks.size,
+          durationMs = albumTracks.sumOf { it.durationMs ?: 0L },
+          artistName = album.artistName,
+        )
+      }
+  }
+
   override fun getArtistAlbums(artistId: String): List<AlbumBrowseItem> {
     val albums = appAlbumRepository.findByArtistId(ArtistId(artistId))
     val tracks = appTrackRepository.findByArtistId(ArtistId(artistId))

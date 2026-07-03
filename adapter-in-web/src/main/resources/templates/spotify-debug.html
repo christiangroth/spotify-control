@@ -148,14 +148,10 @@
                     <div class="tab-pane fade" id="tab-album" role="tabpanel">
                         <p class="text-secondary small mb-3"><code>GET /v1/albums/{"{"}id{"}"}</code> — a single album's details, including all its tracks.</p>
                         <div id="form-album" class="mb-3">
-                            <div id="picker-artist-for-album" class="mb-2" style="max-width:420px;">
-                                <label class="form-label small text-secondary mb-1">Artist (to narrow the album search)</label>
-                                <input type="text" class="form-control form-control-sm picker-search" placeholder="Search artist by name..." autocomplete="off">
-                                <div class="list-group mt-1 picker-results" style="max-height:160px;overflow-y:auto;"></div>
-                            </div>
                             <div id="picker-album-for-album" class="mb-2" style="max-width:420px;">
                                 <label class="form-label small text-secondary mb-1">Album</label>
-                                <div class="list-group picker-results" style="max-height:180px;overflow-y:auto;"></div>
+                                <input type="text" class="form-control form-control-sm picker-search" placeholder="Search album by title..." autocomplete="off">
+                                <div class="list-group mt-1 picker-results" style="max-height:180px;overflow-y:auto;"></div>
                                 <input type="hidden" class="picker-value" data-param="albumId">
                                 <div class="small mt-1 picker-label" style="color:var(--spotify-green);"></div>
                             </div>
@@ -167,14 +163,10 @@
                     <div class="tab-pane fade" id="tab-album-tracks" role="tabpanel">
                         <p class="text-secondary small mb-3"><code>GET /v1/albums/{"{"}id{"}"}/tracks</code> — the tracks of an album (fetches the album first to resolve its metadata).</p>
                         <div id="form-album-tracks" class="mb-3">
-                            <div id="picker-artist-for-album-tracks" class="mb-2" style="max-width:420px;">
-                                <label class="form-label small text-secondary mb-1">Artist (to narrow the album search)</label>
-                                <input type="text" class="form-control form-control-sm picker-search" placeholder="Search artist by name..." autocomplete="off">
-                                <div class="list-group mt-1 picker-results" style="max-height:160px;overflow-y:auto;"></div>
-                            </div>
                             <div id="picker-album-for-album-tracks" class="mb-2" style="max-width:420px;">
                                 <label class="form-label small text-secondary mb-1">Album</label>
-                                <div class="list-group picker-results" style="max-height:180px;overflow-y:auto;"></div>
+                                <input type="text" class="form-control form-control-sm picker-search" placeholder="Search album by title..." autocomplete="off">
+                                <div class="list-group mt-1 picker-results" style="max-height:180px;overflow-y:auto;"></div>
                                 <input type="hidden" class="picker-value" data-param="albumId">
                                 <div class="small mt-1 picker-label" style="color:var(--spotify-green);"></div>
                             </div>
@@ -272,44 +264,6 @@
             input.addEventListener('input', function() { search(this.value); });
         }
 
-        function initArtistThenAlbumPicker(artistRootId, albumRootId) {
-            const artistRoot = document.getElementById(artistRootId);
-            const artistInput = artistRoot.querySelector('.picker-search');
-            const artistResults = artistRoot.querySelector('.picker-results');
-            const albumRoot = document.getElementById(albumRootId);
-            const albumResults = albumRoot.querySelector('.picker-results');
-            const albumHidden = albumRoot.querySelector('.picker-value');
-            const albumLabel = albumRoot.querySelector('.picker-label');
-
-            const search = debounce(function(value) {
-                if (!value) {
-                    artistResults.innerHTML = '';
-                    return;
-                }
-                fetch('/spotify-debug/api/artists?filter=' + encodeURIComponent(value))
-                    .then(function(r) { return r.json(); })
-                    .then(function(artists) {
-                        renderPickerOptions(artistResults, artists, function(artist) {
-                            artistInput.value = artist.name;
-                            artistResults.innerHTML = '';
-                            albumHidden.value = '';
-                            albumLabel.textContent = '';
-                            albumResults.innerHTML = '<div class="text-secondary small px-2 py-1">Loading albums…</div>';
-                            fetch('/spotify-debug/api/artists/' + encodeURIComponent(artist.id) + '/albums')
-                                .then(function(r2) { return r2.json(); })
-                                .then(function(albums) {
-                                    renderPickerOptions(albumResults, albums, function(album) {
-                                        albumHidden.value = album.id;
-                                        albumLabel.textContent = album.name + ' (' + album.id + ')';
-                                        albumResults.innerHTML = '';
-                                    });
-                                });
-                        });
-                    });
-            }, 300);
-            artistInput.addEventListener('input', function() { search(this.value); });
-        }
-
         function executeOperation(operation, formRootId, resultElementId) {
             const root = document.getElementById(formRootId);
             const params = new URLSearchParams();
@@ -330,8 +284,8 @@
         initSearchPicker('picker-playlist', function(v) { return '/spotify-debug/api/playlists?filter=' + encodeURIComponent(v); });
         initSearchPicker('picker-artist-for-artist', function(v) { return '/spotify-debug/api/artists?filter=' + encodeURIComponent(v); });
         initSearchPicker('picker-artist-for-artist-albums', function(v) { return '/spotify-debug/api/artists?filter=' + encodeURIComponent(v); });
-        initArtistThenAlbumPicker('picker-artist-for-album', 'picker-album-for-album');
-        initArtistThenAlbumPicker('picker-artist-for-album-tracks', 'picker-album-for-album-tracks');
+        initSearchPicker('picker-album-for-album', function(v) { return '/spotify-debug/api/albums?filter=' + encodeURIComponent(v); });
+        initSearchPicker('picker-album-for-album-tracks', function(v) { return '/spotify-debug/api/albums?filter=' + encodeURIComponent(v); });
     </script>
     {/content}
 {/include}
