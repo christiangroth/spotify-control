@@ -22,11 +22,8 @@ class OutboxMetrics(
   private val meterRegistry: MeterRegistry,
 ) {
 
-  // a single metrics scrape reads one gauge per partition and one per event type, each of which
-  // needs the partition stats. without caching, that turns into one countByEventType query per
-  // gauge per scrape; caching for a short window collapses those back down to a single query.
   @Volatile
-  private var cachedStats: List<OutboxPartitionStats>? = null
+  private var cachedStats: List<OutboxPartitionStats> = emptyList()
 
   @Volatile
   private var cachedAt: Instant = Instant.EPOCH
@@ -53,17 +50,18 @@ class OutboxMetrics(
   private fun pendingCountForEventType(eventType: String): Long =
     partitionStats().sumOf { partition -> partition.eventTypeCounts.firstOrNull { it.eventType == eventType }?.count ?: 0L }
 
+  // shares a single outbox query across all partition/event-type gauges within the same Prometheus scrape instead of
+  // re-querying once per gauge tag value (which previously multiplied query count by partitions + event types per scrape).
   private fun partitionStats(): List<OutboxPartitionStats> {
     val now = Instant.now()
-    cachedStats?.takeIf { Duration.between(cachedAt, now) < CACHE_TTL }?.let { return it }
-
-    return outboxPort.getPartitionStats().also {
-      cachedStats = it
+    if (Duration.between(cachedAt, now) > CACHE_TTL) {
+      cachedStats = outboxPort.getPartitionStats()
       cachedAt = now
     }
+    return cachedStats
   }
 
   companion object {
-    private val CACHE_TTL: Duration = Duration.ofSeconds(5)
+    private val CACHE_TTL = Duration.ofSeconds(5)
   }
 }
