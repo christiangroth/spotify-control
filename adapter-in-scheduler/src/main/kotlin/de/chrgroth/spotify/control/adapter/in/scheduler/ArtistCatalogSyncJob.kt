@@ -2,6 +2,7 @@ package de.chrgroth.spotify.control.adapter.`in`.scheduler
 
 import de.chrgroth.quarkus.starters.domain.ScheduledSkipPredicate
 import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogPort
+import io.micrometer.core.annotation.Timed
 import io.quarkus.scheduler.Scheduled
 import jakarta.enterprise.context.ApplicationScoped
 import java.time.LocalDate
@@ -13,6 +14,7 @@ class ArtistCatalogSyncJob(
   private val catalog: CatalogPort,
 ) {
 
+  @Timed(value = "scheduler.job", extraTags = ["invoker", "ArtistCatalogSyncJob"], histogram = true)
   @Scheduled(cron = "0 0 2 * * ?", skipExecutionIf = ScheduledSkipPredicate::class)
   fun run() {
     val partition = LocalDate.now(ZoneOffset.UTC).dayOfYear % TOTAL_PARTITIONS
