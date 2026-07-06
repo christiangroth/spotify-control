@@ -19,10 +19,15 @@ import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.playback.AppPlaybackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playback.PlaybackAggregationRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
+import io.micrometer.core.instrument.Gauge
+import io.micrometer.core.instrument.MeterRegistry
 import jakarta.enterprise.context.ApplicationScoped
 import java.time.DayOfWeek
 import java.time.ZoneOffset
 import java.time.temporal.TemporalAdjusters
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
+import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlin.time.toJavaInstant
 import kotlinx.datetime.LocalDate
@@ -39,7 +44,10 @@ class PlaybackAggregationService(
   private val appArtistRepository: AppArtistRepositoryPort,
   private val aggregationRepository: PlaybackAggregationRepositoryPort,
   private val outboxPort: OutboxPort,
+  private val meterRegistry: MeterRegistry,
 ) : PlaybackAggregationPort {
+
+  private val lastAggregationSuccessTimestamps = ConcurrentHashMap<AggregationPeriodType, AtomicLong>()
 
   // --- Enqueue helpers ---
 
@@ -184,7 +192,20 @@ class PlaybackAggregationService(
         event.userId, AggregationPeriodType.YEAR, event.periodStart, event.periodStart.plusKMonths(MONTHS_PER_YEAR).minusKDays(1),
       )
     }
+    recordAggregationSuccess(event.type)
     return Unit.right()
+  }
+
+  private fun recordAggregationSuccess(type: AggregationPeriodType) {
+    val timestamp = lastAggregationSuccessTimestamps.getOrPut(type) {
+      AtomicLong().also { atomic ->
+        Gauge.builder("app.playback.aggregation_last_success_timestamp", atomic) { it.get().toDouble() }
+          .description("Epoch second timestamp of the last successful playback aggregation run")
+          .tag("type", type.name.lowercase())
+          .register(meterRegistry)
+      }
+    }
+    timestamp.set(Clock.System.now().toEpochMilliseconds() / MILLIS_PER_SECOND)
   }
 
   // --- Aggregation logic ---
@@ -339,6 +360,7 @@ class PlaybackAggregationService(
     private const val DAYS_IN_WEEK = 6L
     private const val MONTHS_PER_QUARTER = 3L
     private const val MONTHS_PER_YEAR = 12L
+    private const val MILLIS_PER_SECOND = 1_000L
   }
 
   private data class Rankings(

@@ -32,6 +32,14 @@
       "icon": "external link",
       "tags": [],
       "targetBlank": true,
+      "title": "Domain Metrics",
+      "type": "link",
+      "url": "/d/spotify-control-domain-metrics/domain-metrics"
+    },
+    {
+      "icon": "external link",
+      "tags": [],
+      "targetBlank": true,
       "title": "Quarkus Logs",
       "type": "link",
       "url": "/d/sadlil-loki-apps-dashboard/quarkus-logs"

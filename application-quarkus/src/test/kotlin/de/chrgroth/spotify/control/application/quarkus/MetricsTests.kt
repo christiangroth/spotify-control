@@ -42,4 +42,20 @@ class MetricsTests {
     assertThat(metrics).contains("app_playlist_album_upgrade_pending")
     assertThat(metrics).contains("app_playlist_sync_job_last_success_timestamp")
   }
+
+  @Test
+  fun `check domain metrics dashboard gauges are exposed`() {
+    val metrics = given()
+      .`when`()
+      .get("/q/metrics")
+      .then()
+      .statusCode(200)
+      .extract()
+      .asString()
+
+    assertThat(metrics).contains("app_playlist_out_of_sync")
+    assertThat(metrics).contains("app_catalog_artists")
+    assertThat(metrics).contains("app_catalog_tracks")
+    assertThat(metrics).contains("app_catalog_albums")
+  }
 }
