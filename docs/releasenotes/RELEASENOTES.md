@@ -1,3 +1,12 @@
+# 0.106.2 (2026.07.06)
+
+## Bugfixes / Chore
+* Technical Overview dashboard now uses repeating panels for Starter Status and Outbox Partition Status, so each starter/partition automatically gets its own panel as they are added or removed.
+
+
+
+---
+
 # 0.106.1 (2026.07.06)
 
 ## Bugfixes / Chore
