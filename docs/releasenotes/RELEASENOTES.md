@@ -1,3 +1,24 @@
+# 0.104.0 (2026.07.06)
+
+## New Features
+* Added a new Overview dashboard in Grafana showing active users, tracked playlists, pending outbox tasks, recent errors, and how fresh playback/playlist syncing is, at a glance.
+* Added a link to the new Overview dashboard in the Tools menu.
+* Fixed several panels in the Technical Metrics Grafana dashboard that never showed any data (app version, scheduled job timings, paused outbox tasks).
+* Removed a broken log panel from the Technical Metrics dashboard and added quick links between the Overview, Technical Metrics and Logs dashboards instead.
+* Added a new Domain Metrics dashboard in Grafana showing playback ingestion rates, playlist mirror freshness, duplicate/album-upgrade fixes, catalog size, and listening-stats aggregation freshness.
+* Added a link to the new Domain Metrics dashboard in the Tools menu.
+* The Grafana logging dashboard now has a log level filter (select one or more levels).
+* The logging dashboard's free-text search was replaced with two filters, "Line Contains" and "Line Not Contains", each accepting multiple values separated by `|`.
+
+## Bugfixes / Chore
+* The three Grafana metrics dashboards and the logging dashboard are now fully cross-linked with each other.
+* Fixed the Grafana icons in the Tools menu links rendering inconsistently sized compared to the other menu icons.
+* Removed the outdated dashboard planning document, now that its proposals have been implemented.
+
+
+
+---
+
 # 0.103.1 (2026.07.03)
 
 ## Bugfixes / Chore
