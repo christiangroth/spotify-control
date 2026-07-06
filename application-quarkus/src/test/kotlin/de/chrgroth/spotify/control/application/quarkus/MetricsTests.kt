@@ -18,11 +18,13 @@ class MetricsTests {
       .extract()
       .asString()
 
+    // scheduler_* only appears once a @Scheduled job has actually run, which is timing-dependent in the shared test app instance
     val topLevelGroups = metrics.lines()
       .filter { it.isNotBlank() }
       .filterNot { it.startsWith("#") }
       .map { it.split("_")[0] }
       .distinct()
+      .filterNot { it == "scheduler" }
       .sorted()
     assertThat(topLevelGroups).isEqualTo(listOf("app", "application", "http", "jvm", "mongodb", "netty", "outbox", "process", "spotify", "system", "worker"))
   }
