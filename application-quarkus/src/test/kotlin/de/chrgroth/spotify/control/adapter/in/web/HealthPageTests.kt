@@ -85,6 +85,17 @@ class HealthPageTests {
   }
 
   @Test
+  fun `health page contains grafana overview link in navbar`() {
+    given()
+      .`when`()
+      .get("/health")
+      .then()
+      .statusCode(200)
+      .body(containsString("""data-testid="grafana-overview-link""""))
+      .body(containsString("https://spotifycontrolprod.grafana.net/d/spotify-control-overview/overview"))
+  }
+
+  @Test
   fun `health page contains grafana logs link in navbar`() {
     given()
       .`when`()

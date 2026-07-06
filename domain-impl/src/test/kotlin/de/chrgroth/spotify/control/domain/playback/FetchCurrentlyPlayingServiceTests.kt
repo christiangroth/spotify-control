@@ -20,6 +20,7 @@ import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.playback.SpotifyPlaybackPort
 import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
 import de.chrgroth.spotify.control.domain.catalog.SyncController
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -46,6 +47,7 @@ class FetchCurrentlyPlayingServiceTests {
   private val outboxPort: OutboxPort = mockk(relaxed = true)
   private val dashboardRefresh: DashboardRefreshPort = mockk(relaxed = true)
   private val playbackState: PlaybackStatePort = mockk(relaxed = true)
+  private val meterRegistry = SimpleMeterRegistry()
 
   private val service = PlaybackService(
     userRepository,
@@ -59,6 +61,7 @@ class FetchCurrentlyPlayingServiceTests {
     outboxPort,
     dashboardRefresh,
     playbackState,
+    meterRegistry,
     minimumProgressSeconds = 25L,
   )
 

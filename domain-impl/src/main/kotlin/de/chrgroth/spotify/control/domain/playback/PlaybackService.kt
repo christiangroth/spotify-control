@@ -26,9 +26,14 @@ import de.chrgroth.spotify.control.domain.catalog.SyncController
 import de.chrgroth.spotify.control.domain.catalog.CatalogSyncRequest
 import de.chrgroth.spotify.control.domain.port.out.playback.SpotifyPlaybackPort
 import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
+import io.micrometer.core.instrument.Gauge
+import io.micrometer.core.instrument.MeterRegistry
 import jakarta.enterprise.context.ApplicationScoped
 import java.time.ZoneOffset
 import java.time.LocalDate as JLocalDate
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
+import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Instant
 import kotlin.time.toJavaInstant
@@ -50,11 +55,13 @@ class PlaybackService(
   private val outboxPort: OutboxPort,
   private val dashboardRefresh: DashboardRefreshPort,
   private val playbackState: PlaybackStatePort,
+  private val meterRegistry: MeterRegistry,
   @ConfigProperty(name = "app.playback.minimum-progress-seconds", defaultValue = "25")
   minimumProgressSeconds: Long,
 ) : PlaybackPort {
 
   private val minimumProgressMs = minimumProgressSeconds * MS_PER_SECOND
+  private val lastFetchSuccessTimestamps = ConcurrentHashMap<String, AtomicLong>()
 
   // --- Combined Playback Detection ---
 
@@ -96,6 +103,7 @@ class PlaybackService(
       if (orphanedItemsConverted) {
         dashboardRefresh.notifyUserPlaybackData(userId)
       }
+      recordFetchSuccess(userId, "currently_playing")
       Unit.right()
     }
   }
@@ -157,8 +165,23 @@ class PlaybackService(
         dashboardRefresh.notifyUserPlaybackData(userId)
         outboxPort.enqueue(DomainOutboxEvent.AppendPlaybackData(userId))
       }
+      recordFetchSuccess(userId, "recently_played")
       Unit.right()
     }
+  }
+
+  private fun recordFetchSuccess(userId: UserId, operation: String) {
+    val key = "${userId.value}:$operation"
+    val timestamp = lastFetchSuccessTimestamps.getOrPut(key) {
+      AtomicLong().also { atomic ->
+        Gauge.builder("app.playback.last_success_timestamp", atomic) { it.get().toDouble() }
+          .description("Epoch second timestamp of the last successful playback fetch")
+          .tag("userId", userId.value)
+          .tag("operation", operation)
+          .register(meterRegistry)
+      }
+    }
+    timestamp.set(Clock.System.now().toEpochMilliseconds() / MS_PER_SECOND)
   }
 
   private fun deduplicateWithPartialPlays(userId: UserId, newRecentlyPlayedItems: List<RecentlyPlayedItem>) {
