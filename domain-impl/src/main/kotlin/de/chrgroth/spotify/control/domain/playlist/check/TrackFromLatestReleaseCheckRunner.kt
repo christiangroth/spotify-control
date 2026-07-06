@@ -17,6 +17,7 @@ import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppAlbumRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.SpotifyPlaylistPort
+import io.micrometer.core.instrument.MeterRegistry
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
 import kotlin.time.Clock
@@ -27,6 +28,7 @@ class TrackFromLatestReleaseCheckRunner(
   private val appTrackRepository: AppTrackRepositoryPort,
   private val appAlbumRepository: AppAlbumRepositoryPort,
   private val spotifyPlaylist: SpotifyPlaylistPort,
+  private val meterRegistry: MeterRegistry,
 ) : PlaylistCheckRunner {
 
   override val checkId = "track-from-latest-release"
@@ -74,6 +76,7 @@ class TrackFromLatestReleaseCheckRunner(
         logger.error { "Failed to replace track at position ${violation.position} in playlist $playlistId" }
         return error.left()
       }
+      meterRegistry.counter("app.playlist.album_upgrades_applied", "playlistId", playlistId).increment()
     }
     return Unit.right()
   }

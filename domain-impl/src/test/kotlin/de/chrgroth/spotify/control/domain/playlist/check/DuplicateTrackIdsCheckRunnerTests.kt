@@ -17,6 +17,7 @@ import de.chrgroth.spotify.control.domain.model.user.AccessToken
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.SpotifyPlaylistPort
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -29,7 +30,8 @@ class DuplicateTrackIdsCheckRunnerTests {
 
   private val appTrackRepository: AppTrackRepositoryPort = mockk()
   private val spotifyPlaylist: SpotifyPlaylistPort = mockk()
-  private val runner = DuplicateTrackIdsCheckRunner(appTrackRepository, spotifyPlaylist)
+  private val meterRegistry = SimpleMeterRegistry()
+  private val runner = DuplicateTrackIdsCheckRunner(appTrackRepository, spotifyPlaylist, meterRegistry)
 
   private val userId = UserId("user-1")
   private val accessToken = AccessToken("token")

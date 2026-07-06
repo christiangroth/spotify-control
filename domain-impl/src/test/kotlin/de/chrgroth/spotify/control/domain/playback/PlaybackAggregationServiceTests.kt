@@ -17,6 +17,7 @@ import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.playback.AppPlaybackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playback.PlaybackAggregationRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -34,6 +35,7 @@ class PlaybackAggregationServiceTests {
   private val appArtistRepository: AppArtistRepositoryPort = mockk()
   private val aggregationRepository: PlaybackAggregationRepositoryPort = mockk(relaxed = true)
   private val outboxPort: OutboxPort = mockk(relaxed = true)
+  private val meterRegistry = SimpleMeterRegistry()
 
   private val service = PlaybackAggregationService(
     userRepository = userRepository,
@@ -42,6 +44,7 @@ class PlaybackAggregationServiceTests {
     appArtistRepository = appArtistRepository,
     aggregationRepository = aggregationRepository,
     outboxPort = outboxPort,
+    meterRegistry = meterRegistry,
   )
 
   private val userId = UserId("user-1")

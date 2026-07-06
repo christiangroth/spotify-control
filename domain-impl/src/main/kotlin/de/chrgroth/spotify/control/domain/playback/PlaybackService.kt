@@ -136,6 +136,7 @@ class PlaybackService(
       val newPartial = partialItems.filter { it.playedAt !in existingPlayedAts }
       if (newPartial.isNotEmpty()) {
         recentlyPartialPlayedRepository.saveAll(newPartial)
+        recordEventsIngested(userId, "partial_played", newPartial.size)
       }
       newPartial.isNotEmpty()
     } else {
@@ -158,6 +159,7 @@ class PlaybackService(
       val newItems = tracks.filter { it.playedAt !in existingPlayedAts }
       if (newItems.isNotEmpty()) {
         recentlyPlayedRepository.saveAll(newItems)
+        recordEventsIngested(userId, "recently_played", newItems.size)
         deduplicateWithPartialPlays(userId, newItems)
       }
       val computedCount = convertPartialPlays(userId, tracks.map { it.trackId }.toSet())
@@ -182,6 +184,10 @@ class PlaybackService(
       }
     }
     timestamp.set(Clock.System.now().toEpochMilliseconds() / MS_PER_SECOND)
+  }
+
+  private fun recordEventsIngested(userId: UserId, source: String, count: Int) {
+    meterRegistry.counter("app.playback.events_ingested", "userId", userId.value, "source", source).increment(count.toDouble())
   }
 
   private fun deduplicateWithPartialPlays(userId: UserId, newRecentlyPlayedItems: List<RecentlyPlayedItem>) {
@@ -245,6 +251,7 @@ class PlaybackService(
       val newPartial = partialItems.filter { it.playedAt !in existingPlayedAts }
       if (newPartial.isNotEmpty()) {
         recentlyPartialPlayedRepository.saveAll(newPartial)
+        recordEventsIngested(userId, "partial_played", newPartial.size)
       }
       newPartial.size
     } else {

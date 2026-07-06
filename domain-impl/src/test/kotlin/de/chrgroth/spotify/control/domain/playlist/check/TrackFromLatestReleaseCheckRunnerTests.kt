@@ -16,6 +16,7 @@ import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppAlbumRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.SpotifyPlaylistPort
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -29,7 +30,8 @@ class TrackFromLatestReleaseCheckRunnerTests {
   private val appTrackRepository: AppTrackRepositoryPort = mockk()
   private val appAlbumRepository: AppAlbumRepositoryPort = mockk()
   private val spotifyPlaylist: SpotifyPlaylistPort = mockk()
-  private val runner = TrackFromLatestReleaseCheckRunner(appTrackRepository, appAlbumRepository, spotifyPlaylist)
+  private val meterRegistry = SimpleMeterRegistry()
+  private val runner = TrackFromLatestReleaseCheckRunner(appTrackRepository, appAlbumRepository, spotifyPlaylist, meterRegistry)
 
   private val userId = UserId("user-1")
   private val accessToken = AccessToken("token")

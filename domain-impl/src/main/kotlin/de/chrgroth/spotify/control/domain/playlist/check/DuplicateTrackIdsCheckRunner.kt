@@ -12,6 +12,7 @@ import de.chrgroth.spotify.control.domain.model.user.AccessToken
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.SpotifyPlaylistPort
+import io.micrometer.core.instrument.MeterRegistry
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
 import kotlin.time.Clock
@@ -21,6 +22,7 @@ import kotlin.time.Clock
 class DuplicateTrackIdsCheckRunner(
     private val appTrackRepository: AppTrackRepositoryPort,
     private val spotifyPlaylist: SpotifyPlaylistPort,
+    private val meterRegistry: MeterRegistry,
 ) : PlaylistCheckRunner {
 
   override val checkId = "duplicate-track-ids"
@@ -69,6 +71,7 @@ class DuplicateTrackIdsCheckRunner(
     logger.info { "Removing all occurrences of ${duplicateTrackIds.size} duplicate track(s) from playlist $playlistId (user ${userId.value}), then re-adding once each" }
     return spotifyPlaylist.removePlaylistTracks(userId, accessToken, playlistId, duplicateTrackIds)
       .flatMap { spotifyPlaylist.addPlaylistTracks(userId, accessToken, playlistId, duplicateTrackIds) }
+      .onRight { meterRegistry.counter("app.playlist.duplicates_removed", "playlistId", playlistId).increment(duplicateTrackIds.size.toDouble()) }
   }
 
   companion object : KLogging()

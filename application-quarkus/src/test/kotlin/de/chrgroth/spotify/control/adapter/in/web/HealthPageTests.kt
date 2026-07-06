@@ -118,6 +118,17 @@ class HealthPageTests {
   }
 
   @Test
+  fun `health page contains grafana domain metrics link in navbar`() {
+    given()
+      .`when`()
+      .get("/health")
+      .then()
+      .statusCode(200)
+      .body(containsString("""data-testid="grafana-domain-metrics-link""""))
+      .body(containsString("https://spotifycontrolprod.grafana.net/d/spotify-control-domain-metrics/domain-metrics"))
+  }
+
+  @Test
   fun `health page contains mongodb atlas link in navbar`() {
     given()
       .`when`()

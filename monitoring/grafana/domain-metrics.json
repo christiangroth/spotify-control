@@ -15,7 +15,7 @@
       }
     ]
   },
-  "description": "Single-screen 'is everything fine?' overview. See docs/plans/metrics-dashboard.md.",
+  "description": "Business/domain metrics: playback tracking, playlist mirror & maintenance, catalog sync, listening stats. See docs/plans/metrics-dashboard.md.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -25,9 +25,9 @@
       "icon": "external link",
       "tags": [],
       "targetBlank": true,
-      "title": "Domain Metrics",
+      "title": "Overview",
       "type": "link",
-      "url": "/d/spotify-control-domain-metrics/domain-metrics"
+      "url": "/d/spotify-control-overview/overview"
     },
     {
       "icon": "external link",
@@ -57,7 +57,7 @@
       },
       "id": 1,
       "panels": [],
-      "title": "Application",
+      "title": "Playback Tracking",
       "type": "row"
     },
     {
@@ -68,42 +68,70 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 5,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
           },
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "text",
+                "color": "green",
                 "value": null
               }
             ]
           },
-          "unit": "short"
+          "unit": "ops"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 4,
-        "w": 6,
+        "h": 8,
+        "w": 12,
         "x": 0,
         "y": 1
       },
       "id": 2,
       "options": {
-        "colorMode": "none",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
         },
-        "textMode": "name"
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
       },
       "targets": [
         {
@@ -111,15 +139,15 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "application_info{job=\"prometheus.scrape.spotify_control\"}",
-          "legendFormat": "{{version}}",
+          "expr": "sum by (source) (rate(app_playback_events_ingested_total{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval]))",
+          "legendFormat": "{{source}}",
           "refId": "A",
           "instant": false,
           "range": true
         }
       ],
-      "title": "App Version",
-      "type": "stat"
+      "title": "Playback Events Ingested Rate (by Source)",
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -129,7 +157,37 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 5,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
           },
           "mappings": [],
           "thresholds": {
@@ -141,30 +199,28 @@
               }
             ]
           },
-          "unit": "s"
+          "unit": "ops"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 6,
+        "h": 8,
+        "w": 12,
+        "x": 12,
         "y": 1
       },
       "id": 3,
       "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
         },
-        "textMode": "auto"
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
       },
       "targets": [
         {
@@ -172,166 +228,15 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "process_uptime_seconds{job=\"prometheus.scrape.spotify_control\"}",
-          "legendFormat": "uptime",
+          "expr": "sum by (userId) (rate(app_playback_events_ingested_total{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval]))",
+          "legendFormat": "{{userId}}",
           "refId": "A",
           "instant": false,
           "range": true
         }
       ],
-      "title": "Process Uptime",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "1": {
-                  "text": "Succeeded",
-                  "color": "green",
-                  "index": 0
-                },
-                "0": {
-                  "text": "Failed",
-                  "color": "red",
-                  "index": 1
-                }
-              }
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 1
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 12,
-        "y": 1
-      },
-      "id": 4,
-      "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "expr": "starter_overall_status{job=\"prometheus.scrape.spotify_control\"}",
-          "legendFormat": "{{id}}",
-          "refId": "A",
-          "instant": false,
-          "range": true
-        }
-      ],
-      "title": "Starter Overall Status",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "loki",
-        "uid": "grafanacloud-logs"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 1
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 18,
-        "y": 1
-      },
-      "id": 5,
-      "links": [
-        {
-          "title": "View error logs",
-          "url": "/d/sadlil-loki-apps-dashboard/quarkus-logs?${__url_time_range}&var-search=ERROR"
-        }
-      ],
-      "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "grafanacloud-logs"
-          },
-          "editorMode": "code",
-          "expr": "sum(count_over_time({service_name=\"spotify-control_quarkus\"} |= \"ERROR\" [1h]))",
-          "queryType": "range",
-          "refId": "A"
-        }
-      ],
-      "title": "Errors (Last Hour)",
-      "type": "stat"
+      "title": "Playback Events Ingested Rate (by User)",
+      "type": "timeseries"
     },
     {
       "collapsed": false,
@@ -339,11 +244,11 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 5
+        "y": 9
       },
       "id": 10,
       "panels": [],
-      "title": "Users & Playlists",
+      "title": "Playlist Mirror",
       "type": "row"
     },
     {
@@ -371,73 +276,12 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 4,
-        "w": 6,
+        "h": 5,
+        "w": 8,
         "x": 0,
-        "y": 6
+        "y": 10
       },
       "id": 11,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "expr": "app_users_active{job=\"prometheus.scrape.spotify_control\"}",
-          "legendFormat": "active users",
-          "refId": "A",
-          "instant": false,
-          "range": true
-        }
-      ],
-      "title": "Active Users",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "text",
-                "value": null
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 6,
-        "y": 6
-      },
-      "id": 12,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -497,220 +341,12 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 12,
-        "y": 6
-      },
-      "id": 13,
-      "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "expr": "app_playlist_album_upgrade_pending{job=\"prometheus.scrape.spotify_control\"}",
-          "legendFormat": "pending",
-          "refId": "A",
-          "instant": false,
-          "range": true
-        }
-      ],
-      "title": "Pending Album-Upgrade Decisions",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 1
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 18,
-        "y": 6
-      },
-      "id": 14,
-      "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "expr": "sum(outbox_tasks_enqueued_total{job=\"prometheus.scrape.spotify_control\"}) - sum(outbox_tasks_processed_total{job=\"prometheus.scrape.spotify_control\"})",
-          "legendFormat": "pending",
-          "refId": "A",
-          "instant": false,
-          "range": true
-        }
-      ],
-      "title": "Pending Outbox Tasks (Total)",
-      "type": "stat"
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 10
-      },
-      "id": 20,
-      "panels": [],
-      "title": "Sync Freshness",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 3600
-              }
-            ]
-          },
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 8,
-        "x": 0,
-        "y": 11
-      },
-      "id": 21,
-      "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "expr": "time() - max(app_playback_last_success_timestamp{job=\"prometheus.scrape.spotify_control\",operation=\"currently_playing\"}) by (userId)",
-          "legendFormat": "{{userId}}",
-          "refId": "A",
-          "instant": false,
-          "range": true
-        }
-      ],
-      "title": "Time Since Last Currently-Playing Fetch",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 3600
-              }
-            ]
-          },
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "gridPos": {
         "h": 5,
         "w": 8,
         "x": 8,
-        "y": 11
+        "y": 10
       },
-      "id": 22,
+      "id": 12,
       "options": {
         "colorMode": "background",
         "graphMode": "none",
@@ -731,14 +367,14 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "time() - max(app_playback_last_success_timestamp{job=\"prometheus.scrape.spotify_control\",operation=\"recently_played\"}) by (userId)",
-          "legendFormat": "{{userId}}",
+          "expr": "app_playlist_out_of_sync{job=\"prometheus.scrape.spotify_control\"}",
+          "legendFormat": "out of sync",
           "refId": "A",
           "instant": false,
           "range": true
         }
       ],
-      "title": "Time Since Last Recently-Played Fetch",
+      "title": "Playlists Out Of Sync",
       "type": "stat"
     },
     {
@@ -773,9 +409,9 @@
         "h": 5,
         "w": 8,
         "x": 16,
-        "y": 11
+        "y": 10
       },
-      "id": 23,
+      "id": 13,
       "options": {
         "colorMode": "background",
         "graphMode": "none",
@@ -812,11 +448,398 @@
         "h": 1,
         "w": 24,
         "x": 0,
+        "y": 15
+      },
+      "id": 20,
+      "panels": [],
+      "title": "Playlist Maintenance",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 5,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
         "y": 16
+      },
+      "id": 21,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (playlistId) (rate(app_playlist_duplicates_removed_total{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval]))",
+          "legendFormat": "{{playlistId}}",
+          "refId": "A",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "title": "Duplicates Removed Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 5,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "id": 22,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (playlistId) (rate(app_playlist_album_upgrades_applied_total{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval]))",
+          "legendFormat": "{{playlistId}}",
+          "refId": "A",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "title": "Album Upgrades Applied Rate",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 24
       },
       "id": 30,
       "panels": [],
-      "title": "Outbox",
+      "title": "Catalog Sync",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 8,
+        "x": 0,
+        "y": 25
+      },
+      "id": 31,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "app_catalog_artists{job=\"prometheus.scrape.spotify_control\"}",
+          "legendFormat": "artists",
+          "refId": "A",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "title": "Catalog Artists",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 8,
+        "x": 8,
+        "y": 25
+      },
+      "id": 32,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "app_catalog_tracks{job=\"prometheus.scrape.spotify_control\"}",
+          "legendFormat": "tracks",
+          "refId": "A",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "title": "Catalog Tracks",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 8,
+        "x": 16,
+        "y": 25
+      },
+      "id": 33,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "app_catalog_albums{job=\"prometheus.scrape.spotify_control\"}",
+          "legendFormat": "albums",
+          "refId": "A",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "title": "Catalog Albums",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 30
+      },
+      "id": 40,
+      "panels": [],
+      "title": "Listening Stats",
       "type": "row"
     },
     {
@@ -839,19 +862,19 @@
               }
             ]
           },
-          "unit": "short"
+          "unit": "s"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
+        "h": 5,
         "w": 12,
         "x": 0,
-        "y": 17
+        "y": 31
       },
-      "id": 31,
+      "id": 41,
       "options": {
-        "colorMode": "background",
+        "colorMode": "value",
         "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "horizontal",
@@ -870,14 +893,14 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (partition) (outbox_tasks_enqueued_total{job=\"prometheus.scrape.spotify_control\"}) - sum by (partition) (outbox_tasks_processed_total{job=\"prometheus.scrape.spotify_control\"})",
-          "legendFormat": "{{partition}}",
+          "expr": "time() - app_playback_aggregation_last_success_timestamp{job=\"prometheus.scrape.spotify_control\"}",
+          "legendFormat": "{{type}}",
           "refId": "A",
           "instant": false,
           "range": true
         }
       ],
-      "title": "Pending Outbox Tasks (Per Partition)",
+      "title": "Time Since Last Aggregation Run",
       "type": "stat"
     },
     {
@@ -890,33 +913,13 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "1": {
-                  "text": "Active",
-                  "color": "green",
-                  "index": 0
-                },
-                "0": {
-                  "text": "Paused",
-                  "color": "red",
-                  "index": 1
-                }
-              }
-            }
-          ],
+          "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "red",
+                "color": "text",
                 "value": null
-              },
-              {
-                "color": "green",
-                "value": 1
               }
             ]
           },
@@ -925,14 +928,14 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
+        "h": 5,
         "w": 12,
         "x": 12,
-        "y": 17
+        "y": 31
       },
-      "id": 32,
+      "id": 42,
       "options": {
-        "colorMode": "background",
+        "colorMode": "value",
         "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "horizontal",
@@ -951,14 +954,14 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "last_over_time(outbox_partition_status{job=\"prometheus.scrape.spotify_control\"}[1d])",
-          "legendFormat": "{{partition}}",
+          "expr": "sum by (invoker) (increase(scheduler_job_seconds_count{job=\"prometheus.scrape.spotify_control\",invoker=~\"PlaybackAggregationJob.*\"}[24h]))",
+          "legendFormat": "{{invoker}}",
           "refId": "A",
           "instant": false,
           "range": true
         }
       ],
-      "title": "Outbox Partition Status",
+      "title": "Aggregation Job Runs (24h)",
       "type": "stat"
     }
   ],
@@ -967,7 +970,7 @@
   "tags": [
     "quarkus",
     "spotify-control",
-    "overview"
+    "domain"
   ],
   "templating": {
     "list": [
@@ -992,7 +995,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Overview",
-  "uid": "spotify-control-overview",
+  "title": "Domain Metrics",
+  "uid": "spotify-control-domain-metrics",
   "version": 1
 }
