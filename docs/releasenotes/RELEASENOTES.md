@@ -1,3 +1,13 @@
+# 0.106.6 (2026.07.06)
+
+## Bugfixes / Chore
+* Reduced redundant outbox pending-count queries that were causing frequent slow query reports.
+* Fixed the broken Grafana icon in the Tools menu.
+
+
+
+---
+
 # 0.106.5 (2026.07.06)
 
 ## Bugfixes / Chore
