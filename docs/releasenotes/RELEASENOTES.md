@@ -1,3 +1,13 @@
+# 0.106.3 (2026.07.06)
+
+## Bugfixes / Chore
+* Overview dashboard now shows Pending Outbox Tasks and Outbox Partition Status as one auto-generated panel per partition instead of a combined stat, matching the Technical Overview dashboard.
+* Shortened Grafana dashboard cross-links and the Tools menu entries to "Domain", "Overview", "Technical" and "Logs".
+
+
+
+---
+
 # 0.106.2 (2026.07.06)
 
 ## Bugfixes / Chore
