@@ -304,20 +304,20 @@
       },
       {
         "current": {
-          "text": "",
-          "value": ""
+          "text": ".^",
+          "value": ".^"
         },
-        "description": "Multiple values separated by |",
+        "description": "Multiple values separated by |. Default \".^\" is a regex that never matches, i.e. no lines are excluded.",
         "label": "Line Not Contains",
         "name": "notContains",
         "options": [
           {
             "selected": true,
-            "text": "",
-            "value": ""
+            "text": ".^",
+            "value": ".^"
           }
         ],
-        "query": "",
+        "query": ".^",
         "type": "textbox"
       }
     ]
