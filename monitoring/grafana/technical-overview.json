@@ -334,7 +334,7 @@
             "uid": "${datasource}"
           },
           "expr": "min(last_over_time(outbox_partition_status{job=\"prometheus.scrape.spotify_control\"}[1d]))",
-          "legendFormat": "outbox partitions",
+          "legendFormat": "outbox",
           "refId": "A",
           "instant": false,
           "range": true
@@ -1696,7 +1696,7 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
+        "h": 16,
         "w": 24,
         "x": 0,
         "y": 62
@@ -1706,7 +1706,7 @@
         "colorMode": "background",
         "graphMode": "none",
         "justifyMode": "auto",
-        "orientation": "horizontal",
+        "orientation": "vertical",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -1738,7 +1738,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 70
+        "y": 78
       },
       "id": 10,
       "panels": [],
@@ -1820,7 +1820,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 71
+        "y": 79
       },
       "id": 11,
       "options": {
@@ -1948,7 +1948,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 71
+        "y": 79
       },
       "id": 12,
       "options": {
@@ -2008,7 +2008,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 79
+        "y": 87
       },
       "id": 20,
       "panels": [],
@@ -2073,7 +2073,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 80
+        "y": 88
       },
       "id": 21,
       "options": {
@@ -2173,7 +2173,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 80
+        "y": 88
       },
       "id": 22,
       "options": {
@@ -2232,7 +2232,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 88
+        "y": 96
       },
       "id": 60,
       "panels": [],
@@ -2297,7 +2297,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 89
+        "y": 97
       },
       "id": 61,
       "options": {
@@ -2408,7 +2408,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 89
+        "y": 97
       },
       "id": 62,
       "options": {
@@ -2497,7 +2497,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 97
+        "y": 105
       },
       "id": 63,
       "options": {
