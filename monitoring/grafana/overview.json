@@ -15,7 +15,7 @@
       }
     ]
   },
-  "description": "Single-screen 'is everything fine?' overview. See docs/plans/metrics-dashboard.md.",
+  "description": "Single-screen 'is everything fine?' overview.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
