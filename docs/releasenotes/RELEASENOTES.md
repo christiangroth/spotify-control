@@ -1,3 +1,12 @@
+# 0.106.0 (2026.07.06)
+
+## New Features
+* The Technical Overview dashboard now shows the size of every MongoDB collection as a graph over time.
+
+
+
+---
+
 # 0.105.0 (2026.07.06)
 
 ## New Features
