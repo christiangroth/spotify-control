@@ -1,3 +1,14 @@
+# 0.106.1 (2026.07.06)
+
+## Bugfixes / Chore
+* Fixed the Outbox Partitions quick status on the Technical Overview dashboard, which could show OK even while a partition was paused.
+* Fixed the Outbox Partitions status panel on the Technical Overview dashboard, where the label text was hidden because it didn't fit the panel.
+* Fixed the "Starter Overall Status" panel on the Technical Overview dashboard so starter names are no longer hidden when many starters are shown.
+
+
+
+---
+
 # 0.106.0 (2026.07.06)
 
 ## New Features
