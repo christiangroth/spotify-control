@@ -33,9 +33,9 @@
       "icon": "external link",
       "tags": [],
       "targetBlank": true,
-      "title": "Quarkus Metrics",
+      "title": "Technical Overview",
       "type": "link",
-      "url": "/d/quarkus-spotify-control/quarkus-metrics"
+      "url": "/d/quarkus-spotify-control/technical-overview"
     },
     {
       "icon": "external link",
@@ -830,12 +830,123 @@
       "type": "stat"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 5,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 30
+      },
+      "id": 34,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "app_catalog_artists{job=\"prometheus.scrape.spotify_control\"}",
+          "legendFormat": "artists",
+          "refId": "A",
+          "instant": false,
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "app_catalog_tracks{job=\"prometheus.scrape.spotify_control\"}",
+          "legendFormat": "tracks",
+          "refId": "B",
+          "instant": false,
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "app_catalog_albums{job=\"prometheus.scrape.spotify_control\"}",
+          "legendFormat": "albums",
+          "refId": "C",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "title": "Catalog Size Over Time",
+      "type": "timeseries"
+    },
+    {
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 30
+        "y": 38
       },
       "id": 40,
       "panels": [],
@@ -870,7 +981,7 @@
         "h": 5,
         "w": 12,
         "x": 0,
-        "y": 31
+        "y": 39
       },
       "id": 41,
       "options": {
@@ -931,7 +1042,7 @@
         "h": 5,
         "w": 12,
         "x": 12,
-        "y": 31
+        "y": 39
       },
       "id": 42,
       "options": {
@@ -995,7 +1106,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Domain Metrics",
+  "title": "Domain Overview",
   "uid": "spotify-control-domain-metrics",
   "version": 1
 }

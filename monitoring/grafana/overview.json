@@ -25,17 +25,17 @@
       "icon": "external link",
       "tags": [],
       "targetBlank": true,
-      "title": "Domain Metrics",
+      "title": "Domain Overview",
       "type": "link",
-      "url": "/d/spotify-control-domain-metrics/domain-metrics"
+      "url": "/d/spotify-control-domain-metrics/domain-overview"
     },
     {
       "icon": "external link",
       "tags": [],
       "targetBlank": true,
-      "title": "Quarkus Metrics",
+      "title": "Technical Overview",
       "type": "link",
-      "url": "/d/quarkus-spotify-control/quarkus-metrics"
+      "url": "/d/quarkus-spotify-control/technical-overview"
     },
     {
       "icon": "external link",
@@ -197,12 +197,12 @@
               "type": "value",
               "options": {
                 "1": {
-                  "text": "Succeeded",
+                  "text": "OK",
                   "color": "green",
                   "index": 0
                 },
                 "0": {
-                  "text": "Failed",
+                  "text": "NOK",
                   "color": "red",
                   "index": 1
                 }
@@ -253,8 +253,8 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "starter_overall_status{job=\"prometheus.scrape.spotify_control\"}",
-          "legendFormat": "{{id}}",
+          "expr": "min(starter_overall_status{job=\"prometheus.scrape.spotify_control\"})",
+          "legendFormat": "starters",
           "refId": "A",
           "instant": false,
           "range": true
@@ -325,7 +325,7 @@
             "uid": "grafanacloud-logs"
           },
           "editorMode": "code",
-          "expr": "sum(count_over_time({service_name=\"spotify-control_quarkus\"} |= \"ERROR\" [1h]))",
+          "expr": "sum(count_over_time({service_name=\"spotify-control_quarkus\"} |= \"ERROR\" [1h])) or vector(0)",
           "queryType": "range",
           "refId": "A"
         }
@@ -588,7 +588,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(outbox_tasks_enqueued_total{job=\"prometheus.scrape.spotify_control\"}) - sum(outbox_tasks_processed_total{job=\"prometheus.scrape.spotify_control\"})",
+          "expr": "sum(outbox_partition_pending{job=\"prometheus.scrape.spotify_control\"})",
           "legendFormat": "pending",
           "refId": "A",
           "instant": false,
@@ -870,7 +870,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (partition) (outbox_tasks_enqueued_total{job=\"prometheus.scrape.spotify_control\"}) - sum by (partition) (outbox_tasks_processed_total{job=\"prometheus.scrape.spotify_control\"})",
+          "expr": "sum by (partition) (outbox_partition_pending{job=\"prometheus.scrape.spotify_control\"})",
           "legendFormat": "{{partition}}",
           "refId": "A",
           "instant": false,

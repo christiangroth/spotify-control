@@ -18,6 +18,25 @@ fi
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 dashboard_dir="$script_dir/monitoring/grafana"
 commit_sha="${COMMIT_SHA:-unknown}"
+folder_uid="spctl"
+
+ensure_folder() {
+  local status
+  status=$(curl -s -o /dev/null -w "%{http_code}" \
+    "https://spotifycontrolprod.grafana.net/api/folders/$folder_uid" \
+    -H "Authorization: Bearer $GRAFANA_CLOUD_SA_TOKEN")
+  if [ "$status" = "200" ]; then
+    return 0
+  fi
+
+  echo "Folder '$folder_uid' not found, creating it..."
+  curl --fail-with-body -s -X POST \
+    "https://spotifycontrolprod.grafana.net/api/folders" \
+    -H "Authorization: Bearer $GRAFANA_CLOUD_SA_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "$(jq -n --arg uid "$folder_uid" --arg title "SpCtl" '{uid: $uid, title: $title}')"
+  echo ""
+}
 
 provision_dashboard() {
   local dashboard_file="$1"
@@ -25,7 +44,8 @@ provision_dashboard() {
   payload=$(jq -n \
     --argjson dashboard "$(cat "$dashboard_file")" \
     --arg message "Provisioned by GitHub Actions (commit $commit_sha)" \
-    '{dashboard: $dashboard, overwrite: true, message: $message}')
+    --arg folderUid "$folder_uid" \
+    '{dashboard: $dashboard, overwrite: true, message: $message, folderUid: $folderUid}')
   local delays=(30 60 120 300)
   local attempt=0
   while true; do
@@ -56,6 +76,8 @@ if [ "${#dashboard_files[@]}" -eq 0 ]; then
   echo "Error: No dashboard files found in $dashboard_dir" >&2
   exit 1
 fi
+
+ensure_folder
 
 exit_code=0
 for dashboard_file in "${dashboard_files[@]}"; do
