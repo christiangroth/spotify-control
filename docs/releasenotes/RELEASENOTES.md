@@ -1,3 +1,22 @@
+# 0.105.0 (2026.07.06)
+
+## New Features
+* Renamed the "Quarkus Metrics" dashboard to "Technical Overview" and the "Domain Metrics" dashboard to "Domain Overview", and moved all Grafana dashboards into a shared "SpCtl" folder.
+* The Technical Overview dashboard now shows a small OK/NOK status panel per starter instead of a cramped table, plus two new status panels (Starters, Outbox Partitions) next to CPU usage.
+* Added a graph showing how many outbox events of each type are currently queued, so paused partitions draining their backlog are visible over time.
+* The Domain Overview dashboard now also shows catalog size (artists/tracks/albums) as a graph over time, not just as numbers.
+* Reordered the Technical Overview dashboard sections and grouped the Outbox rate panels into a single row.
+
+## Bugfixes / Chore
+* Fixed the Overview dashboard's Starter Overall Status, which now shows a single OK/NOK instead of one tile per starter.
+* Fixed the Overview dashboard's Errors (Last Hour) panel showing "No Data" instead of 0 when there were no errors.
+* Fixed the Pending Outbox Tasks panels showing 0 despite a real backlog after an app restart, by backing them with the actual persisted task counts instead of a counter difference.
+* Fixed the Grafana logging dashboard showing no logs by default because of a broken "Line Not Contains" filter.
+
+
+
+---
+
 # 0.104.0 (2026.07.06)
 
 ## New Features
