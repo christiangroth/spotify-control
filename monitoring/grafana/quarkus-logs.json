@@ -20,6 +20,22 @@
   "graphTooltip": 0,
   "links": [
     {
+      "icon": "external link",
+      "tags": [],
+      "targetBlank": true,
+      "title": "Overview",
+      "type": "link",
+      "url": "/d/spotify-control-overview/overview"
+    },
+    {
+      "icon": "external link",
+      "tags": [],
+      "targetBlank": true,
+      "title": "Quarkus Metrics",
+      "type": "link",
+      "url": "/d/quarkus-spotify-control/quarkus-metrics"
+    },
+    {
       "icon": "bolt",
       "includeVars": true,
       "keepTime": true,

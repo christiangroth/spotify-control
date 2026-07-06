@@ -6,8 +6,9 @@ import de.chrgroth.spotify.control.domain.port.out.infra.OutgoingRequestStatsPor
 import io.micrometer.core.instrument.Gauge
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Timer
-import jakarta.annotation.PostConstruct
+import io.quarkus.runtime.StartupEvent
 import jakarta.enterprise.context.ApplicationScoped
+import jakarta.enterprise.event.Observes
 import jakarta.enterprise.inject.Any
 import jakarta.enterprise.inject.Instance
 import java.time.Instant
@@ -15,6 +16,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedDeque
 import java.util.concurrent.TimeUnit
 
+// registers eagerly on StartupEvent so this gauge is always visible, even before any Spotify request occurs
 @ApplicationScoped
 class SpotifyHttpMetrics(
   private val meterRegistry: MeterRegistry,
@@ -24,8 +26,7 @@ class SpotifyHttpMetrics(
   private val timers = ConcurrentHashMap<String, Timer>()
   private val requestTimestamps = ConcurrentHashMap<String, ConcurrentLinkedDeque<Instant>>()
 
-  @PostConstruct
-  fun initialize() {
+  fun onStartup(@Observes event: StartupEvent) {
     Gauge.builder("spotify.request.endpoints", requestTimestamps) { it.size.toDouble() }
       .description("Number of tracked Spotify API endpoints with recorded requests")
       .register(meterRegistry)
@@ -52,6 +53,7 @@ class SpotifyHttpMetrics(
       Timer.builder("spotify.request")
         .tag("url", urlTemplate)
         .tag("status", statusCode.toString())
+        .publishPercentileHistogram()
         .register(meterRegistry)
     }.record(durationMs, TimeUnit.MILLISECONDS)
 

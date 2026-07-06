@@ -2,6 +2,7 @@ package de.chrgroth.spotify.control.adapter.`in`.scheduler
 
 import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistPort
 import de.chrgroth.quarkus.starters.domain.ScheduledSkipPredicate
+import io.micrometer.core.annotation.Timed
 import io.quarkus.scheduler.Scheduled
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
@@ -12,6 +13,7 @@ class PlaylistSyncJob(
   private val playlist: PlaylistPort,
 ) {
 
+  @Timed(value = "scheduler.job", extraTags = ["invoker", "PlaylistSyncJob"], histogram = true)
   @Scheduled(cron = "0 30 * * * ?", skipExecutionIf = ScheduledSkipPredicate::class)
   fun run() {
     logger.info { "Running scheduled playlist sync" }
