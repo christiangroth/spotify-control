@@ -23,8 +23,13 @@ import de.chrgroth.spotify.control.domain.catalog.SyncController
 import de.chrgroth.spotify.control.domain.catalog.CatalogSyncRequest
 import de.chrgroth.spotify.control.domain.port.out.playlist.SpotifyPlaylistPort
 import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
+import io.micrometer.core.instrument.Gauge
+import io.micrometer.core.instrument.MeterRegistry
+import io.quarkus.runtime.StartupEvent
 import jakarta.enterprise.context.ApplicationScoped
+import jakarta.enterprise.event.Observes
 import mu.KLogging
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.time.Clock
 
 @ApplicationScoped
@@ -38,7 +43,17 @@ class PlaylistService(
   private val dashboardRefresh: DashboardRefreshPort,
   private val playlistCheckRepository: AppPlaylistCheckRepositoryPort,
   private val syncController: SyncController,
+  private val meterRegistry: MeterRegistry,
 ) : PlaylistPort {
+
+  private val lastSyncJobSuccessTimestamp = AtomicLong()
+
+  @Suppress("UnusedParameter")
+  fun onStartup(@Observes event: StartupEvent) {
+    Gauge.builder("app.playlist.sync_job_last_success_timestamp", lastSyncJobSuccessTimestamp) { it.get().toDouble() }
+      .description("Epoch second timestamp of the last successful playlist sync job run")
+      .register(meterRegistry)
+  }
 
   override fun getPlaylists(userId: UserId): List<PlaylistInfo> = playlistRepository.findByUserId(userId)
 
@@ -50,6 +65,7 @@ class PlaylistService(
     users.forEach { user ->
       outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistInfo(user.spotifyUserId))
     }
+    lastSyncJobSuccessTimestamp.set(Clock.System.now().toEpochMilliseconds() / MILLIS_PER_SECOND)
   }
 
   override fun syncPlaylists(userId: UserId): Either<DomainError, Unit> {
@@ -204,5 +220,6 @@ class PlaylistService(
 
   companion object : KLogging() {
     private val YEAR_NAME_REGEX = Regex("\\d{4}")
+    private const val MILLIS_PER_SECOND = 1_000L
   }
 }

@@ -24,6 +24,22 @@ class MetricsTests {
       .map { it.split("_")[0] }
       .distinct()
       .sorted()
-    assertThat(topLevelGroups).isEqualTo(listOf("http", "jvm", "mongodb", "netty", "outbox", "process", "spotify", "system", "worker"))
+    assertThat(topLevelGroups).isEqualTo(listOf("app", "http", "jvm", "mongodb", "netty", "outbox", "process", "spotify", "system", "worker"))
+  }
+
+  @Test
+  fun `check overview dashboard gauges are exposed`() {
+    val metrics = given()
+      .`when`()
+      .get("/q/metrics")
+      .then()
+      .statusCode(200)
+      .extract()
+      .asString()
+
+    assertThat(metrics).contains("app_users_active")
+    assertThat(metrics).contains("app_playlist_tracked")
+    assertThat(metrics).contains("app_playlist_album_upgrade_pending")
+    assertThat(metrics).contains("app_playlist_sync_job_last_success_timestamp")
   }
 }
