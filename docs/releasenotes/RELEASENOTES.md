@@ -1,3 +1,12 @@
+# 0.106.5 (2026.07.06)
+
+## Bugfixes / Chore
+* Fixed a bug where all Grafana dashboards showed "No Data" because collecting the Outbox and MongoDB collection size metrics was slow enough to make the metrics endpoint time out.
+
+
+
+---
+
 # 0.106.4 (2026.07.06)
 
 ## Bugfixes / Chore
