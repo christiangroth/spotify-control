@@ -15,7 +15,7 @@
       }
     ]
   },
-  "description": "Business/domain metrics: playback tracking, playlist mirror & maintenance, catalog sync, listening stats. See docs/plans/metrics-dashboard.md.",
+  "description": "Business/domain metrics: playback tracking, playlist mirror & maintenance, catalog sync, listening stats.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
