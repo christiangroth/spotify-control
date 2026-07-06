@@ -1007,7 +1007,7 @@
           "query": "label_values(outbox_partition_status{job=\"prometheus.scrape.spotify_control\"}, partition)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
-        "refresh": 2,
+        "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
         "sort": 1,
