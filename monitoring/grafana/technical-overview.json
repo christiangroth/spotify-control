@@ -32,7 +32,7 @@
       "icon": "external link",
       "tags": [],
       "targetBlank": true,
-      "title": "Domain Overview",
+      "title": "Domain",
       "type": "link",
       "url": "/d/spotify-control-domain-metrics/domain-overview"
     },
@@ -40,7 +40,7 @@
       "icon": "external link",
       "tags": [],
       "targetBlank": true,
-      "title": "Quarkus Logs",
+      "title": "Logs",
       "type": "link",
       "url": "/d/sadlil-loki-apps-dashboard/quarkus-logs"
     }

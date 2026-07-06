@@ -31,7 +31,7 @@
       "icon": "external link",
       "tags": [],
       "targetBlank": true,
-      "title": "Technical Overview",
+      "title": "Technical",
       "type": "link",
       "url": "/d/quarkus-spotify-control/technical-overview"
     },
@@ -39,7 +39,7 @@
       "icon": "external link",
       "tags": [],
       "targetBlank": true,
-      "title": "Domain Overview",
+      "title": "Domain",
       "type": "link",
       "url": "/d/spotify-control-domain-metrics/domain-overview"
     },
