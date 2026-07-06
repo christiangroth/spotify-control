@@ -333,7 +333,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "min(outbox_partition_status{job=\"prometheus.scrape.spotify_control\"})",
+          "expr": "min(last_over_time(outbox_partition_status{job=\"prometheus.scrape.spotify_control\"}[1d]))",
           "legendFormat": "outbox partitions",
           "refId": "A",
           "instant": false,
