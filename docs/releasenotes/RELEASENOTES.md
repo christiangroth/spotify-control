@@ -1,3 +1,12 @@
+# 0.106.4 (2026.07.06)
+
+## Bugfixes / Chore
+* Fixed dashboards showing "No Data" for the Starter and Outbox Partition status panels right after opening them, without needing to change the time range first.
+
+
+
+---
+
 # 0.106.3 (2026.07.06)
 
 ## Bugfixes / Chore
