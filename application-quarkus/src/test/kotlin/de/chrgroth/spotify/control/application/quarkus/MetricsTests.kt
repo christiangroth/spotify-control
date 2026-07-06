@@ -60,4 +60,18 @@ class MetricsTests {
     assertThat(metrics).contains("app_catalog_tracks")
     assertThat(metrics).contains("app_catalog_albums")
   }
+
+  @Test
+  fun `check outbox pending gauges are exposed`() {
+    val metrics = given()
+      .`when`()
+      .get("/q/metrics")
+      .then()
+      .statusCode(200)
+      .extract()
+      .asString()
+
+    assertThat(metrics).contains("outbox_partition_pending")
+    assertThat(metrics).contains("outbox_event_type_pending")
+  }
 }

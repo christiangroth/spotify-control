@@ -107,25 +107,25 @@ class HealthPageTests {
   }
 
   @Test
-  fun `health page contains grafana metrics link in navbar`() {
+  fun `health page contains grafana technical overview link in navbar`() {
     given()
       .`when`()
       .get("/health")
       .then()
       .statusCode(200)
-      .body(containsString("""data-testid="grafana-metrics-link""""))
-      .body(containsString("https://spotifycontrolprod.grafana.net/d/quarkus-spotify-control/quarkus-metrics"))
+      .body(containsString("""data-testid="grafana-technical-overview-link""""))
+      .body(containsString("https://spotifycontrolprod.grafana.net/d/quarkus-spotify-control/technical-overview"))
   }
 
   @Test
-  fun `health page contains grafana domain metrics link in navbar`() {
+  fun `health page contains grafana domain overview link in navbar`() {
     given()
       .`when`()
       .get("/health")
       .then()
       .statusCode(200)
-      .body(containsString("""data-testid="grafana-domain-metrics-link""""))
-      .body(containsString("https://spotifycontrolprod.grafana.net/d/spotify-control-domain-metrics/domain-metrics"))
+      .body(containsString("""data-testid="grafana-domain-overview-link""""))
+      .body(containsString("https://spotifycontrolprod.grafana.net/d/spotify-control-domain-metrics/domain-overview"))
   }
 
   @Test

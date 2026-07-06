@@ -260,6 +260,21 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
   }
 
   companion object {
+    val allKeys: List<String> = listOf(
+      FetchPlaybackData.KEY,
+      UpdateUserProfile.KEY,
+      SyncPlaylistInfo.KEY,
+      SyncPlaylistData.KEY,
+      RebuildPlaybackData.KEY,
+      AppendPlaybackData.KEY,
+      SyncArtistDetails.KEY,
+      SyncArtistAlbums.KEY,
+      SyncAlbumDetails.KEY,
+      ResyncCatalog.KEY,
+      RunPlaylistChecks.KEY,
+      AggregatePlaybackData.KEY,
+    )
+
     @Suppress("CyclomaticComplexMethod")
     fun fromKey(key: String, payload: String): DomainOutboxEvent = when (key) {
       FetchPlaybackData.KEY -> FetchPlaybackData(UserId(payload))

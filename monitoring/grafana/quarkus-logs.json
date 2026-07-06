@@ -31,17 +31,17 @@
       "icon": "external link",
       "tags": [],
       "targetBlank": true,
-      "title": "Quarkus Metrics",
+      "title": "Technical Overview",
       "type": "link",
-      "url": "/d/quarkus-spotify-control/quarkus-metrics"
+      "url": "/d/quarkus-spotify-control/technical-overview"
     },
     {
       "icon": "external link",
       "tags": [],
       "targetBlank": true,
-      "title": "Domain Metrics",
+      "title": "Domain Overview",
       "type": "link",
-      "url": "/d/spotify-control-domain-metrics/domain-metrics"
+      "url": "/d/spotify-control-domain-metrics/domain-overview"
     },
     {
       "icon": "bolt",
