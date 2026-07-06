@@ -74,4 +74,17 @@ class MetricsTests {
     assertThat(metrics).contains("outbox_partition_pending")
     assertThat(metrics).contains("outbox_event_type_pending")
   }
+
+  @Test
+  fun `check mongodb collection size gauges are exposed`() {
+    val metrics = given()
+      .`when`()
+      .get("/q/metrics")
+      .then()
+      .statusCode(200)
+      .extract()
+      .asString()
+
+    assertThat(metrics).contains("mongodb_collection_size_bytes")
+  }
 }
