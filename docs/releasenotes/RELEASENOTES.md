@@ -1,3 +1,12 @@
+# 0.106.8 (2026.07.07)
+
+## Bugfixes / Chore
+* Reverted the Technical Overview dashboard's Starter and Outbox Partition status panels back to fixed, non-repeating panels, since the native Grafana repeating-panel approach kept causing "No Data" on dashboard load.
+
+
+
+---
+
 # 0.106.7 (2026.07.07)
 
 ## Bugfixes / Chore
