@@ -43,12 +43,27 @@ class OutboxMetricsTests {
   }
 
   @Test
-  fun `partition stats are cached across all gauge reads within a single scrape`() {
+  fun `partition stats are shared across all gauge reads instead of re-queried per partition or event type`() {
     every { outboxPort.getPartitionStats() } returns emptyList()
 
     metrics.onStartup(StartupEvent())
     meterRegistry.meters.forEach { meter -> meter.measure().forEach { it.value } }
 
     verify(exactly = 1) { outboxPort.getPartitionStats() }
+  }
+
+  @Test
+  fun `a failed refresh keeps the previously cached values instead of propagating`() {
+    val partition = DomainOutboxPartition.Domain
+    every { outboxPort.getPartitionStats() } returns listOf(
+      OutboxPartitionStats(name = partition.key, status = "ACTIVE", documentCount = 3L, blockedUntil = null, eventTypeCounts = emptyList()),
+    )
+    metrics.onStartup(StartupEvent())
+
+    every { outboxPort.getPartitionStats() } throws IllegalStateException("outbox unreachable")
+    metrics.refresh()
+
+    val partitionGauge = meterRegistry.find("outbox.partition.pending").tag("partition", partition.key).gauge()
+    assertThat(partitionGauge?.value()).isEqualTo(3.0)
   }
 }

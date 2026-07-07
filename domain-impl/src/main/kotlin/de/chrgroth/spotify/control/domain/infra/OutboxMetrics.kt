@@ -7,14 +7,17 @@ import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
 import io.micrometer.core.instrument.Gauge
 import io.micrometer.core.instrument.MeterRegistry
 import io.quarkus.runtime.StartupEvent
+import io.quarkus.scheduler.Scheduled
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.enterprise.event.Observes
-import java.time.Duration
-import java.time.Instant
+import mu.KLogging
 
 // registers eagerly on StartupEvent so these gauges are always visible, even before any outbox activity occurs.
 // backed by the actual persisted document counts rather than an enqueued/processed counter diff, which drifts
 // from reality across app restarts (counters reset, the persisted backlog does not).
+// stats are refreshed on a background schedule rather than during gauge evaluation, so a slow/blocking outbox
+// query can never delay the Prometheus scrape response itself (a scrape timeout drops the whole /q/metrics scrape,
+// not just the affected gauges).
 @ApplicationScoped
 @Suppress("Unused", "UnusedParameter")
 class OutboxMetrics(
@@ -25,10 +28,9 @@ class OutboxMetrics(
   @Volatile
   private var cachedStats: List<OutboxPartitionStats> = emptyList()
 
-  @Volatile
-  private var cachedAt: Instant = Instant.EPOCH
-
   fun onStartup(@Observes event: StartupEvent) {
+    refresh()
+
     DomainOutboxPartition.all.forEach { partition ->
       Gauge.builder("outbox.partition.pending", this) { pendingCountForPartition(partition.key).toDouble() }
         .tag("partition", partition.key)
@@ -44,24 +46,20 @@ class OutboxMetrics(
     }
   }
 
+  @Scheduled(every = "15s")
+  fun refresh() {
+    try {
+      cachedStats = outboxPort.getPartitionStats()
+    } catch (e: Exception) {
+      logger.warn(e) { "Failed to refresh outbox partition stats for metrics, keeping previous values" }
+    }
+  }
+
   private fun pendingCountForPartition(partitionKey: String): Long =
-    partitionStats().firstOrNull { it.name == partitionKey }?.documentCount ?: 0L
+    cachedStats.firstOrNull { it.name == partitionKey }?.documentCount ?: 0L
 
   private fun pendingCountForEventType(eventType: String): Long =
-    partitionStats().sumOf { partition -> partition.eventTypeCounts.firstOrNull { it.eventType == eventType }?.count ?: 0L }
+    cachedStats.sumOf { partition -> partition.eventTypeCounts.firstOrNull { it.eventType == eventType }?.count ?: 0L }
 
-  // shares a single outbox query across all partition/event-type gauges within the same Prometheus scrape instead of
-  // re-querying once per gauge tag value (which previously multiplied query count by partitions + event types per scrape).
-  private fun partitionStats(): List<OutboxPartitionStats> {
-    val now = Instant.now()
-    if (Duration.between(cachedAt, now) > CACHE_TTL) {
-      cachedStats = outboxPort.getPartitionStats()
-      cachedAt = now
-    }
-    return cachedStats
-  }
-
-  companion object {
-    private val CACHE_TTL = Duration.ofSeconds(5)
-  }
+  companion object : KLogging()
 }
