@@ -83,7 +83,7 @@ class StatsResource(
   private fun loadTracksById(tabs: List<AggregationTab>) = appTrackRepository.findByTrackIds(
     tabs.flatMap { tab ->
       tab.aggregations.flatMap { aggregation ->
-        aggregation.data?.trackEntries?.map { TrackId(it.id) } ?: emptyList()
+        aggregation.data?.trackEntries?.take(TOP_ENTRIES_LIMIT)?.map { TrackId(it.id) } ?: emptyList()
       }
     }.toSet(),
   ).associateBy { it.id }
@@ -96,7 +96,7 @@ class StatsResource(
       tracksById.values.mapNotNull { it.albumId } +
         tabs.flatMap { tab ->
           tab.aggregations.flatMap { aggregation ->
-            aggregation.data?.albumEntries?.map { AlbumId(it.id) } ?: emptyList()
+            aggregation.data?.albumEntries?.take(TOP_ENTRIES_LIMIT)?.map { AlbumId(it.id) } ?: emptyList()
           }
         }
       ).toSet(),
@@ -105,7 +105,7 @@ class StatsResource(
   private fun loadArtistsById(tabs: List<AggregationTab>) = appArtistRepository.findByArtistIds(
     tabs.flatMap { tab ->
       tab.aggregations.flatMap { aggregation ->
-        aggregation.data?.artistEntries?.map { ArtistId(it.id) } ?: emptyList()
+        aggregation.data?.artistEntries?.take(TOP_ENTRIES_LIMIT)?.map { ArtistId(it.id) } ?: emptyList()
       }
     }.toSet(),
   ).associateBy { it.id }
