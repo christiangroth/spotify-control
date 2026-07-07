@@ -1,5 +1,6 @@
 package de.chrgroth.spotify.control.domain.infra
 
+import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.model.DashboardStats
 import de.chrgroth.spotify.control.domain.model.playback.DayCount
@@ -187,8 +188,6 @@ class DashboardService(
 
     val allTrackIds = secondsByTrackId.keys.map { TrackId(it) }.toSet()
     val statsTrackMap = appTrackRepository.findByTrackIds(allTrackIds).associateBy { it.id.value }
-    val statsAlbumIds = statsTrackMap.values.mapNotNull { it.albumId }.toSet()
-    val statsArtistIds = secondsByArtistId.keys.map { ArtistId(it) }.toSet()
 
     val secondsByAlbumId = mutableMapOf<String, Long>()
     secondsByTrackId.forEach { (trackId, seconds) ->
@@ -196,10 +195,17 @@ class DashboardService(
       secondsByAlbumId[albumId] = (secondsByAlbumId[albumId] ?: 0L) + seconds
     }
 
+    // only the tracks/albums/artists that actually end up in the top-N lists below need their catalog details resolved
+    val topTrackDetails = secondsByTrackId.entries.sortedByDescending { it.value }.take(topEntriesLimit).mapNotNull { statsTrackMap[it.key] }
+    val topAlbumIds = secondsByAlbumId.entries.sortedByDescending { it.value }.take(topEntriesLimit).map { it.key }
+    val topArtistIds = secondsByArtistId.entries.sortedByDescending { it.value }.take(topEntriesLimit).map { it.key }
+    val neededAlbumIds = (topTrackDetails.mapNotNull { it.albumId } + topAlbumIds.map { AlbumId(it) }).toSet()
+    val neededArtistIds = (topTrackDetails.flatMap { it.allArtistIds() } + topArtistIds).map { ArtistId(it) }.toSet()
+
     return coroutineScope {
-      val statsAlbumMapAsync = async(Dispatchers.IO) { appAlbumRepository.findByAlbumIds(statsAlbumIds).associateBy { it.id.value } }
+      val statsAlbumMapAsync = async(Dispatchers.IO) { appAlbumRepository.findByAlbumIds(neededAlbumIds).associateBy { it.id.value } }
       val statsArtistMapAsync = async(Dispatchers.IO) {
-        appArtistRepository.findByArtistIds(statsArtistIds).associateBy { it.id.value }
+        appArtistRepository.findByArtistIds(neededArtistIds).associateBy { it.id.value }
       }
       val statsAlbumMap = statsAlbumMapAsync.await()
       val statsArtistMap = statsArtistMapAsync.await()
