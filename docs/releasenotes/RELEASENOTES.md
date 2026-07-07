@@ -1,3 +1,12 @@
+# 0.106.11 (2026.07.07)
+
+## Bugfixes / Chore
+* Reduced the number of catalog lookups needed to render the Stats page and the Dashboard's listening stats, cutting slow MongoDB queries for track/album/artist details.
+
+
+
+---
+
 # 0.106.10 (2026.07.07)
 
 ## Bugfixes / Chore
