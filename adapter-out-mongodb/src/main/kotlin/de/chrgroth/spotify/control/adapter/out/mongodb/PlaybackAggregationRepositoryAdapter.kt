@@ -1,7 +1,10 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
+import com.mongodb.client.model.Filters
+import com.mongodb.client.model.Projections
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.ActivityEntry
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.ActivityTimeWindow
+import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationEventCount
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationPeriodType
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationRankEntry
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.PlaybackAggregation
@@ -49,9 +52,28 @@ class PlaybackAggregationRepositoryAdapter(
       ).map { it.toDomain() }
     }
 
+  override fun countEventsByUserTypeAndPeriodRange(userId: UserId, type: AggregationPeriodType, from: LocalDate, to: LocalDate): List<AggregationEventCount> =
+    mongoQueryMetrics.timed("app_playback_aggregation.countEventsByUserTypeAndPeriodRange") {
+      repository.mongoCollection()
+        .find(
+          Filters.and(
+            Filters.eq(SPOTIFY_USER_ID_FIELD, userId.value),
+            Filters.eq(TYPE_FIELD, type.name),
+            Filters.gte(PERIOD_START_FIELD, from.toString()),
+            Filters.lte(PERIOD_START_FIELD, to.toString()),
+          ),
+        )
+        .projection(Projections.include(PERIOD_START_FIELD, EVENT_COUNT_FIELD))
+        .toList()
+        .map { AggregationEventCount(periodStart = LocalDate.parse(it.periodStart), eventCount = it.eventCount) }
+    }
+
   override fun sumEventCountByUser(userId: UserId): Long =
     mongoQueryMetrics.timed("app_playback_aggregation.sumEventCountByUser") {
-      repository.list("$SPOTIFY_USER_ID_FIELD = ?1 and $TYPE_FIELD = ?2", userId.value, AggregationPeriodType.DAY.name)
+      repository.mongoCollection()
+        .find(Filters.and(Filters.eq(SPOTIFY_USER_ID_FIELD, userId.value), Filters.eq(TYPE_FIELD, AggregationPeriodType.DAY.name)))
+        .projection(Projections.include(EVENT_COUNT_FIELD))
+        .toList()
         .sumOf { it.eventCount }
     }
 
@@ -114,6 +136,7 @@ class PlaybackAggregationRepositoryAdapter(
     internal const val SPOTIFY_USER_ID_FIELD = "spotifyUserId"
     internal const val TYPE_FIELD = "type"
     internal const val PERIOD_START_FIELD = "periodStart"
+    internal const val EVENT_COUNT_FIELD = "eventCount"
 
     internal fun documentId(userId: UserId, type: AggregationPeriodType, periodStart: LocalDate): String =
       "${userId.value}:${type.name}:$periodStart"
