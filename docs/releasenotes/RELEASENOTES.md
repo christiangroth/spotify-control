@@ -1,3 +1,12 @@
+# 0.106.7 (2026.07.07)
+
+## Bugfixes / Chore
+* Reverted the recent Grafana dashboard and Outbox/MongoDB metrics changes back to the last known-good state, after several follow-up fixes failed to fully resolve dashboards showing "No Data".
+
+
+
+---
+
 # 0.106.6 (2026.07.06)
 
 ## Bugfixes / Chore
