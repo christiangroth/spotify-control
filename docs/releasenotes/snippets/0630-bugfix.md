@@ -1,2 +1,0 @@
-* Restored the repeating status panels and dashboard fixes that were rolled back while chasing the "No Data" issue, since they were not the actual cause.
-* Fixed the real root cause: MongoDB collection size and Outbox pending-count metrics now refresh in the background every 15 seconds instead of querying MongoDB/the outbox during Prometheus scrapes, so a slow query can no longer make the whole metrics endpoint time out.
