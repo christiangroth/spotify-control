@@ -1,3 +1,12 @@
+# 0.106.10 (2026.07.07)
+
+## Bugfixes / Chore
+* Fixed slow dashboard loading caused by inefficient playback statistics queries.
+
+
+
+---
+
 # 0.106.9 (2026.07.07)
 
 ## Bugfixes / Chore
