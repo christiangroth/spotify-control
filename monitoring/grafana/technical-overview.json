@@ -1177,12 +1177,11 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 4,
+        "w": 24,
         "x": 0,
         "y": 39
       },
       "id": 73,
-      "maxPerRow": 6,
       "options": {
         "colorMode": "background",
         "graphMode": "none",
@@ -1197,22 +1196,20 @@
         },
         "textMode": "auto"
       },
-      "repeat": "partition",
-      "repeatDirection": "h",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "last_over_time(outbox_partition_status{job=\"prometheus.scrape.spotify_control\", partition=\"$partition\"}[1d])",
+          "expr": "last_over_time(outbox_partition_status{job=\"prometheus.scrape.spotify_control\"}[1d])",
           "legendFormat": "{{partition}}",
           "refId": "A",
           "instant": false,
           "range": true
         }
       ],
-      "title": "$partition",
+      "title": "Partition Status",
       "type": "stat"
     },
     {
@@ -1699,18 +1696,17 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 4,
-        "w": 4,
+        "h": 16,
+        "w": 24,
         "x": 0,
         "y": 62
       },
       "id": 92,
-      "maxPerRow": 6,
       "options": {
         "colorMode": "background",
         "graphMode": "none",
         "justifyMode": "auto",
-        "orientation": "horizontal",
+        "orientation": "vertical",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -1720,22 +1716,20 @@
         },
         "textMode": "auto"
       },
-      "repeat": "starter",
-      "repeatDirection": "h",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "starter_overall_status{job=\"prometheus.scrape.spotify_control\", id=\"$starter\"}",
+          "expr": "starter_overall_status{job=\"prometheus.scrape.spotify_control\"}",
           "legendFormat": "{{id}}",
           "refId": "A",
           "instant": false,
           "range": true
         }
       ],
-      "title": "$starter",
+      "title": "Starter Overall Status",
       "type": "stat"
     },
     {
@@ -2555,52 +2549,6 @@
         "refresh": 1,
         "skipUrlSync": false,
         "type": "datasource"
-      },
-      {
-        "current": {},
-        "datasource": {
-          "type": "prometheus",
-          "uid": "${datasource}"
-        },
-        "definition": "label_values(starter_overall_status{job=\"prometheus.scrape.spotify_control\"}, id)",
-        "hide": 0,
-        "includeAll": true,
-        "label": "Starter",
-        "multi": true,
-        "name": "starter",
-        "options": [],
-        "query": {
-          "query": "label_values(starter_overall_status{job=\"prometheus.scrape.spotify_control\"}, id)",
-          "refId": "PrometheusVariableQueryEditor-VariableQuery"
-        },
-        "refresh": 2,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 1,
-        "type": "query"
-      },
-      {
-        "current": {},
-        "datasource": {
-          "type": "prometheus",
-          "uid": "${datasource}"
-        },
-        "definition": "label_values(outbox_partition_status{job=\"prometheus.scrape.spotify_control\"}, partition)",
-        "hide": 0,
-        "includeAll": true,
-        "label": "Outbox Partition",
-        "multi": true,
-        "name": "partition",
-        "options": [],
-        "query": {
-          "query": "label_values(outbox_partition_status{job=\"prometheus.scrape.spotify_control\"}, partition)",
-          "refId": "PrometheusVariableQueryEditor-VariableQuery"
-        },
-        "refresh": 2,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 1,
-        "type": "query"
       }
     ]
   },
