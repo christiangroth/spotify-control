@@ -95,11 +95,11 @@ class DashboardService(
   private fun computePlaybackStats(userId: UserId): DashboardStats {
     val today = Clock.System.now().toLocalDateTime(TimeZone.UTC).date
     val from = today - DatePeriod(days = STATS_DAYS - 1)
-    val dailyAggs = aggregationRepository.findByUserTypeAndPeriodRange(userId, AggregationPeriodType.DAY, from, today)
+    val dailyEventCounts = aggregationRepository.countEventsByUserTypeAndPeriodRange(userId, AggregationPeriodType.DAY, from, today)
     val total = aggregationRepository.sumEventCountByUser(userId)
-    val last30Days = dailyAggs.sumOf { it.eventCount }
+    val last30Days = dailyEventCounts.sumOf { it.eventCount }
 
-    val countByDate = dailyAggs.associate { it.periodStart to it.eventCount }
+    val countByDate = dailyEventCounts.associate { it.periodStart to it.eventCount }
     val allDays = ((STATS_DAYS - 1) downTo 0).map { today - DatePeriod(days = it) }
     val maxCount = countByDate.values.maxOrNull() ?: 1L
     val perDay = allDays.map { date ->
