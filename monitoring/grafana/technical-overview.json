@@ -32,7 +32,7 @@
       "icon": "external link",
       "tags": [],
       "targetBlank": true,
-      "title": "Domain",
+      "title": "Domain Overview",
       "type": "link",
       "url": "/d/spotify-control-domain-metrics/domain-overview"
     },
@@ -40,7 +40,7 @@
       "icon": "external link",
       "tags": [],
       "targetBlank": true,
-      "title": "Logs",
+      "title": "Quarkus Logs",
       "type": "link",
       "url": "/d/sadlil-loki-apps-dashboard/quarkus-logs"
     }
@@ -2573,7 +2573,7 @@
           "query": "label_values(starter_overall_status{job=\"prometheus.scrape.spotify_control\"}, id)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
-        "refresh": 1,
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "sort": 1,
@@ -2596,7 +2596,7 @@
           "query": "label_values(outbox_partition_status{job=\"prometheus.scrape.spotify_control\"}, partition)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
-        "refresh": 1,
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "sort": 1,

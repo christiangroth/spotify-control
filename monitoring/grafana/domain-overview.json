@@ -33,7 +33,7 @@
       "icon": "external link",
       "tags": [],
       "targetBlank": true,
-      "title": "Technical",
+      "title": "Technical Overview",
       "type": "link",
       "url": "/d/quarkus-spotify-control/technical-overview"
     },
@@ -41,7 +41,7 @@
       "icon": "external link",
       "tags": [],
       "targetBlank": true,
-      "title": "Logs",
+      "title": "Quarkus Logs",
       "type": "link",
       "url": "/d/sadlil-loki-apps-dashboard/quarkus-logs"
     }
