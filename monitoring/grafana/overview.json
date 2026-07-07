@@ -25,7 +25,7 @@
       "icon": "external link",
       "tags": [],
       "targetBlank": true,
-      "title": "Domain Overview",
+      "title": "Domain",
       "type": "link",
       "url": "/d/spotify-control-domain-metrics/domain-overview"
     },
@@ -33,7 +33,7 @@
       "icon": "external link",
       "tags": [],
       "targetBlank": true,
-      "title": "Technical Overview",
+      "title": "Technical",
       "type": "link",
       "url": "/d/quarkus-spotify-control/technical-overview"
     },
@@ -41,7 +41,7 @@
       "icon": "external link",
       "tags": [],
       "targetBlank": true,
-      "title": "Quarkus Logs",
+      "title": "Logs",
       "type": "link",
       "url": "/d/sadlil-loki-apps-dashboard/quarkus-logs"
     }
@@ -844,12 +844,13 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
-        "w": 12,
+        "h": 4,
+        "w": 4,
         "x": 0,
         "y": 17
       },
       "id": 31,
+      "maxPerRow": 6,
       "options": {
         "colorMode": "background",
         "graphMode": "none",
@@ -864,20 +865,22 @@
         },
         "textMode": "auto"
       },
+      "repeat": "partition",
+      "repeatDirection": "h",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (partition) (outbox_partition_pending{job=\"prometheus.scrape.spotify_control\"})",
+          "expr": "outbox_partition_pending{job=\"prometheus.scrape.spotify_control\", partition=\"$partition\"}",
           "legendFormat": "{{partition}}",
           "refId": "A",
           "instant": false,
           "range": true
         }
       ],
-      "title": "Pending Outbox Tasks (Per Partition)",
+      "title": "Pending: $partition",
       "type": "stat"
     },
     {
@@ -925,12 +928,13 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
-        "w": 12,
-        "x": 12,
-        "y": 17
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 21
       },
       "id": 32,
+      "maxPerRow": 6,
       "options": {
         "colorMode": "background",
         "graphMode": "none",
@@ -945,20 +949,22 @@
         },
         "textMode": "auto"
       },
+      "repeat": "partition",
+      "repeatDirection": "h",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "last_over_time(outbox_partition_status{job=\"prometheus.scrape.spotify_control\"}[1d])",
+          "expr": "last_over_time(outbox_partition_status{job=\"prometheus.scrape.spotify_control\", partition=\"$partition\"}[1d])",
           "legendFormat": "{{partition}}",
           "refId": "A",
           "instant": false,
           "range": true
         }
       ],
-      "title": "Outbox Partition Status",
+      "title": "$partition",
       "type": "stat"
     }
   ],
@@ -983,6 +989,29 @@
         "refresh": 1,
         "skipUrlSync": false,
         "type": "datasource"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(outbox_partition_status{job=\"prometheus.scrape.spotify_control\"}, partition)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Outbox Partition",
+        "multi": true,
+        "name": "partition",
+        "options": [],
+        "query": {
+          "query": "label_values(outbox_partition_status{job=\"prometheus.scrape.spotify_control\"}, partition)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
       }
     ]
   },
