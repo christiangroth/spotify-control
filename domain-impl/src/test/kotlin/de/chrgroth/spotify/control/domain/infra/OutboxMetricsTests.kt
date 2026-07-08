@@ -16,8 +16,9 @@ import org.junit.jupiter.api.Test
 class OutboxMetricsTests {
 
   private val outboxPort: OutboxPort = mockk()
+  private val statsCache = OutboxPartitionStatsCache(outboxPort)
   private val meterRegistry = SimpleMeterRegistry()
-  private val metrics = OutboxMetrics(outboxPort, meterRegistry)
+  private val metrics = OutboxMetrics(statsCache, meterRegistry)
 
   @Test
   fun `gauges expose pending counts per partition and event type`() {
@@ -50,20 +51,5 @@ class OutboxMetricsTests {
     meterRegistry.meters.forEach { meter -> meter.measure().forEach { it.value } }
 
     verify(exactly = 1) { outboxPort.getPartitionStats() }
-  }
-
-  @Test
-  fun `a failed refresh keeps the previously cached values instead of propagating`() {
-    val partition = DomainOutboxPartition.Domain
-    every { outboxPort.getPartitionStats() } returns listOf(
-      OutboxPartitionStats(name = partition.key, status = "ACTIVE", documentCount = 3L, blockedUntil = null, eventTypeCounts = emptyList()),
-    )
-    metrics.onStartup(StartupEvent())
-
-    every { outboxPort.getPartitionStats() } throws IllegalStateException("outbox unreachable")
-    metrics.refresh()
-
-    val partitionGauge = meterRegistry.find("outbox.partition.pending").tag("partition", partition.key).gauge()
-    assertThat(partitionGauge?.value()).isEqualTo(3.0)
   }
 }
