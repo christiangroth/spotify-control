@@ -1,3 +1,12 @@
+# 0.106.13 (2026.07.08)
+
+## Bugfixes / Chore
+* Sped up the dashboard by switching a slow aggregation query to a fast, index-backed lookup, removing a redundant query, and only fetching full track details for the tracks actually shown in the top lists.
+
+
+
+---
+
 # 0.106.12 (2026.07.08)
 
 ## Bugfixes / Chore
