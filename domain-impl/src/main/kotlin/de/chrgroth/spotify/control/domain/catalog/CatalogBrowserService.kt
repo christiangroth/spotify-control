@@ -5,6 +5,9 @@ import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistBrowseItem
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.model.catalog.CatalogStats
+import de.chrgroth.spotify.control.domain.model.catalog.CatalogSyncEntityType
+import de.chrgroth.spotify.control.domain.model.catalog.CatalogSyncTimelineEntry
+import de.chrgroth.spotify.control.domain.model.catalog.CatalogSyncTimelinePage
 import de.chrgroth.spotify.control.domain.model.catalog.SyncCause
 import de.chrgroth.spotify.control.domain.model.catalog.SyncTraceDisplay
 import de.chrgroth.spotify.control.domain.model.catalog.SyncTraceEntityType
@@ -145,6 +148,53 @@ class CatalogBrowserService(
       }
     }
     return SyncTraceDisplay(description, trace.triggeredAt)
+  }
+
+  override fun getSyncTimeline(artistOffset: Int, albumOffset: Int, limit: Int): CatalogSyncTimelinePage {
+    val artistCandidates = appArtistRepository.findRecentlySynced(artistOffset, limit + 1)
+    val albumCandidates = appAlbumRepository.findRecentlySynced(albumOffset, limit + 1)
+
+    val artistHasMoreBeyondBatch = artistCandidates.size > limit
+    val albumHasMoreBeyondBatch = albumCandidates.size > limit
+    val boundedArtists = artistCandidates.take(limit)
+    val boundedAlbums = albumCandidates.take(limit)
+
+    val albumCountByArtistId = appAlbumRepository.findByArtistIds(boundedArtists.map { it.id }.toSet())
+      .groupingBy { it.artistId?.value }
+      .eachCount()
+
+    val artistEntries = boundedArtists.map { artist ->
+      CatalogSyncTimelineEntry(
+        entityType = CatalogSyncEntityType.ARTIST,
+        syncedAt = artist.lastSync,
+        artistId = artist.id.value,
+        artistName = artist.artistName,
+        albumCount = albumCountByArtistId[artist.id.value] ?: 0,
+      )
+    }
+    val albumEntries = boundedAlbums.map { album ->
+      CatalogSyncTimelineEntry(
+        entityType = CatalogSyncEntityType.ALBUM,
+        syncedAt = album.lastSync,
+        artistId = album.artistId?.value,
+        artistName = album.artistName,
+        albumId = album.id.value,
+        albumName = album.title,
+        trackCount = album.totalTracks ?: 0,
+      )
+    }
+
+    val merged = (artistEntries + albumEntries).sortedByDescending { it.syncedAt }
+    val page = merged.take(limit)
+    val artistTaken = page.count { it.entityType == CatalogSyncEntityType.ARTIST }
+    val albumTaken = page.count { it.entityType == CatalogSyncEntityType.ALBUM }
+
+    return CatalogSyncTimelinePage(
+      entries = page,
+      nextArtistOffset = artistOffset + artistTaken,
+      nextAlbumOffset = albumOffset + albumTaken,
+      hasMore = merged.size > limit || artistHasMoreBeyondBatch || albumHasMoreBeyondBatch,
+    )
   }
 
   private fun describeCause(cause: SyncCause): String = when (cause) {

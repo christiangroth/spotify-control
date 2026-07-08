@@ -1,0 +1,97 @@
+{#include layout.html}
+    {#title}SpCtl – Catalog Sync{/title}
+    {#content}
+    <div class="container-fluid py-4 px-3 px-md-4">
+
+        <h1 class="mb-4 fs-4 fw-semibold">Catalog Sync</h1>
+        <p class="text-secondary small mb-4">Timeline of artists and albums most recently synced from Spotify, newest first.</p>
+
+        <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle mb-0" data-testid="catalog-sync-table">
+                <thead>
+                    <tr class="app-section-label" style="font-size:.8rem;">
+                        <th>Type</th>
+                        <th>Artist</th>
+                        <th>Album</th>
+                        <th class="text-end">Albums</th>
+                        <th class="text-end">Tracks</th>
+                        <th>Synced At</th>
+                    </tr>
+                </thead>
+                <tbody id="catalog-sync-rows">
+                    {#fragment id="snippet_rows"}
+                    {#for entry in entries}
+                    <tr data-testid="catalog-sync-row">
+                        <td>
+                            {#if entry.entityType == "ARTIST"}
+                            <span class="badge" style="background-color:var(--spotify-green);color:#000;">Artist</span>
+                            {#else}
+                            <span class="badge" style="background-color:#555;color:#fff;">Album</span>
+                            {/if}
+                        </td>
+                        <td style="color:#fff;font-size:.9rem;">
+                            {#if entry.artistName}{entry.artistName}{#else}–{/if}
+                            {#if entry.artistId}<span style="color:#666;font-size:.75rem;">({entry.artistId})</span>{/if}
+                        </td>
+                        <td style="color:#ccc;font-size:.9rem;">
+                            {#if entry.entityType == "ALBUM"}
+                            {#if entry.albumName}{entry.albumName}{#else}(untitled){/if}
+                            <span style="color:#666;font-size:.75rem;">({entry.albumId})</span>
+                            {#else}
+                            –
+                            {/if}
+                        </td>
+                        <td class="text-end" style="color:#888;font-size:.85rem;">{#if entry.entityType == "ARTIST"}{entry.albumCount.formatted}{#else}–{/if}</td>
+                        <td class="text-end" style="color:#888;font-size:.85rem;">{#if entry.entityType == "ALBUM"}{entry.trackCount.formatted}{#else}–{/if}</td>
+                        <td style="white-space:nowrap;color:#888;font-size:.85rem;">{entry.syncedAt.formatted}</td>
+                    </tr>
+                    {/for}
+                    {/fragment}
+                </tbody>
+            </table>
+            {#if page.entries.empty}
+            <p style="color:#888;" class="mt-3">No catalog sync activity recorded yet.</p>
+            {/if}
+        </div>
+
+        <div id="catalog-sync-load-more-container" class="text-center my-3"
+             data-next-artist-offset="{page.nextArtistOffset}" data-next-album-offset="{page.nextAlbumOffset}"
+             {#if !page.hasMore}style="display:none;"{/if}>
+            <button id="catalog-sync-load-more-btn" type="button" class="btn btn-outline-secondary btn-sm" data-testid="catalog-sync-load-more">Load more</button>
+        </div>
+
+    </div>
+
+    <script>
+        (function() {
+            var container = document.getElementById('catalog-sync-load-more-container');
+            var btn = document.getElementById('catalog-sync-load-more-btn');
+            var tbody = document.getElementById('catalog-sync-rows');
+            if (!btn || !container || !tbody) return;
+
+            btn.addEventListener('click', function() {
+                btn.disabled = true;
+                var artistOffset = container.dataset.nextArtistOffset;
+                var albumOffset = container.dataset.nextAlbumOffset;
+                fetch('/catalog-sync/snippet?artistOffset=' + encodeURIComponent(artistOffset) + '&albumOffset=' + encodeURIComponent(albumOffset))
+                    .then(function(r) {
+                        container.dataset.nextArtistOffset = r.headers.get('X-Next-Artist-Offset');
+                        container.dataset.nextAlbumOffset = r.headers.get('X-Next-Album-Offset');
+                        container.style.display = r.headers.get('X-Has-More') === 'true' ? '' : 'none';
+                        return r.text();
+                    })
+                    .then(function(html) {
+                        var table = document.createElement('table');
+                        table.innerHTML = '<tbody>' + html + '</tbody>';
+                        var rows = table.querySelectorAll('tr');
+                        rows.forEach(function(row) { tbody.appendChild(row); });
+                        btn.disabled = false;
+                    })
+                    .catch(function() {
+                        btn.disabled = false;
+                    });
+            });
+        })();
+    </script>
+    {/content}
+{/include}

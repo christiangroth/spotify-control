@@ -2,6 +2,7 @@ package de.chrgroth.spotify.control.adapter.out.mongodb
 
 import com.mongodb.client.model.BulkWriteOptions
 import com.mongodb.client.model.Filters
+import com.mongodb.client.model.Sorts
 import com.mongodb.client.model.UpdateOneModel
 import com.mongodb.client.model.UpdateOptions
 import com.mongodb.client.model.Updates
@@ -71,6 +72,27 @@ class AppAlbumRepositoryAdapter(
   override fun findByArtistId(artistId: ArtistId): List<AppAlbum> =
     mongoQueryMetrics.timed("app_album.findByArtistId") {
       appAlbumDocumentRepository.list("artistId = ?1", artistId.value).map { it.toDomain() }
+    }
+
+  override fun findByArtistIds(artistIds: Set<ArtistId>): List<AppAlbum> {
+    if (artistIds.isEmpty()) return emptyList()
+    return mongoQueryMetrics.timed("app_album.findByArtistIds") {
+      appAlbumDocumentRepository.mongoCollection()
+        .find(Filters.`in`(ARTIST_ID_FIELD, artistIds.map { it.value }))
+        .toList()
+        .map { it.toDomain() }
+    }
+  }
+
+  override fun findRecentlySynced(offset: Int, limit: Int): List<AppAlbum> =
+    mongoQueryMetrics.timed("app_album.findRecentlySynced") {
+      appAlbumDocumentRepository.mongoCollection()
+        .find()
+        .sort(Sorts.descending(LAST_SYNC_FIELD))
+        .skip(offset)
+        .limit(limit)
+        .toList()
+        .map { it.toDomain() }
     }
 
   override fun deleteAll() {

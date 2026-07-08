@@ -151,6 +151,25 @@ class AppArtistRepositoryTests {
   }
 
   @Test
+  fun `findRecentlySynced returns artists ordered by lastSync descending`() {
+    val older = artist("recent-older")
+    appArtistRepository.upsertAll(listOf(older))
+    Thread.sleep(5)
+    val newer = artist("recent-newer")
+    appArtistRepository.upsertAll(listOf(newer))
+
+    val ids = appArtistRepository.findRecentlySynced(offset = 0, limit = 10000).map { it.id }
+
+    assertThat(ids.indexOf(newer.id)).isLessThan(ids.indexOf(older.id))
+  }
+
+  @Test
+  fun `findRecentlySynced honors offset and limit`() {
+    val result = appArtistRepository.findRecentlySynced(offset = 0, limit = 1)
+    assertThat(result).hasSizeLessThanOrEqualTo(1)
+  }
+
+  @Test
   fun `countAll returns total number of artists`() {
     val before = appArtistRepository.countAll()
     val artist1 = artist("count1")

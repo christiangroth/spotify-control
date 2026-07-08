@@ -114,6 +114,39 @@ class AppAlbumRepositoryTests {
   }
 
   @Test
+  fun `findByArtistIds returns albums for all given artists in a single batch`() {
+    val artistId1 = ArtistId("artist-bulk1-${UUID.randomUUID()}")
+    val artistId2 = ArtistId("artist-bulk2-${UUID.randomUUID()}")
+    val album1 = album("bulk1").copy(artistId = artistId1)
+    val album2 = album("bulk2").copy(artistId = artistId2)
+    val other = album("bulk-other").copy(artistId = ArtistId("other-artist-${UUID.randomUUID()}"))
+    appAlbumRepository.upsertAll(listOf(album1, album2, other))
+
+    val result = appAlbumRepository.findByArtistIds(setOf(artistId1, artistId2))
+
+    assertThat(result.map { it.id }).containsExactlyInAnyOrder(album1.id, album2.id)
+  }
+
+  @Test
+  fun `findByArtistIds returns empty list for empty input`() {
+    val result = appAlbumRepository.findByArtistIds(emptySet())
+    assertThat(result).isEmpty()
+  }
+
+  @Test
+  fun `findRecentlySynced returns albums ordered by lastSync descending`() {
+    val older = album("recent-older")
+    appAlbumRepository.upsertAll(listOf(older))
+    Thread.sleep(5)
+    val newer = album("recent-newer")
+    appAlbumRepository.upsertAll(listOf(newer))
+
+    val ids = appAlbumRepository.findRecentlySynced(offset = 0, limit = 10000).map { it.id }
+
+    assertThat(ids.indexOf(newer.id)).isLessThan(ids.indexOf(older.id))
+  }
+
+  @Test
   fun `countAll returns total number of albums`() {
     val before = appAlbumRepository.countAll()
     val album1 = album("count1")

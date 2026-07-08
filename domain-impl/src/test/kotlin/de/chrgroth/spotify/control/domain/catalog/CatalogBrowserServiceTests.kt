@@ -5,6 +5,7 @@ import de.chrgroth.spotify.control.domain.model.catalog.AppAlbum
 import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
 import de.chrgroth.spotify.control.domain.model.catalog.AppTrack
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
+import de.chrgroth.spotify.control.domain.model.catalog.CatalogSyncEntityType
 import de.chrgroth.spotify.control.domain.model.catalog.SyncCause
 import de.chrgroth.spotify.control.domain.model.catalog.SyncTrace
 import de.chrgroth.spotify.control.domain.model.catalog.SyncTraceEntityType
@@ -180,5 +181,51 @@ class CatalogBrowserServiceTests {
     val result = service.getAlbumSyncTrace("album-1")
 
     assertThat(result!!.description).isEqualTo("Synced as part of full discography sync for artist 'Some Artist'")
+  }
+
+  @Test
+  fun `getSyncTimeline merges artists and albums by syncedAt descending and reports correct next offsets`() {
+    val artistA = AppArtist(id = ArtistId("artist-a"), artistName = "Artist A", lastSync = Instant.fromEpochSeconds(100))
+    val artistB = AppArtist(id = ArtistId("artist-b"), artistName = "Artist B", lastSync = Instant.fromEpochSeconds(90))
+    val albumX = AppAlbum(
+      id = AlbumId("album-x"), title = "Album X", artistId = ArtistId("artist-c"), artistName = "Artist C",
+      totalTracks = 12, lastSync = Instant.fromEpochSeconds(95),
+    )
+    every { appArtistRepository.findRecentlySynced(0, 3) } returns listOf(artistA, artistB, AppArtist(id = ArtistId("artist-z"), artistName = "Z", lastSync = Instant.fromEpochSeconds(50)))
+    every { appAlbumRepository.findRecentlySynced(0, 3) } returns listOf(albumX)
+    every { appAlbumRepository.findByArtistIds(setOf(artistA.id, artistB.id)) } returns listOf(
+      AppAlbum(id = AlbumId("album-a1"), artistId = artistA.id, lastSync = triggeredAt),
+      AppAlbum(id = AlbumId("album-a2"), artistId = artistA.id, lastSync = triggeredAt),
+    )
+
+    val result = service.getSyncTimeline(artistOffset = 0, albumOffset = 0, limit = 2)
+
+    assertThat(result.entries).hasSize(2)
+    assertThat(result.entries[0].entityType).isEqualTo(CatalogSyncEntityType.ARTIST)
+    assertThat(result.entries[0].artistId).isEqualTo("artist-a")
+    assertThat(result.entries[0].albumCount).isEqualTo(2)
+    assertThat(result.entries[1].entityType).isEqualTo(CatalogSyncEntityType.ALBUM)
+    assertThat(result.entries[1].albumId).isEqualTo("album-x")
+    assertThat(result.entries[1].artistId).isEqualTo("artist-c")
+    assertThat(result.entries[1].trackCount).isEqualTo(12)
+    assertThat(result.nextArtistOffset).isEqualTo(1)
+    assertThat(result.nextAlbumOffset).isEqualTo(1)
+    assertThat(result.hasMore).isTrue()
+  }
+
+  @Test
+  fun `getSyncTimeline reports hasMore false when both sources are exhausted`() {
+    every { appArtistRepository.findRecentlySynced(0, 3) } returns listOf(
+      AppArtist(id = ArtistId("artist-a"), artistName = "Artist A", lastSync = Instant.fromEpochSeconds(100)),
+    )
+    every { appAlbumRepository.findRecentlySynced(0, 3) } returns emptyList()
+    every { appAlbumRepository.findByArtistIds(setOf(ArtistId("artist-a"))) } returns emptyList()
+
+    val result = service.getSyncTimeline(artistOffset = 0, albumOffset = 0, limit = 2)
+
+    assertThat(result.entries).hasSize(1)
+    assertThat(result.nextArtistOffset).isEqualTo(1)
+    assertThat(result.nextAlbumOffset).isEqualTo(0)
+    assertThat(result.hasMore).isFalse()
   }
 }
