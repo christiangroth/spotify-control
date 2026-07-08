@@ -73,9 +73,17 @@ class MongoIndexInitializer(
   }
 
   private fun ensureCatalogCollectionIndexes() {
+    appArtistDocumentRepository.mongoCollection().createIndex(
+      Document(AppArtistRepositoryAdapter.LAST_SYNC_FIELD, -1),
+      IndexOptions().name("app_artist_lastSync_-1"),
+    )
     appAlbumDocumentRepository.mongoCollection().createIndex(
       Document(AppAlbumRepositoryAdapter.ARTIST_ID_FIELD, 1),
       IndexOptions().name("app_album_artistId_1"),
+    )
+    appAlbumDocumentRepository.mongoCollection().createIndex(
+      Document(AppAlbumRepositoryAdapter.LAST_SYNC_FIELD, -1),
+      IndexOptions().name("app_album_lastSync_-1"),
     )
     appTrackDocumentRepository.mongoCollection().createIndex(
       Document(AppTrackRepositoryAdapter.ARTIST_ID_FIELD, 1),

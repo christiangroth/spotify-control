@@ -2,6 +2,7 @@ package de.chrgroth.spotify.control.adapter.out.mongodb
 
 import com.mongodb.client.model.BulkWriteOptions
 import com.mongodb.client.model.Filters
+import com.mongodb.client.model.Sorts
 import com.mongodb.client.model.UpdateOneModel
 import com.mongodb.client.model.UpdateOptions
 import com.mongodb.client.model.Updates
@@ -73,6 +74,17 @@ class AppArtistRepositoryAdapter(
             ),
           ),
         )
+        .toList()
+        .map { it.toDomain() }
+    }
+
+  override fun findRecentlySynced(offset: Int, limit: Int): List<AppArtist> =
+    mongoQueryMetrics.timed("app_artist.findRecentlySynced") {
+      appArtistDocumentRepository.mongoCollection()
+        .find()
+        .sort(Sorts.descending(LAST_SYNC_FIELD))
+        .skip(offset)
+        .limit(limit)
         .toList()
         .map { it.toDomain() }
     }
