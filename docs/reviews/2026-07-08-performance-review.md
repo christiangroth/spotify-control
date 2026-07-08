@@ -85,6 +85,24 @@ At current traffic this is invisible. As concurrent dashboard/SSE usage grows, i
 
 **Action:** low priority; only worth batching into a single `$in`-based query if user count grows enough that per-cycle query volume itself becomes a concern (see Finding 4, which will bite first).
 
+### 10. `DomainMetrics` catalog gauges bypass the project's own caching pattern (Medium-High)
+
+The project has no `quarkus-cache` dependency anywhere in the Gradle build; every existing "cache" in the codebase is a hand-rolled `@Volatile` field refreshed by a `@Scheduled(every = "15s")` job (`OutboxPartitionStatsCache.kt:17-29`, `OutboxViewerTasksCache.kt:24-42`, `MongoCollectionMetrics.kt:25-45`). `MongoCollectionMetrics` spells out exactly why: *"stats are refreshed on a background schedule rather than during gauge evaluation, so a slow/blocking ... call can never delay the Prometheus scrape response itself (a scrape timeout drops the whole /q/metrics scrape, not just the affected gauges)"* (`MongoCollectionMetrics.kt:15-17`). This is precisely the bug [PR #714](https://github.com/christiangroth/spotify-control/pull/714) fixed for outbox/Mongo metrics.
+
+`DomainMetrics` (`domain-impl/.../infra/DomainMetrics.kt:32-42`) does not follow that pattern — its `app.catalog.artists`/`app.catalog.tracks`/`app.catalog.albums` gauges call `appArtistRepository.countAll()`, `appTrackRepository.countAll()`, `appAlbumRepository.countAll()` directly inside the `Gauge.builder { ... }` lambda, so all three run against MongoDB synchronously on every single Prometheus scrape, with no cache in between.
+
+At today's catalog size this is cheap, but it's the same class of issue that already caused scrape timeouts once (per #714) — it just wasn't caught here because `DomainMetrics` was written separately from `MongoCollectionMetrics`/`OutboxPartitionStatsCache`. As the catalog grows (Finding 2), these `countAll()` calls get more expensive at the exact same rate the collection scans in Finding 2 do.
+
+**Action:** move these three gauges onto the same `@Volatile` + `@Scheduled` cache pattern as `MongoCollectionMetrics`, or introduce the `quarkus-cache` extension (`@CacheResult` with a short TTL) as a reusable alternative so future gauges/hot reads don't each need a hand-rolled cache class.
+
+### 11. `CatalogBrowserService.getCatalogStats()` recomputed on every `/dashboard` and `/catalog` page load (Medium)
+
+`getCatalogStats()` (`CatalogBrowserService.kt:36-45`) issues three uncached `countAll()` calls. It is invoked on every `/dashboard` request via `DashboardService.getStats` (`DashboardService.kt:63, 78`) *and* on every `/catalog` request via `CatalogResource.catalog` (`CatalogResource.kt:41`) — both are pages a logged-in user is likely to land on repeatedly per session. `DashboardService.getStats` also runs `playlistCheckRepository.countAll()`/`countSucceeded()` (`DashboardService.kt:144-145`) on the same request, with the same "recomputed every page view, never cached" characteristic.
+
+Unlike Finding 10, these aren't triggered by an external scrape interval, so the request volume scales with page views rather than a fixed 15s cadence — at low user counts this is negligible, but it's counted queries that don't need to be fresher than "last catalog sync", which runs at most a few times a day (`ArtistCatalogSyncJob.kt:19-22`).
+
+**Action:** apply the same short-TTL in-memory cache to `getCatalogStats()` (and, if convenient, `playlistCheckRepository.countAll()`/`countSucceeded()`) rather than recomputing on every page load — a 15-30s cache is more than fresh enough for counts that only change on catalog sync.
+
 ## Action Items (prioritized)
 
 | # | Action | Severity | Effort |
@@ -98,16 +116,20 @@ At current traffic this is invisible. As concurrent dashboard/SSE usage grows, i
 | 7 | Simplify `runBlocking`/`Dispatchers.IO` usage in `DashboardService` and `PlaylistCheckService` to plain sequential calls or Quarkus's managed executor | Low-Medium | Small |
 | 8 | Remove/bound unpaginated `findAll()` catalog ports once Finding 2 is fixed | Low | Small |
 | 9 | Batch per-user `currently_playing` reload into a single multi-user query, if/when user count grows significantly | Low | Medium |
+| 10 | Cache `DomainMetrics` catalog gauges the same way `MongoCollectionMetrics` does, so Prometheus scrapes never hit MongoDB directly | Medium-High | Small |
+| 11 | Cache `CatalogBrowserService.getCatalogStats()` (and playlist check counts) with a short TTL instead of recomputing on every `/dashboard`/`/catalog` load | Medium | Small |
 
 ## Multi-user scalability — what breaks first
 
 Ranked by how soon each mechanism is expected to become a visible problem as the user base grows from 1-2 to 20-50 users:
 
 1. **Catalog search (Finding 2)** — grows with total catalog size, hit on every keystroke; most likely to be the first user-visible slowdown.
-2. **`to-spotify-playback` partition throughput (Finding 4)** — if single-worker-per-partition, degrades silently (staler data, no errors) as user count rises.
-3. **`spotify_playlist` unindexed scan (Finding 1)** — grows with total playlists × tracks across all users, hit on every settings page load.
-4. **Single-user catalog-sync shortcut (Finding 3)** — not a throughput issue, but a robustness gap that becomes more likely to trigger as more users (and more chances of one stale token) are added.
-5. **Per-user `currently_playing` reload (Finding 9)** — scales linearly with user count, but stays small in absolute terms until user count is quite large.
+2. **`DomainMetrics` uncached catalog gauges (Finding 10)** — same failure mode (Prometheus scrape timeout) that already happened once for other metrics before #714 fixed it; grows in lockstep with Finding 2's catalog size.
+3. **`to-spotify-playback` partition throughput (Finding 4)** — if single-worker-per-partition, degrades silently (staler data, no errors) as user count rises.
+4. **`spotify_playlist` unindexed scan (Finding 1)** — grows with total playlists × tracks across all users, hit on every settings page load.
+5. **Single-user catalog-sync shortcut (Finding 3)** — not a throughput issue, but a robustness gap that becomes more likely to trigger as more users (and more chances of one stale token) are added.
+6. **Uncached `getCatalogStats()` on `/dashboard`/`/catalog` (Finding 11)** — scales with page-view frequency, not data size; low absolute cost per call but adds up with more concurrent users.
+7. **Per-user `currently_playing` reload (Finding 9)** — scales linearly with user count, but stays small in absolute terms until user count is quite large.
 
 By contrast, `appendPlaybackData`'s incremental design and the precomputed aggregation pipeline are already built to scale with new data rather than total history, and should not need changes as either history or user count grows.
 
