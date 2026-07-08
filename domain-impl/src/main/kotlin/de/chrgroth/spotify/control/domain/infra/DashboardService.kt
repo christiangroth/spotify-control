@@ -8,6 +8,7 @@ import de.chrgroth.spotify.control.domain.model.catalog.AppTrack
 import de.chrgroth.spotify.control.domain.model.catalog.displayArtistName
 import de.chrgroth.spotify.control.domain.model.playback.ListeningStats
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationPeriodType
+import de.chrgroth.spotify.control.domain.model.playback.aggregation.PlaybackAggregation
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistCheckStats
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.playback.RecentlyPlayedItem
@@ -55,13 +56,16 @@ class DashboardService(
 
   override fun getStats(userId: UserId): DashboardStats {
     return runBlocking {
-      val playbackStatsAsync = async(Dispatchers.IO) { computePlaybackStats(userId) }
+      val dailyAggsAsync = async(Dispatchers.IO) { fetchDailyAggregations(userId) }
+      val totalPlaybackEventsAsync = async(Dispatchers.IO) { aggregationRepository.sumEventCountByUser(userId) }
       val playlistMetadataAsync = async(Dispatchers.IO) { computePlaylistMetadata(userId) }
       val playlistCheckStatsAsync = async(Dispatchers.IO) { computePlaylistCheckStats() }
       val recentlyPlayedAsync = async(Dispatchers.IO) { buildRecentlyPlayedTracks(userId) }
-      val listeningStatsAsync = async(Dispatchers.IO) { buildListeningStats(userId) }
       val catalogStatsAsync = async(Dispatchers.IO) { catalogBrowser.getCatalogStats() }
-      val playbackStats = playbackStatsAsync.await()
+
+      val dailyAggs = dailyAggsAsync.await()
+      val listeningStatsAsync = async(Dispatchers.IO) { buildListeningStats(dailyAggs) }
+      val playbackStats = buildPlaybackStats(dailyAggs, totalPlaybackEventsAsync.await())
       val playlistMetadata = playlistMetadataAsync.await()
       DashboardStats(
         syncedPlaylists = playlistMetadata.syncedPlaylists,
@@ -77,7 +81,8 @@ class DashboardService(
     }
   }
 
-  override fun getPlaybackStats(userId: UserId): DashboardStats = computePlaybackStats(userId)
+  override fun getPlaybackStats(userId: UserId): DashboardStats =
+    buildPlaybackStats(fetchDailyAggregations(userId), aggregationRepository.sumEventCountByUser(userId))
 
   override fun getPlaylistMetadata(userId: UserId): DashboardStats = computePlaylistMetadata(userId)
 
@@ -85,7 +90,7 @@ class DashboardService(
     DashboardStats.EMPTY.copy(recentlyPlayedTracks = runBlocking { buildRecentlyPlayedTracks(userId) })
 
   override fun getListeningStats(userId: UserId): DashboardStats =
-    DashboardStats.EMPTY.copy(listeningStats = runBlocking { buildListeningStats(userId) })
+    DashboardStats.EMPTY.copy(listeningStats = runBlocking { buildListeningStats(fetchDailyAggregations(userId)) })
 
   override fun getPlaylistCheckStats(): DashboardStats =
     DashboardStats.EMPTY.copy(playlistCheckStats = runBlocking { computePlaylistCheckStats() })
@@ -93,14 +98,21 @@ class DashboardService(
   override fun getCatalogStats(): DashboardStats =
     DashboardStats.EMPTY.copy(catalogStats = catalogBrowser.getCatalogStats())
 
-  private fun computePlaybackStats(userId: UserId): DashboardStats {
+  private fun statsDateRange(): Pair<LocalDate, LocalDate> {
     val today = Clock.System.now().toLocalDateTime(TimeZone.UTC).date
-    val from = today - DatePeriod(days = STATS_DAYS - 1)
-    val dailyEventCounts = aggregationRepository.countEventsByUserTypeAndPeriodRange(userId, AggregationPeriodType.DAY, from, today)
-    val total = aggregationRepository.sumEventCountByUser(userId)
-    val last30Days = dailyEventCounts.sumOf { it.eventCount }
+    return (today - DatePeriod(days = STATS_DAYS - 1)) to today
+  }
 
-    val countByDate = dailyEventCounts.associate { it.periodStart to it.eventCount }
+  private fun fetchDailyAggregations(userId: UserId): List<PlaybackAggregation> {
+    val (from, to) = statsDateRange()
+    return aggregationRepository.findByUserTypeAndPeriodRange(userId, AggregationPeriodType.DAY, from, to)
+  }
+
+  private fun buildPlaybackStats(dailyAggs: List<PlaybackAggregation>, total: Long): DashboardStats {
+    val (_, today) = statsDateRange()
+    val last30Days = dailyAggs.sumOf { it.eventCount }
+
+    val countByDate = dailyAggs.associate { it.periodStart to it.eventCount }
     val allDays = ((STATS_DAYS - 1) downTo 0).map { today - DatePeriod(days = it) }
     val maxCount = countByDate.values.maxOrNull() ?: 1L
     val perDay = allDays.map { date ->
@@ -173,11 +185,7 @@ class DashboardService(
     }
   }
 
-  private suspend fun buildListeningStats(userId: UserId): ListeningStats {
-    val today = Clock.System.now().toLocalDateTime(TimeZone.UTC).date
-    val from = today - DatePeriod(days = STATS_DAYS - 1)
-    val dailyAggs = aggregationRepository.findByUserTypeAndPeriodRange(userId, AggregationPeriodType.DAY, from, today)
-
+  private suspend fun buildListeningStats(dailyAggs: List<PlaybackAggregation>): ListeningStats {
     val secondsByTrackId = dailyAggs.flatMap { it.trackEntries }
       .groupBy { it.id }
       .mapValues { (_, entries) -> entries.sumOf { it.totalSeconds } }
@@ -186,17 +194,21 @@ class DashboardService(
       .mapValues { (_, entries) -> entries.sumOf { it.totalSeconds } }
     val listenedMinutes = dailyAggs.sumOf { it.totalPlaybackSeconds } / SECONDS_PER_MINUTE
 
+    // resolving the album for every track played in the period is unavoidable (needed for per-album totals below),
+    // but full track details (title, artists, duration, ...) are only ever displayed for the top-N tracks
     val allTrackIds = secondsByTrackId.keys.map { TrackId(it) }.toSet()
-    val statsTrackMap = appTrackRepository.findByTrackIds(allTrackIds).associateBy { it.id.value }
+    val albumIdsByTrackId = appTrackRepository.findAlbumIdsByTrackIds(allTrackIds)
+    val topTrackIds = secondsByTrackId.entries.sortedByDescending { it.value }.take(topEntriesLimit).map { TrackId(it.key) }.toSet()
+    val statsTrackMap = appTrackRepository.findByTrackIds(topTrackIds).associateBy { it.id.value }
 
     val secondsByAlbumId = mutableMapOf<String, Long>()
     secondsByTrackId.forEach { (trackId, seconds) ->
-      val albumId = statsTrackMap[trackId]?.albumId?.value ?: return@forEach
+      val albumId = albumIdsByTrackId[TrackId(trackId)]?.value ?: return@forEach
       secondsByAlbumId[albumId] = (secondsByAlbumId[albumId] ?: 0L) + seconds
     }
 
     // only the tracks/albums/artists that actually end up in the top-N lists below need their catalog details resolved
-    val topTrackDetails = secondsByTrackId.entries.sortedByDescending { it.value }.take(topEntriesLimit).mapNotNull { statsTrackMap[it.key] }
+    val topTrackDetails = topTrackIds.mapNotNull { statsTrackMap[it.value] }
     val topAlbumIds = secondsByAlbumId.entries.sortedByDescending { it.value }.take(topEntriesLimit).map { it.key }
     val topArtistIds = secondsByArtistId.entries.sortedByDescending { it.value }.take(topEntriesLimit).map { it.key }
     val neededAlbumIds = (topTrackDetails.mapNotNull { it.albumId } + topAlbumIds.map { AlbumId(it) }).toSet()

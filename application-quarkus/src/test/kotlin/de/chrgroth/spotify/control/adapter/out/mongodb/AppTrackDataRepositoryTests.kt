@@ -120,6 +120,30 @@ class AppTrackDataRepositoryTests {
   }
 
   @Test
+  fun `findAlbumIdsByTrackIds returns album id per track`() {
+    val withAlbum = trackData("album-lookup").copy(albumId = AlbumId("album-lookup"))
+    val withoutAlbum = trackData("no-album-lookup")
+    appTrackRepository.upsertAll(listOf(withAlbum, withoutAlbum))
+
+    val result = appTrackRepository.findAlbumIdsByTrackIds(setOf(withAlbum.id, withoutAlbum.id))
+
+    assertThat(result).containsEntry(withAlbum.id, AlbumId("album-lookup"))
+    assertThat(result).containsEntry(withoutAlbum.id, null)
+  }
+
+  @Test
+  fun `findAlbumIdsByTrackIds returns empty map for unknown trackIds`() {
+    val result = appTrackRepository.findAlbumIdsByTrackIds(setOf(TrackId("unknown-track-id-${UUID.randomUUID()}")))
+    assertThat(result).isEmpty()
+  }
+
+  @Test
+  fun `findAlbumIdsByTrackIds returns empty map for empty input`() {
+    val result = appTrackRepository.findAlbumIdsByTrackIds(emptySet())
+    assertThat(result).isEmpty()
+  }
+
+  @Test
   fun `findByArtistId returns tracks for the given artist`() {
     val artistId = ArtistId("artist-find-${UUID.randomUUID()}")
     val track1 = trackData("t1").copy(artistId = artistId)

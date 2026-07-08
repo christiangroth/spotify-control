@@ -4,7 +4,6 @@ import com.mongodb.client.model.Filters
 import com.mongodb.client.model.Projections
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.ActivityEntry
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.ActivityTimeWindow
-import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationEventCount
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationPeriodType
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationRankEntry
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.PlaybackAggregation
@@ -43,17 +42,6 @@ class PlaybackAggregationRepositoryAdapter(
 
   override fun findByUserTypeAndPeriodRange(userId: UserId, type: AggregationPeriodType, from: LocalDate, to: LocalDate): List<PlaybackAggregation> =
     mongoQueryMetrics.timed("app_playback_aggregation.findByUserTypeAndPeriodRange") {
-      repository.list(
-        "$SPOTIFY_USER_ID_FIELD = ?1 and $TYPE_FIELD = ?2 and $PERIOD_START_FIELD >= ?3 and $PERIOD_START_FIELD <= ?4",
-        userId.value,
-        type.name,
-        from.toString(),
-        to.toString(),
-      ).map { it.toDomain() }
-    }
-
-  override fun countEventsByUserTypeAndPeriodRange(userId: UserId, type: AggregationPeriodType, from: LocalDate, to: LocalDate): List<AggregationEventCount> =
-    mongoQueryMetrics.timed("app_playback_aggregation.countEventsByUserTypeAndPeriodRange") {
       repository.mongoCollection()
         .find(
           Filters.and(
@@ -63,9 +51,8 @@ class PlaybackAggregationRepositoryAdapter(
             Filters.lte(PERIOD_START_FIELD, to.toString()),
           ),
         )
-        .projection(Projections.include(PERIOD_START_FIELD, EVENT_COUNT_FIELD))
         .toList()
-        .map { AggregationEventCount(periodStart = LocalDate.parse(it.periodStart), eventCount = it.eventCount) }
+        .map { it.toDomain() }
     }
 
   override fun sumEventCountByUser(userId: UserId): Long =
