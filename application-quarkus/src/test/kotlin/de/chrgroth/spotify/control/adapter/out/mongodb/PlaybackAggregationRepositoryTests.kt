@@ -1,6 +1,7 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationPeriodType
+import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationRankEntry
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.PlaybackAggregation
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.playback.PlaybackAggregationRepositoryPort
@@ -26,9 +27,9 @@ class PlaybackAggregationRepositoryTests {
     distinctArtistCount = 0,
     distinctTrackCount = 0,
     distinctAlbumCount = 0,
-    artistEntries = emptyList(),
-    albumEntries = emptyList(),
-    trackEntries = emptyList(),
+    artistEntries = listOf(AggregationRankEntry(id = "artist-1", name = "Artist One", totalSeconds = eventCount * SECONDS_PER_EVENT)),
+    albumEntries = listOf(AggregationRankEntry(id = "album-1", name = "Album One", totalSeconds = eventCount * SECONDS_PER_EVENT)),
+    trackEntries = listOf(AggregationRankEntry(id = "track-1", name = "Track One", totalSeconds = eventCount * SECONDS_PER_EVENT)),
     activityEntries = emptyList(),
   )
 
@@ -69,6 +70,44 @@ class PlaybackAggregationRepositoryTests {
   fun `findByUserTypeAndPeriodRange returns empty list when nothing matches`() {
     val result = aggregationRepository.findByUserTypeAndPeriodRange(
       UserId("user-${UUID.randomUUID()}"), AggregationPeriodType.DAY, LocalDate(2024, 1, 1), LocalDate(2024, 1, 31),
+    )
+    assertThat(result).isEmpty()
+  }
+
+  @Test
+  fun `findDailySummaryByUserAndPeriodRange returns only DAY aggregations within range for the given user`() {
+    val userId = UserId("user-${UUID.randomUUID()}")
+    val otherUserId = UserId("user-${UUID.randomUUID()}")
+    aggregationRepository.save(aggregation(userId, AggregationPeriodType.DAY, LocalDate(2024, 1, 10)))
+    aggregationRepository.save(aggregation(userId, AggregationPeriodType.DAY, LocalDate(2024, 1, 15)))
+    aggregationRepository.save(aggregation(userId, AggregationPeriodType.DAY, LocalDate(2024, 2, 1)))
+    aggregationRepository.save(aggregation(userId, AggregationPeriodType.WEEK, LocalDate(2024, 1, 15)))
+    aggregationRepository.save(aggregation(otherUserId, AggregationPeriodType.DAY, LocalDate(2024, 1, 15)))
+
+    val result = aggregationRepository.findDailySummaryByUserAndPeriodRange(userId, LocalDate(2024, 1, 1), LocalDate(2024, 1, 31))
+
+    assertThat(result.map { it.periodStart }).containsExactlyInAnyOrder(LocalDate(2024, 1, 10), LocalDate(2024, 1, 15))
+  }
+
+  @Test
+  fun `findDailySummaryByUserAndPeriodRange maps event count, playback seconds, track and artist entries`() {
+    val userId = UserId("user-${UUID.randomUUID()}")
+    aggregationRepository.save(aggregation(userId, AggregationPeriodType.DAY, LocalDate(2024, 1, 10), eventCount = 5L))
+
+    val result = aggregationRepository.findDailySummaryByUserAndPeriodRange(userId, LocalDate(2024, 1, 1), LocalDate(2024, 1, 31))
+
+    assertThat(result).hasSize(1)
+    val summary = result.single()
+    assertThat(summary.eventCount).isEqualTo(5L)
+    assertThat(summary.totalPlaybackSeconds).isEqualTo(5L * SECONDS_PER_EVENT)
+    assertThat(summary.trackEntries).extracting("id").containsExactly("track-1")
+    assertThat(summary.artistEntries).extracting("id").containsExactly("artist-1")
+  }
+
+  @Test
+  fun `findDailySummaryByUserAndPeriodRange returns empty list when nothing matches`() {
+    val result = aggregationRepository.findDailySummaryByUserAndPeriodRange(
+      UserId("user-${UUID.randomUUID()}"), LocalDate(2024, 1, 1), LocalDate(2024, 1, 31),
     )
     assertThat(result).isEmpty()
   }

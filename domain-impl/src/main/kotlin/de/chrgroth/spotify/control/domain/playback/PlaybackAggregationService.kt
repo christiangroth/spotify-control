@@ -284,6 +284,10 @@ class PlaybackAggregationService(
       .groupBy { it.dayOfWeek to it.timeWindow }
       .map { (key, entries) -> ActivityEntry(dayOfWeek = key.first, timeWindow = key.second, totalSeconds = entries.sumOf { it.totalSeconds }) }
 
+    // WEEK/MONTH/QUARTER/YEAR aggregations are only ever read back as a single document for top-N display
+    // (StatsResource), never merged further, so only the top entries need to be persisted. Without this, merging
+    // a full year of daily entries can produce documents with one rank entry per distinct track/artist/album ever
+    // played in that period, which made a single findByUserAndPeriod lookup of such a document slow.
     val aggregation = PlaybackAggregation(
       userId = userId,
       type = type,
@@ -293,9 +297,9 @@ class PlaybackAggregationService(
       distinctArtistCount = mergedArtistEntries.size,
       distinctTrackCount = mergedTrackEntries.size,
       distinctAlbumCount = mergedAlbumEntries.size,
-      artistEntries = mergedArtistEntries,
-      albumEntries = mergedAlbumEntries,
-      trackEntries = mergedTrackEntries,
+      artistEntries = mergedArtistEntries.take(STORED_ENTRIES_LIMIT),
+      albumEntries = mergedAlbumEntries.take(STORED_ENTRIES_LIMIT),
+      trackEntries = mergedTrackEntries.take(STORED_ENTRIES_LIMIT),
       activityEntries = mergedActivityEntries,
     )
     aggregationRepository.save(aggregation)
@@ -361,6 +365,7 @@ class PlaybackAggregationService(
     private const val MONTHS_PER_QUARTER = 3L
     private const val MONTHS_PER_YEAR = 12L
     private const val MILLIS_PER_SECOND = 1_000L
+    private const val STORED_ENTRIES_LIMIT = 25
   }
 
   private data class Rankings(
