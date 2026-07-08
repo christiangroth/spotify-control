@@ -10,6 +10,7 @@ import de.chrgroth.spotify.control.domain.model.catalog.TrackId
 import de.chrgroth.spotify.control.domain.model.playback.CurrentlyPlayingItem
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.playback.CurrentlyPlayingRepositoryPort
+import io.quarkus.panache.common.Sort
 import jakarta.enterprise.context.ApplicationScoped
 import kotlin.time.toJavaInstant
 import kotlin.time.toKotlinInstant
@@ -42,9 +43,8 @@ class CurrentlyPlayingRepositoryAdapter(
   override fun findMostRecentByUserAndTrack(userId: UserId, trackId: TrackId): CurrentlyPlayingItem? =
     mongoQueryMetrics.timed("spotify_currently_playing.findMostRecentByUserAndTrack") {
       currentlyPlayingDocumentRepository
-        .find("spotifyUserId = ?1 and trackId = ?2", userId.value, trackId.value)
-        .list()
-        .maxByOrNull { it.observedAt }
+        .find("spotifyUserId = ?1 and trackId = ?2", Sort.by(OBSERVED_AT_FIELD).descending(), userId.value, trackId.value)
+        .firstResult()
         ?.let { doc ->
           CurrentlyPlayingItem(
             spotifyUserId = UserId(doc.spotifyUserId),

@@ -22,11 +22,8 @@ import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Timer
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.enterprise.inject.Instance
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.runBlocking
 import mu.KLogging
+import org.eclipse.microprofile.context.ManagedExecutor
 import java.util.concurrent.TimeUnit
 
 @ApplicationScoped
@@ -41,6 +38,7 @@ class PlaylistCheckService(
   private val spotifyAccessToken: SpotifyAccessTokenPort,
   private val outboxPort: OutboxPort,
   private val meterRegistry: MeterRegistry,
+  private val managedExecutor: ManagedExecutor,
 ) : PlaylistCheckPort {
 
   override fun handle(event: DomainOutboxEvent.RunPlaylistChecks): Either<DomainError, Unit> {
@@ -54,17 +52,15 @@ class PlaylistCheckService(
     val currentPlaylistInfo = allPlaylistInfos.find { it.spotifyPlaylistId == event.playlistId }
 
     val applicableRunners = checkRunners.filter { it.isApplicable(currentPlaylistInfo) }
-    val results = runBlocking {
-      applicableRunners
-        .map { runner ->
-          async(Dispatchers.IO) {
-            timedCheck(runner.checkId, event.playlistId) {
-              runner.run(event.userId, event.playlistId, playlist, currentPlaylistInfo, allPlaylistInfos)
-            }
+    val results = applicableRunners
+      .map { runner ->
+        managedExecutor.supplyAsync {
+          timedCheck(runner.checkId, event.playlistId) {
+            runner.run(event.userId, event.playlistId, playlist, currentPlaylistInfo, allPlaylistInfos)
           }
         }
-        .awaitAll()
-    }
+      }
+      .map { it.join() }
 
     results.forEach { check ->
       val previous = playlistCheckRepository.findByCheckId(check.checkId)
@@ -80,14 +76,14 @@ class PlaylistCheckService(
   }
 
   override fun getCheckDashboard(userId: UserId): PlaylistCheckDashboard {
-    val (displayName, playlistNameById, checks) = runBlocking {
-      val userAsync = async(Dispatchers.IO) { userRepository.findById(userId)?.displayName ?: userId.value }
-      val playlistNamesAsync = async(Dispatchers.IO) {
-        playlistRepository.findByUserId(userId).associateBy({ it.spotifyPlaylistId }, { it.name })
-      }
-      val checksAsync = async(Dispatchers.IO) { playlistCheckRepository.findAll() }
-      Triple(userAsync.await(), playlistNamesAsync.await(), checksAsync.await())
+    val displayNameFuture = managedExecutor.supplyAsync { userRepository.findById(userId)?.displayName ?: userId.value }
+    val playlistNamesFuture = managedExecutor.supplyAsync {
+      playlistRepository.findByUserId(userId).associateBy({ it.spotifyPlaylistId }, { it.name })
     }
+    val checksFuture = managedExecutor.supplyAsync { playlistCheckRepository.findAll() }
+    val displayName = displayNameFuture.join()
+    val playlistNameById = playlistNamesFuture.join()
+    val checks = checksFuture.join()
     return PlaylistCheckDashboard(
       displayName = displayName,
       checks = checks,

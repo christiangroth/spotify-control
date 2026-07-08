@@ -11,6 +11,7 @@ import de.chrgroth.spotify.control.domain.model.catalog.AppAlbum
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppAlbumRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
+import java.util.regex.Pattern
 import kotlin.time.toKotlinInstant
 
 
@@ -68,6 +69,15 @@ class AppAlbumRepositoryAdapter(
         .map { it.toDomain() }
     }
   }
+
+  override fun searchByTitle(filter: String, limit: Int): List<AppAlbum> =
+    mongoQueryMetrics.timed("app_album.searchByTitle") {
+      appAlbumDocumentRepository.mongoCollection()
+        .find(Filters.regex(TITLE_FIELD, Pattern.quote(filter), "i"))
+        .limit(limit)
+        .toList()
+        .map { it.toDomain() }
+    }
 
   override fun findByArtistId(artistId: ArtistId): List<AppAlbum> =
     mongoQueryMetrics.timed("app_album.findByArtistId") {

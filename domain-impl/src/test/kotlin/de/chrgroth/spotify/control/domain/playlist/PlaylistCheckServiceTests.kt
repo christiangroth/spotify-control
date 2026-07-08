@@ -30,7 +30,10 @@ import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.verify
 import jakarta.enterprise.inject.Instance
+import java.util.concurrent.CompletableFuture
+import java.util.function.Supplier
 import org.assertj.core.api.Assertions.assertThat
+import org.eclipse.microprofile.context.ManagedExecutor
 import org.junit.jupiter.api.Test
 import kotlin.time.Clock
 
@@ -46,6 +49,11 @@ class PlaylistCheckServiceTests {
   private val spotifyAccessToken: SpotifyAccessTokenPort = mockk()
   private val outboxPort: OutboxPort = mockk()
   private val meterRegistry = SimpleMeterRegistry()
+  private val managedExecutor: ManagedExecutor = mockk {
+    every { supplyAsync(any<Supplier<Any>>()) } answers {
+      CompletableFuture.completedFuture(firstArg<Supplier<Any>>().get())
+    }
+  }
 
   private val adapter = PlaylistCheckService(
     checkRunners,
@@ -57,6 +65,7 @@ class PlaylistCheckServiceTests {
     spotifyAccessToken,
     outboxPort,
     meterRegistry,
+    managedExecutor,
   )
 
   private val userId = UserId("user-1")

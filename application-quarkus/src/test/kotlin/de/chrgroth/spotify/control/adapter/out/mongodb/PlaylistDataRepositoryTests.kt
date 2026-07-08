@@ -126,6 +126,35 @@ class PlaylistDataRepositoryTests {
   }
 
   @Test
+  fun `findTrackCountsByUserId returns track count per playlist for the given user`() {
+    val userId = UserId("test-${UUID.randomUUID()}")
+    val otherUserId = UserId("test-${UUID.randomUUID()}")
+    playlistRepository.save(
+      userId,
+      Playlist(
+        spotifyPlaylistId = "playlist-1",
+        tracks = listOf(
+          PlaylistTrack(trackId = TrackId("t1"), artistIds = listOf(ArtistId("a1")), albumId = AlbumId("al1")),
+          PlaylistTrack(trackId = TrackId("t2"), artistIds = listOf(ArtistId("a2")), albumId = AlbumId("al2")),
+        ),
+      ),
+    )
+    playlistRepository.save(userId, buildPlaylist("playlist-2"))
+    playlistRepository.save(otherUserId, buildPlaylist("playlist-3"))
+
+    val result = playlistRepository.findTrackCountsByUserId(userId)
+
+    assertThat(result).containsExactlyInAnyOrderEntriesOf(mapOf("playlist-1" to 2, "playlist-2" to 1))
+  }
+
+  @Test
+  fun `findTrackCountsByUserId returns empty map when user has no playlists`() {
+    val userId = UserId("no-playlists-${UUID.randomUUID()}")
+
+    assertThat(playlistRepository.findTrackCountsByUserId(userId)).isEmpty()
+  }
+
+  @Test
   fun `save does not affect playlists of other users`() {
     val userId1 = UserId("test-${UUID.randomUUID()}")
     val userId2 = UserId("test-${UUID.randomUUID()}")

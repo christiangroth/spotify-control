@@ -41,6 +41,21 @@ class PlaybackAggregationRepositoryAdapter(
     }
   }
 
+  override fun findByUserAndPeriods(
+    userId: UserId,
+    periods: List<Pair<AggregationPeriodType, LocalDate>>,
+  ): Map<Pair<AggregationPeriodType, LocalDate>, PlaybackAggregation> {
+    if (periods.isEmpty()) return emptyMap()
+    val keyByDocumentId = periods.associateBy { documentId(userId, it.first, it.second) }
+    return mongoQueryMetrics.timed("app_playback_aggregation.findByUserAndPeriods") {
+      repository.mongoCollection()
+        .find(Filters.`in`("_id", keyByDocumentId.keys.toList()))
+        .toList()
+        .mapNotNull { doc -> keyByDocumentId[doc.id]?.let { key -> key to doc.toDomain() } }
+        .toMap()
+    }
+  }
+
   override fun findByUserTypeAndPeriodRange(userId: UserId, type: AggregationPeriodType, from: LocalDate, to: LocalDate): List<PlaybackAggregation> =
     mongoQueryMetrics.timed("app_playback_aggregation.findByUserTypeAndPeriodRange") {
       repository.mongoCollection()

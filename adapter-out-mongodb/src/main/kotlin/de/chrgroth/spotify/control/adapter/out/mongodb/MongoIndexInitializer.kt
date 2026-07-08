@@ -19,6 +19,7 @@ class MongoIndexInitializer(
   private val appAlbumDocumentRepository: AppAlbumDocumentRepository,
   private val appTrackDocumentRepository: AppTrackDocumentRepository,
   private val playlistMetadataDocumentRepository: PlaylistMetadataDocumentRepository,
+  private val playlistDocumentRepository: PlaylistDocumentRepository,
   private val appPlaylistCheckDocumentRepository: AppPlaylistCheckDocumentRepository,
 ) {
 
@@ -100,6 +101,10 @@ class MongoIndexInitializer(
   }
 
   private fun ensurePlaylistCollectionIndexes() {
+    playlistDocumentRepository.mongoCollection().createIndex(
+      Document(AppPlaybackRepositoryAdapter.SPOTIFY_USER_ID_FIELD, 1),
+      IndexOptions().name("spotify_playlist_spotifyUserId_1"),
+    )
     playlistMetadataDocumentRepository.mongoCollection().createIndex(
       Document(AppPlaybackRepositoryAdapter.SPOTIFY_USER_ID_FIELD, 1),
       IndexOptions().name("spotify_playlist_metadata_spotifyUserId_1"),

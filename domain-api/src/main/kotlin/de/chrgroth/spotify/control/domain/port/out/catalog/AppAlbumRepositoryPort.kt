@@ -8,6 +8,7 @@ interface AppAlbumRepositoryPort {
   fun upsertAll(items: List<AppAlbum>)
   fun countAll(): Long
   fun findAll(): List<AppAlbum>
+  fun searchByTitle(filter: String, limit: Int): List<AppAlbum>
   fun findByAlbumIds(albumIds: Set<AlbumId>): List<AppAlbum>
   fun findByArtistId(artistId: ArtistId): List<AppAlbum>
   fun findByArtistIds(artistIds: Set<ArtistId>): List<AppAlbum>

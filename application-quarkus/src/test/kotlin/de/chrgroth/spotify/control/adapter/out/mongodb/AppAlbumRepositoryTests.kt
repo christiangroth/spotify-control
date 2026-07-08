@@ -147,6 +147,37 @@ class AppAlbumRepositoryTests {
   }
 
   @Test
+  fun `searchByTitle matches case-insensitively by substring`() {
+    val suffix = UUID.randomUUID().toString()
+    appAlbumRepository.upsertAll(listOf(album("search-$suffix").copy(title = "The Search Album $suffix")))
+
+    val result = appAlbumRepository.searchByTitle("search album $suffix".uppercase(), 10)
+
+    assertThat(result.map { it.title }).containsExactly("The Search Album $suffix")
+  }
+
+  @Test
+  fun `searchByTitle returns empty list when nothing matches`() {
+    val result = appAlbumRepository.searchByTitle("no-such-album-${UUID.randomUUID()}", 10)
+    assertThat(result).isEmpty()
+  }
+
+  @Test
+  fun `searchByTitle honors limit`() {
+    val suffix = UUID.randomUUID().toString()
+    appAlbumRepository.upsertAll(
+      listOf(
+        album("limit1-$suffix").copy(title = "Limit Album One $suffix"),
+        album("limit2-$suffix").copy(title = "Limit Album Two $suffix"),
+      ),
+    )
+
+    val result = appAlbumRepository.searchByTitle("Limit Album", 1)
+
+    assertThat(result).hasSize(1)
+  }
+
+  @Test
   fun `countAll returns total number of albums`() {
     val before = appAlbumRepository.countAll()
     val album1 = album("count1")

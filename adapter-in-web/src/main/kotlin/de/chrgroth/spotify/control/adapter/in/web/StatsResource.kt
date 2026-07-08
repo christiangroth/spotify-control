@@ -46,11 +46,11 @@ class StatsResource(
   @Produces(MediaType.TEXT_HTML)
   fun stats(): TemplateInstance {
     val userId = UserId(securityIdentity.principal.name)
+    val periodStartsByType = AggregationPeriodType.entries.associateWith { threePeriodStarts(it) }
+    val requestedPeriods = periodStartsByType.flatMap { (type, periodStarts) -> periodStarts.map { type to it } }
+    val aggregationsByTypeAndPeriod = aggregationRepository.findByUserAndPeriods(userId, requestedPeriods)
     val tabs = AggregationPeriodType.entries.mapIndexed { index, type ->
-      val periodStarts = threePeriodStarts(type)
-      val aggregationsByStart = periodStarts.associateWith { periodStart ->
-        aggregationRepository.findByUserAndPeriod(userId, type, periodStart)
-      }
+      val periodStarts = periodStartsByType.getValue(type)
       AggregationTab(
         id = type.name.lowercase(),
         label = tabLabel(type),
@@ -59,7 +59,7 @@ class StatsResource(
           AggregationView(
             periodLabel = periodLabel(periodIndex, periodStart),
             periodStart = periodStart.toString(),
-            data = aggregationsByStart[periodStart],
+            data = aggregationsByTypeAndPeriod[type to periodStart],
           )
         },
       )

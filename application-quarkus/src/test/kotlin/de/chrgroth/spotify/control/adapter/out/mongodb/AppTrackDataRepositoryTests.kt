@@ -166,6 +166,26 @@ class AppTrackDataRepositoryTests {
   }
 
   @Test
+  fun `findByArtistIds returns tracks for all given artists in a single batch`() {
+    val artistId1 = ArtistId("artist-bulk1-${UUID.randomUUID()}")
+    val artistId2 = ArtistId("artist-bulk2-${UUID.randomUUID()}")
+    val track1 = trackData("bulk1").copy(artistId = artistId1)
+    val track2 = trackData("bulk2").copy(artistId = artistId2)
+    val other = trackData("bulk-other").copy(artistId = ArtistId("other-artist-${UUID.randomUUID()}"))
+    appTrackRepository.upsertAll(listOf(track1, track2, other))
+
+    val result = appTrackRepository.findByArtistIds(setOf(artistId1, artistId2))
+
+    assertThat(result.map { it.id }).containsExactlyInAnyOrder(track1.id, track2.id)
+  }
+
+  @Test
+  fun `findByArtistIds returns empty list for empty input`() {
+    val result = appTrackRepository.findByArtistIds(emptySet())
+    assertThat(result).isEmpty()
+  }
+
+  @Test
   fun `findByAlbumId returns tracks for the given album`() {
     val albumId = AlbumId("album-find-${UUID.randomUUID()}")
     val track1 = trackData("ta1").copy(albumId = albumId)
@@ -184,6 +204,26 @@ class AppTrackDataRepositoryTests {
 
     val result = appTrackRepository.findByAlbumId(albumId)
 
+    assertThat(result).isEmpty()
+  }
+
+  @Test
+  fun `findByAlbumIds returns tracks for all given albums in a single batch`() {
+    val albumId1 = AlbumId("album-bulk1-${UUID.randomUUID()}")
+    val albumId2 = AlbumId("album-bulk2-${UUID.randomUUID()}")
+    val track1 = trackData("albumbulk1").copy(albumId = albumId1)
+    val track2 = trackData("albumbulk2").copy(albumId = albumId2)
+    val other = trackData("albumbulk-other").copy(albumId = AlbumId("other-album-${UUID.randomUUID()}"))
+    appTrackRepository.upsertAll(listOf(track1, track2, other))
+
+    val result = appTrackRepository.findByAlbumIds(setOf(albumId1, albumId2))
+
+    assertThat(result.map { it.id }).containsExactlyInAnyOrder(track1.id, track2.id)
+  }
+
+  @Test
+  fun `findByAlbumIds returns empty list for empty input`() {
+    val result = appTrackRepository.findByAlbumIds(emptySet())
     assertThat(result).isEmpty()
   }
 
