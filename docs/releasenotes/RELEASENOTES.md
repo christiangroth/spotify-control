@@ -1,3 +1,17 @@
+# 0.107.0 (2026.07.08)
+
+## New Features
+* Added a "Catalog Sync" page under the Tools menu showing a timeline of the artists and albums most recently synced from Spotify, newest first, with a "load more" button to page through older entries.
+
+## Bugfixes / Chore
+* Sped up the dashboard by trimming the data fetched for the last-30-days playback stats and adding a missing MongoDB index, cutting the two slowest queries behind the "Slow MongoDB query" warnings.
+* Fixed slow `outbox.partition.findAll` queries by having the health page and its live-updating widgets share the same cached outbox partition stats used for metrics, instead of each triggering its own query.
+* Fixed slow Stats page loading by capping the number of top tracks/artists/albums stored per week/month/quarter/year aggregation, instead of persisting one entry per distinct item ever played in that period.
+
+
+
+---
+
 # 0.106.13 (2026.07.08)
 
 ## Bugfixes / Chore
