@@ -136,18 +136,47 @@ class PlaybackAggregationServiceTests {
     verify(exactly = 1) { aggregationRepository.findByUserTypeAndPeriodRange(userId, AggregationPeriodType.DAY, weekStart, LocalDate(2024, 1, 21)) }
   }
 
-  private fun dayAggregation(periodStart: LocalDate, albumEntries: List<AggregationRankEntry>) = PlaybackAggregation(
+  @Test
+  fun `aggregate week persists only top entries but keeps full distinct counts`() {
+    val weekStart = LocalDate(2024, 1, 15)
+    val savedAggregation = slot<PlaybackAggregation>()
+    every { aggregationRepository.save(capture(savedAggregation)) } returns Unit
+    val manyTrackEntries = (1..STORED_ENTRIES_LIMIT_PLUS_MARGIN).map { AggregationRankEntry(id = "track-$it", name = "Track $it", totalSeconds = it.toLong()) }
+    every {
+      aggregationRepository.findByUserTypeAndPeriodRange(userId, AggregationPeriodType.DAY, weekStart, LocalDate(2024, 1, 21))
+    } returns listOf(dayAggregation(weekStart, trackEntries = manyTrackEntries))
+
+    val result = service.handle(DomainOutboxEvent.AggregatePlaybackData(userId, AggregationPeriodType.WEEK, weekStart))
+
+    assertThat(result.isRight()).isTrue()
+    assertThat(savedAggregation.captured.distinctTrackCount).isEqualTo(STORED_ENTRIES_LIMIT_PLUS_MARGIN)
+    assertThat(savedAggregation.captured.trackEntries).hasSize(STORED_ENTRIES_LIMIT)
+    assertThat(savedAggregation.captured.trackEntries.map { it.id }).containsExactly(
+      *manyTrackEntries.sortedByDescending { it.totalSeconds }.take(STORED_ENTRIES_LIMIT).map { it.id }.toTypedArray(),
+    )
+  }
+
+  private fun dayAggregation(
+    periodStart: LocalDate,
+    albumEntries: List<AggregationRankEntry> = emptyList(),
+    trackEntries: List<AggregationRankEntry> = emptyList(),
+  ) = PlaybackAggregation(
     userId = userId,
     type = AggregationPeriodType.DAY,
     periodStart = periodStart,
-    totalPlaybackSeconds = albumEntries.sumOf { it.totalSeconds },
-    eventCount = albumEntries.size.toLong(),
+    totalPlaybackSeconds = albumEntries.sumOf { it.totalSeconds } + trackEntries.sumOf { it.totalSeconds },
+    eventCount = (albumEntries.size + trackEntries.size).toLong(),
     distinctArtistCount = 0,
-    distinctTrackCount = 0,
+    distinctTrackCount = trackEntries.size,
     distinctAlbumCount = albumEntries.size,
     artistEntries = emptyList(),
     albumEntries = albumEntries,
-    trackEntries = emptyList(),
+    trackEntries = trackEntries,
     activityEntries = emptyList(),
   )
+
+  private companion object {
+    private const val STORED_ENTRIES_LIMIT = 25
+    private const val STORED_ENTRIES_LIMIT_PLUS_MARGIN = STORED_ENTRIES_LIMIT + 5
+  }
 }
