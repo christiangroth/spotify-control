@@ -6,7 +6,6 @@ import de.chrgroth.spotify.control.domain.port.`in`.infra.HealthPort
 import de.chrgroth.spotify.control.domain.port.out.infra.ConfigurationInfoPort
 import de.chrgroth.spotify.control.domain.port.out.infra.CronjobInfoPort
 import de.chrgroth.spotify.control.domain.port.out.infra.MongoStatsPort
-import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.infra.OutgoingRequestStatsPort
 import de.chrgroth.spotify.control.domain.port.out.playback.PlaybackActivityPort
 import jakarta.enterprise.context.ApplicationScoped
@@ -19,7 +18,7 @@ import kotlin.coroutines.CoroutineContext
 @ApplicationScoped
 @Suppress("Unused")
 class HealthService(
-  private val outboxPort: OutboxPort,
+  private val outboxStatsCache: OutboxPartitionStatsCache,
   private val outgoingRequestStats: OutgoingRequestStatsPort,
   private val mongoStats: MongoStatsPort,
   private val cronjobInfo: CronjobInfoPort,
@@ -30,7 +29,6 @@ class HealthService(
   override fun getStats(): HealthStats = runBlocking {
     val dispatcher = Dispatchers.IO + tcclContext()
     val outgoingRequestStatsAsync = async(dispatcher) { outgoingRequestStats.getRequestStats() }
-    val outboxPartitionsAsync = async(dispatcher) { outboxPort.getPartitionStats() }
     val mongoCollectionStatsAsync = async(dispatcher) { mongoStats.getCollectionStats() }
     val mongoQueryStatsAsync = async(dispatcher) { mongoStats.getQueryStats() }
     val cronjobStatsAsync = async(dispatcher) { cronjobInfo.getCronjobStats() }
@@ -39,7 +37,7 @@ class HealthService(
     val configurationStatsAsync = async(dispatcher) { configurationInfo.getConfigurationStats() }
     HealthStats(
       outgoingRequestStats = outgoingRequestStatsAsync.await(),
-      outboxPartitions = outboxPartitionsAsync.await(),
+      outboxPartitions = outboxStatsCache.current(),
       mongoCollectionStats = mongoCollectionStatsAsync.await(),
       mongoQueryStats = mongoQueryStatsAsync.await(),
       cronjobStats = cronjobStatsAsync.await(),
