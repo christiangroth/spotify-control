@@ -1,3 +1,12 @@
+# 0.107.1 (2026.07.08)
+
+## Bugfixes / Chore
+* Fixed the Catalog Sync timeline not showing the album id, album name and track count for album sync entries.
+
+
+
+---
+
 # 0.107.0 (2026.07.08)
 
 ## New Features
