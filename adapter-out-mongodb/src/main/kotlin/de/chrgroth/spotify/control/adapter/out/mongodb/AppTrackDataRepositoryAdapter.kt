@@ -2,6 +2,7 @@ package de.chrgroth.spotify.control.adapter.out.mongodb
 
 import com.mongodb.client.model.BulkWriteOptions
 import com.mongodb.client.model.Filters
+import com.mongodb.client.model.Projections
 import com.mongodb.client.model.UpdateOneModel
 import com.mongodb.client.model.UpdateOptions
 import com.mongodb.client.model.Updates
@@ -67,6 +68,17 @@ class AppTrackRepositoryAdapter(
         .find(Filters.`in`("_id", trackIds.map { it.value }))
         .toList()
         .map { it.toDomain() }
+    }
+  }
+
+  override fun findAlbumIdsByTrackIds(trackIds: Set<TrackId>): Map<TrackId, AlbumId?> {
+    if (trackIds.isEmpty()) return emptyMap()
+    return mongoQueryMetrics.timed("app_track.findAlbumIdsByTrackIds") {
+      appTrackDocumentRepository.mongoCollection()
+        .find(Filters.`in`("_id", trackIds.map { it.value }))
+        .projection(Projections.include(ID_FIELD, ALBUM_ID_FIELD))
+        .toList()
+        .associate { TrackId(it.id) to it.albumId?.let { albumId -> AlbumId(albumId) } }
     }
   }
 
