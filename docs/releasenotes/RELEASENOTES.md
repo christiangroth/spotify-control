@@ -1,3 +1,13 @@
+# 0.107.3 (2026.07.08)
+
+## Bugfixes / Chore
+* Added a documented performance review with concrete follow-up action items.* Added a documented performance review with concrete follow-up action items.* Improved performance of the playlist settings page, catalog search, and stats page as the amount of data grows.
+* Improved reliability of catalog metrics under load.
+
+
+
+---
+
 # 0.107.2 (2026.07.08)
 
 ## Bugfixes / Chore
