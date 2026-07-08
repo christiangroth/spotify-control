@@ -1,3 +1,12 @@
+# 0.106.12 (2026.07.08)
+
+## Bugfixes / Chore
+* Updated the outbox library dependency, which fixes frequent "Slow MongoDB query" warnings for the event type count query by maintaining per-partition counts incrementally instead of recomputing them on every read.
+
+
+
+---
+
 # 0.106.11 (2026.07.07)
 
 ## Bugfixes / Chore
