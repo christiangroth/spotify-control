@@ -12,6 +12,8 @@ interface AppTrackRepositoryPort {
   fun findByTrackIds(trackIds: Set<TrackId>): List<AppTrack>
   fun findAlbumIdsByTrackIds(trackIds: Set<TrackId>): Map<TrackId, AlbumId?>
   fun findByArtistId(artistId: ArtistId): List<AppTrack>
+  fun findByArtistIds(artistIds: Set<ArtistId>): List<AppTrack>
   fun findByAlbumId(albumId: AlbumId): List<AppTrack>
+  fun findByAlbumIds(albumIds: Set<AlbumId>): List<AppTrack>
   fun deleteAll()
 }

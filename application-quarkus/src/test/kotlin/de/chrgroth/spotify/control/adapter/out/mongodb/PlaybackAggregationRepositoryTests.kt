@@ -52,6 +52,35 @@ class PlaybackAggregationRepositoryTests {
   }
 
   @Test
+  fun `findByUserAndPeriods resolves multiple type period-start pairs in a single batch`() {
+    val userId = UserId("user-${UUID.randomUUID()}")
+    val otherUserId = UserId("user-${UUID.randomUUID()}")
+    aggregationRepository.save(aggregation(userId, AggregationPeriodType.DAY, LocalDate(2024, 1, 10), eventCount = 3L))
+    aggregationRepository.save(aggregation(userId, AggregationPeriodType.WEEK, LocalDate(2024, 1, 8), eventCount = 5L))
+    aggregationRepository.save(aggregation(otherUserId, AggregationPeriodType.DAY, LocalDate(2024, 1, 10), eventCount = 99L))
+
+    val result = aggregationRepository.findByUserAndPeriods(
+      userId,
+      listOf(
+        AggregationPeriodType.DAY to LocalDate(2024, 1, 10),
+        AggregationPeriodType.WEEK to LocalDate(2024, 1, 8),
+        AggregationPeriodType.MONTH to LocalDate(2024, 1, 1),
+      ),
+    )
+
+    assertThat(result).hasSize(2)
+    assertThat(result[AggregationPeriodType.DAY to LocalDate(2024, 1, 10)]?.eventCount).isEqualTo(3L)
+    assertThat(result[AggregationPeriodType.WEEK to LocalDate(2024, 1, 8)]?.eventCount).isEqualTo(5L)
+    assertThat(result[AggregationPeriodType.MONTH to LocalDate(2024, 1, 1)]).isNull()
+  }
+
+  @Test
+  fun `findByUserAndPeriods returns empty map for empty input`() {
+    val result = aggregationRepository.findByUserAndPeriods(UserId("user-${UUID.randomUUID()}"), emptyList())
+    assertThat(result).isEmpty()
+  }
+
+  @Test
   fun `findByUserTypeAndPeriodRange returns only aggregations within range for the given user and type`() {
     val userId = UserId("user-${UUID.randomUUID()}")
     val otherUserId = UserId("user-${UUID.randomUUID()}")

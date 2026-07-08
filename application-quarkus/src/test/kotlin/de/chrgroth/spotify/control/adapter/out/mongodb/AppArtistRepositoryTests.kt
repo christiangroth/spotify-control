@@ -170,6 +170,37 @@ class AppArtistRepositoryTests {
   }
 
   @Test
+  fun `searchByName matches case-insensitively by substring`() {
+    val suffix = UUID.randomUUID().toString()
+    appArtistRepository.upsertAll(listOf(artist("Search-$suffix").copy(artistName = "The Search Artist $suffix")))
+
+    val result = appArtistRepository.searchByName("search artist $suffix".uppercase(), 10)
+
+    assertThat(result.map { it.artistName }).containsExactly("The Search Artist $suffix")
+  }
+
+  @Test
+  fun `searchByName returns empty list when nothing matches`() {
+    val result = appArtistRepository.searchByName("no-such-artist-${UUID.randomUUID()}", 10)
+    assertThat(result).isEmpty()
+  }
+
+  @Test
+  fun `searchByName honors limit`() {
+    val suffix = UUID.randomUUID().toString()
+    appArtistRepository.upsertAll(
+      listOf(
+        artist("limit1-$suffix").copy(artistName = "Limit Artist One $suffix"),
+        artist("limit2-$suffix").copy(artistName = "Limit Artist Two $suffix"),
+      ),
+    )
+
+    val result = appArtistRepository.searchByName("Limit Artist", 1)
+
+    assertThat(result).hasSize(1)
+  }
+
+  @Test
   fun `countAll returns total number of artists`() {
     val before = appArtistRepository.countAll()
     val artist1 = artist("count1")

@@ -87,10 +87,30 @@ class AppTrackRepositoryAdapter(
       appTrackDocumentRepository.list("artistId = ?1", artistId.value).map { it.toDomain() }
     }
 
+  override fun findByArtistIds(artistIds: Set<ArtistId>): List<AppTrack> {
+    if (artistIds.isEmpty()) return emptyList()
+    return mongoQueryMetrics.timed("app_track.findByArtistIds") {
+      appTrackDocumentRepository.mongoCollection()
+        .find(Filters.`in`(ARTIST_ID_FIELD, artistIds.map { it.value }))
+        .toList()
+        .map { it.toDomain() }
+    }
+  }
+
   override fun findByAlbumId(albumId: AlbumId): List<AppTrack> =
     mongoQueryMetrics.timed("app_track.findByAlbumId") {
       appTrackDocumentRepository.list("albumId = ?1", albumId.value).map { it.toDomain() }
     }
+
+  override fun findByAlbumIds(albumIds: Set<AlbumId>): List<AppTrack> {
+    if (albumIds.isEmpty()) return emptyList()
+    return mongoQueryMetrics.timed("app_track.findByAlbumIds") {
+      appTrackDocumentRepository.mongoCollection()
+        .find(Filters.`in`(ALBUM_ID_FIELD, albumIds.map { it.value }))
+        .toList()
+        .map { it.toDomain() }
+    }
+  }
 
   override fun deleteAll() {
     mongoQueryMetrics.timed("app_track.deleteAll") {

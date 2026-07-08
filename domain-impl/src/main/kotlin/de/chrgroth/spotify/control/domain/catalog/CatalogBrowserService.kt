@@ -45,20 +45,15 @@ class CatalogBrowserService(
   }
 
   override fun getArtists(filter: String?): List<ArtistBrowseItem> {
-    val filterLower = filter?.trim()?.lowercase()
-    if (filterLower.isNullOrBlank()) return emptyList()
+    val filterTrimmed = filter?.trim()
+    if (filterTrimmed.isNullOrBlank()) return emptyList()
 
-    val artists = appArtistRepository.findAll()
-    val allAlbums = appAlbumRepository.findAll()
-    val allTracks = appTrackRepository.findAll()
-
-    val albumCountByArtistId = allAlbums.groupingBy { it.artistId?.value }.eachCount()
-    val trackCountByArtistId = allTracks.groupingBy { it.artistId.value }.eachCount()
+    val artists = appArtistRepository.searchByName(filterTrimmed, SEARCH_RESULT_LIMIT)
+    val artistIds = artists.map { it.id }.toSet()
+    val albumCountByArtistId = appAlbumRepository.findByArtistIds(artistIds).groupingBy { it.artistId?.value }.eachCount()
+    val trackCountByArtistId = appTrackRepository.findByArtistIds(artistIds).groupingBy { it.artistId.value }.eachCount()
 
     return artists
-      .filter { artist ->
-        artist.artistName.lowercase().contains(filterLower)
-      }
       .sortedBy { it.artistName.lowercase() }
       .map { artist ->
         ArtistBrowseItem(
@@ -73,14 +68,14 @@ class CatalogBrowserService(
   }
 
   override fun getAlbums(filter: String?): List<AlbumBrowseItem> {
-    val filterLower = filter?.trim()?.lowercase()
-    if (filterLower.isNullOrBlank()) return emptyList()
+    val filterTrimmed = filter?.trim()
+    if (filterTrimmed.isNullOrBlank()) return emptyList()
 
-    val albums = appAlbumRepository.findAll()
-    val tracksByAlbumId = appTrackRepository.findAll().groupBy { it.albumId?.value }
+    val albums = appAlbumRepository.searchByTitle(filterTrimmed, SEARCH_RESULT_LIMIT)
+    val albumIds = albums.map { it.id }.toSet()
+    val tracksByAlbumId = appTrackRepository.findByAlbumIds(albumIds).groupBy { it.albumId?.value }
 
     return albums
-      .filter { album -> album.title?.lowercase()?.contains(filterLower) ?: false }
       .sortedBy { it.title?.lowercase() }
       .map { album ->
         val albumTracks = tracksByAlbumId[album.id.value] ?: emptyList()
@@ -213,5 +208,9 @@ class CatalogBrowserService(
   private fun playlistName(playlistId: String): String {
     val userId = userRepository.findAll().firstOrNull()?.spotifyUserId ?: return playlistId
     return playlistRepository.findByUserId(userId).firstOrNull { it.spotifyPlaylistId == playlistId }?.name ?: playlistId
+  }
+
+  companion object {
+    internal const val SEARCH_RESULT_LIMIT = 50
   }
 }

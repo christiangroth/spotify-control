@@ -10,6 +10,7 @@ interface PlaybackAggregationRepositoryPort {
   fun save(aggregation: PlaybackAggregation)
   fun deleteAll()
   fun findByUserAndPeriod(userId: UserId, type: AggregationPeriodType, periodStart: LocalDate): PlaybackAggregation?
+  fun findByUserAndPeriods(userId: UserId, periods: List<Pair<AggregationPeriodType, LocalDate>>): Map<Pair<AggregationPeriodType, LocalDate>, PlaybackAggregation>
   fun findByUserTypeAndPeriodRange(userId: UserId, type: AggregationPeriodType, from: LocalDate, to: LocalDate): List<PlaybackAggregation>
   fun findDailySummaryByUserAndPeriodRange(userId: UserId, from: LocalDate, to: LocalDate): List<DailyPlaybackSummary>
   fun sumEventCountByUser(userId: UserId): Long

@@ -1,6 +1,8 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
+import com.mongodb.client.model.Aggregates
 import com.mongodb.client.model.Filters
+import com.mongodb.client.model.Projections
 import com.mongodb.client.model.Updates
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
@@ -50,12 +52,22 @@ class PlaylistRepositoryAdapter(
       playlistDocumentRepository.findById("${userId.value}:$playlistId")?.toDomain()
     }
 
-  override fun findTrackCountsByUserId(userId: UserId): Map<String, Int> =
-    mongoQueryMetrics.timed("spotify_playlist.findTrackCountsByUserId") {
-      playlistDocumentRepository
-        .list("spotifyUserId = ?1", userId.value)
-        .associate { it.spotifyPlaylistId to it.tracks.size }
+  override fun findTrackCountsByUserId(userId: UserId): Map<String, Int> {
+    val pipeline = listOf(
+      Aggregates.match(Filters.eq("spotifyUserId", userId.value)),
+      Aggregates.project(
+        Projections.fields(
+          Projections.include("spotifyPlaylistId"),
+          Projections.computed("trackCount", Document("\$size", "\$tracks")),
+        ),
+      ),
+    )
+    return mongoQueryMetrics.timed("spotify_playlist.findTrackCountsByUserId") {
+      playlistDocumentRepository.mongoCollection()
+        .aggregate(pipeline, Document::class.java)
+        .associate { it.getString("spotifyPlaylistId") to it.getInteger("trackCount") }
     }
+  }
 
   override fun save(userId: UserId, playlist: Playlist) {
     val document = playlist.toDocument(userId)

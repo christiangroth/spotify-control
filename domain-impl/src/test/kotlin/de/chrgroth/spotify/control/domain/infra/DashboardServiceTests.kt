@@ -22,9 +22,12 @@ import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPo
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import java.util.concurrent.CompletableFuture
+import java.util.function.Supplier
 import kotlin.time.Instant
 import kotlinx.datetime.LocalDate
 import org.assertj.core.api.Assertions.assertThat
+import org.eclipse.microprofile.context.ManagedExecutor
 import org.junit.jupiter.api.Test
 
 class DashboardServiceTests {
@@ -37,10 +40,16 @@ class DashboardServiceTests {
   private val catalogBrowser: CatalogBrowserPort = mockk()
   private val playlistRepository: PlaylistRepositoryPort = mockk()
   private val playlistCheckRepository: AppPlaylistCheckRepositoryPort = mockk()
+  private val managedExecutor: ManagedExecutor = mockk {
+    every { supplyAsync(any<Supplier<Any>>()) } answers {
+      CompletableFuture.completedFuture(firstArg<Supplier<Any>>().get())
+    }
+  }
 
   private val adapter = DashboardService(
     appPlaybackRepository, appTrackRepository, appArtistRepository, appAlbumRepository,
     aggregationRepository, catalogBrowser, playlistRepository, playlistCheckRepository,
+    managedExecutor,
     recentlyPlayedLimit = 5,
     topEntriesLimit = 3,
   )

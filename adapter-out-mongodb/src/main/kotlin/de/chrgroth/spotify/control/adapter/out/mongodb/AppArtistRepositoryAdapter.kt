@@ -10,6 +10,7 @@ import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
+import java.util.regex.Pattern
 import kotlin.time.toKotlinInstant
 
 
@@ -61,6 +62,15 @@ class AppArtistRepositoryAdapter(
         .map { it.toDomain() }
     }
   }
+
+  override fun searchByName(filter: String, limit: Int): List<AppArtist> =
+    mongoQueryMetrics.timed("app_artist.searchByName") {
+      appArtistDocumentRepository.mongoCollection()
+        .find(Filters.regex(ARTIST_NAME_FIELD, Pattern.quote(filter), "i"))
+        .limit(limit)
+        .toList()
+        .map { it.toDomain() }
+    }
 
   override fun findWithImageLinkAndBlankName(): List<AppArtist> =
     mongoQueryMetrics.timed("app_artist.findWithImageLinkAndBlankName") {

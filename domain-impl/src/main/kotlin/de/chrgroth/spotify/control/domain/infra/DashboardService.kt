@@ -25,16 +25,13 @@ import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPor
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 import kotlin.time.Clock
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.minus
 import kotlinx.datetime.toLocalDateTime
 import org.eclipse.microprofile.config.inject.ConfigProperty
+import org.eclipse.microprofile.context.ManagedExecutor
 
 @ApplicationScoped
 @Suppress("Unused")
@@ -47,6 +44,7 @@ class DashboardService(
   private val catalogBrowser: CatalogBrowserPort,
   private val playlistRepository: PlaylistRepositoryPort,
   private val playlistCheckRepository: AppPlaylistCheckRepositoryPort,
+  private val managedExecutor: ManagedExecutor,
   @param:ConfigProperty(name = "dashboard.recently-played.limit")
   private val recentlyPlayedLimit: Int,
   @param:ConfigProperty(name = "dashboard.listening-stats.top-entries-limit")
@@ -54,30 +52,28 @@ class DashboardService(
 ) : DashboardPort {
 
   override fun getStats(userId: UserId): DashboardStats {
-    return runBlocking {
-      val dailyAggsAsync = async(Dispatchers.IO) { fetchDailyAggregations(userId) }
-      val totalPlaybackEventsAsync = async(Dispatchers.IO) { aggregationRepository.sumEventCountByUser(userId) }
-      val playlistMetadataAsync = async(Dispatchers.IO) { computePlaylistMetadata(userId) }
-      val playlistCheckStatsAsync = async(Dispatchers.IO) { computePlaylistCheckStats() }
-      val recentlyPlayedAsync = async(Dispatchers.IO) { buildRecentlyPlayedTracks(userId) }
-      val catalogStatsAsync = async(Dispatchers.IO) { catalogBrowser.getCatalogStats() }
+    val dailyAggsFuture = managedExecutor.supplyAsync { fetchDailyAggregations(userId) }
+    val totalPlaybackEventsFuture = managedExecutor.supplyAsync { aggregationRepository.sumEventCountByUser(userId) }
+    val playlistMetadataFuture = managedExecutor.supplyAsync { computePlaylistMetadata(userId) }
+    val playlistCheckStatsFuture = managedExecutor.supplyAsync { computePlaylistCheckStats() }
+    val recentlyPlayedFuture = managedExecutor.supplyAsync { buildRecentlyPlayedTracks(userId) }
+    val catalogStatsFuture = managedExecutor.supplyAsync { catalogBrowser.getCatalogStats() }
 
-      val dailyAggs = dailyAggsAsync.await()
-      val listeningStatsAsync = async(Dispatchers.IO) { buildListeningStats(dailyAggs) }
-      val playbackStats = buildPlaybackStats(dailyAggs, totalPlaybackEventsAsync.await())
-      val playlistMetadata = playlistMetadataAsync.await()
-      DashboardStats(
-        syncedPlaylists = playlistMetadata.syncedPlaylists,
-        totalPlaylists = playlistMetadata.totalPlaylists,
-        playlistCheckStats = playlistCheckStatsAsync.await(),
-        totalPlaybackEvents = playbackStats.totalPlaybackEvents,
-        playbackEventsLast30Days = playbackStats.playbackEventsLast30Days,
-        playbackEventsPerDay = playbackStats.playbackEventsPerDay,
-        recentlyPlayedTracks = recentlyPlayedAsync.await(),
-        listeningStats = listeningStatsAsync.await(),
-        catalogStats = catalogStatsAsync.await(),
-      )
-    }
+    val dailyAggs = dailyAggsFuture.join()
+    val listeningStatsFuture = managedExecutor.supplyAsync { buildListeningStats(dailyAggs) }
+    val playbackStats = buildPlaybackStats(dailyAggs, totalPlaybackEventsFuture.join())
+    val playlistMetadata = playlistMetadataFuture.join()
+    return DashboardStats(
+      syncedPlaylists = playlistMetadata.syncedPlaylists,
+      totalPlaylists = playlistMetadata.totalPlaylists,
+      playlistCheckStats = playlistCheckStatsFuture.join(),
+      totalPlaybackEvents = playbackStats.totalPlaybackEvents,
+      playbackEventsLast30Days = playbackStats.playbackEventsLast30Days,
+      playbackEventsPerDay = playbackStats.playbackEventsPerDay,
+      recentlyPlayedTracks = recentlyPlayedFuture.join(),
+      listeningStats = listeningStatsFuture.join(),
+      catalogStats = catalogStatsFuture.join(),
+    )
   }
 
   override fun getPlaybackStats(userId: UserId): DashboardStats =
@@ -86,13 +82,13 @@ class DashboardService(
   override fun getPlaylistMetadata(userId: UserId): DashboardStats = computePlaylistMetadata(userId)
 
   override fun getRecentlyPlayed(userId: UserId): DashboardStats =
-    DashboardStats.EMPTY.copy(recentlyPlayedTracks = runBlocking { buildRecentlyPlayedTracks(userId) })
+    DashboardStats.EMPTY.copy(recentlyPlayedTracks = buildRecentlyPlayedTracks(userId))
 
   override fun getListeningStats(userId: UserId): DashboardStats =
-    DashboardStats.EMPTY.copy(listeningStats = runBlocking { buildListeningStats(fetchDailyAggregations(userId)) })
+    DashboardStats.EMPTY.copy(listeningStats = buildListeningStats(fetchDailyAggregations(userId)))
 
   override fun getPlaylistCheckStats(): DashboardStats =
-    DashboardStats.EMPTY.copy(playlistCheckStats = runBlocking { computePlaylistCheckStats() })
+    DashboardStats.EMPTY.copy(playlistCheckStats = computePlaylistCheckStats())
 
   override fun getCatalogStats(): DashboardStats =
     DashboardStats.EMPTY.copy(catalogStats = catalogBrowser.getCatalogStats())
@@ -140,51 +136,49 @@ class DashboardService(
     )
   }
 
-  private suspend fun computePlaylistCheckStats(): PlaylistCheckStats = coroutineScope {
-    val totalChecksAsync = async(Dispatchers.IO) { playlistCheckRepository.countAll() }
-    val succeededChecksAsync = async(Dispatchers.IO) { playlistCheckRepository.countSucceeded() }
-    val totalChecks = totalChecksAsync.await()
-    val succeededChecks = succeededChecksAsync.await()
-    PlaylistCheckStats(
+  private fun computePlaylistCheckStats(): PlaylistCheckStats {
+    val totalChecksFuture = managedExecutor.supplyAsync { playlistCheckRepository.countAll() }
+    val succeededChecksFuture = managedExecutor.supplyAsync { playlistCheckRepository.countSucceeded() }
+    val totalChecks = totalChecksFuture.join()
+    val succeededChecks = succeededChecksFuture.join()
+    return PlaylistCheckStats(
       succeededChecks = succeededChecks,
       totalChecks = totalChecks,
       allSucceeded = totalChecks == 0L || succeededChecks == totalChecks,
     )
   }
 
-  private suspend fun buildRecentlyPlayedTracks(userId: UserId): List<RecentlyPlayedItem> {
+  private fun buildRecentlyPlayedTracks(userId: UserId): List<RecentlyPlayedItem> {
     val recentPlaybackItems = appPlaybackRepository.findRecentlyPlayed(userId, recentlyPlayedLimit)
     val trackIds = recentPlaybackItems.map { it.trackId }.toSet()
     val trackMap = appTrackRepository.findByTrackIds(trackIds.map { TrackId(it) }.toSet()).associateBy { it.id.value }
     val albumIds = trackMap.values.mapNotNull { it.albumId }.toSet()
     val allArtistIds = trackMap.values.flatMap { it.allArtistIds() }.toSet()
-    return coroutineScope {
-      val albumMapAsync = async(Dispatchers.IO) { appAlbumRepository.findByAlbumIds(albumIds).associateBy { it.id.value } }
-      val artistMapAsync = async(Dispatchers.IO) {
-        appArtistRepository.findByArtistIds(allArtistIds.map { ArtistId(it) }.toSet()).associateBy { it.id.value }
-      }
-      val albumMap = albumMapAsync.await()
-      val artistMap = artistMapAsync.await()
-      recentPlaybackItems.map { playback ->
-        val track = trackMap[playback.trackId]
-        val trackArtistIds = track?.allArtistIds() ?: emptyList()
-        val album = track?.albumId?.let { albumMap[it.value] }
-        RecentlyPlayedItem(
-          spotifyUserId = playback.userId,
-          trackId = TrackId(playback.trackId),
-          trackName = track?.title ?: playback.trackId,
-          artistIds = trackArtistIds.map { ArtistId(it) },
-          artistNames = trackArtistIds.mapNotNull { artistMap[it]?.artistName },
-          playedAt = playback.playedAt,
-          albumName = album?.title ?: track?.albumName,
-          imageLink = album?.imageLink,
-          durationSeconds = playback.secondsPlayed.takeIf { it > 0 },
-        )
-      }
+    val albumMapFuture = managedExecutor.supplyAsync { appAlbumRepository.findByAlbumIds(albumIds).associateBy { it.id.value } }
+    val artistMapFuture = managedExecutor.supplyAsync {
+      appArtistRepository.findByArtistIds(allArtistIds.map { ArtistId(it) }.toSet()).associateBy { it.id.value }
+    }
+    val albumMap = albumMapFuture.join()
+    val artistMap = artistMapFuture.join()
+    return recentPlaybackItems.map { playback ->
+      val track = trackMap[playback.trackId]
+      val trackArtistIds = track?.allArtistIds() ?: emptyList()
+      val album = track?.albumId?.let { albumMap[it.value] }
+      RecentlyPlayedItem(
+        spotifyUserId = playback.userId,
+        trackId = TrackId(playback.trackId),
+        trackName = track?.title ?: playback.trackId,
+        artistIds = trackArtistIds.map { ArtistId(it) },
+        artistNames = trackArtistIds.mapNotNull { artistMap[it]?.artistName },
+        playedAt = playback.playedAt,
+        albumName = album?.title ?: track?.albumName,
+        imageLink = album?.imageLink,
+        durationSeconds = playback.secondsPlayed.takeIf { it > 0 },
+      )
     }
   }
 
-  private suspend fun buildListeningStats(dailyAggs: List<DailyPlaybackSummary>): ListeningStats {
+  private fun buildListeningStats(dailyAggs: List<DailyPlaybackSummary>): ListeningStats {
     val secondsByTrackId = dailyAggs.flatMap { it.trackEntries }
       .groupBy { it.id }
       .mapValues { (_, entries) -> entries.sumOf { it.totalSeconds } }
@@ -213,41 +207,39 @@ class DashboardService(
     val neededAlbumIds = (topTrackDetails.mapNotNull { it.albumId } + topAlbumIds.map { AlbumId(it) }).toSet()
     val neededArtistIds = (topTrackDetails.flatMap { it.allArtistIds() } + topArtistIds).map { ArtistId(it) }.toSet()
 
-    return coroutineScope {
-      val statsAlbumMapAsync = async(Dispatchers.IO) { appAlbumRepository.findByAlbumIds(neededAlbumIds).associateBy { it.id.value } }
-      val statsArtistMapAsync = async(Dispatchers.IO) {
-        appArtistRepository.findByArtistIds(neededArtistIds).associateBy { it.id.value }
-      }
-      val statsAlbumMap = statsAlbumMapAsync.await()
-      val statsArtistMap = statsArtistMapAsync.await()
+    val statsAlbumMapFuture = managedExecutor.supplyAsync { appAlbumRepository.findByAlbumIds(neededAlbumIds).associateBy { it.id.value } }
+    val statsArtistMapFuture = managedExecutor.supplyAsync {
+      appArtistRepository.findByArtistIds(neededArtistIds).associateBy { it.id.value }
+    }
+    val statsAlbumMap = statsAlbumMapFuture.join()
+    val statsArtistMap = statsArtistMapFuture.join()
 
-      val topTracks = buildTopEntries(secondsByTrackId, { statsTrackMap[it]?.title ?: it }) { id ->
-        statsTrackMap[id]?.albumId?.let { statsAlbumMap[it.value]?.imageLink }
-      }.map { entry ->
-        val track = statsTrackMap[entry.id]
-        val album = track?.albumId?.let { statsAlbumMap[it.value] }
-        entry.topEntry.copy(
-          artistName = track?.displayArtistName { artistId -> statsArtistMap[artistId.value]?.artistName },
-          albumName = track?.albumName ?: album?.title,
-          trackDurationMs = track?.durationMs,
-        )
-      }
-      val topArtists = buildTopEntries(secondsByArtistId, { statsArtistMap[it]?.artistName ?: it }) { id ->
-        statsArtistMap[id]?.imageLink
-      }.map { it.topEntry }
-      val topAlbums = buildTopEntries(secondsByAlbumId, { statsAlbumMap[it]?.title ?: it }) { id ->
-        statsAlbumMap[id]?.imageLink
-      }.map { entry ->
-        entry.topEntry.copy(artistName = statsAlbumMap[entry.id]?.artistName)
-      }
-
-      ListeningStats(
-        listenedMinutesLast30Days = listenedMinutes,
-        topTracksLast30Days = topTracks,
-        topArtistsLast30Days = topArtists,
-        topAlbumsLast30Days = topAlbums,
+    val topTracks = buildTopEntries(secondsByTrackId, { statsTrackMap[it]?.title ?: it }) { id ->
+      statsTrackMap[id]?.albumId?.let { statsAlbumMap[it.value]?.imageLink }
+    }.map { entry ->
+      val track = statsTrackMap[entry.id]
+      val album = track?.albumId?.let { statsAlbumMap[it.value] }
+      entry.topEntry.copy(
+        artistName = track?.displayArtistName { artistId -> statsArtistMap[artistId.value]?.artistName },
+        albumName = track?.albumName ?: album?.title,
+        trackDurationMs = track?.durationMs,
       )
     }
+    val topArtists = buildTopEntries(secondsByArtistId, { statsArtistMap[it]?.artistName ?: it }) { id ->
+      statsArtistMap[id]?.imageLink
+    }.map { it.topEntry }
+    val topAlbums = buildTopEntries(secondsByAlbumId, { statsAlbumMap[it]?.title ?: it }) { id ->
+      statsAlbumMap[id]?.imageLink
+    }.map { entry ->
+      entry.topEntry.copy(artistName = statsAlbumMap[entry.id]?.artistName)
+    }
+
+    return ListeningStats(
+      listenedMinutesLast30Days = listenedMinutes,
+      topTracksLast30Days = topTracks,
+      topArtistsLast30Days = topArtists,
+      topAlbumsLast30Days = topAlbums,
+    )
   }
 
   private fun buildTopEntries(

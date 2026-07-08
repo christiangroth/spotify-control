@@ -65,11 +65,10 @@ class CatalogBrowserServiceTests {
 
   @Test
   fun `getAlbums matches album title case-insensitively across all artists and includes artist name`() {
-    every { appAlbumRepository.findAll() } returns listOf(
+    every { appAlbumRepository.searchByTitle("greatest", CatalogBrowserService.SEARCH_RESULT_LIMIT) } returns listOf(
       AppAlbum(id = AlbumId("album-1"), title = "Greatest Hits", artistName = "Artist One", lastSync = triggeredAt),
-      AppAlbum(id = AlbumId("album-2"), title = "Other Record", artistName = "Artist Two", lastSync = triggeredAt),
     )
-    every { appTrackRepository.findAll() } returns emptyList()
+    every { appTrackRepository.findByAlbumIds(setOf(AlbumId("album-1"))) } returns emptyList()
 
     val result = service.getAlbums("greatest")
 
