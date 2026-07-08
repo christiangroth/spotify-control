@@ -7,8 +7,7 @@ import de.chrgroth.spotify.control.domain.model.playback.DayCount
 import de.chrgroth.spotify.control.domain.model.catalog.AppTrack
 import de.chrgroth.spotify.control.domain.model.catalog.displayArtistName
 import de.chrgroth.spotify.control.domain.model.playback.ListeningStats
-import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationPeriodType
-import de.chrgroth.spotify.control.domain.model.playback.aggregation.PlaybackAggregation
+import de.chrgroth.spotify.control.domain.model.playback.aggregation.DailyPlaybackSummary
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistCheckStats
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.playback.RecentlyPlayedItem
@@ -103,12 +102,12 @@ class DashboardService(
     return (today - DatePeriod(days = STATS_DAYS - 1)) to today
   }
 
-  private fun fetchDailyAggregations(userId: UserId): List<PlaybackAggregation> {
+  private fun fetchDailyAggregations(userId: UserId): List<DailyPlaybackSummary> {
     val (from, to) = statsDateRange()
-    return aggregationRepository.findByUserTypeAndPeriodRange(userId, AggregationPeriodType.DAY, from, to)
+    return aggregationRepository.findDailySummaryByUserAndPeriodRange(userId, from, to)
   }
 
-  private fun buildPlaybackStats(dailyAggs: List<PlaybackAggregation>, total: Long): DashboardStats {
+  private fun buildPlaybackStats(dailyAggs: List<DailyPlaybackSummary>, total: Long): DashboardStats {
     val (_, today) = statsDateRange()
     val last30Days = dailyAggs.sumOf { it.eventCount }
 
@@ -185,7 +184,7 @@ class DashboardService(
     }
   }
 
-  private suspend fun buildListeningStats(dailyAggs: List<PlaybackAggregation>): ListeningStats {
+  private suspend fun buildListeningStats(dailyAggs: List<DailyPlaybackSummary>): ListeningStats {
     val secondsByTrackId = dailyAggs.flatMap { it.trackEntries }
       .groupBy { it.id }
       .mapValues { (_, entries) -> entries.sumOf { it.totalSeconds } }

@@ -6,6 +6,7 @@ import de.chrgroth.spotify.control.domain.model.playback.aggregation.ActivityEnt
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.ActivityTimeWindow
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationPeriodType
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationRankEntry
+import de.chrgroth.spotify.control.domain.model.playback.aggregation.DailyPlaybackSummary
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.PlaybackAggregation
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.playback.PlaybackAggregationRepositoryPort
@@ -53,6 +54,22 @@ class PlaybackAggregationRepositoryAdapter(
         )
         .toList()
         .map { it.toDomain() }
+    }
+
+  override fun findDailySummaryByUserAndPeriodRange(userId: UserId, from: LocalDate, to: LocalDate): List<DailyPlaybackSummary> =
+    mongoQueryMetrics.timed("app_playback_aggregation.findDailySummaryByUserAndPeriodRange") {
+      repository.mongoCollection()
+        .find(
+          Filters.and(
+            Filters.eq(SPOTIFY_USER_ID_FIELD, userId.value),
+            Filters.eq(TYPE_FIELD, AggregationPeriodType.DAY.name),
+            Filters.gte(PERIOD_START_FIELD, from.toString()),
+            Filters.lte(PERIOD_START_FIELD, to.toString()),
+          ),
+        )
+        .projection(Projections.include(PERIOD_START_FIELD, EVENT_COUNT_FIELD, TOTAL_PLAYBACK_SECONDS_FIELD, ARTIST_ENTRIES_FIELD, TRACK_ENTRIES_FIELD))
+        .toList()
+        .map { it.toSummary() }
     }
 
   override fun sumEventCountByUser(userId: UserId): Long =
@@ -107,6 +124,14 @@ class PlaybackAggregationRepositoryAdapter(
     activityEntries = activityEntries.map { it.toDomain() },
   )
 
+  private fun PlaybackAggregationDocument.toSummary(): DailyPlaybackSummary = DailyPlaybackSummary(
+    periodStart = LocalDate.parse(periodStart),
+    totalPlaybackSeconds = totalPlaybackSeconds,
+    eventCount = eventCount,
+    artistEntries = artistEntries.map { it.toDomain() },
+    trackEntries = trackEntries.map { it.toDomain() },
+  )
+
   private fun PlaybackAggregationEntryDocument.toDomain(): AggregationRankEntry = AggregationRankEntry(
     id = id,
     name = name,
@@ -124,6 +149,9 @@ class PlaybackAggregationRepositoryAdapter(
     internal const val TYPE_FIELD = "type"
     internal const val PERIOD_START_FIELD = "periodStart"
     internal const val EVENT_COUNT_FIELD = "eventCount"
+    internal const val TOTAL_PLAYBACK_SECONDS_FIELD = "totalPlaybackSeconds"
+    internal const val ARTIST_ENTRIES_FIELD = "artistEntries"
+    internal const val TRACK_ENTRIES_FIELD = "trackEntries"
 
     internal fun documentId(userId: UserId, type: AggregationPeriodType, periodStart: LocalDate): String =
       "${userId.value}:${type.name}:$periodStart"

@@ -85,6 +85,10 @@ class MongoIndexInitializer(
       Document(AppTrackRepositoryAdapter.ALBUM_ID_FIELD, 1),
       IndexOptions().name("app_track_albumId_1"),
     )
+    appTrackDocumentRepository.mongoCollection().createIndex(
+      Document(AppTrackRepositoryAdapter.ID_FIELD, 1).append(AppTrackRepositoryAdapter.ALBUM_ID_FIELD, 1),
+      IndexOptions().name("app_track_id_1_albumId_1"),
+    )
   }
 
   private fun ensurePlaylistCollectionIndexes() {
