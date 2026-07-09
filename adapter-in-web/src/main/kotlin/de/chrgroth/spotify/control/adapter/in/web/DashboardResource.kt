@@ -1,7 +1,6 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
 import de.chrgroth.spotify.control.domain.model.DashboardStats
-import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.infra.DashboardPort
 import de.chrgroth.spotify.control.domain.port.`in`.user.UserProfilePort
 import io.quarkus.qute.Location
@@ -30,9 +29,8 @@ class DashboardResource(
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
   fun dashboard(): TemplateInstance {
-    val userId = UserId(securityIdentity.principal.name)
-    val displayName = userProfile.getDisplayName() ?: userId.value
-    val stats = dashboard.getStats(userId)
+    val displayName = userProfile.getDisplayName() ?: securityIdentity.principal.name
+    val stats = dashboard.getStats()
     return dashboardTemplate
       .data("displayName", displayName)
       .data("stats", stats)
@@ -43,8 +41,7 @@ class DashboardResource(
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
   fun snippetPlaybackHistogram(): TemplateInstance {
-    val userId = UserId(securityIdentity.principal.name)
-    val stats = dashboard.getPlaybackStats(userId)
+    val stats = dashboard.getPlaybackStats()
     return dashboardTemplate.getFragment("snippet_playback_histogram").data("stats", stats)
   }
 
@@ -53,8 +50,7 @@ class DashboardResource(
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
   fun snippetRecentlyPlayed(): TemplateInstance {
-    val userId = UserId(securityIdentity.principal.name)
-    val stats = dashboard.getRecentlyPlayed(userId)
+    val stats = dashboard.getRecentlyPlayed()
     return dashboardTemplate.getFragment("snippet_recently_played").data("stats", stats)
   }
 
@@ -63,8 +59,7 @@ class DashboardResource(
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
   fun snippetListeningStats(): TemplateInstance {
-    val userId = UserId(securityIdentity.principal.name)
-    val stats = dashboard.getListeningStats(userId)
+    val stats = dashboard.getListeningStats()
     return dashboardTemplate.getFragment("snippet_listening_stats").data("stats", stats)
   }
 

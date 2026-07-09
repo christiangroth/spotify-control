@@ -375,7 +375,7 @@ Layer 5 applies to adapter modules where the logic is pure (e.g. `adapter-in-sta
 
 - Spotify OAuth 2.0 Authorization Code Flow.
 - A `User` document is upserted in the `app_user` MongoDB collection on every successful login. Both access and refresh tokens are stored encrypted (AES-256-GCM) using `APP_TOKEN_ENCRYPTION_KEY`.
-- The application is built for a single user (see [ADR-0008](../adr/0008-single-user-architecture.md)); login no longer checks an allow-list — any Spotify account that completes the OAuth flow is upserted as the application's user. Phases 1 and 2 of the [migration plan](../plans/single-user-simplification.md) are complete: scheduled jobs (playback fetch, playback aggregation, playlist sync, profile update) and catalog sync now act directly on the one stored user instead of fanning out over a user list. Phase 3 (dropping `UserId` from ports and outbox events) is in progress; the user-profile slice is done — `UserProfilePort` and the `UpdateUserProfile` outbox event no longer carry a `UserId`.
+- The application is built for a single user (see [ADR-0008](../adr/0008-single-user-architecture.md)); login no longer checks an allow-list — any Spotify account that completes the OAuth flow is upserted as the application's user. Phases 1 and 2 of the [migration plan](../plans/single-user-simplification.md) are complete: scheduled jobs (playback fetch, playback aggregation, playlist sync, profile update) and catalog sync now act directly on the one stored user instead of fanning out over a user list. Phase 3 (dropping `UserId` from ports and outbox events) is in progress; the user-profile, `SpotifyAccessTokenPort`, and SSE/dashboard slices are done — `UserProfilePort`, `SpotifyAccessTokenPort`, `DashboardPort`, and `DashboardRefreshPort` no longer carry a `UserId`, and the `UpdateUserProfile` outbox event no longer carries one either.
 - Session-based authentication for all endpoints. The session stores only the Spotify user ID – never tokens.
 - `return_to` parameter stored in the session for redirect after login.
 - A CSRF `state` parameter is generated per authorization request and validated in the callback.
@@ -410,7 +410,7 @@ Successfully processed events are moved to `outbox_archive` (audit log). Interna
 
 ## Server-Sent Events (SSE) and Live Updates
 
-Backend services notify SSE streams via CDI events. The SSE endpoint delivers the initial state on connect, then pushes named update events to connected clients via per-user reactive streams.
+Backend services notify SSE streams via CDI events. The SSE endpoint delivers the initial state on connect, then pushes named update events to connected clients via a single shared reactive stream — there is only ever one possible subscriber, so `DashboardSseAdapter` collapsed its per-user emitter map to one emitter list as part of the single-user migration ([ADR-0008](../adr/0008-single-user-architecture.md)).
 
 ## Scheduler Jobs
 

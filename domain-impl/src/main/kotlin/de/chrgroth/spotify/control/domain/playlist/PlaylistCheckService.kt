@@ -71,7 +71,7 @@ class PlaylistCheckService(
     val totalViolations = results.sumOf { it.violations.size }
     val status = if (totalViolations == 0) "all passed" else "$totalViolations violation(s)"
     logger.info { "Ran playlist checks for playlist ${event.playlistId} (user ${event.userId.value}): $status" }
-    dashboardRefresh.notifyUserPlaylistChecks(event.userId)
+    dashboardRefresh.notifyUserPlaylistChecks()
     return Unit.right()
   }
 

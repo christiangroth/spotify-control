@@ -142,7 +142,7 @@ class PlaylistServiceTests {
     ).right()
     every { playlistRepository.findByUserId(userId) } returns emptyList()
     every { playlistRepository.replaceAll(any(), any()) } just runs
-    every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
+    every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
 
     val result = adapter.syncPlaylists(userId)
 
@@ -161,7 +161,7 @@ class PlaylistServiceTests {
     every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(buildSpotifyItem("p1")).right()
     every { playlistRepository.findByUserId(userId) } returns emptyList()
     every { playlistRepository.replaceAll(any(), any()) } just runs
-    every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
+    every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
 
     val result = adapter.syncPlaylists(userId)
 
@@ -250,12 +250,12 @@ class PlaylistServiceTests {
     every { playlistRepository.replaceAll(any(), any()) } just runs
     every { playlistRepository.findByUserIdAndPlaylistId(userId, "p1") } returns mockk()
     every { outboxPort.enqueue(any()) } just runs
-    every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
+    every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
 
     val result = adapter.syncPlaylists(userId)
 
     assertThat(result.isRight()).isTrue()
-    verify(exactly = 1) { dashboardRefresh.notifyUserPlaylistMetadata(userId) }
+    verify(exactly = 1) { dashboardRefresh.notifyUserPlaylistMetadata() }
   }
 
   @Test
@@ -267,12 +267,12 @@ class PlaylistServiceTests {
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1"), buildPlaylistInfo("p2"))
     every { playlistRepository.replaceAll(any(), any()) } just runs
     every { playlistRepository.findByUserIdAndPlaylistId(userId, "p1") } returns mockk()
-    every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
+    every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
 
     val result = adapter.syncPlaylists(userId)
 
     assertThat(result.isRight()).isTrue()
-    verify(exactly = 1) { dashboardRefresh.notifyUserPlaylistMetadata(userId) }
+    verify(exactly = 1) { dashboardRefresh.notifyUserPlaylistMetadata() }
   }
 
   @Test
@@ -288,7 +288,7 @@ class PlaylistServiceTests {
     val result = adapter.syncPlaylists(userId)
 
     assertThat(result.isRight()).isTrue()
-    verify(exactly = 0) { dashboardRefresh.notifyUserPlaylistMetadata(any()) }
+    verify(exactly = 0) { dashboardRefresh.notifyUserPlaylistMetadata() }
   }
 
   @Test
@@ -351,7 +351,7 @@ class PlaylistServiceTests {
     )
     every { playlistRepository.replaceAll(any(), any()) } just runs
     every { playlistRepository.findByUserIdAndPlaylistId(userId, "p1") } returns mockk()
-    every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
+    every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
     every { playlistCheckRepository.deleteByPlaylistId("p1") } just runs
 
     val result = adapter.updateSyncStatus(userId, "p1", PlaylistSyncStatus.PASSIVE)
@@ -637,7 +637,7 @@ class PlaylistServiceTests {
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE))
     every { playlistRepository.replaceAll(any(), any()) } just runs
     every { outboxPort.enqueue(any()) } just runs
-    every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
+    every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
 
     val result = adapter.updateSyncStatus(userId, "p1", PlaylistSyncStatus.ACTIVE)
 
@@ -652,7 +652,7 @@ class PlaylistServiceTests {
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE))
     every { playlistRepository.replaceAll(any(), any()) } just runs
     every { outboxPort.enqueue(any()) } just runs
-    every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
+    every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
 
     val result = adapter.updateSyncStatus(userId, "p1", PlaylistSyncStatus.ACTIVE)
 
@@ -668,13 +668,13 @@ class PlaylistServiceTests {
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.ACTIVE))
     every { playlistRepository.replaceAll(any(), any()) } just runs
     every { playlistRepository.findByUserIdAndPlaylistId(userId, "p1") } returns mockk()
-    every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
+    every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
     every { playlistCheckRepository.deleteByPlaylistId("p1") } just runs
 
     val result = adapter.updateSyncStatus(userId, "p1", PlaylistSyncStatus.PASSIVE)
 
     assertThat(result.isRight()).isTrue()
-    verify(exactly = 1) { dashboardRefresh.notifyUserPlaylistMetadata(userId) }
+    verify(exactly = 1) { dashboardRefresh.notifyUserPlaylistMetadata() }
   }
 
   @Test
@@ -685,12 +685,12 @@ class PlaylistServiceTests {
     every { playlistRepository.replaceAll(any(), any()) } just runs
     every { playlistRepository.findByUserIdAndPlaylistId(userId, "p1") } returns mockk()
     every { outboxPort.enqueue(any()) } just runs
-    every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
+    every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
 
     val result = adapter.updateSyncStatus(userId, "p1", PlaylistSyncStatus.ACTIVE)
 
     assertThat(result.isRight()).isTrue()
-    verify(exactly = 1) { dashboardRefresh.notifyUserPlaylistMetadata(userId) }
+    verify(exactly = 1) { dashboardRefresh.notifyUserPlaylistMetadata() }
   }
 
   @Test
@@ -700,7 +700,7 @@ class PlaylistServiceTests {
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.ACTIVE))
     every { playlistRepository.replaceAll(any(), any()) } just runs
     every { playlistRepository.findByUserIdAndPlaylistId(userId, "p1") } returns mockk()
-    every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
+    every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
     every { playlistCheckRepository.deleteByPlaylistId("p1") } just runs
 
     val result = adapter.updateSyncStatus(userId, "p1", PlaylistSyncStatus.PASSIVE)
@@ -717,7 +717,7 @@ class PlaylistServiceTests {
     every { playlistRepository.replaceAll(any(), any()) } just runs
     every { playlistRepository.findByUserIdAndPlaylistId(userId, "p1") } returns mockk()
     every { outboxPort.enqueue(any()) } just runs
-    every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
+    every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
 
     val result = adapter.updateSyncStatus(userId, "p1", PlaylistSyncStatus.ACTIVE)
 
@@ -732,7 +732,7 @@ class PlaylistServiceTests {
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE, name = "All"))
     every { playlistRepository.replaceAll(any(), any()) } just runs
     every { outboxPort.enqueue(any()) } just runs
-    every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
+    every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
 
     val result = adapter.updateSyncStatus(userId, "p1", PlaylistSyncStatus.ACTIVE)
 
@@ -749,7 +749,7 @@ class PlaylistServiceTests {
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE, name = "ALL"))
     every { playlistRepository.replaceAll(any(), any()) } just runs
     every { outboxPort.enqueue(any()) } just runs
-    every { dashboardRefresh.notifyUserPlaylistMetadata(userId) } just runs
+    every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
 
     val result = adapter.updateSyncStatus(userId, "p1", PlaylistSyncStatus.ACTIVE)
 

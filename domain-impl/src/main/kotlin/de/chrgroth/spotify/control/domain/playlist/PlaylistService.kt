@@ -86,7 +86,7 @@ class PlaylistService(
       }
       playlistRepository.replaceAll(userId, updatedPlaylists)
       if (updatedPlaylists.size != existingById.size) {
-        dashboardRefresh.notifyUserPlaylistMetadata(userId)
+        dashboardRefresh.notifyUserPlaylistMetadata()
       }
       updatedPlaylists
         .filter { it.syncStatus == PlaylistSyncStatus.ACTIVE }
@@ -155,7 +155,7 @@ class PlaylistService(
     }
     logger.info { "Updated sync status for playlist '${playlist.name}' ($playlistId, user ${userDisplayName(userId)}) to $syncStatus" }
     playlistRepository.replaceAll(userId, updatedPlaylists)
-    dashboardRefresh.notifyUserPlaylistMetadata(userId)
+    dashboardRefresh.notifyUserPlaylistMetadata()
     if (syncStatus == PlaylistSyncStatus.PASSIVE) {
       logger.info { "Deleting checks for deactivated playlist '${playlist.name}' ($playlistId, user ${userDisplayName(userId)})" }
       playlistCheckRepository.deleteByPlaylistId(playlistId)
@@ -176,7 +176,7 @@ class PlaylistService(
     val playlistName = playlists.find { it.spotifyPlaylistId == playlistId }?.name ?: playlistId
     logger.info { "Updated type for playlist '$playlistName' ($playlistId, user ${userDisplayName(userId)}) to $type" }
     playlistRepository.replaceAll(userId, updatedPlaylists)
-    dashboardRefresh.notifyUserPlaylistMetadata(userId)
+    dashboardRefresh.notifyUserPlaylistMetadata()
     return Unit.right()
   }
 
