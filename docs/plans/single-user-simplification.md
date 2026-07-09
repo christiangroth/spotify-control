@@ -58,6 +58,27 @@ emitter list during the single-user migration. The same simplification applies h
 ever one possible subscriber, so a flat emitter list removes the map and the `UserId` parameter on
 `stream()`.
 
+## 5. Drop the `userId` tag from playback metrics and the matching Grafana panels
+
+`PlaybackService.recordFetchSuccess`/`recordEventsIngested` (`PlaybackService.kt:175-190`) tag the
+`app.playback.last_success_timestamp` and `app.playback.events_ingested` metrics with `userId`, even
+though there is only ever one possible value. That ceremony carries through into the Grafana
+dashboards under `monitoring/grafana/`:
+
+* `domain-overview.json` — "Playback Events Ingested Rate (by User)" groups `sum by (userId) (...)`
+  and uses `{{userId}}` as the legend.
+* `overview.json` — "Time Since Last Currently-Playing Fetch" and "Time Since Last Recently-Played
+  Fetch" group `... by (userId)` with a `{{userId}}` legend.
+* `overview.json` — "Active Users" plots the `app_users_active` gauge, which per item 1 above is
+  really a 0/1 "is a user registered" signal rather than a count.
+
+**Proposal:** once item 1 lands and metrics no longer need a `userId` tag, drop it from the two
+`PlaybackService` metrics and simplify the corresponding panels: remove the `by (userId)` grouping
+and `{{userId}}` legend (a single series is enough) and drop the "(by User)" qualifier from the
+events-ingested panel title. Rename/rework the "Active Users" panel alongside the `app.users.active`
+gauge rename from item 1. None of this changes what an operator can observe — it removes a
+now-meaningless per-user split from panels that only ever show one series.
+
 ## Risk
 
 Low. Each item is a mechanical signature/data-shape simplification following patterns already
