@@ -9,6 +9,7 @@ import de.chrgroth.spotify.control.domain.model.user.RefreshToken
 import de.chrgroth.spotify.control.domain.model.user.SpotifyProfile
 import de.chrgroth.spotify.control.domain.model.user.SpotifyProfileId
 import de.chrgroth.spotify.control.domain.model.user.SpotifyTokens
+import de.chrgroth.spotify.control.domain.model.user.User
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAuthPort
 import de.chrgroth.spotify.control.domain.port.out.user.TokenEncryptionPort
@@ -27,15 +28,16 @@ class LoginServiceTests {
   private val userRepository: UserRepositoryPort = mockk()
   private val tokenEncryption: TokenEncryptionPort = mockk()
 
-  private val adapter = LoginService(spotifyAuth, userRepository, tokenEncryption, listOf("user-1"))
+  private val adapter = LoginService(spotifyAuth, userRepository, tokenEncryption)
 
   private val tokens = SpotifyTokens(AccessToken("access"), RefreshToken("refresh"), 3600)
   private val profile = SpotifyProfile(SpotifyProfileId("user-1"), "Test User")
 
   @Test
-  fun `allowed user succeeds and user is upserted`() {
+  fun `login succeeds and user is upserted when no user is registered yet`() {
     every { spotifyAuth.exchangeCode("code") } returns tokens.right()
     every { spotifyAuth.getUserProfile(AccessToken("access")) } returns profile.right()
+    every { userRepository.findAll() } returns emptyList()
     every { tokenEncryption.encrypt(any()) } returns "encrypted".right()
     every { userRepository.upsert(any()) } just runs
 
@@ -47,14 +49,30 @@ class LoginServiceTests {
   }
 
   @Test
-  fun `not-allowed user returns failure and user is not upserted`() {
+  fun `login succeeds when the already registered user logs in again`() {
     every { spotifyAuth.exchangeCode("code") } returns tokens.right()
-    every { spotifyAuth.getUserProfile(AccessToken("access")) } returns SpotifyProfile(SpotifyProfileId("user-2"), "Other User").right()
+    every { spotifyAuth.getUserProfile(AccessToken("access")) } returns profile.right()
+    every { userRepository.findAll() } returns listOf(existingUser(UserId("user-1")))
+    every { tokenEncryption.encrypt(any()) } returns "encrypted".right()
+    every { userRepository.upsert(any()) } just runs
+
+    val result = adapter.handleCallback("code")
+
+    assertThat(result.isRight()).isTrue()
+    assertThat((result as Either.Right).value).isEqualTo(UserId("user-1"))
+    verify { userRepository.upsert(any()) }
+  }
+
+  @Test
+  fun `login is denied when a different user is already registered`() {
+    every { spotifyAuth.exchangeCode("code") } returns tokens.right()
+    every { spotifyAuth.getUserProfile(AccessToken("access")) } returns profile.right()
+    every { userRepository.findAll() } returns listOf(existingUser(UserId("other-user")))
 
     val result = adapter.handleCallback("code")
 
     assertThat(result.isLeft()).isTrue()
-    assertThat((result as Either.Left).value).isEqualTo(AuthError.USER_NOT_ALLOWED)
+    assertThat((result as Either.Left).value).isEqualTo(AuthError.ANOTHER_USER_ALREADY_REGISTERED)
     verify(exactly = 0) { userRepository.upsert(any()) }
   }
 
@@ -85,6 +103,7 @@ class LoginServiceTests {
   fun `unexpected exception during upsert returns UNEXPECTED error`() {
     every { spotifyAuth.exchangeCode("code") } returns tokens.right()
     every { spotifyAuth.getUserProfile(AccessToken("access")) } returns profile.right()
+    every { userRepository.findAll() } returns emptyList()
     every { tokenEncryption.encrypt(any()) } returns "encrypted".right()
     every { userRepository.upsert(any()) } throws RuntimeException("DB connection failed")
 
@@ -94,15 +113,12 @@ class LoginServiceTests {
     assertThat((result as Either.Left).value).isEqualTo(AuthError.UNEXPECTED)
   }
 
-  // --- isAllowed tests ---
-
-  @Test
-  fun `isAllowed returns true for user in allowed list`() {
-    assertThat(adapter.isAllowed(UserId("user-1"))).isTrue()
-  }
-
-  @Test
-  fun `isAllowed returns false for user not in allowed list`() {
-    assertThat(adapter.isAllowed(UserId("unknown-user"))).isFalse()
-  }
+  private fun existingUser(userId: UserId) = User(
+    spotifyUserId = userId,
+    displayName = "Existing User",
+    encryptedAccessToken = "encrypted-access",
+    encryptedRefreshToken = "encrypted-refresh",
+    tokenExpiresAt = kotlin.time.Clock.System.now(),
+    lastLoginAt = kotlin.time.Clock.System.now(),
+  )
 }
