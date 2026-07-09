@@ -13,7 +13,6 @@ import de.chrgroth.spotify.control.domain.model.playlist.Playlist
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistId
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.user.AccessToken
-import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppAlbumRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.SpotifyPlaylistPort
@@ -35,7 +34,6 @@ class TrackFromLatestReleaseCheckRunner(
   override val displayName = "Track From Latest Release"
 
   override fun run(
-    userId: UserId,
     playlistId: String,
     playlist: Playlist,
     currentPlaylistInfo: PlaylistInfo?,
@@ -54,7 +52,6 @@ class TrackFromLatestReleaseCheckRunner(
   override fun canFix(): Boolean = true
 
   override fun fix(
-    userId: UserId,
     accessToken: AccessToken,
     playlistId: String,
     playlist: Playlist,
@@ -65,7 +62,7 @@ class TrackFromLatestReleaseCheckRunner(
     if (violations.isEmpty()) {
       return Unit.right()
     }
-    logger.info { "Replacing ${violations.size} outdated track(s) in playlist $playlistId (user ${userId.value})" }
+    logger.info { "Replacing ${violations.size} outdated track(s) in playlist $playlistId" }
     // Process in reverse position order so earlier positions are unaffected by later replacements
     violations.sortedByDescending { it.position }.forEach { violation ->
       val result = spotifyPlaylist.replacePlaylistTrack(

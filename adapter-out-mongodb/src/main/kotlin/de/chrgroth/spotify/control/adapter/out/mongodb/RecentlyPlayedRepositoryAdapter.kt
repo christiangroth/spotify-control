@@ -4,7 +4,6 @@ import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.model.playback.RecentlyPlayedItem
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
-import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.playback.RecentlyPlayedRepositoryPort
 import io.quarkus.panache.common.Sort
 import jakarta.enterprise.context.ApplicationScoped
@@ -18,39 +17,34 @@ class RecentlyPlayedRepositoryAdapter(
   private val mongoQueryMetrics: MongoQueryMetrics,
 ) : RecentlyPlayedRepositoryPort {
 
-  override fun findExistingPlayedAts(spotifyUserId: UserId, playedAts: Set<Instant>): Set<Instant> {
+  override fun findExistingPlayedAts(playedAts: Set<Instant>): Set<Instant> {
     if (playedAts.isEmpty()) return emptySet()
     val javaPlayedAts = playedAts.map { it.toJavaInstant() }
     return mongoQueryMetrics.timed("spotify_recently_played.findExistingPlayedAts") {
       recentlyPlayedDocumentRepository
-        .list("spotifyUserId = ?1 and playedAt in ?2", spotifyUserId.value, javaPlayedAts)
+        .list("playedAt in ?1", javaPlayedAts)
         .map { it.playedAt.toKotlinInstant() }
         .toSet()
     }
   }
 
-  override fun findMostRecentPlayedAt(spotifyUserId: UserId): Instant? =
+  override fun findMostRecentPlayedAt(): Instant? =
     mongoQueryMetrics.timed("spotify_recently_played.findMostRecentPlayedAt") {
       recentlyPlayedDocumentRepository
-        .find("spotifyUserId = ?1", Sort.by("playedAt").descending(), spotifyUserId.value)
+        .findAll(Sort.by("playedAt").descending())
         .firstResult()
         ?.playedAt?.toKotlinInstant()
     }
 
-  override fun findSince(spotifyUserId: UserId, since: Instant?): List<RecentlyPlayedItem> =
+  override fun findSince(since: Instant?): List<RecentlyPlayedItem> =
     mongoQueryMetrics.timed("spotify_recently_played.findSince") {
       val query = if (since != null) {
-        recentlyPlayedDocumentRepository.list(
-          "spotifyUserId = ?1 and playedAt > ?2",
-          spotifyUserId.value,
-          since.toJavaInstant(),
-        )
+        recentlyPlayedDocumentRepository.list("playedAt > ?1", since.toJavaInstant())
       } else {
-        recentlyPlayedDocumentRepository.list("spotifyUserId = ?1", spotifyUserId.value)
+        recentlyPlayedDocumentRepository.listAll()
       }
       query.map { doc ->
         RecentlyPlayedItem(
-          spotifyUserId = UserId(doc.spotifyUserId),
           trackId = TrackId(doc.trackId),
           trackName = doc.trackName,
           artistIds = doc.artistIds.map { ArtistId(it) },
@@ -67,7 +61,6 @@ class RecentlyPlayedRepositoryAdapter(
     if (items.isEmpty()) return
     val documents = items.map { item ->
       RecentlyPlayedDocument().apply {
-        spotifyUserId = item.spotifyUserId.value
         trackId = item.trackId.value
         trackName = item.trackName
         artistIds = item.artistIds.map { it.value }
@@ -89,4 +82,3 @@ class RecentlyPlayedRepositoryAdapter(
     }
 
 }
-

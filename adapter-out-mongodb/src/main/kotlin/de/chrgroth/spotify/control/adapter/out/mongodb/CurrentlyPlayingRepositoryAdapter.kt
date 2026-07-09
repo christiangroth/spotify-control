@@ -8,7 +8,6 @@ import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
 import de.chrgroth.spotify.control.domain.model.playback.CurrentlyPlayingItem
-import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.playback.CurrentlyPlayingRepositoryPort
 import io.quarkus.panache.common.Sort
 import jakarta.enterprise.context.ApplicationScoped
@@ -23,7 +22,6 @@ class CurrentlyPlayingRepositoryAdapter(
 
   override fun save(item: CurrentlyPlayingItem) {
     val document = CurrentlyPlayingDocument().apply {
-      spotifyUserId = item.spotifyUserId.value
       trackId = item.trackId.value
       trackName = item.trackName
       artistIds = item.artistIds.map { it.value }
@@ -40,35 +38,18 @@ class CurrentlyPlayingRepositoryAdapter(
     }
   }
 
-  override fun findMostRecentByUserAndTrack(userId: UserId, trackId: TrackId): CurrentlyPlayingItem? =
-    mongoQueryMetrics.timed("spotify_currently_playing.findMostRecentByUserAndTrack") {
+  override fun findMostRecentByTrack(trackId: TrackId): CurrentlyPlayingItem? =
+    mongoQueryMetrics.timed("spotify_currently_playing.findMostRecentByTrack") {
       currentlyPlayingDocumentRepository
-        .find("spotifyUserId = ?1 and trackId = ?2", Sort.by(OBSERVED_AT_FIELD).descending(), userId.value, trackId.value)
+        .find("trackId = ?1", Sort.by(OBSERVED_AT_FIELD).descending(), trackId.value)
         .firstResult()
-        ?.let { doc ->
-          CurrentlyPlayingItem(
-            spotifyUserId = UserId(doc.spotifyUserId),
-            trackId = TrackId(doc.trackId),
-            trackName = doc.trackName,
-            artistIds = doc.artistIds.map { ArtistId(it) },
-            artistNames = doc.artistNames,
-            progressMs = doc.progressMs,
-            durationMs = doc.durationMs,
-            isPlaying = doc.isPlaying,
-            observedAt = doc.observedAt.toKotlinInstant(),
-            startTime = doc.startTime.toKotlinInstant(),
-            albumId = doc.albumId?.let { AlbumId(it) },
-          )
-        }
+        ?.toItem()
     }
 
   override fun updateProgress(item: CurrentlyPlayingItem) {
     mongoQueryMetrics.timed("spotify_currently_playing.updateProgress") {
       currentlyPlayingDocumentRepository.mongoCollection().findOneAndUpdate(
-        Filters.and(
-          Filters.eq(SPOTIFY_USER_ID_FIELD, item.spotifyUserId.value),
-          Filters.eq(TRACK_ID_FIELD, item.trackId.value),
-        ),
+        Filters.eq(TRACK_ID_FIELD, item.trackId.value),
         Updates.combine(
           Updates.set(PROGRESS_MS_FIELD, item.progressMs),
           Updates.set(IS_PLAYING_FIELD, item.isPlaying),
@@ -80,40 +61,34 @@ class CurrentlyPlayingRepositoryAdapter(
     }
   }
 
-  override fun findByUserId(userId: UserId): List<CurrentlyPlayingItem> =
-    mongoQueryMetrics.timed("spotify_currently_playing.findByUserId") {
+  override fun findAll(): List<CurrentlyPlayingItem> =
+    mongoQueryMetrics.timed("spotify_currently_playing.findAll") {
       currentlyPlayingDocumentRepository
-        .list("spotifyUserId = ?1", userId.value)
-        .map { doc ->
-          CurrentlyPlayingItem(
-            spotifyUserId = UserId(doc.spotifyUserId),
-            trackId = TrackId(doc.trackId),
-            trackName = doc.trackName,
-            artistIds = doc.artistIds.map { ArtistId(it) },
-            artistNames = doc.artistNames,
-            progressMs = doc.progressMs,
-            durationMs = doc.durationMs,
-            isPlaying = doc.isPlaying,
-            observedAt = doc.observedAt.toKotlinInstant(),
-            startTime = doc.startTime.toKotlinInstant(),
-            albumId = doc.albumId?.let { AlbumId(it) },
-          )
-        }
+        .listAll()
+        .map { doc -> doc.toItem() }
     }
 
-  override fun deleteByUserIdAndTrackIds(userId: UserId, trackIds: Set<String>) {
+  override fun deleteByTrackIds(trackIds: Set<String>) {
     if (trackIds.isEmpty()) return
-    mongoQueryMetrics.timed("spotify_currently_playing.deleteByUserIdAndTrackIds") {
-      currentlyPlayingDocumentRepository.delete(
-        "spotifyUserId = ?1 and trackId in ?2",
-        userId.value,
-        trackIds.toList(),
-      )
+    mongoQueryMetrics.timed("spotify_currently_playing.deleteByTrackIds") {
+      currentlyPlayingDocumentRepository.delete("trackId in ?1", trackIds.toList())
     }
   }
 
+  private fun CurrentlyPlayingDocument.toItem() = CurrentlyPlayingItem(
+    trackId = TrackId(trackId),
+    trackName = trackName,
+    artistIds = artistIds.map { ArtistId(it) },
+    artistNames = artistNames,
+    progressMs = progressMs,
+    durationMs = durationMs,
+    isPlaying = isPlaying,
+    observedAt = observedAt.toKotlinInstant(),
+    startTime = startTime.toKotlinInstant(),
+    albumId = albumId?.let { AlbumId(it) },
+  )
+
   companion object {
-    internal const val SPOTIFY_USER_ID_FIELD = "spotifyUserId"
     internal const val TRACK_ID_FIELD = "trackId"
     internal const val OBSERVED_AT_FIELD = "observedAt"
     internal const val START_TIME_FIELD = "startTime"

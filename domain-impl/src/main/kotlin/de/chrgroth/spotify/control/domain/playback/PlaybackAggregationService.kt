@@ -10,7 +10,6 @@ import de.chrgroth.spotify.control.domain.model.playback.aggregation.ActivityTim
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationPeriodType
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationRankEntry
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.PlaybackAggregation
-import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackAggregationPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
@@ -167,20 +166,20 @@ class PlaybackAggregationService(
   // --- Outbox handler ---
 
   override fun handle(event: DomainOutboxEvent.AggregatePlaybackData): Either<DomainError, Unit> {
-    val userId = currentUserResolver.userId() ?: return Unit.right()
+    currentUserResolver.userId() ?: return Unit.right()
     when (event.type) {
-      AggregationPeriodType.DAY -> aggregateDay(userId, event.periodStart)
+      AggregationPeriodType.DAY -> aggregateDay(event.periodStart)
       AggregationPeriodType.WEEK -> aggregateFromDailyAggregations(
-        userId, AggregationPeriodType.WEEK, event.periodStart, event.periodStart.plusKDays(DAYS_IN_WEEK),
+        AggregationPeriodType.WEEK, event.periodStart, event.periodStart.plusKDays(DAYS_IN_WEEK),
       )
       AggregationPeriodType.MONTH -> aggregateFromDailyAggregations(
-        userId, AggregationPeriodType.MONTH, event.periodStart, event.periodStart.endOfMonth(),
+        AggregationPeriodType.MONTH, event.periodStart, event.periodStart.endOfMonth(),
       )
       AggregationPeriodType.QUARTER -> aggregateFromDailyAggregations(
-        userId, AggregationPeriodType.QUARTER, event.periodStart, event.periodStart.plusKMonths(MONTHS_PER_QUARTER).minusKDays(1),
+        AggregationPeriodType.QUARTER, event.periodStart, event.periodStart.plusKMonths(MONTHS_PER_QUARTER).minusKDays(1),
       )
       AggregationPeriodType.YEAR -> aggregateFromDailyAggregations(
-        userId, AggregationPeriodType.YEAR, event.periodStart, event.periodStart.plusKMonths(MONTHS_PER_YEAR).minusKDays(1),
+        AggregationPeriodType.YEAR, event.periodStart, event.periodStart.plusKMonths(MONTHS_PER_YEAR).minusKDays(1),
       )
     }
     recordAggregationSuccess(event.type)
@@ -201,14 +200,14 @@ class PlaybackAggregationService(
 
   // --- Aggregation logic ---
 
-  private fun aggregateDay(userId: UserId, date: LocalDate) {
+  private fun aggregateDay(date: LocalDate) {
     val javaDate = date.toJavaLocalDate()
     val from = Instant.fromEpochMilliseconds(javaDate.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli())
     val to = Instant.fromEpochMilliseconds(javaDate.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli())
 
-    val items = appPlaybackRepository.findAllBetween(userId, from, to)
+    val items = appPlaybackRepository.findAllBetween(from, to)
     if (items.isEmpty()) {
-      aggregationRepository.save(emptyAggregation(userId, AggregationPeriodType.DAY, date))
+      aggregationRepository.save(emptyAggregation(AggregationPeriodType.DAY, date))
       return
     }
 
@@ -225,7 +224,7 @@ class PlaybackAggregationService(
     }
 
     if (filteredItems.isEmpty()) {
-      aggregationRepository.save(emptyAggregation(userId, AggregationPeriodType.DAY, date))
+      aggregationRepository.save(emptyAggregation(AggregationPeriodType.DAY, date))
       return
     }
 
@@ -233,7 +232,6 @@ class PlaybackAggregationService(
     val activityEntries = buildActivityEntries(filteredItems)
 
     val aggregation = PlaybackAggregation(
-      userId = userId,
       type = AggregationPeriodType.DAY,
       periodStart = date,
       totalPlaybackSeconds = filteredItems.sumOf { it.secondsPlayed },
@@ -249,10 +247,10 @@ class PlaybackAggregationService(
     aggregationRepository.save(aggregation)
   }
 
-  private fun aggregateFromDailyAggregations(userId: UserId, type: AggregationPeriodType, from: LocalDate, to: LocalDate) {
-    val dailyAggregations = aggregationRepository.findByUserTypeAndPeriodRange(userId, AggregationPeriodType.DAY, from, to)
+  private fun aggregateFromDailyAggregations(type: AggregationPeriodType, from: LocalDate, to: LocalDate) {
+    val dailyAggregations = aggregationRepository.findByTypeAndPeriodRange(AggregationPeriodType.DAY, from, to)
     if (dailyAggregations.isEmpty()) {
-      aggregationRepository.save(emptyAggregation(userId, type, from))
+      aggregationRepository.save(emptyAggregation(type, from))
       return
     }
 
@@ -280,7 +278,6 @@ class PlaybackAggregationService(
     // a full year of daily entries can produce documents with one rank entry per distinct track/artist/album ever
     // played in that period, which made a single findByUserAndPeriod lookup of such a document slow.
     val aggregation = PlaybackAggregation(
-      userId = userId,
       type = type,
       periodStart = from,
       totalPlaybackSeconds = dailyAggregations.sumOf { it.totalPlaybackSeconds },
@@ -334,8 +331,7 @@ class PlaybackAggregationService(
       ActivityEntry(dayOfWeek = key.first, timeWindow = key.second, totalSeconds = entries.sumOf { it.secondsPlayed })
     }
 
-  private fun emptyAggregation(userId: UserId, type: AggregationPeriodType, periodStart: LocalDate): PlaybackAggregation = PlaybackAggregation(
-    userId = userId,
+  private fun emptyAggregation(type: AggregationPeriodType, periodStart: LocalDate): PlaybackAggregation = PlaybackAggregation(
     type = type,
     periodStart = periodStart,
     totalPlaybackSeconds = 0L,

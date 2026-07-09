@@ -15,7 +15,6 @@ import de.chrgroth.spotify.control.domain.model.catalog.TrackId
 import de.chrgroth.spotify.control.domain.model.playback.CurrentlyPlayingItem
 import de.chrgroth.spotify.control.domain.model.playback.RecentlyPlayedItem
 import de.chrgroth.spotify.control.domain.model.user.AccessToken
-import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.playback.SpotifyPlaybackPort
 import jakarta.enterprise.context.ApplicationScoped
 import kotlinx.serialization.json.JsonElement
@@ -65,8 +64,6 @@ class SpotifyPlaybackAdapter(
     val progressMs = response.progressMs ?: 0L
     val observedAt = Clock.System.now()
     return CurrentlyPlayingItem(
-      // stamped with the real user by PlaybackService, which resolves "the" current user
-      spotifyUserId = PLACEHOLDER_USER_ID,
       trackId = TrackId(trackId),
       trackName = track.name ?: "",
       artistIds = track.artists?.mapNotNull { it.id?.let { id -> ArtistId(id) } } ?: emptyList(),
@@ -126,8 +123,6 @@ class SpotifyPlaybackAdapter(
     val durationSeconds = track.durationMs?.let { it.toLong() / MS_PER_SECOND }
     val playedAtInstant = Instant.parse(playedAt)
     return RecentlyPlayedItem(
-      // stamped with the real user by PlaybackService, which resolves "the" current user
-      spotifyUserId = PLACEHOLDER_USER_ID,
       trackId = TrackId(track.id),
       trackName = track.name ?: "",
       artistIds = track.artists?.mapNotNull { it.id?.let { id -> ArtistId(id) } } ?: emptyList(),
@@ -145,6 +140,5 @@ class SpotifyPlaybackAdapter(
   companion object : KLogging() {
     private const val MS_PER_SECOND = 1_000L
     private const val RECENTLY_PLAYED_LIMIT = 50
-    private val PLACEHOLDER_USER_ID = UserId("")
   }
 }

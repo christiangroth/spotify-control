@@ -10,7 +10,6 @@ class RecentlyPartialPlayedDocument {
 
   @BsonId
   var id: ObjectId = ObjectId()
-  lateinit var spotifyUserId: String
   lateinit var trackId: String
   lateinit var trackName: String
   lateinit var artistIds: List<String>

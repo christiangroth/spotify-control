@@ -4,7 +4,6 @@ import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
 import de.chrgroth.spotify.control.domain.model.playback.RecentlyPartialPlayedItem
-import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.playback.RecentlyPartialPlayedRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 import kotlin.time.Instant
@@ -17,37 +16,33 @@ class RecentlyPartialPlayedRepositoryAdapter(
   private val mongoQueryMetrics: MongoQueryMetrics,
 ) : RecentlyPartialPlayedRepositoryPort {
 
-  override fun findExistingPlayedAts(userId: UserId, playedAts: Set<Instant>): Set<Instant> {
+  override fun findExistingPlayedAts(playedAts: Set<Instant>): Set<Instant> {
     if (playedAts.isEmpty()) return emptySet()
     val javaPlayedAts = playedAts.map { it.toJavaInstant() }
     return mongoQueryMetrics.timed("recently_partial_played.findExistingPlayedAts") {
       recentlyPartialPlayedDocumentRepository
-        .list("spotifyUserId = ?1 and playedAt in ?2", userId.value, javaPlayedAts)
+        .list("playedAt in ?1", javaPlayedAts)
         .map { it.playedAt.toKotlinInstant() }
         .toSet()
     }
   }
 
-  override fun findSince(userId: UserId, since: Instant?): List<RecentlyPartialPlayedItem> =
+  override fun findSince(since: Instant?): List<RecentlyPartialPlayedItem> =
     mongoQueryMetrics.timed("recently_partial_played.findSince") {
       val query = if (since != null) {
-        recentlyPartialPlayedDocumentRepository.list(
-          "spotifyUserId = ?1 and playedAt > ?2",
-          userId.value,
-          since.toJavaInstant(),
-        )
+        recentlyPartialPlayedDocumentRepository.list("playedAt > ?1", since.toJavaInstant())
       } else {
-        recentlyPartialPlayedDocumentRepository.list("spotifyUserId = ?1", userId.value)
+        recentlyPartialPlayedDocumentRepository.listAll()
       }
       query.map { doc -> doc.toItem() }
     }
 
-  override fun findByUserIdAndTrackIds(userId: UserId, trackIds: Set<TrackId>): List<RecentlyPartialPlayedItem> {
+  override fun findByTrackIds(trackIds: Set<TrackId>): List<RecentlyPartialPlayedItem> {
     if (trackIds.isEmpty()) return emptyList()
     val trackIdValues = trackIds.map { it.value }
-    return mongoQueryMetrics.timed("recently_partial_played.findByUserIdAndTrackIds") {
+    return mongoQueryMetrics.timed("recently_partial_played.findByTrackIds") {
       recentlyPartialPlayedDocumentRepository
-        .list("spotifyUserId = ?1 and trackId in ?2", userId.value, trackIdValues)
+        .list("trackId in ?1", trackIdValues)
         .map { doc -> doc.toItem() }
     }
   }
@@ -56,7 +51,6 @@ class RecentlyPartialPlayedRepositoryAdapter(
     if (items.isEmpty()) return
     val documents = items.map { item ->
       RecentlyPartialPlayedDocument().apply {
-        spotifyUserId = item.spotifyUserId.value
         trackId = item.trackId.value
         trackName = item.trackName
         artistIds = item.artistIds.map { it.value }
@@ -72,16 +66,15 @@ class RecentlyPartialPlayedRepositoryAdapter(
     }
   }
 
-  override fun deleteByPlayedAts(userId: UserId, playedAts: Set<Instant>) {
+  override fun deleteByPlayedAts(playedAts: Set<Instant>) {
     if (playedAts.isEmpty()) return
     val javaPlayedAts = playedAts.map { it.toJavaInstant() }
     mongoQueryMetrics.timed("recently_partial_played.deleteByPlayedAts") {
-      recentlyPartialPlayedDocumentRepository.delete("spotifyUserId = ?1 and playedAt in ?2", userId.value, javaPlayedAts)
+      recentlyPartialPlayedDocumentRepository.delete("playedAt in ?1", javaPlayedAts)
     }
   }
 
   private fun RecentlyPartialPlayedDocument.toItem() = RecentlyPartialPlayedItem(
-    spotifyUserId = UserId(spotifyUserId),
     trackId = TrackId(trackId),
     trackName = trackName,
     artistIds = artistIds.map { ArtistId(it) },

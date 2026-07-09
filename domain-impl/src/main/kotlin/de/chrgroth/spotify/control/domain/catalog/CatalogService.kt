@@ -13,7 +13,6 @@ import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.model.catalog.SyncCause
 import de.chrgroth.spotify.control.domain.model.catalog.SyncTrace
 import de.chrgroth.spotify.control.domain.model.catalog.SyncTraceEntityType
-import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppAlbumRepositoryPort
@@ -104,8 +103,8 @@ class CatalogService(
 
   override fun resyncCatalog(): Either<DomainError, Unit> {
     val allArtistIds = appArtistRepository.findAll().map { it.id.value }
-    val userId = currentUserResolver.userId() ?: return Unit.right()
-    val playbackCatalogRequests = buildPlaybackCatalogRequests(userId)
+    currentUserResolver.userId() ?: return Unit.right()
+    val playbackCatalogRequests = buildPlaybackCatalogRequests()
     logger.info { "Re-syncing catalog: ${allArtistIds.size} catalog artist(s), ${playbackCatalogRequests.size} playback track(s)" }
     allArtistIds.forEach { outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums(it)) }
     syncController.syncForTracks(playbackCatalogRequests)
@@ -196,20 +195,19 @@ class CatalogService(
   }
 
   override fun enqueuePlaybackArtistsForSync() {
-    val userId = currentUserResolver.userId()
-    if (userId == null) {
+    if (currentUserResolver.userId() == null) {
       logger.warn { "No users available for playback artists sync, skipping" }
       return
     }
-    val playbackCatalogRequests = buildPlaybackCatalogRequests(userId)
+    val playbackCatalogRequests = buildPlaybackCatalogRequests()
     val artistCount = playbackCatalogRequests.flatMap { it.artistIds }.filter { it.isNotBlank() }.distinct().size
     logger.info { "Enqueuing artist sync for $artistCount artist(s) found in playback data" }
     syncController.syncForTracks(playbackCatalogRequests)
   }
 
-  private fun buildPlaybackCatalogRequests(userId: UserId): List<CatalogSyncRequest> {
-    val recentlyPlayed = recentlyPlayedRepository.findSince(userId, null)
-    val partialPlayed = recentlyPartialPlayedRepository.findSince(userId, null)
+  private fun buildPlaybackCatalogRequests(): List<CatalogSyncRequest> {
+    val recentlyPlayed = recentlyPlayedRepository.findSince(null)
+    val partialPlayed = recentlyPartialPlayedRepository.findSince(null)
     return (
       recentlyPlayed.map { buildCatalogSyncRequest(it.trackId.value, it.artistIds) } +
         partialPlayed.map { buildCatalogSyncRequest(it.trackId.value, it.artistIds) }

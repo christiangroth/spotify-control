@@ -3,17 +3,11 @@ package de.chrgroth.spotify.control.adapter.out.mongodb
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.model.playlist.Playlist
-import de.chrgroth.spotify.control.domain.model.playlist.PlaylistInfo
-import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistTrack
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
-import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
 import io.quarkus.test.junit.QuarkusTest
 import jakarta.inject.Inject
-import kotlin.time.Clock
-import kotlin.time.Duration.Companion.hours
-import kotlin.time.Instant
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.util.UUID
@@ -35,34 +29,21 @@ class PlaylistDataRepositoryTests {
     ),
   )
 
-  private fun buildPlaylistInfo(playlistId: String, syncStatus: PlaylistSyncStatus = PlaylistSyncStatus.PASSIVE): PlaylistInfo {
-    val now = Clock.System.now().let { Instant.fromEpochMilliseconds(it.toEpochMilliseconds()) }
-    return PlaylistInfo(
-      spotifyPlaylistId = playlistId,
-      snapshotId = "snap-1",
-      lastSnapshotIdSyncTime = now - 1.hours,
-      name = "Playlist $playlistId",
-      syncStatus = syncStatus,
-    )
+  @Test
+  fun `findByPlaylistId returns null when no playlist exists`() {
+    assertThat(playlistRepository.findByPlaylistId("unknown-playlist-${UUID.randomUUID()}")).isNull()
   }
 
   @Test
-  fun `findByUserIdAndPlaylistId returns null when no playlist exists`() {
-    val userId = UserId("no-playlist-${UUID.randomUUID()}")
+  fun `save and findByPlaylistId round-trips playlist correctly`() {
+    val playlistId = "playlist-${UUID.randomUUID()}"
+    val playlist = buildPlaylist(playlistId)
 
-    assertThat(playlistRepository.findByUserIdAndPlaylistId(userId, "unknown-playlist")).isNull()
-  }
+    playlistRepository.save(playlist)
 
-  @Test
-  fun `save and findByUserIdAndPlaylistId round-trips playlist correctly`() {
-    val userId = UserId("test-${UUID.randomUUID()}")
-    val playlist = buildPlaylist("playlist-1")
-
-    playlistRepository.save(userId, playlist)
-
-    val found = playlistRepository.findByUserIdAndPlaylistId(userId, "playlist-1")
+    val found = playlistRepository.findByPlaylistId(playlistId)
     assertThat(found).isNotNull
-    assertThat(found!!.spotifyPlaylistId).isEqualTo("playlist-1")
+    assertThat(found!!.spotifyPlaylistId).isEqualTo(playlistId)
     assertThat(found.tracks).hasSize(1)
     assertThat(found.tracks[0].trackId).isEqualTo(TrackId("track-1"))
     assertThat(found.tracks[0].artistIds).containsExactly(ArtistId("artist-1"))
@@ -70,7 +51,6 @@ class PlaylistDataRepositoryTests {
 
   @Test
   fun `numberOfTracks returns correct size after save`() {
-    val userId = UserId("test-${UUID.randomUUID()}")
     val playlistId = "playlist-ntracks-${UUID.randomUUID()}"
     val playlist = Playlist(
       spotifyPlaylistId = playlistId,
@@ -80,19 +60,17 @@ class PlaylistDataRepositoryTests {
       ),
     )
 
-    playlistRepository.save(userId, playlist)
+    playlistRepository.save(playlist)
 
-    val found = playlistRepository.findByUserIdAndPlaylistId(userId, playlistId)
+    val found = playlistRepository.findByPlaylistId(playlistId)
     assertThat(found).isNotNull
     assertThat(found!!.numberOfTracks).isEqualTo(2)
   }
 
   @Test
   fun `numberOfTracks returns correct size after appendTracks`() {
-    val userId = UserId("test-${UUID.randomUUID()}")
     val playlistId = "playlist-append-${UUID.randomUUID()}"
     playlistRepository.save(
-      userId,
       Playlist(
         spotifyPlaylistId = playlistId,
         tracks = listOf(PlaylistTrack(trackId = TrackId("t1"), artistIds = listOf(ArtistId("a1")), albumId = AlbumId("al1"))),
@@ -100,7 +78,6 @@ class PlaylistDataRepositoryTests {
     )
 
     playlistRepository.appendTracks(
-      userId,
       playlistId,
       listOf(
         PlaylistTrack(trackId = TrackId("t2"), artistIds = listOf(ArtistId("a2")), albumId = AlbumId("al2")),
@@ -108,62 +85,41 @@ class PlaylistDataRepositoryTests {
       ),
     )
 
-    val found = playlistRepository.findByUserIdAndPlaylistId(userId, playlistId)
+    val found = playlistRepository.findByPlaylistId(playlistId)
     assertThat(found).isNotNull
     assertThat(found!!.numberOfTracks).isEqualTo(3)
   }
 
   @Test
   fun `save overwrites previous playlist data`() {
-    val userId = UserId("test-${UUID.randomUUID()}")
-    playlistRepository.save(userId, buildPlaylist("playlist-1"))
+    val playlistId = "playlist-${UUID.randomUUID()}"
+    playlistRepository.save(buildPlaylist(playlistId))
 
-    playlistRepository.save(userId, buildPlaylist("playlist-1"))
+    playlistRepository.save(buildPlaylist(playlistId))
 
-    val found = playlistRepository.findByUserIdAndPlaylistId(userId, "playlist-1")
+    val found = playlistRepository.findByPlaylistId(playlistId)
     assertThat(found).isNotNull
     assertThat(found!!.tracks).hasSize(1)
   }
 
   @Test
-  fun `findTrackCountsByUserId returns track count per playlist for the given user`() {
-    val userId = UserId("test-${UUID.randomUUID()}")
-    val otherUserId = UserId("test-${UUID.randomUUID()}")
+  fun `findTrackCounts returns track count per playlist`() {
+    val playlistId1 = "playlist-${UUID.randomUUID()}"
+    val playlistId2 = "playlist-${UUID.randomUUID()}"
     playlistRepository.save(
-      userId,
       Playlist(
-        spotifyPlaylistId = "playlist-1",
+        spotifyPlaylistId = playlistId1,
         tracks = listOf(
           PlaylistTrack(trackId = TrackId("t1"), artistIds = listOf(ArtistId("a1")), albumId = AlbumId("al1")),
           PlaylistTrack(trackId = TrackId("t2"), artistIds = listOf(ArtistId("a2")), albumId = AlbumId("al2")),
         ),
       ),
     )
-    playlistRepository.save(userId, buildPlaylist("playlist-2"))
-    playlistRepository.save(otherUserId, buildPlaylist("playlist-3"))
+    playlistRepository.save(buildPlaylist(playlistId2))
 
-    val result = playlistRepository.findTrackCountsByUserId(userId)
+    val result = playlistRepository.findTrackCounts()
 
-    assertThat(result).containsExactlyInAnyOrderEntriesOf(mapOf("playlist-1" to 2, "playlist-2" to 1))
-  }
-
-  @Test
-  fun `findTrackCountsByUserId returns empty map when user has no playlists`() {
-    val userId = UserId("no-playlists-${UUID.randomUUID()}")
-
-    assertThat(playlistRepository.findTrackCountsByUserId(userId)).isEmpty()
-  }
-
-  @Test
-  fun `save does not affect playlists of other users`() {
-    val userId1 = UserId("test-${UUID.randomUUID()}")
-    val userId2 = UserId("test-${UUID.randomUUID()}")
-    playlistRepository.save(userId1, buildPlaylist("playlist-1"))
-    playlistRepository.save(userId2, buildPlaylist("playlist-2"))
-
-    assertThat(playlistRepository.findByUserIdAndPlaylistId(userId1, "playlist-1")).isNotNull
-    assertThat(playlistRepository.findByUserIdAndPlaylistId(userId2, "playlist-2")).isNotNull
-    assertThat(playlistRepository.findByUserIdAndPlaylistId(userId1, "playlist-2")).isNull()
-    assertThat(playlistRepository.findByUserIdAndPlaylistId(userId2, "playlist-1")).isNull()
+    assertThat(result).containsEntry(playlistId1, 2)
+    assertThat(result).containsEntry(playlistId2, 1)
   }
 }

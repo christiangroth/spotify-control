@@ -5,7 +5,6 @@ import de.chrgroth.spotify.control.domain.model.playlist.Playlist
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistId
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistType
-import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 import kotlin.time.Clock
@@ -22,7 +21,6 @@ class SingleArtistTrackCheckRunner(
   override fun isApplicable(playlistInfo: PlaylistInfo?): Boolean = playlistInfo?.type == PlaylistType.SINGULARITY
 
   override fun run(
-    userId: UserId,
     playlistId: String,
     playlist: Playlist,
     currentPlaylistInfo: PlaylistInfo?,

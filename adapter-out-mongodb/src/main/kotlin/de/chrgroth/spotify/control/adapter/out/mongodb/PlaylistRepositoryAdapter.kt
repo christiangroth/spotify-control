@@ -12,7 +12,6 @@ import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistTrack
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistType
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
-import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 import kotlin.time.toJavaInstant
@@ -28,33 +27,32 @@ class PlaylistRepositoryAdapter(
   private val mongoQueryMetrics: MongoQueryMetrics,
 ) : PlaylistRepositoryPort {
 
-  override fun findByUserId(userId: UserId): List<PlaylistInfo> =
-    mongoQueryMetrics.timed("spotify_playlist_metadata.findByUserId") {
+  override fun findAll(): List<PlaylistInfo> =
+    mongoQueryMetrics.timed("spotify_playlist_metadata.findAll") {
       playlistMetadataDocumentRepository
-        .list("spotifyUserId = ?1", userId.value)
+        .listAll()
         .map { it.toDomain() }
     }
 
-  override fun replaceAll(userId: UserId, playlists: List<PlaylistInfo>) {
-    mongoQueryMetrics.timed("spotify_playlist_metadata.deleteByUserId") {
-      playlistMetadataDocumentRepository.delete("spotifyUserId = ?1", userId.value)
+  override fun replaceAll(playlists: List<PlaylistInfo>) {
+    mongoQueryMetrics.timed("spotify_playlist_metadata.deleteAll") {
+      playlistMetadataDocumentRepository.deleteAll()
     }
     if (playlists.isNotEmpty()) {
-      val documents = playlists.map { it.toDocument(userId) }
+      val documents = playlists.map { it.toDocument() }
       mongoQueryMetrics.timed("spotify_playlist_metadata.saveAll") {
         playlistMetadataDocumentRepository.persist(documents)
       }
     }
   }
 
-  override fun findByUserIdAndPlaylistId(userId: UserId, playlistId: String): Playlist? =
-    mongoQueryMetrics.timed("spotify_playlist.findByUserIdAndPlaylistId") {
-      playlistDocumentRepository.findById("${userId.value}:$playlistId")?.toDomain()
+  override fun findByPlaylistId(playlistId: String): Playlist? =
+    mongoQueryMetrics.timed("spotify_playlist.findByPlaylistId") {
+      playlistDocumentRepository.findById(playlistId)?.toDomain()
     }
 
-  override fun findTrackCountsByUserId(userId: UserId): Map<String, Int> {
+  override fun findTrackCounts(): Map<String, Int> {
     val pipeline = listOf(
-      Aggregates.match(Filters.eq("spotifyUserId", userId.value)),
       Aggregates.project(
         Projections.fields(
           Projections.include("spotifyPlaylistId"),
@@ -62,23 +60,22 @@ class PlaylistRepositoryAdapter(
         ),
       ),
     )
-    return mongoQueryMetrics.timed("spotify_playlist.findTrackCountsByUserId") {
+    return mongoQueryMetrics.timed("spotify_playlist.findTrackCounts") {
       playlistDocumentRepository.mongoCollection()
         .aggregate(pipeline, Document::class.java)
         .associate { it.getString("spotifyPlaylistId") to it.getInteger("trackCount") }
     }
   }
 
-  override fun save(userId: UserId, playlist: Playlist) {
-    val document = playlist.toDocument(userId)
+  override fun save(playlist: Playlist) {
+    val document = playlist.toDocument()
     mongoQueryMetrics.timed("spotify_playlist.save") {
       playlistDocumentRepository.persistOrUpdate(document)
     }
   }
 
-  override fun appendTracks(userId: UserId, playlistId: String, tracks: List<PlaylistTrack>) {
+  override fun appendTracks(playlistId: String, tracks: List<PlaylistTrack>) {
     if (tracks.isEmpty()) return
-    val docId = "${userId.value}:$playlistId"
     mongoQueryMetrics.timed("spotify_playlist.appendTracks") {
       val trackDocuments = tracks.map { track ->
         Document("trackId", track.trackId.value)
@@ -86,19 +83,18 @@ class PlaylistRepositoryAdapter(
           .append("albumId", track.albumId?.value)
       }
       val result = playlistDocumentRepository.mongoCollection().updateOne(
-        Filters.eq("_id", docId),
+        Filters.eq("_id", playlistId),
         Updates.pushEach("tracks", trackDocuments),
       )
       if (result.matchedCount == 0L) {
-        logger.warn { "Playlist document not found for appending tracks: $playlistId (user ${userId.value})" }
+        logger.warn { "Playlist document not found for appending tracks: $playlistId" }
       }
     }
   }
 
-  override fun updateLastSyncTime(userId: UserId, playlistId: String, time: kotlin.time.Instant) {
-    val id = "${userId.value}:$playlistId"
+  override fun updateLastSyncTime(playlistId: String, time: kotlin.time.Instant) {
     mongoQueryMetrics.timed("spotify_playlist_metadata.updateLastSyncTime") {
-      playlistMetadataDocumentRepository.findById(id)?.let { doc ->
+      playlistMetadataDocumentRepository.findById(playlistId)?.let { doc ->
         doc.lastSyncTime = time.toJavaInstant()
         playlistMetadataDocumentRepository.persistOrUpdate(doc)
       }
@@ -115,9 +111,8 @@ class PlaylistRepositoryAdapter(
     lastSyncTime = lastSyncTime?.toKotlinInstant(),
   )
 
-  private fun PlaylistInfo.toDocument(userId: UserId) = PlaylistMetadataDocument().apply {
-    id = "${userId.value}:${this@toDocument.spotifyPlaylistId}"
-    spotifyUserId = userId.value
+  private fun PlaylistInfo.toDocument() = PlaylistMetadataDocument().apply {
+    id = this@toDocument.spotifyPlaylistId
     spotifyPlaylistId = this@toDocument.spotifyPlaylistId
     snapshotId = this@toDocument.snapshotId
     lastSnapshotIdSyncTime = this@toDocument.lastSnapshotIdSyncTime.toJavaInstant()
@@ -138,9 +133,8 @@ class PlaylistRepositoryAdapter(
     albumId = albumId?.let { AlbumId(it) },
   )
 
-  private fun Playlist.toDocument(userId: UserId) = PlaylistDocument().apply {
-    id = "${userId.value}:${this@toDocument.spotifyPlaylistId}"
-    spotifyUserId = userId.value
+  private fun Playlist.toDocument() = PlaylistDocument().apply {
+    id = this@toDocument.spotifyPlaylistId
     spotifyPlaylistId = this@toDocument.spotifyPlaylistId
     tracks = this@toDocument.tracks.map { it.toSubdocument() }
   }
@@ -164,4 +158,3 @@ class PlaylistRepositoryAdapter(
     internal const val SYNC_STATUS_FIELD = "syncStatus"
   }
 }
-

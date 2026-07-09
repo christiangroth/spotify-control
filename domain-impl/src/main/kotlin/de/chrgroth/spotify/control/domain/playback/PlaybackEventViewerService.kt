@@ -29,16 +29,16 @@ class PlaybackEventViewerService(
   override fun getEvents(date: LocalDate): PlaybackEventViewerResult {
     val tz = TimeZone.currentSystemDefault()
     val isToday = date == Clock.System.now().toLocalDateTime(tz).date
-    val userId = currentUserResolver.userId() ?: return PlaybackEventViewerResult(date = date, isToday = isToday, events = emptyList())
+    currentUserResolver.userId() ?: return PlaybackEventViewerResult(date = date, isToday = isToday, events = emptyList())
     val from = date.atStartOfDayIn(tz)
     val to = date.plus(DatePeriod(days = 1)).atStartOfDayIn(tz)
 
-    val rawCurrentlyPlaying = repository.findCurrentlyPlaying(userId, from, to)
+    val rawCurrentlyPlaying = repository.findCurrentlyPlaying(from, to)
     val latestCurrentlyPlayingTimestamp = if (isToday) rawCurrentlyPlaying.maxByOrNull { it.timestamp }?.timestamp else null
 
     val allEvents = (
-      repository.findRecentlyPlayed(userId, from, to).map { it.toEntry(PlaybackEventType.RECENTLY_PLAYED, false) } +
-        repository.findRecentlyPartialPlayed(userId, from, to).map { it.toEntry(PlaybackEventType.RECENTLY_PARTIAL_PLAYED, false) } +
+      repository.findRecentlyPlayed(from, to).map { it.toEntry(PlaybackEventType.RECENTLY_PLAYED, false) } +
+        repository.findRecentlyPartialPlayed(from, to).map { it.toEntry(PlaybackEventType.RECENTLY_PARTIAL_PLAYED, false) } +
         rawCurrentlyPlaying.map { it.toEntry(PlaybackEventType.CURRENTLY_PLAYING, it.timestamp != latestCurrentlyPlayingTimestamp) }
       ).sortedByDescending { it.timestamp }
 

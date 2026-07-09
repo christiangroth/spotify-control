@@ -43,14 +43,14 @@ class PlaylistCheckService(
 ) : PlaylistCheckPort {
 
   override fun handle(event: DomainOutboxEvent.RunPlaylistChecks): Either<DomainError, Unit> {
-    val userId = currentUserResolver.userId() ?: return Unit.right()
-    val playlist = playlistRepository.findByUserIdAndPlaylistId(userId, event.playlistId)
+    currentUserResolver.userId() ?: return Unit.right()
+    val playlist = playlistRepository.findByPlaylistId(event.playlistId)
     if (playlist == null) {
-      logger.warn { "Playlist ${event.playlistId} not found for user ${userId.value}, skipping checks" }
+      logger.warn { "Playlist ${event.playlistId} not found, skipping checks" }
       return Unit.right()
     }
 
-    val allPlaylistInfos = playlistRepository.findByUserId(userId)
+    val allPlaylistInfos = playlistRepository.findAll()
     val currentPlaylistInfo = allPlaylistInfos.find { it.spotifyPlaylistId == event.playlistId }
 
     val applicableRunners = checkRunners.filter { it.isApplicable(currentPlaylistInfo) }
@@ -58,7 +58,7 @@ class PlaylistCheckService(
       .map { runner ->
         managedExecutor.supplyAsync {
           timedCheck(runner.checkId, event.playlistId) {
-            runner.run(userId, event.playlistId, playlist, currentPlaylistInfo, allPlaylistInfos)
+            runner.run(event.playlistId, playlist, currentPlaylistInfo, allPlaylistInfos)
           }
         }
       }
@@ -72,7 +72,7 @@ class PlaylistCheckService(
 
     val totalViolations = results.sumOf { it.violations.size }
     val status = if (totalViolations == 0) "all passed" else "$totalViolations violation(s)"
-    logger.info { "Ran playlist checks for playlist ${event.playlistId} (user ${userId.value}): $status" }
+    logger.info { "Ran playlist checks for playlist ${event.playlistId}: $status" }
     dashboardRefresh.notifyUserPlaylistChecks()
     return Unit.right()
   }
@@ -87,7 +87,7 @@ class PlaylistCheckService(
     )
     val displayNameFuture = managedExecutor.supplyAsync { userRepository.findById(userId)?.displayName ?: userId.value }
     val playlistNamesFuture = managedExecutor.supplyAsync {
-      playlistRepository.findByUserId(userId).associateBy({ it.spotifyPlaylistId }, { it.name })
+      playlistRepository.findAll().associateBy({ it.spotifyPlaylistId }, { it.name })
     }
     val checksFuture = managedExecutor.supplyAsync { playlistCheckRepository.findAll() }
     val displayName = displayNameFuture.join()
@@ -109,20 +109,20 @@ class PlaylistCheckService(
     checkRunners.filter { it.canFix() }.map { it.checkId }.toSet()
 
   override fun runFix(playlistId: String, checkType: String): Either<DomainError, Unit> {
-    val userId = currentUserResolver.userId() ?: return PlaylistFixError.PLAYLIST_NOT_FOUND.left()
+    currentUserResolver.userId() ?: return PlaylistFixError.PLAYLIST_NOT_FOUND.left()
     val runner = checkRunners.find { it.checkId == checkType && it.canFix() } ?: run {
       logger.warn { "No fix runner found for checkType $checkType" }
       return PlaylistFixError.FIX_NOT_FOUND.left()
     }
-    val playlist = playlistRepository.findByUserIdAndPlaylistId(userId, playlistId) ?: run {
-      logger.warn { "Playlist $playlistId not found for user ${userId.value}" }
+    val playlist = playlistRepository.findByPlaylistId(playlistId) ?: run {
+      logger.warn { "Playlist $playlistId not found" }
       return PlaylistFixError.PLAYLIST_NOT_FOUND.left()
     }
-    val allPlaylistInfos = playlistRepository.findByUserId(userId)
+    val allPlaylistInfos = playlistRepository.findAll()
     val currentPlaylistInfo = allPlaylistInfos.find { it.spotifyPlaylistId == playlistId }
     val accessToken = spotifyAccessToken.getValidAccessToken()
-    logger.info { "Running fix '$checkType' for playlist $playlistId (user ${userId.value})" }
-    return runner.fix(userId, accessToken, playlistId, playlist, currentPlaylistInfo, allPlaylistInfos).also { result ->
+    logger.info { "Running fix '$checkType' for playlist $playlistId" }
+    return runner.fix(accessToken, playlistId, playlist, currentPlaylistInfo, allPlaylistInfos).also { result ->
       if (result.isRight()) {
         logger.info { "Fix '$checkType' for playlist $playlistId completed, enqueueing re-check" }
         outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(playlistId))

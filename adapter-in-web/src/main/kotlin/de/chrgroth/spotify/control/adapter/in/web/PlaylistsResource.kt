@@ -69,7 +69,7 @@ class PlaylistsResource(
     val (user, playlistNameById, checks) = runBlocking {
       val userAsync = async(Dispatchers.IO) { userRepository.findById(userId) }
       val playlistNamesAsync = async(Dispatchers.IO) {
-        playlistRepository.findByUserId(userId).associateBy({ it.spotifyPlaylistId }, { it.name })
+        playlistRepository.findAll().associateBy({ it.spotifyPlaylistId }, { it.name })
       }
       val checksAsync = async(Dispatchers.IO) { playlistCheckRepository.findAll() }
       Triple(userAsync.await(), playlistNamesAsync.await(), checksAsync.await())

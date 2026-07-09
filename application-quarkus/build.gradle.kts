@@ -37,6 +37,7 @@ dependencies {
   testImplementation("io.quarkus:quarkus-junit5")
   testImplementation("io.quarkus:quarkus-junit5-mockito")
   testImplementation("io.quarkus:quarkus-test-security")
+  testImplementation("io.quarkus:quarkus-mongodb-panache-kotlin")
   testImplementation("io.rest-assured:rest-assured")
 }
 

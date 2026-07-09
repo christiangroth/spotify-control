@@ -375,7 +375,7 @@ Layer 5 applies to adapter modules where the logic is pure (e.g. `adapter-in-sta
 
 - Spotify OAuth 2.0 Authorization Code Flow.
 - A `User` document is upserted in the `app_user` MongoDB collection on every successful login. Both access and refresh tokens are stored encrypted (AES-256-GCM) using `APP_TOKEN_ENCRYPTION_KEY`.
-- The application is built for a single user (see [ADR-0008](../adr/0008-single-user-architecture.md)); login no longer checks an allow-list — any Spotify account that completes the OAuth flow is upserted as the application's user. Phases 1 and 2 of the [migration plan](../plans/single-user-simplification.md) are complete: scheduled jobs (playback fetch, playback aggregation, playlist sync, profile update) and catalog sync now act directly on the one stored user instead of fanning out over a user list. Phase 3 (dropping `UserId` from ports and outbox events) is in progress; the user-profile, `SpotifyAccessTokenPort`, and SSE/dashboard slices are done — `UserProfilePort`, `SpotifyAccessTokenPort`, `DashboardPort`, and `DashboardRefreshPort` no longer carry a `UserId`, and the `UpdateUserProfile` outbox event no longer carries one either.
+- The application is built for a single user (see [ADR-0008](../adr/0008-single-user-architecture.md)); login no longer checks an allow-list — any Spotify account that completes the OAuth flow is upserted as the application's user. Phases 1–4 of the [migration plan](../plans/single-user-simplification.md) are complete: scheduled jobs, catalog sync, and every repository port act directly on the one stored user instead of fanning out over or filtering by a user list, and the MongoDB collections that used to carry a `spotifyUserId` field or key (`app_playback`, `app_playback_aggregation`, `spotify_currently_playing`, `spotify_recently_played`, `spotify_recently_partial_played`, `spotify_playlist`, `spotify_playlist_metadata`) no longer do. Only Phase 5 (config/tests/deploy cleanup) remains.
 - Session-based authentication for all endpoints. The session stores only the Spotify user ID – never tokens.
 - `return_to` parameter stored in the session for redirect after login.
 - A CSRF `state` parameter is generated per authorization request and validated in the callback.
@@ -514,7 +514,7 @@ SLACK_WEBHOOK_URL
 | Enrichment completeness | `app_artist`, `app_track`, and `app_album` entries that existed before enrichment was introduced may lack imageLink or albumTitle until re-enriched. |
 | Partial-play detection accuracy | Partial play detection relies on polling frequency; very short plays near the end of a track may be missed or misclassified. |
 | Test coverage for domain adapters | Domain adapter integration (e.g. `PlaybackDataAdapter`, `PlaylistSyncAdapter`) is not yet covered by `@QuarkusTest` boundary tests. |
-| Multi-user plumbing | `UserId` is no longer part of any port's public signature (Phase 3 of the [single-user simplification plan](../plans/single-user-simplification.md) is complete), but repository out-ports and MongoDB document keys still carry `spotifyUserId` internally until Phase 4 migrates the schema. Tracked by [ADR-0008](../adr/0008-single-user-architecture.md). |
+| Config/test/deploy cleanup | Phase 5 of the [single-user simplification plan](../plans/single-user-simplification.md) (removing now-dead config, test fixtures, and documentation references) is still open. Tracked by [ADR-0008](../adr/0008-single-user-architecture.md). |
 
 # Glossary
 

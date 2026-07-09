@@ -83,18 +83,17 @@ class PlaybackService(
 
   internal fun fetchCurrentlyPlaying(userId: UserId): Either<DomainError, Unit> {
     val accessToken = spotifyAccessToken.getValidAccessToken()
-    return spotifyPlayback.getCurrentlyPlaying(accessToken).flatMap { rawItem ->
-      val item = rawItem?.copy(spotifyUserId = userId)
+    return spotifyPlayback.getCurrentlyPlaying(accessToken).flatMap { item ->
       if (item != null && item.isPlaying) {
         playbackState.onPlaybackDetected()
       }
       val orphanedItemsConverted = if (item != null) {
-        val existing = currentlyPlayingRepository.findMostRecentByUserAndTrack(userId, item.trackId)
+        val existing = currentlyPlayingRepository.findMostRecentByTrack(item.trackId)
         if (existing != null && !isTrackRestart(item, existing)) {
           currentlyPlayingRepository.updateProgress(item.copy(startTime = existing.startTime))
         } else {
           if (existing != null) {
-            currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, setOf(item.trackId.value))
+            currentlyPlayingRepository.deleteByTrackIds(setOf(item.trackId.value))
           }
           currentlyPlayingRepository.save(item)
         }
@@ -114,7 +113,7 @@ class PlaybackService(
     newItem.progressMs < RESTART_THRESHOLD_MS && existingItem.progressMs > minimumProgressMs
 
   private fun convertAndDeleteOrphanedItems(userId: UserId, currentTrackId: TrackId?): Boolean {
-    val orphanedItems = currentlyPlayingRepository.findByUserId(userId)
+    val orphanedItems = currentlyPlayingRepository.findAll()
       .let { items -> if (currentTrackId != null) items.filter { it.trackId != currentTrackId } else items }
     if (orphanedItems.isEmpty()) return false
 
@@ -123,7 +122,6 @@ class PlaybackService(
       val partialItems = convertibleItems.map { item ->
         val playedMs = minOf(item.progressMs, item.durationMs)
         RecentlyPartialPlayedItem(
-          spotifyUserId = userId,
           trackId = item.trackId,
           trackName = item.trackName,
           artistIds = item.artistIds,
@@ -134,7 +132,7 @@ class PlaybackService(
           albumId = item.albumId,
         )
       }
-      val existingPlayedAts = recentlyPartialPlayedRepository.findExistingPlayedAts(userId, partialItems.map { it.playedAt }.toSet())
+      val existingPlayedAts = recentlyPartialPlayedRepository.findExistingPlayedAts(partialItems.map { it.playedAt }.toSet())
       val newPartial = partialItems.filter { it.playedAt !in existingPlayedAts }
       if (newPartial.isNotEmpty()) {
         recentlyPartialPlayedRepository.saveAll(newPartial)
@@ -146,7 +144,7 @@ class PlaybackService(
     }
 
     val orphanedTrackIds = orphanedItems.map { it.trackId.value }.toSet()
-    currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, orphanedTrackIds)
+    currentlyPlayingRepository.deleteByTrackIds(orphanedTrackIds)
     return newPartialSaved
   }
 
@@ -154,16 +152,15 @@ class PlaybackService(
 
   internal fun fetchRecentlyPlayed(userId: UserId): Either<DomainError, Unit> {
     val accessToken = spotifyAccessToken.getValidAccessToken()
-    val after = recentlyPlayedRepository.findMostRecentPlayedAt(userId)
-    return spotifyPlayback.getRecentlyPlayed(accessToken, after).flatMap { rawTracks ->
-      val tracks = rawTracks.map { it.copy(spotifyUserId = userId) }
+    val after = recentlyPlayedRepository.findMostRecentPlayedAt()
+    return spotifyPlayback.getRecentlyPlayed(accessToken, after).flatMap { tracks ->
       val playedAts = tracks.map { it.playedAt }.toSet()
-      val existingPlayedAts = recentlyPlayedRepository.findExistingPlayedAts(userId, playedAts)
+      val existingPlayedAts = recentlyPlayedRepository.findExistingPlayedAts(playedAts)
       val newItems = tracks.filter { it.playedAt !in existingPlayedAts }
       if (newItems.isNotEmpty()) {
         recentlyPlayedRepository.saveAll(newItems)
         recordEventsIngested(userId, "recently_played", newItems.size)
-        deduplicateWithPartialPlays(userId, newItems)
+        deduplicateWithPartialPlays(newItems)
       }
       val computedCount = convertPartialPlays(userId, tracks.map { it.trackId }.toSet())
       if (newItems.isNotEmpty() || computedCount > 0) {
@@ -193,12 +190,12 @@ class PlaybackService(
     meterRegistry.counter("app.playback.events_ingested", "userId", userId.value, "source", source).increment(count.toDouble())
   }
 
-  private fun deduplicateWithPartialPlays(userId: UserId, newRecentlyPlayedItems: List<RecentlyPlayedItem>) {
+  private fun deduplicateWithPartialPlays(newRecentlyPlayedItems: List<RecentlyPlayedItem>) {
     val recentlyPlayedWithStartTime = newRecentlyPlayedItems.filter { it.startTime != null }
     if (recentlyPlayedWithStartTime.isEmpty()) return
 
     val trackIds = recentlyPlayedWithStartTime.map { it.trackId }.toSet()
-    val partialPlays = recentlyPartialPlayedRepository.findByUserIdAndTrackIds(userId, trackIds)
+    val partialPlays = recentlyPartialPlayedRepository.findByTrackIds(trackIds)
     if (partialPlays.isEmpty()) return
 
     val duplicatePlayedAts = mutableSetOf<Instant>()
@@ -213,8 +210,8 @@ class PlaybackService(
     }
 
     if (duplicatePlayedAts.isNotEmpty()) {
-      recentlyPartialPlayedRepository.deleteByPlayedAts(userId, duplicatePlayedAts)
-      appPlaybackRepository.deleteByUserAndPlayedAts(userId, duplicatePlayedAts)
+      recentlyPartialPlayedRepository.deleteByPlayedAts(duplicatePlayedAts)
+      appPlaybackRepository.deleteByPlayedAts(duplicatePlayedAts)
       duplicatePlayedAts
         .map { instant -> JLocalDate.ofInstant(instant.toJavaInstant(), ZoneOffset.UTC).toKotlinLocalDate() }
         .toSet()
@@ -225,7 +222,7 @@ class PlaybackService(
   }
 
   private fun convertPartialPlays(userId: UserId, completedTrackIds: Set<TrackId>): Int {
-    val sortedItems = currentlyPlayingRepository.findByUserId(userId).sortedBy { it.observedAt }
+    val sortedItems = currentlyPlayingRepository.findAll().sortedBy { it.observedAt }
 
     // The single latest item is protected — it may still be active
     val latestItem = sortedItems.lastOrNull()
@@ -239,7 +236,6 @@ class PlaybackService(
       val partialItems = convertibleItems.map { item ->
         val playedMs = minOf(item.progressMs, item.durationMs)
         RecentlyPartialPlayedItem(
-          spotifyUserId = userId,
           trackId = item.trackId,
           trackName = item.trackName,
           artistIds = item.artistIds,
@@ -250,7 +246,7 @@ class PlaybackService(
           albumId = item.albumId,
         )
       }
-      val existingPlayedAts = recentlyPartialPlayedRepository.findExistingPlayedAts(userId, partialItems.map { it.playedAt }.toSet())
+      val existingPlayedAts = recentlyPartialPlayedRepository.findExistingPlayedAts(partialItems.map { it.playedAt }.toSet())
       val newPartial = partialItems.filter { it.playedAt !in existingPlayedAts }
       if (newPartial.isNotEmpty()) {
         recentlyPartialPlayedRepository.saveAll(newPartial)
@@ -264,7 +260,7 @@ class PlaybackService(
     // Delete completed tracks and all processed items (converted or skipped below threshold),
     // but don't delete the latest item's trackId as it may still be active
     val allProcessedTrackIds = itemsToProcess.map { it.trackId }.filter { it != latestItem?.trackId }.toSet()
-    currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, (completedTrackIds + allProcessedTrackIds).map { it.value }.toSet())
+    currentlyPlayingRepository.deleteByTrackIds((completedTrackIds + allProcessedTrackIds).map { it.value }.toSet())
     return newComputedCount
   }
 
@@ -279,27 +275,24 @@ class PlaybackService(
   override fun rebuildPlaybackData() {
     val userId = currentUserResolver.userId() ?: return
     logger.info { "Rebuilding playback data for user: ${userDisplayName(userId)}" }
-    appPlaybackRepository.deleteAllByUserId(userId)
-    appendPlaybackDataForUser(userId)
+    appPlaybackRepository.deleteAll()
+    appendPlaybackDataForUser()
   }
 
   override fun appendPlaybackData() {
-    val userId = currentUserResolver.userId() ?: return
-    appendPlaybackDataForUser(userId)
+    currentUserResolver.userId() ?: return
+    appendPlaybackDataForUser()
   }
 
-  private fun appendPlaybackDataForUser(userId: UserId) {
-    val since = appPlaybackRepository.findMostRecentPlayedAt(userId)
-    val recentlyPlayed = recentlyPlayedRepository.findSince(userId, since)
-    val partialPlayed = recentlyPartialPlayedRepository.findSince(userId, since)
+  private fun appendPlaybackDataForUser() {
+    val since = appPlaybackRepository.findMostRecentPlayedAt()
+    val recentlyPlayed = recentlyPlayedRepository.findSince(since)
+    val partialPlayed = recentlyPartialPlayedRepository.findSince(since)
 
     val allPlaybackItems = buildPlaybackItems(recentlyPlayed, partialPlayed)
     if (allPlaybackItems.isEmpty()) return
 
-    val existingPlayedAts = appPlaybackRepository.findExistingPlayedAts(
-      userId = userId,
-      playedAts = allPlaybackItems.map { it.playedAt }.toSet(),
-    )
+    val existingPlayedAts = appPlaybackRepository.findExistingPlayedAts(allPlaybackItems.map { it.playedAt }.toSet())
     val newPlaybackItems = allPlaybackItems.filter { it.playedAt !in existingPlayedAts }
     if (newPlaybackItems.isEmpty()) return
 
@@ -324,14 +317,12 @@ class PlaybackService(
     partialPlayed: List<RecentlyPartialPlayedItem>,
   ) = recentlyPlayed.map { item ->
     AppPlaybackItem(
-      userId = item.spotifyUserId,
       playedAt = item.playedAt,
       trackId = item.trackId.value,
       secondsPlayed = item.durationSeconds ?: 0L,
     )
   } + partialPlayed.map { item ->
     AppPlaybackItem(
-      userId = item.spotifyUserId,
       playedAt = item.playedAt,
       trackId = item.trackId.value,
       secondsPlayed = item.playedSeconds,

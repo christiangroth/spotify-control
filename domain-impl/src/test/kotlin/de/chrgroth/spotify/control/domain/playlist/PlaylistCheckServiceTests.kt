@@ -109,14 +109,14 @@ class PlaylistCheckServiceTests {
     every { checkRunner.checkId } returns checkId
     every { checkRunner.displayName } returns "Test Check"
     every { checkRunner.isApplicable(any()) } returns true
-    every { checkRunner.run(any(), any(), any(), any(), any()) } returns check
+    every { checkRunner.run(any(), any(), any(), any()) } returns check
     every { checkRunners.iterator() } answers { mutableListOf(checkRunner).iterator() }
   }
 
   @Test
   fun `handle returns success and skips notifications when playlist not found`() {
     every { currentUserResolver.userId() } returns userId
-    every { playlistRepository.findByUserIdAndPlaylistId(userId, playlistId) } returns null
+    every { playlistRepository.findByPlaylistId(playlistId) } returns null
 
     val result = adapter.handle(event)
 
@@ -132,8 +132,8 @@ class PlaylistCheckServiceTests {
     val check = buildCheck(succeeded = true)
     setupCheckRunner(check)
     every { currentUserResolver.userId() } returns userId
-    every { playlistRepository.findByUserIdAndPlaylistId(userId, playlistId) } returns playlist
-    every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo())
+    every { playlistRepository.findByPlaylistId(playlistId) } returns playlist
+    every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo())
     every { playlistCheckRepository.findByCheckId(fullCheckId) } returns null
     every { playlistCheckRepository.save(any()) } just runs
     every { dashboardRefresh.notifyUserPlaylistChecks() } just runs
@@ -153,8 +153,8 @@ class PlaylistCheckServiceTests {
     val previousCheck = buildCheck(succeeded = false, violations = listOf("Artist – Track t1"))
     setupCheckRunner(check)
     every { currentUserResolver.userId() } returns userId
-    every { playlistRepository.findByUserIdAndPlaylistId(userId, playlistId) } returns playlist
-    every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo())
+    every { playlistRepository.findByPlaylistId(playlistId) } returns playlist
+    every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo())
     every { playlistCheckRepository.findByCheckId(fullCheckId) } returns previousCheck
     every { playlistCheckRepository.save(any()) } just runs
     every { dashboardRefresh.notifyUserPlaylistChecks() } just runs
@@ -174,8 +174,8 @@ class PlaylistCheckServiceTests {
     val previousCheck = buildCheck(succeeded = false, violations = listOf("Artist A – Track A"))
     setupCheckRunner(check)
     every { currentUserResolver.userId() } returns userId
-    every { playlistRepository.findByUserIdAndPlaylistId(userId, playlistId) } returns playlist
-    every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo())
+    every { playlistRepository.findByPlaylistId(playlistId) } returns playlist
+    every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo())
     every { playlistCheckRepository.findByCheckId(fullCheckId) } returns previousCheck
     every { playlistCheckRepository.save(any()) } just runs
     every { dashboardRefresh.notifyUserPlaylistChecks() } just runs
@@ -196,8 +196,8 @@ class PlaylistCheckServiceTests {
     val previousCheck = buildCheck(succeeded = false, violations = violations)
     setupCheckRunner(check)
     every { currentUserResolver.userId() } returns userId
-    every { playlistRepository.findByUserIdAndPlaylistId(userId, playlistId) } returns playlist
-    every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo())
+    every { playlistRepository.findByPlaylistId(playlistId) } returns playlist
+    every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo())
     every { playlistCheckRepository.findByCheckId(fullCheckId) } returns previousCheck
     every { playlistCheckRepository.save(any()) } just runs
     every { dashboardRefresh.notifyUserPlaylistChecks() } just runs
@@ -216,8 +216,8 @@ class PlaylistCheckServiceTests {
     val previousCheck = buildCheck(succeeded = true)
     setupCheckRunner(check)
     every { currentUserResolver.userId() } returns userId
-    every { playlistRepository.findByUserIdAndPlaylistId(userId, playlistId) } returns playlist
-    every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo())
+    every { playlistRepository.findByPlaylistId(playlistId) } returns playlist
+    every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo())
     every { playlistCheckRepository.findByCheckId(fullCheckId) } returns previousCheck
     every { playlistCheckRepository.save(any()) } just runs
     every { dashboardRefresh.notifyUserPlaylistChecks() } just runs
@@ -232,7 +232,7 @@ class PlaylistCheckServiceTests {
   @Test
   fun `handle propagates unexpected exception`() {
     every { currentUserResolver.userId() } returns userId
-    every { playlistRepository.findByUserIdAndPlaylistId(userId, playlistId) } throws RuntimeException("DB error")
+    every { playlistRepository.findByPlaylistId(playlistId) } throws RuntimeException("DB error")
 
     org.assertj.core.api.Assertions.assertThatThrownBy { adapter.handle(event) }
       .isInstanceOf(RuntimeException::class.java)
@@ -245,8 +245,8 @@ class PlaylistCheckServiceTests {
     every { checkRunner.isApplicable(any()) } returns false
     every { checkRunners.iterator() } answers { mutableListOf(checkRunner).iterator() }
     every { currentUserResolver.userId() } returns userId
-    every { playlistRepository.findByUserIdAndPlaylistId(userId, playlistId) } returns playlist
-    every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo())
+    every { playlistRepository.findByPlaylistId(playlistId) } returns playlist
+    every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo())
     every { dashboardRefresh.notifyUserPlaylistChecks() } just runs
 
     val result = adapter.handle(event)
@@ -269,7 +269,7 @@ class PlaylistCheckServiceTests {
     val playlistInfo = buildPlaylistInfo()
     every { currentUserResolver.userId() } returns userId
     every { userRepository.findById(userId) } returns user
-    every { playlistRepository.findByUserId(userId) } returns listOf(playlistInfo)
+    every { playlistRepository.findAll() } returns listOf(playlistInfo)
     every { playlistCheckRepository.findAll() } returns listOf(check)
     every { checkRunners.iterator() } answers { mutableListOf(checkRunner).iterator() }
     every { checkRunner.checkId } returns checkId
@@ -289,7 +289,7 @@ class PlaylistCheckServiceTests {
   fun `getCheckDashboard falls back to userId when user not found`() {
     every { currentUserResolver.userId() } returns userId
     every { userRepository.findById(userId) } returns null
-    every { playlistRepository.findByUserId(userId) } returns emptyList()
+    every { playlistRepository.findAll() } returns emptyList()
     every { playlistCheckRepository.findAll() } returns emptyList()
     every { checkRunners.iterator() } answers { mutableListOf<PlaylistCheckRunner>().iterator() }
 
@@ -348,7 +348,7 @@ class PlaylistCheckServiceTests {
     every { checkRunners.iterator() } returns mutableListOf(checkRunner).iterator()
     every { checkRunner.checkId } returns checkId
     every { checkRunner.canFix() } returns true
-    every { playlistRepository.findByUserIdAndPlaylistId(userId, playlistId) } returns null
+    every { playlistRepository.findByPlaylistId(playlistId) } returns null
 
     val result = adapter.runFix(playlistId, checkId)
 
@@ -364,10 +364,10 @@ class PlaylistCheckServiceTests {
     every { checkRunners.iterator() } returns mutableListOf(checkRunner).iterator()
     every { checkRunner.checkId } returns checkId
     every { checkRunner.canFix() } returns true
-    every { playlistRepository.findByUserIdAndPlaylistId(userId, playlistId) } returns playlist
-    every { playlistRepository.findByUserId(userId) } returns listOf(playlistInfo)
+    every { playlistRepository.findByPlaylistId(playlistId) } returns playlist
+    every { playlistRepository.findAll() } returns listOf(playlistInfo)
     every { spotifyAccessToken.getValidAccessToken() } returns AccessToken("token")
-    every { checkRunner.fix(userId, AccessToken("token"), playlistId, playlist, playlistInfo, listOf(playlistInfo)) } returns Unit.right()
+    every { checkRunner.fix(AccessToken("token"), playlistId, playlist, playlistInfo, listOf(playlistInfo)) } returns Unit.right()
     every { outboxPort.enqueue(any()) } just runs
 
     val result = adapter.runFix(playlistId, checkId)
