@@ -19,7 +19,7 @@ import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPo
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.SyncTraceRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
+import de.chrgroth.spotify.control.domain.user.CurrentUserResolver
 import jakarta.enterprise.context.ApplicationScoped
 
 @ApplicationScoped
@@ -30,7 +30,7 @@ class CatalogBrowserService(
   private val appTrackRepository: AppTrackRepositoryPort,
   private val syncTraceRepository: SyncTraceRepositoryPort,
   private val playlistRepository: PlaylistRepositoryPort,
-  private val userRepository: UserRepositoryPort,
+  private val currentUserResolver: CurrentUserResolver,
 ) : CatalogBrowserPort {
 
   override fun getCatalogStats(): CatalogStats {
@@ -206,7 +206,7 @@ class CatalogBrowserService(
     appArtistRepository.findByArtistIds(setOf(ArtistId(artistId))).firstOrNull()?.artistName ?: artistId
 
   private fun playlistName(playlistId: String): String {
-    val userId = userRepository.findAll().firstOrNull()?.spotifyUserId ?: return playlistId
+    val userId = currentUserResolver.userId() ?: return playlistId
     return playlistRepository.findByUserId(userId).firstOrNull { it.spotifyPlaylistId == playlistId }?.name ?: playlistId
   }
 

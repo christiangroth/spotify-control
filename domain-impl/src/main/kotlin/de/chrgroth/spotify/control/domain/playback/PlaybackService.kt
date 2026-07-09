@@ -26,6 +26,7 @@ import de.chrgroth.spotify.control.domain.catalog.SyncController
 import de.chrgroth.spotify.control.domain.catalog.CatalogSyncRequest
 import de.chrgroth.spotify.control.domain.port.out.playback.SpotifyPlaybackPort
 import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
+import de.chrgroth.spotify.control.domain.user.CurrentUserResolver
 import io.micrometer.core.instrument.Gauge
 import io.micrometer.core.instrument.MeterRegistry
 import jakarta.enterprise.context.ApplicationScoped
@@ -45,6 +46,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty
 @Suppress("Unused", "TooGenericExceptionCaught")
 class PlaybackService(
   private val userRepository: UserRepositoryPort,
+  private val currentUserResolver: CurrentUserResolver,
   private val spotifyAccessToken: SpotifyAccessTokenPort,
   private val spotifyPlayback: SpotifyPlaybackPort,
   private val currentlyPlayingRepository: CurrentlyPlayingRepositoryPort,
@@ -66,10 +68,8 @@ class PlaybackService(
   // --- Combined Playback Detection ---
 
   override fun enqueueFetchPlaybackData() {
-    val users = userRepository.findAll()
-    users.forEach { user ->
-      outboxPort.enqueue(DomainOutboxEvent.FetchPlaybackData(user.spotifyUserId))
-    }
+    val userId = currentUserResolver.userId() ?: return
+    outboxPort.enqueue(DomainOutboxEvent.FetchPlaybackData(userId))
   }
 
   override fun fetchPlaybackData(userId: UserId): Either<DomainError, Unit> {

@@ -20,6 +20,7 @@ import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.playback.SpotifyPlaybackPort
 import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
 import de.chrgroth.spotify.control.domain.catalog.SyncController
+import de.chrgroth.spotify.control.domain.user.CurrentUserResolver
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.mockk.every
 import io.mockk.just
@@ -37,6 +38,7 @@ import org.junit.jupiter.api.Test
 class FetchCurrentlyPlayingServiceTests {
 
   private val userRepository: UserRepositoryPort = mockk()
+  private val currentUserResolver: CurrentUserResolver = mockk()
   private val spotifyAccessToken: SpotifyAccessTokenPort = mockk()
   private val spotifyPlayback: SpotifyPlaybackPort = mockk(relaxed = true)
   private val currentlyPlayingRepository: CurrentlyPlayingRepositoryPort = mockk(relaxed = true)
@@ -51,6 +53,7 @@ class FetchCurrentlyPlayingServiceTests {
 
   private val service = PlaybackService(
     userRepository,
+    currentUserResolver,
     spotifyAccessToken,
     spotifyPlayback,
     currentlyPlayingRepository,

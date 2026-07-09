@@ -36,7 +36,7 @@ single deployed instance is already only ever logged in by one operator.
 
 ---
 
-## Phase 2: Scheduler fan-out and the catalog-sync shortcut
+## Phase 2: Scheduler fan-out and the catalog-sync shortcut — done
 
 **Goal:** Remove the "for each user" loops in scheduled job enqueuing, since there's only ever one
 user, and remove the arbitrary-user shortcut in catalog sync (performance review Finding 1).
@@ -149,7 +149,7 @@ downtime, and must run after Phase 3 so no code still reads/writes the dropped f
 | Phase | Risk | Mitigation |
 |---|---|---|
 | 1 – Login/allow-list removal | Low | Permissive change; single real operator already unaffected. |
-| 2 – Scheduler fan-out & catalog-sync shortcut | Medium | Test "zero users" and "one user" cases explicitly. |
+| 2 – Scheduler fan-out & catalog-sync shortcut | Medium | Done — "zero users" and "one user" cases covered by tests. |
 | 3 – `UserId` threading removal | High | Split per bounded context; handle in-flight outbox payloads carrying stale `userId` fields during rollout. |
 | 4 – MongoDB schema/index cleanup | Medium | Use a one-time `Starter`; sequence after Phase 3; rebuild indexes without downtime. |
 | 5 – Config/tests/deploy cleanup | Low | Cleanup only. |

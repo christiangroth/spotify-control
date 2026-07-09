@@ -23,6 +23,7 @@ import de.chrgroth.spotify.control.domain.catalog.SyncController
 import de.chrgroth.spotify.control.domain.catalog.CatalogSyncRequest
 import de.chrgroth.spotify.control.domain.port.out.playlist.SpotifyPlaylistPort
 import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
+import de.chrgroth.spotify.control.domain.user.CurrentUserResolver
 import io.micrometer.core.instrument.Gauge
 import io.micrometer.core.instrument.MeterRegistry
 import io.quarkus.runtime.StartupEvent
@@ -36,6 +37,7 @@ import kotlin.time.Clock
 @Suppress("Unused", "TooGenericExceptionCaught")
 class PlaylistService(
   private val userRepository: UserRepositoryPort,
+  private val currentUserResolver: CurrentUserResolver,
   private val playlistRepository: PlaylistRepositoryPort,
   private val spotifyAccessToken: SpotifyAccessTokenPort,
   private val spotifyPlaylist: SpotifyPlaylistPort,
@@ -60,11 +62,8 @@ class PlaylistService(
   override fun getTrackCounts(userId: UserId): Map<String, Int> = playlistRepository.findTrackCountsByUserId(userId)
 
   override fun enqueueUpdates() {
-    val users = userRepository.findAll()
-    logger.info { "Scheduling playlist sync for ${users.size} user(s)" }
-    users.forEach { user ->
-      outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistInfo(user.spotifyUserId))
-    }
+    val userId = currentUserResolver.userId() ?: return
+    outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistInfo(userId))
     lastSyncJobSuccessTimestamp.set(Clock.System.now().toEpochMilliseconds() / MILLIS_PER_SECOND)
   }
 

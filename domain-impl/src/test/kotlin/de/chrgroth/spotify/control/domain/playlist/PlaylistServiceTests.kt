@@ -28,6 +28,7 @@ import de.chrgroth.spotify.control.domain.port.out.playlist.SpotifyPlaylistPort
 import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
 import de.chrgroth.spotify.control.domain.catalog.SyncController
 import de.chrgroth.spotify.control.domain.catalog.CatalogSyncRequest
+import de.chrgroth.spotify.control.domain.user.CurrentUserResolver
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.mockk.every
 import io.mockk.just
@@ -45,6 +46,7 @@ import kotlin.time.Duration.Companion.seconds
 class PlaylistServiceTests {
 
   private val userRepository: UserRepositoryPort = mockk()
+  private val currentUserResolver: CurrentUserResolver = mockk()
   private val playlistRepository: PlaylistRepositoryPort = mockk()
   private val spotifyAccessToken: SpotifyAccessTokenPort = mockk()
   private val spotifyPlaylist: SpotifyPlaylistPort = mockk()
@@ -55,7 +57,7 @@ class PlaylistServiceTests {
   private val meterRegistry = SimpleMeterRegistry()
 
   private val adapter = PlaylistService(
-    userRepository, playlistRepository,
+    userRepository, currentUserResolver, playlistRepository,
     spotifyAccessToken, spotifyPlaylist,
     outboxPort, dashboardRefresh,
     playlistCheckRepository,
@@ -99,8 +101,8 @@ class PlaylistServiceTests {
   // --- enqueueUpdates tests ---
 
   @Test
-  fun `enqueueUpdates does nothing when no users exist`() {
-    every { userRepository.findAll() } returns emptyList()
+  fun `enqueueUpdates does nothing when no user exists`() {
+    every { currentUserResolver.userId() } returns null
 
     adapter.enqueueUpdates()
 
@@ -108,14 +110,13 @@ class PlaylistServiceTests {
   }
 
   @Test
-  fun `enqueueUpdates enqueues one task per user`() {
-    every { userRepository.findAll() } returns listOf(buildUser("user-1"), buildUser("user-2"))
+  fun `enqueueUpdates enqueues task for the stored user`() {
+    every { currentUserResolver.userId() } returns UserId("user-1")
     every { outboxPort.enqueue(any()) } just runs
 
     adapter.enqueueUpdates()
 
     verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistInfo(UserId("user-1"))) }
-    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistInfo(UserId("user-2"))) }
   }
 
   // --- syncPlaylists tests ---

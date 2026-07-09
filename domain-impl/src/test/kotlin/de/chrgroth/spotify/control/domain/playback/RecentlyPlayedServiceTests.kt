@@ -12,7 +12,6 @@ import de.chrgroth.spotify.control.domain.model.playback.CurrentlyPlayingItem
 import de.chrgroth.spotify.control.domain.model.playback.RecentlyPartialPlayedItem
 import de.chrgroth.spotify.control.domain.model.playback.RecentlyPlayedItem
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
-import de.chrgroth.spotify.control.domain.model.user.User
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.out.playback.AppPlaybackRepositoryPort
@@ -27,6 +26,7 @@ import de.chrgroth.spotify.control.domain.port.out.playback.SpotifyPlaybackPort
 import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
 import de.chrgroth.spotify.control.domain.catalog.SyncController
 import de.chrgroth.spotify.control.domain.catalog.CatalogSyncRequest
+import de.chrgroth.spotify.control.domain.user.CurrentUserResolver
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.mockk.every
 import io.mockk.just
@@ -46,6 +46,7 @@ import org.junit.jupiter.api.Test
 class RecentlyPlayedServiceTests {
 
   private val userRepository: UserRepositoryPort = mockk()
+  private val currentUserResolver: CurrentUserResolver = mockk()
   private val spotifyAccessToken: SpotifyAccessTokenPort = mockk()
   private val spotifyPlayback: SpotifyPlaybackPort = mockk(relaxed = true)
   private val currentlyPlayingRepository: CurrentlyPlayingRepositoryPort = mockk(relaxed = true)
@@ -60,6 +61,7 @@ class RecentlyPlayedServiceTests {
 
   private val adapter = PlaybackService(
     userRepository,
+    currentUserResolver,
     spotifyAccessToken,
     spotifyPlayback,
     currentlyPlayingRepository,
@@ -77,15 +79,6 @@ class RecentlyPlayedServiceTests {
   private val userId = UserId("user-1")
   private val accessToken = AccessToken("token")
   private val now = Clock.System.now()
-
-  private fun buildUser(id: String) = User(
-    spotifyUserId = UserId(id),
-    displayName = "User $id",
-    encryptedAccessToken = "enc-access",
-    encryptedRefreshToken = "enc-refresh",
-    tokenExpiresAt = now + 1.hours,
-    lastLoginAt = now,
-  )
 
   private fun item(index: Int, forUserId: UserId = userId, albumId: String? = null) = RecentlyPlayedItem(
     spotifyUserId = forUserId,
@@ -122,8 +115,8 @@ class RecentlyPlayedServiceTests {
   // --- enqueueUpdates tests ---
 
   @Test
-  fun `enqueueUpdates does nothing when no users exist`() {
-    every { userRepository.findAll() } returns emptyList()
+  fun `enqueueUpdates does nothing when no user exists`() {
+    every { currentUserResolver.userId() } returns null
 
     adapter.enqueueFetchPlaybackData()
 
@@ -131,14 +124,13 @@ class RecentlyPlayedServiceTests {
   }
 
   @Test
-  fun `enqueueUpdates enqueues one task per user`() {
-    every { userRepository.findAll() } returns listOf(buildUser("user-1"), buildUser("user-2"))
+  fun `enqueueUpdates enqueues task for the stored user`() {
+    every { currentUserResolver.userId() } returns UserId("user-1")
     every { outboxPort.enqueue(any()) } just runs
 
     adapter.enqueueFetchPlaybackData()
 
     verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.FetchPlaybackData(UserId("user-1"))) }
-    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.FetchPlaybackData(UserId("user-2"))) }
   }
 
   // --- update tests ---
