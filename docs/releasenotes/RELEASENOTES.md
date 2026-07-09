@@ -1,3 +1,14 @@
+# 0.107.4 (2026.07.09)
+
+## Bugfixes / Chore
+* Added a documented plan and architecture decision for simplifying the application to a strict single-user design.
+* Login no longer requires being on an allow-list; any Spotify account can now log in.
+* Once an account has logged in, login attempts from any other Spotify account are rejected to prevent a different account from taking over the instance.
+
+
+
+---
+
 # 0.107.3 (2026.07.08)
 
 ## Bugfixes / Chore
