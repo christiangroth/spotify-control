@@ -6,6 +6,12 @@ This review was requested in [issue #732](https://github.com/christiangroth/spot
 
 The review covers the MongoDB data model and indexes, the playback/catalog processing pipeline, dashboard aggregation, scheduler jobs, and general Kotlin/Quarkus patterns. Findings are based on reading the current source, not assumptions from the architecture docs alone.
 
+> **Update, 2026-07-09:** [ADR-0008](../adr/0008-single-user-architecture.md) converted the
+> application to a strict single-user architecture, completed via the
+> [single-user simplification plan](../plans/single-user-simplification.md). Findings 1 and 2
+> below, and the "what breaks first" multi-user scalability section, are resolved by eliminating
+> their precondition — there is no user count left to scale. See the inline notes on each.
+
 ## What is already done well
 
 Not everything here is a problem — several mechanisms are already built with scale in mind and should be kept as-is:
@@ -29,11 +35,15 @@ This is a design smell that gets worse, not better, as the user base grows: more
 
 **Action:** either round-robin/fall back across all authenticated users, or make catalog sync operations independent of any single user's token (e.g. a dedicated service-account style token, or explicit fallback to the next valid user on failure).
 
+**Resolved (2026-07-09):** the single-user migration ([ADR-0008](../adr/0008-single-user-architecture.md)) removed the arbitrary-user pick entirely — catalog sync now resolves the one stored user via `CurrentUserResolver`, so there is no "wrong user picked" failure mode left to harden against.
+
 ### 2. Potential single-partition serialization bottleneck for playback polling (Medium-High, needs confirmation)
 
 Per `docs/arc42/arc42.md:401` all playback-fetch events route through a single `to-spotify-playback` outbox partition with no throttle. If that partition is drained by one worker at a time (this is implemented in the external `de.chrgroth.quarkus.outbox` library, not this repo), every 20-second poll cycle enqueues one event per user into a partition processed sequentially. As user count grows from 1-2 to 20-50, the time to drain the partition (N × [Spotify round trip + Mongo write]) could approach or exceed the 20s interval, causing a growing backlog and stale currently-playing data for all users, not just the one that's slow.
 
 **Action:** confirm the concurrency model of `OutboxPartitionWorker` in the outbox library. If it is strictly single-worker-per-partition, consider splitting `to-spotify-playback` per user or increasing partition worker concurrency before onboarding significantly more users.
+
+**Resolved (2026-07-09):** the single-user migration ([ADR-0008](../adr/0008-single-user-architecture.md)) means `to-spotify-playback` only ever carries events for the one user; per-user sub-partitioning is no longer a meaningful mitigation since there is nothing to partition by.
 
 ### 3. No pagination on catalog list ports (Low)
 
@@ -66,6 +76,8 @@ Unlike the `DomainMetrics` catalog gauges (now fixed), these aren't triggered by
 | 5 | Cache `CatalogBrowserService.getCatalogStats()` (and playlist check counts) with a short TTL instead of recomputing on every `/dashboard`/`/catalog` load | Medium | Small |
 
 ## Multi-user scalability — what breaks first
+
+**Resolved (2026-07-09):** this section described risks in a multi-user world that no longer exists after [ADR-0008](../adr/0008-single-user-architecture.md)'s single-user migration. Kept below for historical context only — none of these need action.
 
 Ranked by how soon each mechanism is expected to become a visible problem as the user base grows from 1-2 to 20-50 users:
 
