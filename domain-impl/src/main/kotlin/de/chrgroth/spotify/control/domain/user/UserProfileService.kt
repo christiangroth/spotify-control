@@ -3,7 +3,6 @@ package de.chrgroth.spotify.control.domain.user
 import arrow.core.Either
 import arrow.core.right
 import de.chrgroth.spotify.control.domain.error.DomainError
-import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.user.UserProfilePort
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
@@ -23,14 +22,15 @@ class UserProfileService(
   private val outboxPort: OutboxPort,
 ) : UserProfilePort {
 
-  override fun getDisplayName(userId: UserId): String? = userRepository.findById(userId)?.displayName
+  override fun getDisplayName(): String? = currentUserResolver.userId()?.let { userRepository.findById(it)?.displayName }
 
   override fun enqueueUpdates() {
-    val userId = currentUserResolver.userId() ?: return
-    outboxPort.enqueue(DomainOutboxEvent.UpdateUserProfile(userId))
+    currentUserResolver.userId() ?: return
+    outboxPort.enqueue(DomainOutboxEvent.UpdateUserProfile())
   }
 
-  override fun update(userId: UserId): Either<DomainError, Unit> {
+  override fun update(): Either<DomainError, Unit> {
+    val userId = currentUserResolver.userId() ?: return Unit.right()
     val user = userRepository.findById(userId) ?: run {
       logger.warn { "User not found for profile update: ${userId.value}" }
       return Unit.right()
@@ -44,7 +44,7 @@ class UserProfileService(
   }
 
   override fun handle(event: DomainOutboxEvent.UpdateUserProfile): Either<DomainError, Unit> =
-    update(event.userId)
+    update()
 
   companion object : KLogging()
 }

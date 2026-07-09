@@ -23,11 +23,11 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
     }
   }
 
-  data class UpdateUserProfile(val userId: UserId) : DomainOutboxEvent {
+  data class UpdateUserProfile(val placeholder: String = "") : DomainOutboxEvent {
     override val key = KEY
-    override val deduplicationKey = "$KEY:${userId.value}"
+    override val deduplicationKey = KEY
     override val partition = DomainOutboxPartition.ToSpotifyUser
-    override val serializePayload = userId.value
+    override val serializePayload = ""
 
     companion object {
       const val KEY = "UpdateUserProfile"
@@ -278,7 +278,7 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
     @Suppress("CyclomaticComplexMethod")
     fun fromKey(key: String, payload: String): DomainOutboxEvent = when (key) {
       FetchPlaybackData.KEY -> FetchPlaybackData(UserId(payload))
-      UpdateUserProfile.KEY -> UpdateUserProfile(UserId(payload))
+      UpdateUserProfile.KEY -> UpdateUserProfile()
       SyncPlaylistInfo.KEY -> SyncPlaylistInfo(UserId(payload))
       SyncPlaylistData.KEY -> SyncPlaylistData.fromPayload(payload)
       RebuildPlaybackData.KEY -> RebuildPlaybackData(UserId(payload))

@@ -39,7 +39,7 @@ class PlaybackSettingsResource(
   @Produces(MediaType.TEXT_HTML)
   fun playback(): TemplateInstance {
     val userId = UserId(securityIdentity.principal.name)
-    val displayName = userProfile.getDisplayName(userId) ?: userId.value
+    val displayName = userProfile.getDisplayName() ?: userId.value
     return playbackTemplate
       .data("displayName", displayName)
   }

@@ -31,7 +31,7 @@ class DashboardResource(
   @Produces(MediaType.TEXT_HTML)
   fun dashboard(): TemplateInstance {
     val userId = UserId(securityIdentity.principal.name)
-    val displayName = userProfile.getDisplayName(userId) ?: userId.value
+    val displayName = userProfile.getDisplayName() ?: userId.value
     val stats = dashboard.getStats(userId)
     return dashboardTemplate
       .data("displayName", displayName)

@@ -64,10 +64,16 @@ afterward, since it becomes structurally impossible.
 
 ---
 
-## Phase 3: Thread removal of `UserId` through ports and services
+## Phase 3: Thread removal of `UserId` through ports and services — in progress
 
 **Goal:** Drop `UserId` parameters from ports, services, and outbox events where they only ever
 existed to distinguish between users, once Phase 2 has established that there is exactly one user.
+
+**User profile slice — done:** `UserProfilePort.getDisplayName()` and `update()` no longer take a
+`UserId`; both resolve the one stored user internally via `CurrentUserResolver`. The
+`UpdateUserProfile` outbox event dropped its `userId` field (same placeholder-payload pattern as
+`ResyncCatalog`). Remaining slices (playback, playlist, catalog, `SpotifyAccessTokenPort`, SSE) are
+still open.
 
 * `domain-api/.../port/out/*` – ports whose only use of `UserId` is to select "which user" (not
   domain data itself) can drop the parameter: `PlaybackPort`, `PlaybackAggregationPort`,
@@ -150,7 +156,7 @@ downtime, and must run after Phase 3 so no code still reads/writes the dropped f
 |---|---|---|
 | 1 – Login/allow-list removal | Low | Permissive change; single real operator already unaffected. |
 | 2 – Scheduler fan-out & catalog-sync shortcut | Medium | Done — "zero users" and "one user" cases covered by tests. |
-| 3 – `UserId` threading removal | High | Split per bounded context; handle in-flight outbox payloads carrying stale `userId` fields during rollout. |
+| 3 – `UserId` threading removal | High | Split per bounded context; handle in-flight outbox payloads carrying stale `userId` fields during rollout. User-profile slice done. |
 | 4 – MongoDB schema/index cleanup | Medium | Use a one-time `Starter`; sequence after Phase 3; rebuild indexes without downtime. |
 | 5 – Config/tests/deploy cleanup | Low | Cleanup only. |
 
