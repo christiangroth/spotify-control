@@ -12,14 +12,13 @@ import de.chrgroth.spotify.control.domain.model.catalog.SyncTraceEntityType
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSyncStatus
-import de.chrgroth.spotify.control.domain.model.user.User
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppAlbumRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.SyncTraceRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
+import de.chrgroth.spotify.control.domain.user.CurrentUserResolver
 import io.mockk.every
 import io.mockk.mockk
 import kotlin.time.Instant
@@ -33,7 +32,7 @@ class CatalogBrowserServiceTests {
   private val appTrackRepository: AppTrackRepositoryPort = mockk()
   private val syncTraceRepository: SyncTraceRepositoryPort = mockk()
   private val playlistRepository: PlaylistRepositoryPort = mockk()
-  private val userRepository: UserRepositoryPort = mockk()
+  private val currentUserResolver: CurrentUserResolver = mockk()
 
   private val service = CatalogBrowserService(
     appArtistRepository,
@@ -41,20 +40,11 @@ class CatalogBrowserServiceTests {
     appTrackRepository,
     syncTraceRepository,
     playlistRepository,
-    userRepository,
+    currentUserResolver,
   )
 
   private val userId = UserId("user-1")
   private val triggeredAt = Instant.fromEpochSeconds(100)
-
-  private fun buildUser() = User(
-    spotifyUserId = userId,
-    displayName = "User 1",
-    encryptedAccessToken = "enc-access",
-    encryptedRefreshToken = "enc-refresh",
-    tokenExpiresAt = Instant.DISTANT_FUTURE,
-    lastLoginAt = Instant.fromEpochSeconds(0),
-  )
 
   @Test
   fun `getAlbums returns empty list when filter is blank`() {
@@ -118,7 +108,7 @@ class CatalogBrowserServiceTests {
       SyncTrace(SyncTraceEntityType.ARTIST, "artist-1", SyncCause.Playlist("playlist-1", "track-1"), triggeredAt)
     every { appTrackRepository.findByTrackIds(setOf(TrackId("track-1"))) } returns
       listOf(AppTrack(id = TrackId("track-1"), title = "Some Song", artistId = ArtistId("artist-1"), lastSync = triggeredAt))
-    every { userRepository.findAll() } returns listOf(buildUser())
+    every { currentUserResolver.userId() } returns userId
     every { playlistRepository.findByUserId(userId) } returns listOf(
       PlaylistInfo(
         spotifyPlaylistId = "playlist-1",

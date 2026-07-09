@@ -13,14 +13,13 @@ import de.chrgroth.spotify.control.domain.model.catalog.SyncTraceDisplay
 import de.chrgroth.spotify.control.domain.model.catalog.SyncTraceEntityType
 import de.chrgroth.spotify.control.domain.model.catalog.TrackBrowseItem
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
-import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogBrowserPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppAlbumRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.SyncTraceRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
+import de.chrgroth.spotify.control.domain.user.CurrentUserResolver
 import jakarta.enterprise.context.ApplicationScoped
 
 @ApplicationScoped
@@ -31,7 +30,7 @@ class CatalogBrowserService(
   private val appTrackRepository: AppTrackRepositoryPort,
   private val syncTraceRepository: SyncTraceRepositoryPort,
   private val playlistRepository: PlaylistRepositoryPort,
-  private val userRepository: UserRepositoryPort,
+  private val currentUserResolver: CurrentUserResolver,
 ) : CatalogBrowserPort {
 
   override fun getCatalogStats(): CatalogStats {
@@ -207,13 +206,9 @@ class CatalogBrowserService(
     appArtistRepository.findByArtistIds(setOf(ArtistId(artistId))).firstOrNull()?.artistName ?: artistId
 
   private fun playlistName(playlistId: String): String {
-    val userId = theUserId() ?: return playlistId
+    val userId = currentUserResolver.userId() ?: return playlistId
     return playlistRepository.findByUserId(userId).firstOrNull { it.spotifyPlaylistId == playlistId }?.name ?: playlistId
   }
-
-  // Single-user application: there is at most one stored user, resolved once here rather than picked
-  // arbitrarily from a list.
-  private fun theUserId(): UserId? = userRepository.findAll().firstOrNull()?.spotifyUserId
 
   companion object {
     internal const val SEARCH_RESULT_LIMIT = 50

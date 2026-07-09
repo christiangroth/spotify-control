@@ -17,7 +17,7 @@ import de.chrgroth.spotify.control.domain.port.out.playback.RecentlyPlayedReposi
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.SpotifyCatalogPort
-import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
+import de.chrgroth.spotify.control.domain.user.CurrentUserResolver
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -34,7 +34,7 @@ class PlaybackEnrichmentServiceTests {
   private val appAlbumRepository: AppAlbumRepositoryPort = mockk()
   private val recentlyPlayedRepository: RecentlyPlayedRepositoryPort = mockk(relaxed = true)
   private val recentlyPartialPlayedRepository: RecentlyPartialPlayedRepositoryPort = mockk(relaxed = true)
-  private val userRepository: UserRepositoryPort = mockk(relaxed = true)
+  private val currentUserResolver: CurrentUserResolver = mockk(relaxed = true)
   private val outboxPort: OutboxPort = mockk()
   private val playlistRepository: PlaylistRepositoryPort = mockk()
   private val playlistCheckRepository: AppPlaylistCheckRepositoryPort = mockk()
@@ -51,7 +51,7 @@ class PlaybackEnrichmentServiceTests {
     appAlbumRepository,
     recentlyPlayedRepository,
     recentlyPartialPlayedRepository,
-    userRepository,
+    currentUserResolver,
     outboxPort,
     playlistRepository,
     playlistCheckRepository,

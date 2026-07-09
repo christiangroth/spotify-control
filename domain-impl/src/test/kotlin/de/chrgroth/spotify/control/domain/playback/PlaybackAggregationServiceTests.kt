@@ -16,7 +16,7 @@ import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPor
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.playback.AppPlaybackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playback.PlaybackAggregationRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
+import de.chrgroth.spotify.control.domain.user.CurrentUserResolver
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.mockk.every
 import io.mockk.mockk
@@ -29,7 +29,7 @@ import org.junit.jupiter.api.Test
 
 class PlaybackAggregationServiceTests {
 
-  private val userRepository: UserRepositoryPort = mockk()
+  private val currentUserResolver: CurrentUserResolver = mockk()
   private val appPlaybackRepository: AppPlaybackRepositoryPort = mockk()
   private val appTrackRepository: AppTrackRepositoryPort = mockk()
   private val appArtistRepository: AppArtistRepositoryPort = mockk()
@@ -38,7 +38,7 @@ class PlaybackAggregationServiceTests {
   private val meterRegistry = SimpleMeterRegistry()
 
   private val service = PlaybackAggregationService(
-    userRepository = userRepository,
+    currentUserResolver = currentUserResolver,
     appPlaybackRepository = appPlaybackRepository,
     appTrackRepository = appTrackRepository,
     appArtistRepository = appArtistRepository,

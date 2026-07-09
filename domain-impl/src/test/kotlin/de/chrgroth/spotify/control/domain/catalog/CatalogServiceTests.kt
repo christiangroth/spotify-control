@@ -16,7 +16,6 @@ import de.chrgroth.spotify.control.domain.model.catalog.TrackId
 import de.chrgroth.spotify.control.domain.model.playback.RecentlyPartialPlayedItem
 import de.chrgroth.spotify.control.domain.model.playback.RecentlyPlayedItem
 import de.chrgroth.spotify.control.domain.model.user.UserId
-import de.chrgroth.spotify.control.domain.model.user.User
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
 import kotlin.time.Duration.Companion.seconds
@@ -33,7 +32,7 @@ import de.chrgroth.spotify.control.domain.port.out.playback.RecentlyPlayedReposi
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.SpotifyCatalogPort
-import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
+import de.chrgroth.spotify.control.domain.user.CurrentUserResolver
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -51,7 +50,7 @@ class CatalogServiceTests {
   private val appAlbumRepository: AppAlbumRepositoryPort = mockk()
   private val recentlyPlayedRepository: RecentlyPlayedRepositoryPort = mockk(relaxed = true)
   private val recentlyPartialPlayedRepository: RecentlyPartialPlayedRepositoryPort = mockk(relaxed = true)
-  private val userRepository: UserRepositoryPort = mockk()
+  private val currentUserResolver: CurrentUserResolver = mockk()
   private val outboxPort: OutboxPort = mockk()
   private val playlistRepository: PlaylistRepositoryPort = mockk()
   private val playlistCheckRepository: AppPlaylistCheckRepositoryPort = mockk()
@@ -64,7 +63,7 @@ class CatalogServiceTests {
     spotifyAccessToken, spotifyCatalog,
     appArtistRepository, appTrackRepository, appAlbumRepository,
     recentlyPlayedRepository, recentlyPartialPlayedRepository,
-    userRepository, outboxPort,
+    currentUserResolver, outboxPort,
     playlistRepository, playlistCheckRepository,
     dashboardRefresh, syncController,
     playbackAggregation, syncTraceRepository,
@@ -99,15 +98,6 @@ class CatalogServiceTests {
     albumId = AlbumId("album-2"), artistId = ArtistId("artist-2"), lastSync = syncTimestamp,
   )
   private val albumSyncResult = AlbumSyncResult(album = album1, tracks = listOf(trackWithAlbum1, trackWithAlbum2))
-
-  private fun buildUser(id: String = "user-1") = User(
-    spotifyUserId = UserId(id),
-    displayName = "User $id",
-    encryptedAccessToken = "enc-access",
-    encryptedRefreshToken = "enc-refresh",
-    tokenExpiresAt = Instant.DISTANT_FUTURE,
-    lastLoginAt = Instant.fromEpochSeconds(0),
-  )
 
   private fun recentlyPlayedItem(trackId: String, vararg artistIds: String) = RecentlyPlayedItem(
     spotifyUserId = userId,
@@ -144,7 +134,7 @@ class CatalogServiceTests {
   @Test
   fun `resyncArtist enqueues SyncArtistAlbums for existing artist`() {
     every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns listOf(artist1)
-    every { userRepository.findAll() } returns listOf(buildUser())
+    every { currentUserResolver.userId() } returns userId
     every { outboxPort.enqueue(any()) } just runs
 
     val result = adapter.resyncArtist("artist-1")
@@ -157,7 +147,7 @@ class CatalogServiceTests {
   @Test
   fun `resyncArtist does nothing when no users available`() {
     every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns listOf(artist1)
-    every { userRepository.findAll() } returns emptyList()
+    every { currentUserResolver.userId() } returns null
 
     val result = adapter.resyncArtist("artist-1")
 
@@ -170,7 +160,7 @@ class CatalogServiceTests {
   @Test
   fun `resyncCatalog enqueues playback-based sync when catalog is empty`() {
     every { appArtistRepository.findAll() } returns emptyList()
-    every { userRepository.findAll() } returns listOf(buildUser())
+    every { currentUserResolver.userId() } returns userId
     every { recentlyPlayedRepository.findSince(userId, null) } returns listOf(recentlyPlayedItem("track-1", "artist-1", "artist-1b"))
     every { recentlyPartialPlayedRepository.findSince(userId, null) } returns listOf(recentlyPartialPlayedItem("track-2", "artist-2"))
 
@@ -193,7 +183,7 @@ class CatalogServiceTests {
   @Test
   fun `resyncCatalog enqueues SyncArtistAlbums for all artists`() {
     every { appArtistRepository.findAll() } returns listOf(artist1, artist2)
-    every { userRepository.findAll() } returns listOf(buildUser())
+    every { currentUserResolver.userId() } returns userId
     every { outboxPort.enqueue(any()) } just runs
     every { recentlyPlayedRepository.findSince(userId, null) } returns emptyList()
     every { recentlyPartialPlayedRepository.findSince(userId, null) } returns emptyList()
@@ -208,7 +198,7 @@ class CatalogServiceTests {
   @Test
   fun `resyncCatalog does not enqueue events when no users available`() {
     every { appArtistRepository.findAll() } returns listOf(artist1)
-    every { userRepository.findAll() } returns emptyList()
+    every { currentUserResolver.userId() } returns null
 
     val result = adapter.resyncCatalog()
 
@@ -221,7 +211,7 @@ class CatalogServiceTests {
   @Test
   fun `handle ResyncCatalog returns success`() {
     every { appArtistRepository.findAll() } returns listOf(artist1)
-    every { userRepository.findAll() } returns listOf(buildUser())
+    every { currentUserResolver.userId() } returns userId
     every { outboxPort.enqueue(any()) } just runs
     every { recentlyPlayedRepository.findSince(userId, null) } returns emptyList()
     every { recentlyPartialPlayedRepository.findSince(userId, null) } returns emptyList()
@@ -234,7 +224,7 @@ class CatalogServiceTests {
   @Test
   fun `handle ResyncCatalog returns success when catalog is empty`() {
     every { appArtistRepository.findAll() } returns emptyList()
-    every { userRepository.findAll() } returns emptyList()
+    every { currentUserResolver.userId() } returns null
 
     val result = adapter.handle(DomainOutboxEvent.ResyncCatalog())
 
@@ -245,7 +235,7 @@ class CatalogServiceTests {
 
   @Test
   fun `handle SyncAlbumDetails returns success when no users available`() {
-    every { userRepository.findAll() } returns emptyList()
+    every { currentUserResolver.userId() } returns null
 
     val result = adapter.handle(DomainOutboxEvent.SyncAlbumDetails("album-1"))
 
@@ -255,7 +245,7 @@ class CatalogServiceTests {
 
   @Test
   fun `handle SyncAlbumDetails fetches only tracks and skips album upsert when album metadata already known`() {
-    every { userRepository.findAll() } returns listOf(buildUser())
+    every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
     every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"))) } returns listOf(album1)
     every { spotifyCatalog.getAlbumTracks(userId, accessToken, album1) } returns listOf(trackWithAlbum1, trackWithAlbum2).right()
@@ -273,7 +263,7 @@ class CatalogServiceTests {
 
   @Test
   fun `handle SyncAlbumDetails falls back to full album fetch and upserts album when metadata not yet known`() {
-    every { userRepository.findAll() } returns listOf(buildUser())
+    every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
     every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"))) } returns emptyList()
     every { spotifyCatalog.getAlbum(userId, accessToken, "album-1") } returns albumSyncResult.right()
@@ -292,7 +282,7 @@ class CatalogServiceTests {
 
   @Test
   fun `handle SyncAlbumDetails does not sync artists found in album tracks`() {
-    every { userRepository.findAll() } returns listOf(buildUser())
+    every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
     every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"))) } returns emptyList()
     every { spotifyCatalog.getAlbum(userId, accessToken, "album-1") } returns albumSyncResult.right()
@@ -306,7 +296,7 @@ class CatalogServiceTests {
 
   @Test
   fun `handle SyncAlbumDetails returns failed when album endpoint returns error`() {
-    every { userRepository.findAll() } returns listOf(buildUser())
+    every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
     every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"))) } returns emptyList()
     every { spotifyCatalog.getAlbum(userId, accessToken, "album-1") } returns SyncError.TRACK_DETAILS_FETCH_FAILED.left()
@@ -320,7 +310,7 @@ class CatalogServiceTests {
   @Test
   fun `handle SyncAlbumDetails returns rate limited when endpoint returns rate limit error`() {
     val rateLimitError = SpotifyRateLimitError(30.seconds)
-    every { userRepository.findAll() } returns listOf(buildUser())
+    every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
     every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"))) } returns emptyList()
     every { spotifyCatalog.getAlbum(userId, accessToken, "album-1") } returns rateLimitError.left()
@@ -468,7 +458,7 @@ class CatalogServiceTests {
 
   @Test
   fun `enqueuePlaybackArtistsForSync delegates playback tracks to syncController using only primary artist per track`() {
-    every { userRepository.findAll() } returns listOf(buildUser())
+    every { currentUserResolver.userId() } returns userId
     every { recentlyPlayedRepository.findSince(userId, null) } returns listOf(recentlyPlayedItem("track-1", "artist-1", "artist-1b"))
     every { recentlyPartialPlayedRepository.findSince(userId, null) } returns listOf(recentlyPartialPlayedItem("track-2", "artist-2"))
 

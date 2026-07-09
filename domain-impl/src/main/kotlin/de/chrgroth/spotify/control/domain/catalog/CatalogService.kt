@@ -28,8 +28,8 @@ import de.chrgroth.spotify.control.domain.port.out.playback.RecentlyPlayedReposi
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.SpotifyCatalogPort
-import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
 import de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackAggregationPort
+import de.chrgroth.spotify.control.domain.user.CurrentUserResolver
 import jakarta.enterprise.context.ApplicationScoped
 import kotlin.time.Clock
 import mu.KLogging
@@ -44,7 +44,7 @@ class CatalogService(
   private val appAlbumRepository: AppAlbumRepositoryPort,
   private val recentlyPlayedRepository: RecentlyPlayedRepositoryPort,
   private val recentlyPartialPlayedRepository: RecentlyPartialPlayedRepositoryPort,
-  private val userRepository: UserRepositoryPort,
+  private val currentUserResolver: CurrentUserResolver,
   private val outboxPort: OutboxPort,
   private val playlistRepository: PlaylistRepositoryPort,
   private val playlistCheckRepository: AppPlaylistCheckRepositoryPort,
@@ -100,7 +100,7 @@ class CatalogService(
 
   override fun resyncCatalog(): Either<DomainError, Unit> {
     val allArtistIds = appArtistRepository.findAll().map { it.id.value }
-    val userId = theUserId() ?: return Unit.right()
+    val userId = currentUserResolver.userId() ?: return Unit.right()
     val playbackCatalogRequests = buildPlaybackCatalogRequests(userId)
     logger.info { "Re-syncing catalog: ${allArtistIds.size} catalog artist(s), ${playbackCatalogRequests.size} playback track(s)" }
     allArtistIds.forEach { outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums(it, userId)) }
@@ -111,7 +111,7 @@ class CatalogService(
   override fun resyncArtist(artistId: String): Either<DomainError, Unit> {
     appArtistRepository.findByArtistIds(setOf(ArtistId(artistId))).firstOrNull()
       ?: return ArtistSettingsError.ARTIST_NOT_FOUND.left()
-    val userId = theUserId() ?: run {
+    val userId = currentUserResolver.userId() ?: run {
       logger.warn { "No users available for artist resync, skipping $artistId" }
       return Unit.right()
     }
@@ -131,7 +131,7 @@ class CatalogService(
   }
 
   private fun syncAlbumDetails(albumId: String): Either<DomainError, Int> {
-    val userId = theUserId()
+    val userId = currentUserResolver.userId()
     if (userId == null) {
       logger.debug { "No users available, skipping syncAlbumDetails" }
       return 0.right()
@@ -182,7 +182,7 @@ class CatalogService(
 
   override fun enqueueArtistAlbumsSync(partition: Int, totalPartitions: Int) {
     val allArtists = appArtistRepository.findAll()
-    val userId = theUserId()
+    val userId = currentUserResolver.userId()
     if (userId == null) {
       logger.warn { "No users available for artist albums sync, skipping partition $partition/$totalPartitions" }
       return
@@ -194,7 +194,7 @@ class CatalogService(
   }
 
   override fun enqueuePlaybackArtistsForSync() {
-    val userId = theUserId()
+    val userId = currentUserResolver.userId()
     if (userId == null) {
       logger.warn { "No users available for playback artists sync, skipping" }
       return
@@ -204,10 +204,6 @@ class CatalogService(
     logger.info { "Enqueuing artist sync for $artistCount artist(s) found in playback data" }
     syncController.syncForTracks(playbackCatalogRequests, userId)
   }
-
-  // Single-user application: there is at most one stored user, resolved once here rather than picked
-  // arbitrarily from a list, since all catalog sync operations act on behalf of "the one user".
-  private fun theUserId(): UserId? = userRepository.findAll().firstOrNull()?.spotifyUserId
 
   private fun buildPlaybackCatalogRequests(userId: UserId): List<CatalogSyncRequest> {
     val recentlyPlayed = recentlyPlayedRepository.findSince(userId, null)
