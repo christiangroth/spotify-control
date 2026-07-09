@@ -1,3 +1,12 @@
+# 0.107.5 (2026.07.09)
+
+## Bugfixes / Chore
+* Simplified internal scheduling and catalog sync logic as part of the ongoing single-user architecture migration.
+
+
+
+---
+
 # 0.107.4 (2026.07.09)
 
 ## Bugfixes / Chore
