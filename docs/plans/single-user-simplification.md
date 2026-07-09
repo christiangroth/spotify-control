@@ -12,7 +12,7 @@ schema → cleanup), so each phase can be built and tested independently before 
 
 ---
 
-## Phase 1: Login and allow-list removal
+## Phase 1: Login and allow-list removal — done
 
 **Goal:** Login no longer checks an allow-list; any Spotify account can log in, and the concept of
 "not allowed" disappears.

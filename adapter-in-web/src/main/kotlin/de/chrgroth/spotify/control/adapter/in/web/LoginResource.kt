@@ -36,7 +36,6 @@ class LoginResource(
   }
 
   private fun errorMessage(code: String): String = when (code) {
-      AuthError.USER_NOT_ALLOWED.code -> "You are not allowed to log in with this Spotify account."
       AuthError.TOKEN_EXCHANGE_FAILED.code -> "Could not exchange the authorisation code with Spotify. Please try again."
       AuthError.PROFILE_FETCH_FAILED.code -> "Could not retrieve your Spotify profile. Please try again."
       AuthError.TOKEN_REFRESH_FAILED.code -> "Could not refresh your access token. Please log in again."

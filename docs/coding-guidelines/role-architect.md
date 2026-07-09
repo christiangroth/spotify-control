@@ -81,7 +81,7 @@ When in doubt: if it compiles without `domain-api` in scope, it belongs in an ad
 - No CQRS, no event sourcing beyond the outbox pattern
 - No message brokers (Kafka, RabbitMQ) – CDI events + persistent outbox are sufficient
 - No separate frontend deployment – Qute SSR in the same Quarkus process
-- No custom user management – a comma-separated allowlist config property (`APP_ALLOWED_SPOTIFY_USER_IDS`)
+- No custom user management – strict single-user application (see [ADR-0008](../adr/0008-single-user-architecture.md)); any Spotify account that completes login becomes the application's user
 
 ## Testing Strategy
 

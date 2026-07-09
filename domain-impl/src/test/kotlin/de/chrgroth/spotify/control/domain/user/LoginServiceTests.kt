@@ -27,13 +27,13 @@ class LoginServiceTests {
   private val userRepository: UserRepositoryPort = mockk()
   private val tokenEncryption: TokenEncryptionPort = mockk()
 
-  private val adapter = LoginService(spotifyAuth, userRepository, tokenEncryption, listOf("user-1"))
+  private val adapter = LoginService(spotifyAuth, userRepository, tokenEncryption)
 
   private val tokens = SpotifyTokens(AccessToken("access"), RefreshToken("refresh"), 3600)
   private val profile = SpotifyProfile(SpotifyProfileId("user-1"), "Test User")
 
   @Test
-  fun `allowed user succeeds and user is upserted`() {
+  fun `login succeeds and user is upserted`() {
     every { spotifyAuth.exchangeCode("code") } returns tokens.right()
     every { spotifyAuth.getUserProfile(AccessToken("access")) } returns profile.right()
     every { tokenEncryption.encrypt(any()) } returns "encrypted".right()
@@ -44,18 +44,6 @@ class LoginServiceTests {
     assertThat(result.isRight()).isTrue()
     assertThat((result as Either.Right).value).isEqualTo(UserId("user-1"))
     verify { userRepository.upsert(any()) }
-  }
-
-  @Test
-  fun `not-allowed user returns failure and user is not upserted`() {
-    every { spotifyAuth.exchangeCode("code") } returns tokens.right()
-    every { spotifyAuth.getUserProfile(AccessToken("access")) } returns SpotifyProfile(SpotifyProfileId("user-2"), "Other User").right()
-
-    val result = adapter.handleCallback("code")
-
-    assertThat(result.isLeft()).isTrue()
-    assertThat((result as Either.Left).value).isEqualTo(AuthError.USER_NOT_ALLOWED)
-    verify(exactly = 0) { userRepository.upsert(any()) }
   }
 
   @Test
@@ -92,17 +80,5 @@ class LoginServiceTests {
 
     assertThat(result.isLeft()).isTrue()
     assertThat((result as Either.Left).value).isEqualTo(AuthError.UNEXPECTED)
-  }
-
-  // --- isAllowed tests ---
-
-  @Test
-  fun `isAllowed returns true for user in allowed list`() {
-    assertThat(adapter.isAllowed(UserId("user-1"))).isTrue()
-  }
-
-  @Test
-  fun `isAllowed returns false for user not in allowed list`() {
-    assertThat(adapter.isAllowed(UserId("unknown-user"))).isFalse()
   }
 }

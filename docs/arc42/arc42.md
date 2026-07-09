@@ -375,7 +375,7 @@ Layer 5 applies to adapter modules where the logic is pure (e.g. `adapter-in-sta
 
 - Spotify OAuth 2.0 Authorization Code Flow.
 - A `User` document is upserted in the `app_user` MongoDB collection on every successful login. Both access and refresh tokens are stored encrypted (AES-256-GCM) using `APP_TOKEN_ENCRYPTION_KEY`.
-- The application is built for a single user (see [ADR-0008](../adr/0008-single-user-architecture.md)); the allow-list check (`APP_ALLOWED_SPOTIFY_USER_IDS`) that previously gated login is being removed as part of the single-user migration (see [migration plan](../plans/single-user-simplification.md)).
+- The application is built for a single user (see [ADR-0008](../adr/0008-single-user-architecture.md)); login no longer checks an allow-list — any Spotify account that completes the OAuth flow is upserted as the application's user. Phase 1 of the [migration plan](../plans/single-user-simplification.md) is complete.
 - Session-based authentication for all endpoints. The session stores only the Spotify user ID – never tokens.
 - `return_to` parameter stored in the session for redirect after login.
 - A CSRF `state` parameter is generated per authorization request and validated in the callback.
@@ -451,16 +451,12 @@ Architecture documentation (`docs/arc42`), ADRs (`docs/adr`), and release notes 
 All sensitive configuration is provided via environment variables:
 
 ```
-APP_ALLOWED_SPOTIFY_USER_IDS
 SPOTIFY_CLIENT_ID
 SPOTIFY_CLIENT_SECRET
 MONGODB_CONNECTION_STRING
 APP_TOKEN_ENCRYPTION_KEY
 SLACK_WEBHOOK_URL
 ```
-
-`APP_ALLOWED_SPOTIFY_USER_IDS` is scheduled for removal as part of the single-user migration
-(see [ADR-0008](../adr/0008-single-user-architecture.md)) once login no longer needs an allow-list check.
 
 # Architecture Decisions
 
