@@ -5,6 +5,7 @@ sealed interface DomainError {
 }
 
 enum class AuthError(override val code: String) : DomainError {
+  ANOTHER_USER_ALREADY_REGISTERED("AUTH-001"),
   TOKEN_EXCHANGE_FAILED("AUTH-002"),
   PROFILE_FETCH_FAILED("AUTH-003"),
   TOKEN_REFRESH_FAILED("AUTH-004"),

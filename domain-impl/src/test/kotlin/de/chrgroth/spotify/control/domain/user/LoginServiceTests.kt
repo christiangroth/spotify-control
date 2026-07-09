@@ -9,6 +9,7 @@ import de.chrgroth.spotify.control.domain.model.user.RefreshToken
 import de.chrgroth.spotify.control.domain.model.user.SpotifyProfile
 import de.chrgroth.spotify.control.domain.model.user.SpotifyProfileId
 import de.chrgroth.spotify.control.domain.model.user.SpotifyTokens
+import de.chrgroth.spotify.control.domain.model.user.User
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAuthPort
 import de.chrgroth.spotify.control.domain.port.out.user.TokenEncryptionPort
@@ -33,9 +34,10 @@ class LoginServiceTests {
   private val profile = SpotifyProfile(SpotifyProfileId("user-1"), "Test User")
 
   @Test
-  fun `login succeeds and user is upserted`() {
+  fun `login succeeds and user is upserted when no user is registered yet`() {
     every { spotifyAuth.exchangeCode("code") } returns tokens.right()
     every { spotifyAuth.getUserProfile(AccessToken("access")) } returns profile.right()
+    every { userRepository.findAll() } returns emptyList()
     every { tokenEncryption.encrypt(any()) } returns "encrypted".right()
     every { userRepository.upsert(any()) } just runs
 
@@ -44,6 +46,34 @@ class LoginServiceTests {
     assertThat(result.isRight()).isTrue()
     assertThat((result as Either.Right).value).isEqualTo(UserId("user-1"))
     verify { userRepository.upsert(any()) }
+  }
+
+  @Test
+  fun `login succeeds when the already registered user logs in again`() {
+    every { spotifyAuth.exchangeCode("code") } returns tokens.right()
+    every { spotifyAuth.getUserProfile(AccessToken("access")) } returns profile.right()
+    every { userRepository.findAll() } returns listOf(existingUser(UserId("user-1")))
+    every { tokenEncryption.encrypt(any()) } returns "encrypted".right()
+    every { userRepository.upsert(any()) } just runs
+
+    val result = adapter.handleCallback("code")
+
+    assertThat(result.isRight()).isTrue()
+    assertThat((result as Either.Right).value).isEqualTo(UserId("user-1"))
+    verify { userRepository.upsert(any()) }
+  }
+
+  @Test
+  fun `login is denied when a different user is already registered`() {
+    every { spotifyAuth.exchangeCode("code") } returns tokens.right()
+    every { spotifyAuth.getUserProfile(AccessToken("access")) } returns profile.right()
+    every { userRepository.findAll() } returns listOf(existingUser(UserId("other-user")))
+
+    val result = adapter.handleCallback("code")
+
+    assertThat(result.isLeft()).isTrue()
+    assertThat((result as Either.Left).value).isEqualTo(AuthError.ANOTHER_USER_ALREADY_REGISTERED)
+    verify(exactly = 0) { userRepository.upsert(any()) }
   }
 
   @Test
@@ -73,6 +103,7 @@ class LoginServiceTests {
   fun `unexpected exception during upsert returns UNEXPECTED error`() {
     every { spotifyAuth.exchangeCode("code") } returns tokens.right()
     every { spotifyAuth.getUserProfile(AccessToken("access")) } returns profile.right()
+    every { userRepository.findAll() } returns emptyList()
     every { tokenEncryption.encrypt(any()) } returns "encrypted".right()
     every { userRepository.upsert(any()) } throws RuntimeException("DB connection failed")
 
@@ -81,4 +112,13 @@ class LoginServiceTests {
     assertThat(result.isLeft()).isTrue()
     assertThat((result as Either.Left).value).isEqualTo(AuthError.UNEXPECTED)
   }
+
+  private fun existingUser(userId: UserId) = User(
+    spotifyUserId = userId,
+    displayName = "Existing User",
+    encryptedAccessToken = "encrypted-access",
+    encryptedRefreshToken = "encrypted-refresh",
+    tokenExpiresAt = kotlin.time.Clock.System.now(),
+    lastLoginAt = kotlin.time.Clock.System.now(),
+  )
 }
