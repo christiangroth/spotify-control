@@ -1,3 +1,12 @@
+# 0.107.8 (2026.07.09)
+
+## Bugfixes / Chore
+* Continued the single-user simplification: playback, playlist, and catalog no longer require selecting a user internally, since the app only ever supports one.
+
+
+
+---
+
 # 0.107.7 (2026.07.09)
 
 ## Bugfixes / Chore
