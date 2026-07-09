@@ -4,7 +4,12 @@
 
 ## Requirements Overview
 
-spotify-control is a private Spotify playlist manager for a small, allow-listed set of users.
+spotify-control is a private Spotify playlist manager for a single user. It has always been
+operated by exactly one person; the previous allow-list design supported multiple users in
+theory but that was never actually used (see [ADR-0008](../adr/0008-single-user-architecture.md)).
+The application is being converted to a strict single-user architecture; see the
+[single-user simplification plan](../plans/single-user-simplification.md) for the migration
+approach.
 
 **Implemented features:**
 
@@ -14,7 +19,7 @@ spotify-control is a private Spotify playlist manager for a small, allow-listed 
 
 3. **Catalog Sync** – Artist images, track album references, and album details (title, cover) are fetched from the Spotify API and stored in deduplicated `app_artist`, `app_track`, and `app_album` collections.
 
-4. **Listening Statistics** – Playback data is aggregated into a per-user dashboard showing total play counts, daily play trends, top artists, top tracks, and recently played items.
+4. **Listening Statistics** – Playback data is aggregated into a dashboard showing total play counts, daily play trends, top artists, top tracks, and recently played items.
 
 5. **Artist Playback Filtering** – Users can mark artists as `ACTIVE`, `INACTIVE`, or `UNDECIDED`. Tracks from `INACTIVE` artists are excluded from playback processing.
 
@@ -26,11 +31,11 @@ spotify-control is a private Spotify playlist manager for a small, allow-listed 
 
 | Role/Name         | Contact     | Expectations                                                              |
 |-------------------|-------------|---------------------------------------------------------------------------|
-| Developer / User  | (private)   | Allow-listed user(s); operates and uses the application for personal use  |
+| Developer / User  | (private)   | The single user; operates and uses the application for personal use      |
 
 # Architecture Constraints
 
-- **Allow-listed users** – Multiple users are supported, but access is restricted to a configured allow list of Spotify user IDs. No registration, no user-management UI.
+- **Single user** – The application is built for exactly one user (see [ADR-0008](../adr/0008-single-user-architecture.md)). No registration, no user-management UI, no allow-list.
 - **Login exclusively via Spotify OAuth** – No other authentication mechanism.
 - **External MongoDB** – Data is stored in MongoDB Atlas (two projects: prod + dev). No self-hosted database.
 - **VPS with Docker Swarm** – Deployment target is an existing VPS running Docker Swarm with Traefik for routing and TLS.
@@ -67,7 +72,7 @@ spotify-control interacts with the following external systems:
 - **Hexagonal Architecture** – The application is structured using hexagonal (ports and adapters) architecture to cleanly separate domain logic from infrastructure concerns.
 - **Outbox Pattern** – All Spotify API operations are routed through a persistent outbox to ensure reliability and rate limit handling. No direct Spotify calls are made outside `adapter-out-spotify`.
 - **Server-Side Rendering** – The frontend uses Quarkus Qute templates with vanilla JS (fetch API) for dynamic interactions, eliminating the need for a separate frontend project or JavaScript framework.
-- **Allow-listed User System** – Access is restricted to users whose Spotify user IDs appear in a configured allow list. Multiple users are supported, but no self-service registration exists.
+- **Single-User System** – The application is built for exactly one user, logging in via Spotify OAuth. No allow-list, no self-service registration, no user-management UI. See [ADR-0008](../adr/0008-single-user-architecture.md); the migration is tracked in the [single-user simplification plan](../plans/single-user-simplification.md).
 
 # Building Block View
 
@@ -221,7 +226,7 @@ Raw playback data from `spotify_recently_played` and `spotify_recently_partial_p
 **Append (triggered automatically):** After new raw data arrives, `AppendPlaybackData` is enqueued on the `domain` partition. The adapter first loads all artists with `INACTIVE` playback processing status, then filters raw playback items to skip tracks whose primary artist is inactive. For remaining items it fetches all source items newer than the most recent `app_playback` entry for the user, deduplicates against existing `app_playback` timestamps, then:
 1. Upserts artist metadata into `app_artist` (artistId, artistName) — enriched imageLink is preserved on re-encounter.
 2. Upserts track metadata into `app_track` (trackId, trackTitle, artistId, additionalArtistIds) — albumId is preserved if already enriched.
-3. Appends new entries to `app_playback` (userId, playedAt, trackId, secondsPlayed). The document `_id` is a composite of `${userId}:${playedAt.toEpochMilli()}:${trackId}` for natural deduplication.
+3. Appends new entries to `app_playback` (userId, playedAt, trackId, secondsPlayed). The document `_id` is a composite of `${userId}:${playedAt.toEpochMilli()}` for natural deduplication.
 4. Adds artist IDs to `app_sync_pool` and track IDs to `app_sync_pool` for later bulk sync.
 
 **Catalog Sync (bulk-scheduled, `to-spotify` partition):**
@@ -369,8 +374,8 @@ Layer 5 applies to adapter modules where the logic is pure (e.g. `adapter-in-sta
 ## Authentication and Access Control
 
 - Spotify OAuth 2.0 Authorization Code Flow.
-- In the OAuth callback: the Spotify user ID is checked against `APP_ALLOWED_SPOTIFY_USER_IDS` (environment variable, comma-separated list). If the ID is not present in the list, the session is invalidated and nothing is persisted.
-- A `User` document is upserted in the `app_user` MongoDB collection only after a successful allow-list check. Both access and refresh tokens are stored encrypted (AES-256-GCM) using `APP_TOKEN_ENCRYPTION_KEY`.
+- A `User` document is upserted in the `app_user` MongoDB collection on every successful login. Both access and refresh tokens are stored encrypted (AES-256-GCM) using `APP_TOKEN_ENCRYPTION_KEY`.
+- The application is built for a single user (see [ADR-0008](../adr/0008-single-user-architecture.md)); the allow-list check (`APP_ALLOWED_SPOTIFY_USER_IDS`) that previously gated login is being removed as part of the single-user migration (see [migration plan](../plans/single-user-simplification.md)).
 - Session-based authentication for all endpoints. The session stores only the Spotify user ID – never tokens.
 - `return_to` parameter stored in the session for redirect after login.
 - A CSRF `state` parameter is generated per authorization request and validated in the callback.
@@ -454,6 +459,9 @@ APP_TOKEN_ENCRYPTION_KEY
 SLACK_WEBHOOK_URL
 ```
 
+`APP_ALLOWED_SPOTIFY_USER_IDS` is scheduled for removal as part of the single-user migration
+(see [ADR-0008](../adr/0008-single-user-architecture.md)) once login no longer needs an allow-list check.
+
 # Architecture Decisions
 
 | ADR | Title |
@@ -465,6 +473,7 @@ SLACK_WEBHOOK_URL
 | [0005](../adr/0005-markdown-rendering-library.md) | Markdown Rendering Library: marked |
 | [0006](../adr/0006-error-handling-concept.md) | Error Handling: Arrow Either&lt;DomainError, T&gt; |
 | [0007](../adr/0007-persistent-outbox-pattern.md) | Persistent Outbox for Spotify API Operations |
+| [0008](../adr/0008-single-user-architecture.md) | Single-User Architecture |
 
 # Quality Requirements
 
@@ -509,6 +518,7 @@ SLACK_WEBHOOK_URL
 | Enrichment completeness | `app_artist`, `app_track`, and `app_album` entries that existed before enrichment was introduced may lack imageLink or albumTitle until re-enriched. |
 | Partial-play detection accuracy | Partial play detection relies on polling frequency; very short plays near the end of a track may be missed or misclassified. |
 | Test coverage for domain adapters | Domain adapter integration (e.g. `PlaybackDataAdapter`, `PlaylistSyncAdapter`) is not yet covered by `@QuarkusTest` boundary tests. |
+| Multi-user plumbing | `UserId` is still threaded through ports, services, outbox events, and MongoDB document keys even though the application only ever supports a single user. Tracked by [ADR-0008](../adr/0008-single-user-architecture.md) and the [single-user simplification plan](../plans/single-user-simplification.md). |
 
 # Glossary
 
