@@ -13,6 +13,7 @@ import de.chrgroth.spotify.control.domain.model.catalog.SyncTraceDisplay
 import de.chrgroth.spotify.control.domain.model.catalog.SyncTraceEntityType
 import de.chrgroth.spotify.control.domain.model.catalog.TrackBrowseItem
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
+import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogBrowserPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppAlbumRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
@@ -206,9 +207,13 @@ class CatalogBrowserService(
     appArtistRepository.findByArtistIds(setOf(ArtistId(artistId))).firstOrNull()?.artistName ?: artistId
 
   private fun playlistName(playlistId: String): String {
-    val userId = userRepository.findAll().firstOrNull()?.spotifyUserId ?: return playlistId
+    val userId = theUserId() ?: return playlistId
     return playlistRepository.findByUserId(userId).firstOrNull { it.spotifyPlaylistId == playlistId }?.name ?: playlistId
   }
+
+  // Single-user application: there is at most one stored user, resolved once here rather than picked
+  // arbitrarily from a list.
+  private fun theUserId(): UserId? = userRepository.findAll().firstOrNull()?.spotifyUserId
 
   companion object {
     internal const val SEARCH_RESULT_LIMIT = 50

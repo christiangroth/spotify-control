@@ -52,38 +52,28 @@ class PlaybackAggregationService(
   // --- Enqueue helpers ---
 
   override fun enqueueAggregateDay(date: LocalDate) {
-    val users = userRepository.findAll()
-    users.forEach { user ->
-      outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(user.spotifyUserId, AggregationPeriodType.DAY, date))
-    }
+    val user = userRepository.findAll().firstOrNull() ?: return
+    outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(user.spotifyUserId, AggregationPeriodType.DAY, date))
   }
 
   override fun enqueueAggregateWeek(weekStart: LocalDate) {
-    val users = userRepository.findAll()
-    users.forEach { user ->
-      outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(user.spotifyUserId, AggregationPeriodType.WEEK, weekStart))
-    }
+    val user = userRepository.findAll().firstOrNull() ?: return
+    outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(user.spotifyUserId, AggregationPeriodType.WEEK, weekStart))
   }
 
   override fun enqueueAggregateMonth(monthStart: LocalDate) {
-    val users = userRepository.findAll()
-    users.forEach { user ->
-      outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(user.spotifyUserId, AggregationPeriodType.MONTH, monthStart))
-    }
+    val user = userRepository.findAll().firstOrNull() ?: return
+    outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(user.spotifyUserId, AggregationPeriodType.MONTH, monthStart))
   }
 
   override fun enqueueAggregateQuarter(quarterStart: LocalDate) {
-    val users = userRepository.findAll()
-    users.forEach { user ->
-      outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(user.spotifyUserId, AggregationPeriodType.QUARTER, quarterStart))
-    }
+    val user = userRepository.findAll().firstOrNull() ?: return
+    outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(user.spotifyUserId, AggregationPeriodType.QUARTER, quarterStart))
   }
 
   override fun enqueueAggregateYear(yearStart: LocalDate) {
-    val users = userRepository.findAll()
-    users.forEach { user ->
-      outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(user.spotifyUserId, AggregationPeriodType.YEAR, yearStart))
-    }
+    val user = userRepository.findAll().firstOrNull() ?: return
+    outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(user.spotifyUserId, AggregationPeriodType.YEAR, yearStart))
   }
 
   // --- Rebuild ---

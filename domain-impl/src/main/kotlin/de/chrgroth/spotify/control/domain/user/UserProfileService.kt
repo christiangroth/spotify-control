@@ -25,11 +25,8 @@ class UserProfileService(
   override fun getDisplayName(userId: UserId): String? = userRepository.findById(userId)?.displayName
 
   override fun enqueueUpdates() {
-    val users = userRepository.findAll()
-    logger.info { "Scheduling profile update for ${users.size} user(s)" }
-    users.forEach { user ->
-      outboxPort.enqueue(DomainOutboxEvent.UpdateUserProfile(user.spotifyUserId))
-    }
+    val user = userRepository.findAll().firstOrNull() ?: return
+    outboxPort.enqueue(DomainOutboxEvent.UpdateUserProfile(user.spotifyUserId))
   }
 
   override fun update(userId: UserId): Either<DomainError, Unit> {

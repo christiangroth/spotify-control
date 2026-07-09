@@ -66,10 +66,8 @@ class PlaybackService(
   // --- Combined Playback Detection ---
 
   override fun enqueueFetchPlaybackData() {
-    val users = userRepository.findAll()
-    users.forEach { user ->
-      outboxPort.enqueue(DomainOutboxEvent.FetchPlaybackData(user.spotifyUserId))
-    }
+    val user = userRepository.findAll().firstOrNull() ?: return
+    outboxPort.enqueue(DomainOutboxEvent.FetchPlaybackData(user.spotifyUserId))
   }
 
   override fun fetchPlaybackData(userId: UserId): Either<DomainError, Unit> {

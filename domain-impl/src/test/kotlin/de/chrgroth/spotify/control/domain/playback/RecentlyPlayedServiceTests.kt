@@ -122,7 +122,7 @@ class RecentlyPlayedServiceTests {
   // --- enqueueUpdates tests ---
 
   @Test
-  fun `enqueueUpdates does nothing when no users exist`() {
+  fun `enqueueUpdates does nothing when no user exists`() {
     every { userRepository.findAll() } returns emptyList()
 
     adapter.enqueueFetchPlaybackData()
@@ -131,14 +131,13 @@ class RecentlyPlayedServiceTests {
   }
 
   @Test
-  fun `enqueueUpdates enqueues one task per user`() {
-    every { userRepository.findAll() } returns listOf(buildUser("user-1"), buildUser("user-2"))
+  fun `enqueueUpdates enqueues task for the stored user`() {
+    every { userRepository.findAll() } returns listOf(buildUser("user-1"))
     every { outboxPort.enqueue(any()) } just runs
 
     adapter.enqueueFetchPlaybackData()
 
     verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.FetchPlaybackData(UserId("user-1"))) }
-    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.FetchPlaybackData(UserId("user-2"))) }
   }
 
   // --- update tests ---

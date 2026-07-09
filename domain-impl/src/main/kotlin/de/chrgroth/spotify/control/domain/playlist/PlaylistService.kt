@@ -60,11 +60,8 @@ class PlaylistService(
   override fun getTrackCounts(userId: UserId): Map<String, Int> = playlistRepository.findTrackCountsByUserId(userId)
 
   override fun enqueueUpdates() {
-    val users = userRepository.findAll()
-    logger.info { "Scheduling playlist sync for ${users.size} user(s)" }
-    users.forEach { user ->
-      outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistInfo(user.spotifyUserId))
-    }
+    val user = userRepository.findAll().firstOrNull() ?: return
+    outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistInfo(user.spotifyUserId))
     lastSyncJobSuccessTimestamp.set(Clock.System.now().toEpochMilliseconds() / MILLIS_PER_SECOND)
   }
 
