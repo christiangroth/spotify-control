@@ -1,6 +1,5 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
-import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.infra.DashboardPort
 import de.chrgroth.spotify.control.domain.port.`in`.user.UserProfilePort
 import io.quarkus.qute.Location
@@ -29,9 +28,8 @@ class PlaybackResource(
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
   fun playback(): TemplateInstance {
-    val userId = UserId(securityIdentity.principal.name)
-    val displayName = userProfile.getDisplayName() ?: userId.value
-    val stats = dashboard.getPlaybackStats(userId)
+    val displayName = userProfile.getDisplayName() ?: securityIdentity.principal.name
+    val stats = dashboard.getPlaybackStats()
     return playbackTemplate
       .data("displayName", displayName)
       .data("stats", stats)

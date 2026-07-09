@@ -165,7 +165,7 @@ class RecentlyPlayedServiceTests {
 
     adapter.fetchRecentlyPlayed(userId)
 
-    verify { dashboardRefresh.notifyUserPlaybackData(userId) }
+    verify { dashboardRefresh.notifyUserPlaybackData() }
   }
 
   @Test
@@ -179,7 +179,7 @@ class RecentlyPlayedServiceTests {
 
     adapter.fetchRecentlyPlayed(userId)
 
-    verify(exactly = 0) { dashboardRefresh.notifyUserPlaybackData(any()) }
+    verify(exactly = 0) { dashboardRefresh.notifyUserPlaybackData() }
   }
 
   @Test
@@ -546,7 +546,7 @@ class RecentlyPlayedServiceTests {
 
     adapter.fetchRecentlyPlayed(userId)
 
-    verify { dashboardRefresh.notifyUserPlaybackData(userId) }
+    verify { dashboardRefresh.notifyUserPlaybackData() }
   }
 
   @Test

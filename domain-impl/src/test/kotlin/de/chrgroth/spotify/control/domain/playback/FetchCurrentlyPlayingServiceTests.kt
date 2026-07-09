@@ -112,7 +112,7 @@ class FetchCurrentlyPlayingServiceTests {
 
     verify(exactly = 0) { currentlyPlayingRepository.save(any()) }
     verify(exactly = 0) { currentlyPlayingRepository.updateProgress(any()) }
-    verify(exactly = 0) { dashboardRefresh.notifyUserPlaybackData(any()) }
+    verify(exactly = 0) { dashboardRefresh.notifyUserPlaybackData() }
   }
 
   @Test
@@ -236,7 +236,7 @@ class FetchCurrentlyPlayingServiceTests {
     assertThat(savedSlot.captured[0].trackId).isEqualTo(TrackId("track-a"))
     assertThat(savedSlot.captured[0].playedSeconds).isEqualTo(50L)
     verify { currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, setOf("track-a")) }
-    verify { dashboardRefresh.notifyUserPlaybackData(userId) }
+    verify { dashboardRefresh.notifyUserPlaybackData() }
   }
 
   @Test
@@ -252,7 +252,7 @@ class FetchCurrentlyPlayingServiceTests {
 
     verify(exactly = 0) { recentlyPartialPlayedRepository.saveAll(any()) }
     verify { currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, setOf("track-a")) }
-    verify(exactly = 0) { dashboardRefresh.notifyUserPlaybackData(any()) }
+    verify(exactly = 0) { dashboardRefresh.notifyUserPlaybackData() }
   }
 
   @Test
@@ -309,7 +309,7 @@ class FetchCurrentlyPlayingServiceTests {
     assertThat(savedSlot.captured[0].trackId).isEqualTo(TrackId("track-a"))
     assertThat(savedSlot.captured[0].playedSeconds).isEqualTo(50L)
     verify { currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, setOf("track-a")) }
-    verify { dashboardRefresh.notifyUserPlaybackData(userId) }
+    verify { dashboardRefresh.notifyUserPlaybackData() }
   }
 
   @Test
@@ -323,7 +323,7 @@ class FetchCurrentlyPlayingServiceTests {
 
     verify(exactly = 0) { recentlyPartialPlayedRepository.saveAll(any()) }
     verify { currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, setOf("track-a")) }
-    verify(exactly = 0) { dashboardRefresh.notifyUserPlaybackData(any()) }
+    verify(exactly = 0) { dashboardRefresh.notifyUserPlaybackData() }
   }
 
   // --- playback state and dashboard notifications ---
@@ -361,7 +361,7 @@ class FetchCurrentlyPlayingServiceTests {
 
     service.fetchCurrentlyPlaying(userId)
 
-    verify(exactly = 0) { dashboardRefresh.notifyUserPlaybackData(any()) }
+    verify(exactly = 0) { dashboardRefresh.notifyUserPlaybackData() }
   }
 
   @Test
@@ -371,6 +371,6 @@ class FetchCurrentlyPlayingServiceTests {
 
     service.fetchCurrentlyPlaying(userId)
 
-    verify(exactly = 0) { dashboardRefresh.notifyUserPlaybackData(any()) }
+    verify(exactly = 0) { dashboardRefresh.notifyUserPlaybackData() }
   }
 }

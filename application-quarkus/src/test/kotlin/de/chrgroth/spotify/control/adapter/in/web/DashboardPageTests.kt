@@ -1,14 +1,39 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
+import de.chrgroth.spotify.control.domain.model.user.User
+import de.chrgroth.spotify.control.domain.model.user.UserId
+import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
 import io.quarkus.test.junit.QuarkusTest
 import io.quarkus.test.security.TestSecurity
 import io.restassured.RestAssured.given
+import jakarta.inject.Inject
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.hours
 import org.hamcrest.CoreMatchers.containsString
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 @QuarkusTest
 @TestSecurity(user = "test-user-a")
 class DashboardPageTests {
+
+  @Inject
+  lateinit var userRepository: UserRepositoryPort
+
+  @BeforeEach
+  fun seedUser() {
+    val now = Clock.System.now()
+    userRepository.upsert(
+      User(
+        spotifyUserId = UserId("test-user-a"),
+        displayName = "Test User",
+        encryptedAccessToken = "encrypted-access",
+        encryptedRefreshToken = "encrypted-refresh",
+        tokenExpiresAt = now + 1.hours,
+        lastLoginAt = now,
+      ),
+    )
+  }
 
   @Test
   fun `dashboard page is available and displays logout link and personalized welcome message`() {

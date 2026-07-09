@@ -1,5 +1,6 @@
 package de.chrgroth.spotify.control.domain.infra
 
+import de.chrgroth.spotify.control.domain.model.DashboardStats
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
 import de.chrgroth.spotify.control.domain.model.catalog.AppAlbum
 import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
@@ -19,6 +20,7 @@ import de.chrgroth.spotify.control.domain.port.out.playback.PlaybackAggregationR
 import de.chrgroth.spotify.control.domain.port.out.playlist.AppPlaylistCheckRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
+import de.chrgroth.spotify.control.domain.user.CurrentUserResolver
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -40,6 +42,7 @@ class DashboardServiceTests {
   private val catalogBrowser: CatalogBrowserPort = mockk()
   private val playlistRepository: PlaylistRepositoryPort = mockk()
   private val playlistCheckRepository: AppPlaylistCheckRepositoryPort = mockk()
+  private val currentUserResolver: CurrentUserResolver = mockk()
   private val managedExecutor: ManagedExecutor = mockk {
     every { supplyAsync(any<Supplier<Any>>()) } answers {
       CompletableFuture.completedFuture(firstArg<Supplier<Any>>().get())
@@ -49,6 +52,7 @@ class DashboardServiceTests {
   private val adapter = DashboardService(
     appPlaybackRepository, appTrackRepository, appArtistRepository, appAlbumRepository,
     aggregationRepository, catalogBrowser, playlistRepository, playlistCheckRepository,
+    currentUserResolver,
     managedExecutor,
     recentlyPlayedLimit = 5,
     topEntriesLimit = 3,
@@ -78,6 +82,7 @@ class DashboardServiceTests {
   )
 
   private fun setupCommonMocks() {
+    every { currentUserResolver.userId() } returns userId
     every { aggregationRepository.findDailySummaryByUserAndPeriodRange(userId, any(), any()) } returns emptyList()
     every { aggregationRepository.sumEventCountByUser(userId) } returns 0L
     every { appPlaybackRepository.findRecentlyPlayed(userId, any()) } returns emptyList()
@@ -106,7 +111,7 @@ class DashboardServiceTests {
     every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns listOf(artist1)
     every { appAlbumRepository.findByAlbumIds(any()) } returns emptyList()
 
-    val stats = adapter.getStats(userId)
+    val stats = adapter.getStats()
 
     // 180 seconds = 3 minutes
     assertThat(stats.listeningStats.listenedMinutesLast30Days).isEqualTo(3L)
@@ -116,7 +121,7 @@ class DashboardServiceTests {
   fun `listening stats are zero when aggregations have no track entries`() {
     setupCommonMocks()
 
-    val stats = adapter.getStats(userId)
+    val stats = adapter.getStats()
 
     assertThat(stats.listeningStats.listenedMinutesLast30Days).isEqualTo(0L)
     assertThat(stats.listeningStats.topTracksLast30Days).isEmpty()
@@ -150,7 +155,7 @@ class DashboardServiceTests {
     every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns listOf(artist1)
     every { appAlbumRepository.findByAlbumIds(any()) } returns emptyList()
 
-    val stats = adapter.getStats(userId)
+    val stats = adapter.getStats()
 
     // track-1: 120s, track-2: 180s → total 300s = 5 minutes
     assertThat(stats.listeningStats.listenedMinutesLast30Days).isEqualTo(5L)
@@ -185,7 +190,7 @@ class DashboardServiceTests {
     every { appArtistRepository.findByArtistIds(any()) } returns listOf(artist1)
     every { appAlbumRepository.findByAlbumIds(any()) } returns listOf(album1, album2)
 
-    val stats = adapter.getStats(userId)
+    val stats = adapter.getStats()
 
     assertThat(stats.listeningStats.topAlbumsLast30Days).hasSize(2)
     assertThat(stats.listeningStats.topAlbumsLast30Days[0].name).isEqualTo("Album One")
@@ -231,7 +236,7 @@ class DashboardServiceTests {
     val topTrackIds = setOf(TrackId("track-1"), TrackId("track-2"), TrackId("track-3"))
     every { appTrackRepository.findByTrackIds(topTrackIds) } returns listOf(track1, track2, track3)
 
-    val stats = adapter.getStats(userId)
+    val stats = adapter.getStats()
 
     assertThat(stats.listeningStats.topTracksLast30Days).hasSize(3)
     verify { appTrackRepository.findAlbumIdsByTrackIds(allTrackIds) }
@@ -241,6 +246,7 @@ class DashboardServiceTests {
 
   @Test
   fun `recently played tracks include duration from secondsPlayed`() {
+    every { currentUserResolver.userId() } returns userId
     every { aggregationRepository.findDailySummaryByUserAndPeriodRange(userId, any(), any()) } returns emptyList()
     every { aggregationRepository.sumEventCountByUser(userId) } returns 1L
     every { playlistRepository.findByUserId(userId) } returns emptyList()
@@ -262,7 +268,7 @@ class DashboardServiceTests {
     every { appTrackRepository.findByTrackIds(setOf(TrackId("track-1"))) } returns listOf(track1)
     every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns listOf(artist1)
 
-    val stats = adapter.getStats(userId)
+    val stats = adapter.getStats()
 
     assertThat(stats.recentlyPlayedTracks).hasSize(1)
     assertThat(stats.recentlyPlayedTracks[0].durationSeconds).isEqualTo(210L)
@@ -270,11 +276,12 @@ class DashboardServiceTests {
 
   @Test
   fun `getPlaybackStats only queries aggregation repository`() {
+    every { currentUserResolver.userId() } returns userId
     val summary = emptySummary().copy(eventCount = 7L)
     every { aggregationRepository.findDailySummaryByUserAndPeriodRange(userId, any(), any()) } returns listOf(summary)
     every { aggregationRepository.sumEventCountByUser(userId) } returns 42L
 
-    val stats = adapter.getPlaybackStats(userId)
+    val stats = adapter.getPlaybackStats()
 
     assertThat(stats.totalPlaybackEvents).isEqualTo(42L)
     assertThat(stats.playbackEventsLast30Days).isEqualTo(7L)
@@ -287,9 +294,10 @@ class DashboardServiceTests {
 
   @Test
   fun `getPlaylistMetadata only queries playlist repository`() {
+    every { currentUserResolver.userId() } returns userId
     every { playlistRepository.findByUserId(userId) } returns emptyList()
 
-    val stats = adapter.getPlaylistMetadata(userId)
+    val stats = adapter.getPlaylistMetadata()
 
     assertThat(stats.syncedPlaylists).isEqualTo(0L)
     assertThat(stats.totalPlaylists).isEqualTo(0L)
@@ -301,12 +309,13 @@ class DashboardServiceTests {
 
   @Test
   fun `getRecentlyPlayed only queries playback and catalog repositories for track data`() {
+    every { currentUserResolver.userId() } returns userId
     every { appPlaybackRepository.findRecentlyPlayed(userId, any()) } returns emptyList()
     every { appTrackRepository.findByTrackIds(any()) } returns emptyList()
     every { appAlbumRepository.findByAlbumIds(any()) } returns emptyList()
     every { appArtistRepository.findByArtistIds(any()) } returns emptyList()
 
-    val stats = adapter.getRecentlyPlayed(userId)
+    val stats = adapter.getRecentlyPlayed()
 
     assertThat(stats.recentlyPlayedTracks).isEmpty()
     verify(exactly = 0) { aggregationRepository.findDailySummaryByUserAndPeriodRange(any(), any(), any()) }
@@ -318,13 +327,14 @@ class DashboardServiceTests {
 
   @Test
   fun `getListeningStats only queries aggregation and catalog repositories for stats`() {
+    every { currentUserResolver.userId() } returns userId
     every { aggregationRepository.findDailySummaryByUserAndPeriodRange(userId, any(), any()) } returns emptyList()
     every { appTrackRepository.findByTrackIds(any()) } returns emptyList()
     every { appTrackRepository.findAlbumIdsByTrackIds(any()) } returns emptyMap()
     every { appAlbumRepository.findByAlbumIds(any()) } returns emptyList()
     every { appArtistRepository.findByArtistIds(any()) } returns emptyList()
 
-    val stats = adapter.getListeningStats(userId)
+    val stats = adapter.getListeningStats()
 
     assertThat(stats.listeningStats.listenedMinutesLast30Days).isEqualTo(0L)
     verify(exactly = 0) { aggregationRepository.sumEventCountByUser(any()) }
@@ -348,6 +358,16 @@ class DashboardServiceTests {
     verify(exactly = 0) { aggregationRepository.sumEventCountByUser(any()) }
     verify(exactly = 0) { playlistRepository.findByUserId(any()) }
     verify(exactly = 0) { catalogBrowser.getCatalogStats() }
+  }
+
+  @Test
+  fun `getStats returns empty stats when no user exists`() {
+    every { currentUserResolver.userId() } returns null
+
+    val stats = adapter.getStats()
+
+    assertThat(stats).isEqualTo(DashboardStats.EMPTY)
+    verify(exactly = 0) { aggregationRepository.findDailySummaryByUserAndPeriodRange(any(), any(), any()) }
   }
 
   @Test

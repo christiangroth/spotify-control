@@ -1,39 +1,28 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
-import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.infra.DashboardRefreshPort
 import io.smallrye.mutiny.Multi
 import io.smallrye.mutiny.subscription.MultiEmitter
 import jakarta.enterprise.context.ApplicationScoped
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 
 @ApplicationScoped
 class DashboardSseAdapter : DashboardRefreshPort {
 
-  private val emittersByUser = ConcurrentHashMap<String, CopyOnWriteArrayList<MultiEmitter<in String>>>()
+  private val emitters = CopyOnWriteArrayList<MultiEmitter<in String>>()
 
-  fun stream(userId: UserId): Multi<String> = Multi.createFrom().emitter { emitter ->
-    emittersByUser.getOrPut(userId.value) { CopyOnWriteArrayList() }.add(emitter)
-    emitter.onTermination {
-      emittersByUser.computeIfPresent(userId.value) { _, list ->
-        list.remove(emitter)
-        list.takeIf { it.isNotEmpty() }
-      }
-    }
+  fun stream(): Multi<String> = Multi.createFrom().emitter { emitter ->
+    emitters.add(emitter)
+    emitter.onTermination { emitters.remove(emitter) }
   }
 
-  override fun notifyUserPlaybackData(userId: UserId) = emitToUser(userId.value, "refresh-playback-data")
+  override fun notifyUserPlaybackData() = emitAll("refresh-playback-data")
 
-  override fun notifyUserPlaylistMetadata(userId: UserId) = emitToUser(userId.value, "refresh-playlist-metadata")
+  override fun notifyUserPlaylistMetadata() = emitAll("refresh-playlist-metadata")
 
-  override fun notifyUserPlaylistChecks(userId: UserId) = emitToUser(userId.value, "refresh-playlist-checks")
+  override fun notifyUserPlaylistChecks() = emitAll("refresh-playlist-checks")
 
-  override fun notifyCatalogData() = notifyAllUsers("refresh-catalog-data")
+  override fun notifyCatalogData() = emitAll("refresh-catalog-data")
 
-  private fun notifyAllUsers(event: String) = emittersByUser.keys.toList().forEach { emitToUser(it, event) }
-
-  private fun emitToUser(userId: String, event: String) {
-    emittersByUser[userId]?.forEach { runCatching { it.emit(event) } }
-  }
+  private fun emitAll(event: String) = emitters.forEach { runCatching { it.emit(event) } }
 }

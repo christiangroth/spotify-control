@@ -131,7 +131,7 @@ class PlaylistCheckServiceTests {
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo())
     every { playlistCheckRepository.findByCheckId(fullCheckId) } returns null
     every { playlistCheckRepository.save(any()) } just runs
-    every { dashboardRefresh.notifyUserPlaylistChecks(userId) } just runs
+    every { dashboardRefresh.notifyUserPlaylistChecks() } just runs
 
     val result = adapter.handle(event)
 
@@ -151,7 +151,7 @@ class PlaylistCheckServiceTests {
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo())
     every { playlistCheckRepository.findByCheckId(fullCheckId) } returns previousCheck
     every { playlistCheckRepository.save(any()) } just runs
-    every { dashboardRefresh.notifyUserPlaylistChecks(userId) } just runs
+    every { dashboardRefresh.notifyUserPlaylistChecks() } just runs
     every { notification.notifyCheckPassed(any()) } just runs
 
     val result = adapter.handle(event)
@@ -171,7 +171,7 @@ class PlaylistCheckServiceTests {
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo())
     every { playlistCheckRepository.findByCheckId(fullCheckId) } returns previousCheck
     every { playlistCheckRepository.save(any()) } just runs
-    every { dashboardRefresh.notifyUserPlaylistChecks(userId) } just runs
+    every { dashboardRefresh.notifyUserPlaylistChecks() } just runs
     every { notification.notifyViolationsChanged(any()) } just runs
 
     val result = adapter.handle(event)
@@ -192,7 +192,7 @@ class PlaylistCheckServiceTests {
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo())
     every { playlistCheckRepository.findByCheckId(fullCheckId) } returns previousCheck
     every { playlistCheckRepository.save(any()) } just runs
-    every { dashboardRefresh.notifyUserPlaylistChecks(userId) } just runs
+    every { dashboardRefresh.notifyUserPlaylistChecks() } just runs
 
     val result = adapter.handle(event)
 
@@ -211,7 +211,7 @@ class PlaylistCheckServiceTests {
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo())
     every { playlistCheckRepository.findByCheckId(fullCheckId) } returns previousCheck
     every { playlistCheckRepository.save(any()) } just runs
-    every { dashboardRefresh.notifyUserPlaylistChecks(userId) } just runs
+    every { dashboardRefresh.notifyUserPlaylistChecks() } just runs
 
     val result = adapter.handle(event)
 
@@ -236,7 +236,7 @@ class PlaylistCheckServiceTests {
     every { checkRunners.iterator() } answers { mutableListOf(checkRunner).iterator() }
     every { playlistRepository.findByUserIdAndPlaylistId(userId, playlistId) } returns playlist
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo())
-    every { dashboardRefresh.notifyUserPlaylistChecks(userId) } just runs
+    every { dashboardRefresh.notifyUserPlaylistChecks() } just runs
 
     val result = adapter.handle(event)
 

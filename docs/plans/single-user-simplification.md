@@ -82,37 +82,41 @@ so it repeats the same "single stored user" lookup instead). All call sites in `
 `SpotifyDebugResource` already had `userId` in scope for other calls, so only the token-fetch
 argument was dropped.
 
-Remaining slices (playback, playlist, catalog, SSE) are still open. These are substantially larger:
-unlike the two slices above, the `UserId` in `PlaybackPort`, `PlaylistPort`, `PlaylistCheckPort`,
-`PlaybackEventViewerPort`, `DashboardPort`, `CatalogPort`, `SpotifyPlaybackPort`, `SpotifyCatalogPort`,
-`SpotifyPlaylistPort`, and `DashboardRefreshPort` also flows into repository out-ports
-(`AppPlaybackRepositoryPort`, `PlaylistRepositoryPort`, `CurrentlyPlayingRepositoryPort`, etc.) that
-still key their MongoDB queries by `spotifyUserId` until Phase 4 migrates the schema, and into every
-`adapter-in-web` resource. Per the risk note below, do these as separate, bounded-context PRs rather
-than one large change.
+**SSE / dashboard slice — done:** `DashboardPort` (`getStats`, `getPlaybackStats`,
+`getPlaylistMetadata`, `getRecentlyPlayed`, `getListeningStats`) and `DashboardRefreshPort`
+(`notifyUserPlaybackData`, `notifyUserPlaylistMetadata`, `notifyUserPlaylistChecks`) no longer take
+a `UserId`; `DashboardService` resolves the one stored user internally via `CurrentUserResolver`
+(returning `DashboardStats.EMPTY` for the guard-clause "no user yet" case), and
+`DashboardSseAdapter` collapsed its per-user emitter map to a single shared emitter list, since
+there is only ever one possible subscriber. `DashboardResource`, `PlaybackResource`, and
+`DashboardSseResource` updated their call sites accordingly.
+
+Remaining slices (playback, playlist, catalog) are still open. These are substantially larger:
+unlike the slices above, the `UserId` in `PlaybackPort`, `PlaylistPort`, `PlaylistCheckPort`,
+`PlaybackEventViewerPort`, `CatalogPort`, `SpotifyPlaybackPort`, `SpotifyCatalogPort`, and
+`SpotifyPlaylistPort` also flows into repository out-ports (`AppPlaybackRepositoryPort`,
+`PlaylistRepositoryPort`, `CurrentlyPlayingRepositoryPort`, etc.) that still key their MongoDB
+queries by `spotifyUserId` until Phase 4 migrates the schema, and into every `adapter-in-web`
+resource. Per the risk note below, do these as separate, bounded-context PRs rather than one large
+change.
 
 * `domain-api/.../port/out/*` – ports whose only use of `UserId` is to select "which user" (not
   domain data itself) can drop the parameter: `PlaybackPort`, `PlaybackAggregationPort`,
-  `PlaylistPort`, `UserProfilePort`, `SpotifyAccessTokenPort`, `SpotifyPlaybackPort`,
-  `SpotifyCatalogPort`, `SpotifyPlaylistPort`, `DashboardRefreshPort`.
+  `PlaylistPort`, `SpotifyPlaybackPort`, `SpotifyCatalogPort`, `SpotifyPlaylistPort`.
   Note that `CatalogPort` needs care — some of the `UserId` usages there are about *which token to
   use for a Spotify call*, which still needs to resolve to "the one user," not "no user."
 * `domain-api/.../domain/outbox/DomainOutboxEvent.kt` – outbox event payloads that carry `userId`
   purely to route to "the current user" (`FetchPlaybackData`, `RebuildPlaybackData`,
-  `AppendPlaybackData`, `SyncArtistAlbums`, `UpdateUserProfile`, etc.) can drop the field. Existing
-  in-flight outbox tasks in MongoDB will already contain the old payload shape — deserialization
-  must tolerate (ignore) a stray `userId` field during the transition, or old tasks must be
-  drained before deploying this phase.
+  `AppendPlaybackData`, `SyncArtistAlbums`, etc.) can drop the field. Existing in-flight outbox
+  tasks in MongoDB will already contain the old payload shape — deserialization must tolerate
+  (ignore) a stray `userId` field during the transition, or old tasks must be drained before
+  deploying this phase.
 * `adapter-in-web/.../*Resource.kt` – all resources currently resolve "current user" via
-  `UserId(securityIdentity.principal.name)` (`PlaybackResource`, `DashboardSseResource`,
-  `StatsResource`, `PlaylistsResource`, `PlaylistSettingsResource`, `PlaybackSettingsResource`,
-  `PlaylistChecksResource`, `DashboardResource`, `PlaybackEventViewerResource`,
-  `HealthSseResource`). This resolution can stay as-is (it still identifies the logged-in
-  session), but downstream calls no longer need to pass it further than the point where a
-  Spotify token must be selected.
-* SSE: `DashboardSseAdapter` maintains per-user reactive streams (arc42 "SSE" section). This can
-  collapse to a single stream/registry once there is exactly one possible subscriber identity —
-  worth inspecting directly during this phase, since it wasn't fully read during discovery.
+  `UserId(securityIdentity.principal.name)` (`PlaybackResource`, `StatsResource`,
+  `PlaylistsResource`, `PlaylistSettingsResource`, `PlaybackSettingsResource`,
+  `PlaylistChecksResource`, `PlaybackEventViewerResource`, `HealthSseResource`). This resolution
+  can stay as-is (it still identifies the logged-in session), but downstream calls no longer need
+  to pass it further than the point where a Spotify token must be selected.
 
 **Risk:** High — this phase touches the largest surface area (most of `domain-api` and
 `domain-impl`, and all of `adapter-in-web`). Recommend splitting further into one PR per bounded
@@ -172,7 +176,7 @@ downtime, and must run after Phase 3 so no code still reads/writes the dropped f
 |---|---|---|
 | 1 – Login/allow-list removal | Low | Permissive change; single real operator already unaffected. |
 | 2 – Scheduler fan-out & catalog-sync shortcut | Medium | Done — "zero users" and "one user" cases covered by tests. |
-| 3 – `UserId` threading removal | High | Split per bounded context; handle in-flight outbox payloads carrying stale `userId` fields during rollout. User-profile slice done. |
+| 3 – `UserId` threading removal | High | Split per bounded context; handle in-flight outbox payloads carrying stale `userId` fields during rollout. User-profile, `SpotifyAccessTokenPort`, and SSE/dashboard slices done. |
 | 4 – MongoDB schema/index cleanup | Medium | Use a one-time `Starter`; sequence after Phase 3; rebuild indexes without downtime. |
 | 5 – Config/tests/deploy cleanup | Low | Cleanup only. |
 

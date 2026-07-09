@@ -1,7 +1,6 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
 import de.chrgroth.spotify.control.adapter.`in`.web.DashboardSseAdapter
-import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.infra.DashboardRefreshPort
 import io.quarkus.test.junit.QuarkusTest
 import io.smallrye.mutiny.subscription.Cancellable
@@ -24,18 +23,17 @@ class DashboardSseTests {
 
   @Test
   fun `sse endpoint delivers refresh-playback-data event when user is notified`() {
-    val userId = UserId("test-user-sse")
     val received = CopyOnWriteArrayList<String>()
     val latch = CountDownLatch(1)
 
-    val cancellable: Cancellable = dashboardSseService.stream(userId)
+    val cancellable: Cancellable = dashboardSseService.stream()
       .subscribe().with(
         { event: String -> received.add(event); latch.countDown() },
         { _: Throwable -> /* ignore errors */ },
       )
 
     // Mock a change: notify the user via the refresh port
-    dashboardRefreshPort.notifyUserPlaybackData(userId)
+    dashboardRefreshPort.notifyUserPlaybackData()
 
     assertTrue(latch.await(5, TimeUnit.SECONDS), "SSE refresh event should be received within 5 seconds")
     assertEquals(listOf("refresh-playback-data"), received.toList())
@@ -45,17 +43,16 @@ class DashboardSseTests {
 
   @Test
   fun `sse endpoint delivers refresh-playlist-metadata event when playlist metadata is notified`() {
-    val userId = UserId("test-user-sse-playlist")
     val received = CopyOnWriteArrayList<String>()
     val latch = CountDownLatch(1)
 
-    val cancellable: Cancellable = dashboardSseService.stream(userId)
+    val cancellable: Cancellable = dashboardSseService.stream()
       .subscribe().with(
         { event: String -> received.add(event); latch.countDown() },
         { _: Throwable -> /* ignore errors */ },
       )
 
-    dashboardRefreshPort.notifyUserPlaylistMetadata(userId)
+    dashboardRefreshPort.notifyUserPlaylistMetadata()
 
     assertTrue(latch.await(5, TimeUnit.SECONDS), "SSE refresh event should be received within 5 seconds")
     assertEquals(listOf("refresh-playlist-metadata"), received.toList())
@@ -65,11 +62,10 @@ class DashboardSseTests {
 
   @Test
   fun `sse endpoint delivers refresh-catalog-data event when catalog data is notified`() {
-    val userId = UserId("test-user-sse-catalog")
     val received = CopyOnWriteArrayList<String>()
     val latch = CountDownLatch(1)
 
-    val cancellable: Cancellable = dashboardSseService.stream(userId)
+    val cancellable: Cancellable = dashboardSseService.stream()
       .subscribe().with(
         { event: String -> received.add(event); latch.countDown() },
         { _: Throwable -> /* ignore errors */ },

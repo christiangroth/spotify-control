@@ -101,7 +101,7 @@ class PlaybackService(
         convertAndDeleteOrphanedItems(userId, null)
       }
       if (orphanedItemsConverted) {
-        dashboardRefresh.notifyUserPlaybackData(userId)
+        dashboardRefresh.notifyUserPlaybackData()
       }
       recordFetchSuccess(userId, "currently_playing")
       Unit.right()
@@ -164,7 +164,7 @@ class PlaybackService(
       }
       val computedCount = convertPartialPlays(userId, tracks.map { it.trackId }.toSet())
       if (newItems.isNotEmpty() || computedCount > 0) {
-        dashboardRefresh.notifyUserPlaybackData(userId)
+        dashboardRefresh.notifyUserPlaybackData()
         outboxPort.enqueue(DomainOutboxEvent.AppendPlaybackData(userId))
       }
       recordFetchSuccess(userId, "recently_played")
