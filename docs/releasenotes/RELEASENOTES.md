@@ -1,3 +1,12 @@
+# 0.107.7 (2026.07.09)
+
+## Bugfixes / Chore
+* Simplified the dashboard and its live-update stream to rely on there always being exactly one application user.
+
+
+
+---
+
 # 0.107.6 (2026.07.09)
 
 ## Bugfixes / Chore
