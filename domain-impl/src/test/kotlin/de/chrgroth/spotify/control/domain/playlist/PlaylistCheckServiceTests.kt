@@ -350,7 +350,7 @@ class PlaylistCheckServiceTests {
     every { checkRunner.canFix() } returns true
     every { playlistRepository.findByUserIdAndPlaylistId(userId, playlistId) } returns playlist
     every { playlistRepository.findByUserId(userId) } returns listOf(playlistInfo)
-    every { spotifyAccessToken.getValidAccessToken(userId) } returns AccessToken("token")
+    every { spotifyAccessToken.getValidAccessToken() } returns AccessToken("token")
     every { checkRunner.fix(userId, AccessToken("token"), playlistId, playlist, playlistInfo, listOf(playlistInfo)) } returns Unit.right()
     every { outboxPort.enqueue(any()) } just runs
 

@@ -69,7 +69,7 @@ class PlaylistService(
 
   override fun syncPlaylists(userId: UserId): Either<DomainError, Unit> {
     userRepository.findById(userId) ?: return Unit.right()
-    val accessToken = spotifyAccessToken.getValidAccessToken(userId)
+    val accessToken = spotifyAccessToken.getValidAccessToken()
     return spotifyPlaylist.getPlaylists(userId, accessToken).map { spotifyPlaylists ->
       val now = Clock.System.now()
       val existingById = playlistRepository.findByUserId(userId).associateBy { it.spotifyPlaylistId }
@@ -104,7 +104,7 @@ class PlaylistService(
 
   override fun syncPlaylistData(userId: UserId, playlistId: String, nextUrl: String?, snapshotId: String?): Either<DomainError, Unit> {
     userRepository.findById(userId) ?: return Unit.right()
-    val accessToken = spotifyAccessToken.getValidAccessToken(userId)
+    val accessToken = spotifyAccessToken.getValidAccessToken()
     val isFirstPage = nextUrl == null
     return spotifyPlaylist.getPlaylistTracksPage(userId, accessToken, playlistId, nextUrl).map { page ->
       if (snapshotId != null && page.snapshotId != snapshotId) {

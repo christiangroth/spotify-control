@@ -110,7 +110,7 @@ class PlaylistCheckService(
     }
     val allPlaylistInfos = playlistRepository.findByUserId(userId)
     val currentPlaylistInfo = allPlaylistInfos.find { it.spotifyPlaylistId == playlistId }
-    val accessToken = spotifyAccessToken.getValidAccessToken(userId)
+    val accessToken = spotifyAccessToken.getValidAccessToken()
     logger.info { "Running fix '$checkType' for playlist $playlistId (user ${userId.value})" }
     return runner.fix(userId, accessToken, playlistId, playlist, currentPlaylistInfo, allPlaylistInfos).also { result ->
       if (result.isRight()) {

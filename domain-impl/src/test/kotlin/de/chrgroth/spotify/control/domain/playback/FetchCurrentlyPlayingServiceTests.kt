@@ -94,7 +94,7 @@ class FetchCurrentlyPlayingServiceTests {
 
   @Test
   fun `fetchCurrentlyPlaying returns Left on error`() {
-    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlayback.getCurrentlyPlaying(userId, accessToken) } returns PlaybackError.CURRENTLY_PLAYING_FETCH_FAILED.left()
 
     val result = service.fetchCurrentlyPlaying(userId)
@@ -105,7 +105,7 @@ class FetchCurrentlyPlayingServiceTests {
 
   @Test
   fun `fetchCurrentlyPlaying does nothing when nothing is playing`() {
-    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlayback.getCurrentlyPlaying(userId, accessToken) } returns null.right()
 
     service.fetchCurrentlyPlaying(userId)
@@ -118,7 +118,7 @@ class FetchCurrentlyPlayingServiceTests {
   @Test
   fun `fetchCurrentlyPlaying saves new entry when no existing entry for track`() {
     val item = currentlyPlayingItem("track-1", progressMs = 30_000L)
-    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlayback.getCurrentlyPlaying(userId, accessToken) } returns item.right()
     every { currentlyPlayingRepository.findMostRecentByUserAndTrack(userId, item.trackId) } returns null
 
@@ -135,7 +135,7 @@ class FetchCurrentlyPlayingServiceTests {
       .copy(startTime = startTime)
     val newItem = currentlyPlayingItem("track-1", progressMs = 80_000L)
 
-    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlayback.getCurrentlyPlaying(userId, accessToken) } returns newItem.right()
     every { currentlyPlayingRepository.findMostRecentByUserAndTrack(userId, newItem.trackId) } returns existingItem
 
@@ -152,7 +152,7 @@ class FetchCurrentlyPlayingServiceTests {
       .copy(startTime = startTime)
     val newItem = currentlyPlayingItem("track-1", progressMs = 210_000L)
 
-    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlayback.getCurrentlyPlaying(userId, accessToken) } returns newItem.right()
     every { currentlyPlayingRepository.findMostRecentByUserAndTrack(userId, newItem.trackId) } returns existingItem
 
@@ -171,7 +171,7 @@ class FetchCurrentlyPlayingServiceTests {
     // After resuming — progress unchanged, but observedAt moved forward; recalculated start time would differ
     val afterResumeItem = currentlyPlayingItem("track-1", progressMs = 120_500L)
 
-    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlayback.getCurrentlyPlaying(userId, accessToken) } returns afterResumeItem.right()
     every { currentlyPlayingRepository.findMostRecentByUserAndTrack(userId, afterResumeItem.trackId) } returns existingItem
 
@@ -189,7 +189,7 @@ class FetchCurrentlyPlayingServiceTests {
     // New observation: track restarted, only 3 seconds in
     val restartedItem = currentlyPlayingItem("track-1", progressMs = 3_000L)
 
-    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlayback.getCurrentlyPlaying(userId, accessToken) } returns restartedItem.right()
     every { currentlyPlayingRepository.findMostRecentByUserAndTrack(userId, restartedItem.trackId) } returns existingItem
 
@@ -204,7 +204,7 @@ class FetchCurrentlyPlayingServiceTests {
   fun `fetchCurrentlyPlaying does not treat low-progress first play as restart when no prior entry exists`() {
     val newItem = currentlyPlayingItem("track-1", progressMs = 3_000L)
 
-    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlayback.getCurrentlyPlaying(userId, accessToken) } returns newItem.right()
     every { currentlyPlayingRepository.findMostRecentByUserAndTrack(userId, newItem.trackId) } returns null
 
@@ -221,7 +221,7 @@ class FetchCurrentlyPlayingServiceTests {
   fun `fetchCurrentlyPlaying converts orphaned entry with sufficient progress to partial play`() {
     val trackB = currentlyPlayingItem("track-b", progressMs = 60_000L)
     val orphanedTrackA = currentlyPlayingItem("track-a", progressMs = 50_000L, observedAt = now - 5.minutes)
-    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlayback.getCurrentlyPlaying(userId, accessToken) } returns trackB.right()
     every { currentlyPlayingRepository.findMostRecentByUserAndTrack(userId, trackB.trackId) } returns null
     every { currentlyPlayingRepository.findByUserId(userId) } returns listOf(orphanedTrackA)
@@ -243,7 +243,7 @@ class FetchCurrentlyPlayingServiceTests {
   fun `fetchCurrentlyPlaying deletes orphaned entry below progress threshold without creating partial play`() {
     val trackB = currentlyPlayingItem("track-b", progressMs = 60_000L)
     val orphanedTrackA = currentlyPlayingItem("track-a", progressMs = 5_000L, observedAt = now - 5.minutes)
-    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlayback.getCurrentlyPlaying(userId, accessToken) } returns trackB.right()
     every { currentlyPlayingRepository.findMostRecentByUserAndTrack(userId, trackB.trackId) } returns null
     every { currentlyPlayingRepository.findByUserId(userId) } returns listOf(orphanedTrackA)
@@ -261,7 +261,7 @@ class FetchCurrentlyPlayingServiceTests {
     // When Track B is detected, Track A's entry must be converted to a partial play before deletion
     val trackA = currentlyPlayingItem("track-a", progressMs = 150_000L, observedAt = now - 10.minutes)
     val trackB = currentlyPlayingItem("track-b", progressMs = 60_000L)
-    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlayback.getCurrentlyPlaying(userId, accessToken) } returns trackB.right()
     every { currentlyPlayingRepository.findMostRecentByUserAndTrack(userId, trackB.trackId) } returns null
     every { currentlyPlayingRepository.findByUserId(userId) } returns listOf(trackA)
@@ -281,7 +281,7 @@ class FetchCurrentlyPlayingServiceTests {
 
   @Test
   fun `fetchCurrentlyPlaying cleans up orphaned entries when nothing is playing`() {
-    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlayback.getCurrentlyPlaying(userId, accessToken) } returns null.right()
     every { currentlyPlayingRepository.findByUserId(userId) } returns emptyList()
 
@@ -295,7 +295,7 @@ class FetchCurrentlyPlayingServiceTests {
   @Test
   fun `fetchCurrentlyPlaying converts and deletes orphaned entries when nothing is playing`() {
     val lingeringTrack = currentlyPlayingItem("track-a", progressMs = 50_000L, observedAt = now - 5.minutes)
-    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlayback.getCurrentlyPlaying(userId, accessToken) } returns null.right()
     every { currentlyPlayingRepository.findByUserId(userId) } returns listOf(lingeringTrack)
     every { recentlyPartialPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
@@ -315,7 +315,7 @@ class FetchCurrentlyPlayingServiceTests {
   @Test
   fun `fetchCurrentlyPlaying deletes orphaned entry below progress threshold without creating partial play when nothing is playing`() {
     val lingeringTrack = currentlyPlayingItem("track-a", progressMs = 5_000L, observedAt = now - 5.minutes)
-    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlayback.getCurrentlyPlaying(userId, accessToken) } returns null.right()
     every { currentlyPlayingRepository.findByUserId(userId) } returns listOf(lingeringTrack)
 
@@ -331,7 +331,7 @@ class FetchCurrentlyPlayingServiceTests {
   @Test
   fun `fetchCurrentlyPlaying notifies playback state when track is playing`() {
     val item = currentlyPlayingItem("track-1", progressMs = 30_000L)
-    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlayback.getCurrentlyPlaying(userId, accessToken) } returns item.right()
     every { currentlyPlayingRepository.findMostRecentByUserAndTrack(userId, item.trackId) } returns null
 
@@ -343,7 +343,7 @@ class FetchCurrentlyPlayingServiceTests {
   @Test
   fun `fetchCurrentlyPlaying does not notify playback state when item is paused`() {
     val item = currentlyPlayingItem("track-1", progressMs = 30_000L).copy(isPlaying = false)
-    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlayback.getCurrentlyPlaying(userId, accessToken) } returns item.right()
     every { currentlyPlayingRepository.findMostRecentByUserAndTrack(userId, item.trackId) } returns null
 
@@ -355,7 +355,7 @@ class FetchCurrentlyPlayingServiceTests {
   @Test
   fun `fetchCurrentlyPlaying does not notify dashboard when track is merely still playing`() {
     val item = currentlyPlayingItem("track-1", progressMs = 30_000L)
-    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlayback.getCurrentlyPlaying(userId, accessToken) } returns item.right()
     every { currentlyPlayingRepository.findMostRecentByUserAndTrack(userId, item.trackId) } returns null
 
@@ -366,7 +366,7 @@ class FetchCurrentlyPlayingServiceTests {
 
   @Test
   fun `fetchCurrentlyPlaying does not notify dashboard when nothing is playing`() {
-    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlayback.getCurrentlyPlaying(userId, accessToken) } returns null.right()
 
     service.fetchCurrentlyPlaying(userId)

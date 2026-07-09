@@ -6,7 +6,6 @@ import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.model.user.AccessToken
 import de.chrgroth.spotify.control.domain.model.user.RefreshToken
 import de.chrgroth.spotify.control.domain.model.user.User
-import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAuthPort
 import de.chrgroth.spotify.control.domain.port.out.user.TokenEncryptionPort
@@ -24,16 +23,16 @@ class SpotifyAccessTokenAdapter(
   private val tokenEncryption: TokenEncryptionPort,
 ) : SpotifyAccessTokenPort {
 
-  override fun getValidAccessToken(userId: UserId): AccessToken {
-    val user = requireNotNull(userRepository.findById(userId)) { "User not found: ${userId.value}" }
+  override fun getValidAccessToken(): AccessToken {
+    val user = requireNotNull(userRepository.findAll().firstOrNull()) { "No user found" }
     return if (isTokenExpiringSoon(user)) {
       refreshAndPersist(user).fold(
-        ifLeft = { error("Failed to refresh access token for user ${userId.value}: ${it.code}") },
+        ifLeft = { error("Failed to refresh access token for user ${user.spotifyUserId.value}: ${it.code}") },
         ifRight = { it }
       )
     } else {
       tokenEncryption.decrypt(user.encryptedAccessToken).fold(
-        ifLeft = { error("Failed to decrypt access token for user ${userId.value}: ${it.code}") },
+        ifLeft = { error("Failed to decrypt access token for user ${user.spotifyUserId.value}: ${it.code}") },
         ifRight = { AccessToken(it) }
       )
     }

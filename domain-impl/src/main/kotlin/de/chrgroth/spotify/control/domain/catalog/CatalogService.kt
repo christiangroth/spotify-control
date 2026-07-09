@@ -84,7 +84,7 @@ class CatalogService(
       logger.debug { "Artist $artistId already synced, skipping" }
       return Unit.right()
     }
-    val accessToken = spotifyAccessToken.getValidAccessToken(userId)
+    val accessToken = spotifyAccessToken.getValidAccessToken()
     return spotifyCatalog.getArtist(userId, accessToken, artistId)
       .flatMap { detail ->
         if (detail != null) {
@@ -136,7 +136,7 @@ class CatalogService(
       logger.debug { "No users available, skipping syncAlbumDetails" }
       return 0.right()
     }
-    val accessToken = spotifyAccessToken.getValidAccessToken(userId)
+    val accessToken = spotifyAccessToken.getValidAccessToken()
     val knownAlbum = appAlbumRepository.findByAlbumIds(setOf(AlbumId(albumId))).firstOrNull()
     val result = if (knownAlbum != null) {
       // metadata already captured from the artist discography response, only tracks are missing
@@ -221,7 +221,7 @@ class CatalogService(
   )
 
   private fun syncArtistAlbums(artistId: String, userId: UserId, nextUrl: String?): Either<DomainError, Unit> {
-    val accessToken = spotifyAccessToken.getValidAccessToken(userId)
+    val accessToken = spotifyAccessToken.getValidAccessToken()
     return spotifyCatalog.getArtistAlbumsPage(userId, accessToken, artistId, nextUrl)
       .flatMap { page ->
         val existingAlbumIds = appAlbumRepository.findByAlbumIds(page.albums.map { it.id }.toSet()).map { it.id.value }.toSet()

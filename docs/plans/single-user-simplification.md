@@ -64,10 +64,32 @@ afterward, since it becomes structurally impossible.
 
 ---
 
-## Phase 3: Thread removal of `UserId` through ports and services
+## Phase 3: Thread removal of `UserId` through ports and services — in progress
 
 **Goal:** Drop `UserId` parameters from ports, services, and outbox events where they only ever
 existed to distinguish between users, once Phase 2 has established that there is exactly one user.
+
+**User profile slice — done:** `UserProfilePort.getDisplayName()` and `update()` no longer take a
+`UserId`; both resolve the one stored user internally via `CurrentUserResolver`. The
+`UpdateUserProfile` outbox event dropped its `userId` field (same placeholder-payload pattern as
+`ResyncCatalog`).
+
+**`SpotifyAccessTokenPort` slice — done:** `getValidAccessToken()` no longer takes a `UserId`;
+`SpotifyAccessTokenAdapter` resolves the one stored user directly via `UserRepositoryPort.findAll()`
+(it lives in `adapter-out-spotify`, which has no dependency on `domain-impl`'s `CurrentUserResolver`,
+so it repeats the same "single stored user" lookup instead). All call sites in `PlaybackService`,
+`CatalogService`, `PlaylistService`, `PlaylistCheckService`, `UserProfileService`, and
+`SpotifyDebugResource` already had `userId` in scope for other calls, so only the token-fetch
+argument was dropped.
+
+Remaining slices (playback, playlist, catalog, SSE) are still open. These are substantially larger:
+unlike the two slices above, the `UserId` in `PlaybackPort`, `PlaylistPort`, `PlaylistCheckPort`,
+`PlaybackEventViewerPort`, `DashboardPort`, `CatalogPort`, `SpotifyPlaybackPort`, `SpotifyCatalogPort`,
+`SpotifyPlaylistPort`, and `DashboardRefreshPort` also flows into repository out-ports
+(`AppPlaybackRepositoryPort`, `PlaylistRepositoryPort`, `CurrentlyPlayingRepositoryPort`, etc.) that
+still key their MongoDB queries by `spotifyUserId` until Phase 4 migrates the schema, and into every
+`adapter-in-web` resource. Per the risk note below, do these as separate, bounded-context PRs rather
+than one large change.
 
 * `domain-api/.../port/out/*` – ports whose only use of `UserId` is to select "which user" (not
   domain data itself) can drop the parameter: `PlaybackPort`, `PlaybackAggregationPort`,
@@ -150,7 +172,7 @@ downtime, and must run after Phase 3 so no code still reads/writes the dropped f
 |---|---|---|
 | 1 – Login/allow-list removal | Low | Permissive change; single real operator already unaffected. |
 | 2 – Scheduler fan-out & catalog-sync shortcut | Medium | Done — "zero users" and "one user" cases covered by tests. |
-| 3 – `UserId` threading removal | High | Split per bounded context; handle in-flight outbox payloads carrying stale `userId` fields during rollout. |
+| 3 – `UserId` threading removal | High | Split per bounded context; handle in-flight outbox payloads carrying stale `userId` fields during rollout. User-profile slice done. |
 | 4 – MongoDB schema/index cleanup | Medium | Use a one-time `Starter`; sequence after Phase 3; rebuild indexes without downtime. |
 | 5 – Config/tests/deploy cleanup | Low | Cleanup only. |
 

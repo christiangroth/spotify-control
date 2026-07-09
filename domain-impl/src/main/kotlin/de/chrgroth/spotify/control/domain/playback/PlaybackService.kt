@@ -81,7 +81,7 @@ class PlaybackService(
   // --- Currently Playing ---
 
   internal fun fetchCurrentlyPlaying(userId: UserId): Either<DomainError, Unit> {
-    val accessToken = spotifyAccessToken.getValidAccessToken(userId)
+    val accessToken = spotifyAccessToken.getValidAccessToken()
     return spotifyPlayback.getCurrentlyPlaying(userId, accessToken).flatMap { item ->
       if (item != null && item.isPlaying) {
         playbackState.onPlaybackDetected()
@@ -151,7 +151,7 @@ class PlaybackService(
   // --- Recently Played ---
 
   internal fun fetchRecentlyPlayed(userId: UserId): Either<DomainError, Unit> {
-    val accessToken = spotifyAccessToken.getValidAccessToken(userId)
+    val accessToken = spotifyAccessToken.getValidAccessToken()
     val after = recentlyPlayedRepository.findMostRecentPlayedAt(userId)
     return spotifyPlayback.getRecentlyPlayed(userId, accessToken, after).flatMap { tracks ->
       val playedAts = tracks.map { it.playedAt }.toSet()

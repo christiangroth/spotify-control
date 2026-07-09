@@ -46,10 +46,10 @@ class SpotifyAccessTokenAdapterTests {
   @Test
   fun `returns existing access token when not expiring soon`() {
     val user = buildUser(Clock.System.now() + 1.hours)
-    every { userRepository.findById(userId) } returns user
+    every { userRepository.findAll() } returns listOf(user)
     every { tokenEncryption.decrypt("enc-access") } returns "plain-access".right()
 
-    val result = adapter.getValidAccessToken(userId)
+    val result = adapter.getValidAccessToken()
 
     assertThat(result).isEqualTo(AccessToken("plain-access"))
     verify(exactly = 0) { spotifyAuth.refreshToken(any()) }
@@ -58,7 +58,7 @@ class SpotifyAccessTokenAdapterTests {
   @Test
   fun `refreshes token when expiring within 5 minutes`() {
     val user = buildUser(Clock.System.now() + 3.minutes)
-    every { userRepository.findById(userId) } returns user
+    every { userRepository.findAll() } returns listOf(user)
     every { tokenEncryption.decrypt("enc-refresh") } returns "plain-refresh".right()
     every { spotifyAuth.refreshToken(RefreshToken("plain-refresh")) } returns SpotifyRefreshedTokens(
       accessToken = AccessToken("new-access"),
@@ -68,7 +68,7 @@ class SpotifyAccessTokenAdapterTests {
     every { tokenEncryption.encrypt("new-access") } returns "enc-new-access".right()
     every { userRepository.upsert(any()) } just runs
 
-    val result = adapter.getValidAccessToken(userId)
+    val result = adapter.getValidAccessToken()
 
     assertThat(result).isEqualTo(AccessToken("new-access"))
     verify { spotifyAuth.refreshToken(RefreshToken("plain-refresh")) }
@@ -81,7 +81,7 @@ class SpotifyAccessTokenAdapterTests {
   @Test
   fun `persists rotated refresh token when spotify returns a new one`() {
     val user = buildUser(Clock.System.now() + 1.minutes)
-    every { userRepository.findById(userId) } returns user
+    every { userRepository.findAll() } returns listOf(user)
     every { tokenEncryption.decrypt("enc-refresh") } returns "plain-refresh".right()
     every { spotifyAuth.refreshToken(RefreshToken("plain-refresh")) } returns SpotifyRefreshedTokens(
       accessToken = AccessToken("new-access"),
@@ -92,7 +92,7 @@ class SpotifyAccessTokenAdapterTests {
     every { tokenEncryption.encrypt("new-refresh") } returns "enc-new-refresh".right()
     every { userRepository.upsert(any()) } just runs
 
-    adapter.getValidAccessToken(userId)
+    adapter.getValidAccessToken()
 
     val upsertedSlot = slot<User>()
     verify { userRepository.upsert(capture(upsertedSlot)) }
@@ -101,21 +101,21 @@ class SpotifyAccessTokenAdapterTests {
 
   @Test
   fun `throws when user not found`() {
-    every { userRepository.findById(userId) } returns null
+    every { userRepository.findAll() } returns emptyList()
 
-    assertThatThrownBy { adapter.getValidAccessToken(userId) }
+    assertThatThrownBy { adapter.getValidAccessToken() }
       .isInstanceOf(IllegalArgumentException::class.java)
-      .hasMessageContaining("user-1")
+      .hasMessageContaining("No user found")
   }
 
   @Test
   fun `throws when token refresh fails`() {
     val user = buildUser(Clock.System.now() + 1.minutes)
-    every { userRepository.findById(userId) } returns user
+    every { userRepository.findAll() } returns listOf(user)
     every { tokenEncryption.decrypt("enc-refresh") } returns "plain-refresh".right()
     every { spotifyAuth.refreshToken(RefreshToken("plain-refresh")) } returns AuthError.TOKEN_REFRESH_FAILED.left()
 
-    assertThatThrownBy { adapter.getValidAccessToken(userId) }
+    assertThatThrownBy { adapter.getValidAccessToken() }
       .isInstanceOf(IllegalStateException::class.java)
       .hasMessageContaining("user-1")
   }

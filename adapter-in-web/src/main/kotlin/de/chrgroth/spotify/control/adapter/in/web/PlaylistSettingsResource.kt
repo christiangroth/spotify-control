@@ -41,7 +41,7 @@ class PlaylistSettingsResource(
   @Produces(MediaType.TEXT_HTML)
   fun playlist(): TemplateInstance {
     val userId = UserId(securityIdentity.principal.name)
-    val displayName = userProfile.getDisplayName(userId) ?: userId.value
+    val displayName = userProfile.getDisplayName() ?: userId.value
     val sortedPlaylists = playlist.getPlaylists(userId).sortedBy { it.name }
     val padWidth = sortedPlaylists.size.toString().length
     val trackCounts = playlist.getTrackCounts(userId)

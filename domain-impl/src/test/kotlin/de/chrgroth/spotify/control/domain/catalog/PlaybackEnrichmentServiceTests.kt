@@ -75,7 +75,7 @@ class PlaybackEnrichmentServiceTests {
       lastSync = kotlin.time.Instant.fromEpochSeconds(1),
     )
     every { appArtistRepository.findByArtistIds(setOf(ArtistId(artistId))) } returns emptyList()
-    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyCatalog.getArtist(userId, accessToken, artistId) } returns spotifyArtist.right()
     every { appArtistRepository.upsertAll(listOf(spotifyArtist)) } just runs
     every { outboxPort.enqueue(any()) } just runs
