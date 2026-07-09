@@ -1,0 +1,1 @@
+* Updated the architecture documentation and ADR for the single-user redesign to describe only the current state, and removed the completed migration plan content, keeping only remaining simplification ideas.

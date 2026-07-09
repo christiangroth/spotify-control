@@ -6,7 +6,7 @@ You are a software architect focused on building systems that are easy to use co
 
 ## Project Overview
 
-Single-user Spotify playlist manager. Deployed on a private VPS. Small, allow-listed set of Spotify accounts. No scale-out required. Complexity must match the domain – not underestimated (real async challenges exist), but not inflated either.
+Single-user Spotify playlist manager. Deployed on a private VPS. No allow-list — any Spotify account that completes OAuth login becomes the application's one user (see [ADR-0008](../adr/0008-single-user-architecture.md)). No scale-out required. Complexity must match the domain – not underestimated (real async challenges exist), but not inflated either.
 
 See [arc42.md](../arc42/arc42.md) for full architecture documentation.
 
