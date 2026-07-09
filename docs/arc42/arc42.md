@@ -7,9 +7,9 @@
 spotify-control is a private Spotify playlist manager for a single user. It has always been
 operated by exactly one person; the previous allow-list design supported multiple users in
 theory but that was never actually used (see [ADR-0008](../adr/0008-single-user-architecture.md)).
-The application is being converted to a strict single-user architecture; see the
-[single-user simplification plan](../plans/single-user-simplification.md) for the migration
-approach.
+The application has been converted to a strict single-user architecture; see the
+[single-user simplification plan](../plans/single-user-simplification.md) for the completed
+migration.
 
 **Implemented features:**
 
@@ -514,7 +514,7 @@ SLACK_WEBHOOK_URL
 | Enrichment completeness | `app_artist`, `app_track`, and `app_album` entries that existed before enrichment was introduced may lack imageLink or albumTitle until re-enriched. |
 | Partial-play detection accuracy | Partial play detection relies on polling frequency; very short plays near the end of a track may be missed or misclassified. |
 | Test coverage for domain adapters | Domain adapter integration (e.g. `PlaybackDataAdapter`, `PlaylistSyncAdapter`) is not yet covered by `@QuarkusTest` boundary tests. |
-| Config/test/deploy cleanup | Phase 5 of the [single-user simplification plan](../plans/single-user-simplification.md) (removing now-dead config, test fixtures, and documentation references) is still open. Tracked by [ADR-0008](../adr/0008-single-user-architecture.md). |
+| `APP_ALLOWED_SPOTIFY_USER_IDS` in CI workflow | `.github/workflows/gradle.yml` still passes `APP_ALLOWED_SPOTIFY_USER_IDS` through as a deploy secret/env var, even though `deploy/docker-stack.yml` no longer reads it (removed in Phase 1 of the [single-user simplification plan](../plans/single-user-simplification.md)). The variable is unused; only a repo maintainer can remove it from the workflow file and the GitHub secret. |
 
 # Glossary
 

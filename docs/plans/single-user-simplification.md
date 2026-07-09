@@ -162,19 +162,24 @@ only after Phase 3 confirmed no code still reads/writes the dropped fields.
 
 ---
 
-## Phase 5: Configuration, tests, and deployment cleanup
+## Phase 5: Configuration, tests, and deployment cleanup — done
 
 **Goal:** Remove now-dead configuration, test fixtures, and documentation references.
 
-* Remove `APP_ALLOWED_SPOTIFY_USER_IDS` from `docs/arc42/arc42.md` Configuration section,
-  deployment `.env` templates, and GitHub Actions secrets once Phase 1 has shipped.
-* Test fixtures that currently create multiple `test-user-a` / `test-user-b` accounts (see
-  `domain-impl`'s test profile allow-list default) should be reduced to a single test user.
-  Any test asserting "user B cannot see user A's data" becomes obsolete and should be removed
-  rather than adapted.
-* Review `docs/reviews/2026-07-08-performance-review.md` Findings 1, 2, and the "what breaks
-  first" multi-user scaling section — once this migration completes, note in that review (or a
-  follow-up note) that those risks are resolved by design.
+* `APP_ALLOWED_SPOTIFY_USER_IDS` was already removed from `docs/arc42/arc42.md` and
+  `deploy/docker-stack.yml` in Phase 1. `.github/workflows/gradle.yml` still passes it through as
+  an unused deploy secret/env var; workflow files cannot be modified by this migration (no
+  permissions), so this is tracked as a small technical debt item in arc42 instead for a repo
+  maintainer to clean up separately.
+* No multi-account test fixtures (`test-user-a` / `test-user-b`) or obsolete cross-user isolation
+  tests were found in the codebase — earlier phases already reduced fixtures to a single stored
+  user and updated/removed affected tests as each slice landed. The one remaining "different user"
+  test, `LoginServiceTests`' *"login is denied when a different user is already registered"*, is
+  not obsolete: it verifies the single-user enforcement itself (`AuthError.ANOTHER_USER_ALREADY_REGISTERED`)
+  and was kept.
+* `docs/reviews/2026-07-08-performance-review.md` Findings 1, 2, and the "what breaks first"
+  multi-user scaling section now carry inline "Resolved (2026-07-09)" notes referencing
+  [ADR-0008](../adr/0008-single-user-architecture.md).
 
 **Risk:** Low. Cleanup only, no behavioral change.
 
@@ -188,7 +193,7 @@ only after Phase 3 confirmed no code still reads/writes the dropped fields.
 | 2 – Scheduler fan-out & catalog-sync shortcut | Medium | Done — "zero users" and "one user" cases covered by tests. |
 | 3 – `UserId` threading removal | High | Done — split per bounded context (user-profile, `SpotifyAccessTokenPort`, SSE/dashboard, then playback/playlist/catalog); in-flight outbox payloads with stale `userId` fields are tolerated by `fromKey`/`fromPayload`. |
 | 4 – MongoDB schema/index cleanup | Medium | Done — one-time `SimplifySingleUserSchemaStarter`; sequenced after Phase 3; also removed the now-dead `UserId` parameters from repository ports and domain models. |
-| 5 – Config/tests/deploy cleanup | Low | Cleanup only. |
+| 5 – Config/tests/deploy cleanup | Low | Done — no obsolete fixtures found; performance review annotated; `gradle.yml`'s unused env passthrough left as a tracked technical debt (workflow files cannot be modified by this migration). |
 
 ## Out of scope
 
