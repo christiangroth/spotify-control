@@ -45,9 +45,9 @@ class PlaylistsResource(
   fun settings(): TemplateInstance {
     val userId = UserId(securityIdentity.principal.name)
     val displayName = userProfile.getDisplayName() ?: userId.value
-    val sortedPlaylists = playlist.getPlaylists(userId).sortedBy { it.name }
+    val sortedPlaylists = playlist.getPlaylists().sortedBy { it.name }
     val padWidth = sortedPlaylists.size.toString().length
-    val trackCounts = playlist.getTrackCounts(userId)
+    val trackCounts = playlist.getTrackCounts()
     val rows = sortedPlaylists.mapIndexed { index, playlistInfo ->
       PlaylistSettingsResource.PlaylistRow(
         lineNumber = (index + 1).toString().padStart(padWidth, '0'),

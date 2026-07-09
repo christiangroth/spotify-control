@@ -53,6 +53,7 @@ class PlaybackAggregationServiceTests {
 
   @Test
   fun `aggregate day persists album entries and distinct album count`() {
+    every { currentUserResolver.userId() } returns userId
     val savedAggregation = slot<PlaybackAggregation>()
     every { aggregationRepository.save(capture(savedAggregation)) } returns Unit
     every { appPlaybackRepository.findAllBetween(userId, any(), any()) } returns listOf(
@@ -90,7 +91,7 @@ class PlaybackAggregationServiceTests {
       AppArtist(id = ArtistId("artist-2"), artistName = "Artist Two", lastSync = syncTimestamp),
     )
 
-    val result = service.handle(DomainOutboxEvent.AggregatePlaybackData(userId, AggregationPeriodType.DAY, date))
+    val result = service.handle(DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.DAY, date))
 
     assertThat(result.isRight()).isTrue()
     assertThat(savedAggregation.captured.distinctAlbumCount).isEqualTo(2)
@@ -102,6 +103,7 @@ class PlaybackAggregationServiceTests {
 
   @Test
   fun `aggregate week merges album entries from day aggregations`() {
+    every { currentUserResolver.userId() } returns userId
     val weekStart = LocalDate(2024, 1, 15)
     val day1 = LocalDate(2024, 1, 15)
     val day2 = LocalDate(2024, 1, 16)
@@ -125,7 +127,7 @@ class PlaybackAggregationServiceTests {
       ),
     )
 
-    val result = service.handle(DomainOutboxEvent.AggregatePlaybackData(userId, AggregationPeriodType.WEEK, weekStart))
+    val result = service.handle(DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.WEEK, weekStart))
 
     assertThat(result.isRight()).isTrue()
     assertThat(savedAggregation.captured.distinctAlbumCount).isEqualTo(2)
@@ -138,6 +140,7 @@ class PlaybackAggregationServiceTests {
 
   @Test
   fun `aggregate week persists only top entries but keeps full distinct counts`() {
+    every { currentUserResolver.userId() } returns userId
     val weekStart = LocalDate(2024, 1, 15)
     val savedAggregation = slot<PlaybackAggregation>()
     every { aggregationRepository.save(capture(savedAggregation)) } returns Unit
@@ -146,7 +149,7 @@ class PlaybackAggregationServiceTests {
       aggregationRepository.findByUserTypeAndPeriodRange(userId, AggregationPeriodType.DAY, weekStart, LocalDate(2024, 1, 21))
     } returns listOf(dayAggregation(weekStart, trackEntries = manyTrackEntries))
 
-    val result = service.handle(DomainOutboxEvent.AggregatePlaybackData(userId, AggregationPeriodType.WEEK, weekStart))
+    val result = service.handle(DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.WEEK, weekStart))
 
     assertThat(result.isRight()).isTrue()
     assertThat(savedAggregation.captured.distinctTrackCount).isEqualTo(STORED_ENTRIES_LIMIT_PLUS_MARGIN)

@@ -85,7 +85,7 @@ class YearSongsInAllCheckRunner(
         Unit.right()
       } else {
         logger.info { "Adding ${missingTrackIds.size} track(s) to all playlist ${allPlaylistInfo.spotifyPlaylistId} (user ${userId.value})" }
-        spotifyPlaylist.addPlaylistTracks(userId, accessToken, allPlaylistInfo.spotifyPlaylistId, missingTrackIds)
+        spotifyPlaylist.addPlaylistTracks(accessToken, allPlaylistInfo.spotifyPlaylistId, missingTrackIds)
       }
     }
 

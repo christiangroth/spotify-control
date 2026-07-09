@@ -116,27 +116,28 @@ class PlaylistServiceTests {
 
     adapter.enqueueUpdates()
 
-    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistInfo(UserId("user-1"))) }
+    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistInfo()) }
   }
 
   // --- syncPlaylists tests ---
 
   @Test
   fun `syncPlaylists skips when user not found`() {
-    every { userRepository.findById(userId) } returns null
+    every { currentUserResolver.userId() } returns null
 
-    val result = adapter.syncPlaylists(userId)
+    val result = adapter.syncPlaylists()
 
     assertThat(result.isRight()).isTrue()
-    verify(exactly = 0) { spotifyPlaylist.getPlaylists(any(), any()) }
+    verify(exactly = 0) { spotifyPlaylist.getPlaylists(any()) }
   }
 
   @Test
   fun `syncPlaylists filters out playlists not owned by user`() {
     val user = buildUser()
     every { userRepository.findById(userId) } returns user
+    every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
-    every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(
+    every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(
       buildSpotifyItem("p1", ownerId = "user-1"),
       buildSpotifyItem("p2", ownerId = "other-user"),
     ).right()
@@ -144,7 +145,7 @@ class PlaylistServiceTests {
     every { playlistRepository.replaceAll(any(), any()) } just runs
     every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
 
-    val result = adapter.syncPlaylists(userId)
+    val result = adapter.syncPlaylists()
 
     assertThat(result.isRight()).isTrue()
     val savedSlot = slot<List<PlaylistInfo>>()
@@ -157,13 +158,14 @@ class PlaylistServiceTests {
   fun `syncPlaylists persists new playlists with PASSIVE status`() {
     val user = buildUser()
     every { userRepository.findById(userId) } returns user
+    every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
-    every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(buildSpotifyItem("p1")).right()
+    every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1")).right()
     every { playlistRepository.findByUserId(userId) } returns emptyList()
     every { playlistRepository.replaceAll(any(), any()) } just runs
     every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
 
-    val result = adapter.syncPlaylists(userId)
+    val result = adapter.syncPlaylists()
 
     assertThat(result.isRight()).isTrue()
     val savedSlot = slot<List<PlaylistInfo>>()
@@ -177,12 +179,13 @@ class PlaylistServiceTests {
   fun `syncPlaylists preserves existing syncStatus`() {
     val user = buildUser()
     every { userRepository.findById(userId) } returns user
+    every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
-    every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(buildSpotifyItem("p1")).right()
+    every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1")).right()
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE))
     every { playlistRepository.replaceAll(any(), any()) } just runs
 
-    adapter.syncPlaylists(userId)
+    adapter.syncPlaylists()
 
     val savedSlot = slot<List<PlaylistInfo>>()
     verify { playlistRepository.replaceAll(userId, capture(savedSlot)) }
@@ -193,13 +196,14 @@ class PlaylistServiceTests {
   fun `syncPlaylists uses latest playlist state after Spotify API call to preserve syncStatus changes made in the meantime`() {
     val user = buildUser()
     every { userRepository.findById(userId) } returns user
+    every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
-    every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(buildSpotifyItem("p1")).right()
+    every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1")).right()
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.ACTIVE))
     every { playlistRepository.replaceAll(any(), any()) } just runs
     every { playlistRepository.findByUserIdAndPlaylistId(userId, "p1") } returns mockk()
 
-    adapter.syncPlaylists(userId)
+    adapter.syncPlaylists()
 
     val savedSlot = slot<List<PlaylistInfo>>()
     verify { playlistRepository.replaceAll(userId, capture(savedSlot)) }
@@ -210,13 +214,14 @@ class PlaylistServiceTests {
   fun `syncPlaylists preserves lastSnapshotIdSyncTime when snapshotId is unchanged`() {
     val user = buildUser()
     every { userRepository.findById(userId) } returns user
+    every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
-    every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(buildSpotifyItem("p1", snapshotId = "snap-1")).right()
+    every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1", snapshotId = "snap-1")).right()
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", snapshotId = "snap-1"))
     every { playlistRepository.replaceAll(any(), any()) } just runs
     every { playlistRepository.findByUserIdAndPlaylistId(userId, "p1") } returns mockk()
 
-    adapter.syncPlaylists(userId)
+    adapter.syncPlaylists()
 
     val savedSlot = slot<List<PlaylistInfo>>()
     verify { playlistRepository.replaceAll(userId, capture(savedSlot)) }
@@ -227,13 +232,14 @@ class PlaylistServiceTests {
   fun `syncPlaylists updates lastSnapshotIdSyncTime when snapshotId changes`() {
     val user = buildUser()
     every { userRepository.findById(userId) } returns user
+    every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
-    every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(buildSpotifyItem("p1", snapshotId = "snap-2")).right()
+    every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1", snapshotId = "snap-2")).right()
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", snapshotId = "snap-1"))
     every { playlistRepository.replaceAll(any(), any()) } just runs
     every { outboxPort.enqueue(any()) } just runs
 
-    adapter.syncPlaylists(userId)
+    adapter.syncPlaylists()
 
     val savedSlot = slot<List<PlaylistInfo>>()
     verify { playlistRepository.replaceAll(userId, capture(savedSlot)) }
@@ -244,15 +250,16 @@ class PlaylistServiceTests {
   fun `syncPlaylists notifies dashboard when playlist count increases`() {
     val user = buildUser()
     every { userRepository.findById(userId) } returns user
+    every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
-    every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(buildSpotifyItem("p1"), buildSpotifyItem("p2")).right()
+    every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1"), buildSpotifyItem("p2")).right()
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1"))
     every { playlistRepository.replaceAll(any(), any()) } just runs
     every { playlistRepository.findByUserIdAndPlaylistId(userId, "p1") } returns mockk()
     every { outboxPort.enqueue(any()) } just runs
     every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
 
-    val result = adapter.syncPlaylists(userId)
+    val result = adapter.syncPlaylists()
 
     assertThat(result.isRight()).isTrue()
     verify(exactly = 1) { dashboardRefresh.notifyUserPlaylistMetadata() }
@@ -262,14 +269,15 @@ class PlaylistServiceTests {
   fun `syncPlaylists notifies dashboard when playlist count decreases`() {
     val user = buildUser()
     every { userRepository.findById(userId) } returns user
+    every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
-    every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(buildSpotifyItem("p1")).right()
+    every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1")).right()
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1"), buildPlaylistInfo("p2"))
     every { playlistRepository.replaceAll(any(), any()) } just runs
     every { playlistRepository.findByUserIdAndPlaylistId(userId, "p1") } returns mockk()
     every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
 
-    val result = adapter.syncPlaylists(userId)
+    val result = adapter.syncPlaylists()
 
     assertThat(result.isRight()).isTrue()
     verify(exactly = 1) { dashboardRefresh.notifyUserPlaylistMetadata() }
@@ -279,13 +287,14 @@ class PlaylistServiceTests {
   fun `syncPlaylists does not notify dashboard when playlist count is unchanged`() {
     val user = buildUser()
     every { userRepository.findById(userId) } returns user
+    every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
-    every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(buildSpotifyItem("p1")).right()
+    every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1")).right()
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1"))
     every { playlistRepository.replaceAll(any(), any()) } just runs
     every { playlistRepository.findByUserIdAndPlaylistId(userId, "p1") } returns mockk()
 
-    val result = adapter.syncPlaylists(userId)
+    val result = adapter.syncPlaylists()
 
     assertThat(result.isRight()).isTrue()
     verify(exactly = 0) { dashboardRefresh.notifyUserPlaylistMetadata() }
@@ -295,10 +304,11 @@ class PlaylistServiceTests {
   fun `syncPlaylists returns Left when spotify fetch fails`() {
     val user = buildUser()
     every { userRepository.findById(userId) } returns user
+    every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
-    every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns PlaylistSyncError.PLAYLIST_FETCH_FAILED.left()
+    every { spotifyPlaylist.getPlaylists(accessToken) } returns PlaylistSyncError.PLAYLIST_FETCH_FAILED.left()
 
-    val result = adapter.syncPlaylists(userId)
+    val result = adapter.syncPlaylists()
 
     assertThat(result.isLeft()).isTrue()
     verify(exactly = 0) { playlistRepository.replaceAll(any(), any()) }
@@ -308,10 +318,11 @@ class PlaylistServiceTests {
   fun `syncPlaylists returns Left with SpotifyRateLimitError when rate limited`() {
     val user = buildUser()
     every { userRepository.findById(userId) } returns user
+    every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
-    every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns SpotifyRateLimitError(30.seconds).left()
+    every { spotifyPlaylist.getPlaylists(accessToken) } returns SpotifyRateLimitError(30.seconds).left()
 
-    val result = adapter.syncPlaylists(userId)
+    val result = adapter.syncPlaylists()
 
     assertThat(result.isLeft()).isTrue()
     assertThat(result.leftOrNull()).isInstanceOf(SpotifyRateLimitError::class.java)
@@ -321,9 +332,9 @@ class PlaylistServiceTests {
 
   @Test
   fun `updateSyncStatus returns Left when user not found`() {
-    every { userRepository.findById(userId) } returns null
+    every { currentUserResolver.userId() } returns null
 
-    val result = adapter.updateSyncStatus(userId, "p1", PlaylistSyncStatus.PASSIVE)
+    val result = adapter.updateSyncStatus("p1", PlaylistSyncStatus.PASSIVE)
 
     assertThat(result.isLeft()).isTrue()
     assertThat(result.leftOrNull()).isEqualTo(PlaylistSyncError.PLAYLIST_NOT_FOUND)
@@ -333,9 +344,10 @@ class PlaylistServiceTests {
   fun `updateSyncStatus returns Left when playlist not found`() {
     val user = buildUser()
     every { userRepository.findById(userId) } returns user
+    every { currentUserResolver.userId() } returns userId
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1"))
 
-    val result = adapter.updateSyncStatus(userId, "p-unknown", PlaylistSyncStatus.PASSIVE)
+    val result = adapter.updateSyncStatus("p-unknown", PlaylistSyncStatus.PASSIVE)
 
     assertThat(result.isLeft()).isTrue()
     assertThat(result.leftOrNull()).isEqualTo(PlaylistSyncError.PLAYLIST_NOT_FOUND)
@@ -345,6 +357,7 @@ class PlaylistServiceTests {
   fun `updateSyncStatus updates only the target playlist`() {
     val user = buildUser()
     every { userRepository.findById(userId) } returns user
+    every { currentUserResolver.userId() } returns userId
     every { playlistRepository.findByUserId(userId) } returns listOf(
       buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.ACTIVE),
       buildPlaylistInfo("p2", syncStatus = PlaylistSyncStatus.ACTIVE),
@@ -354,7 +367,7 @@ class PlaylistServiceTests {
     every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
     every { playlistCheckRepository.deleteByPlaylistId("p1") } just runs
 
-    val result = adapter.updateSyncStatus(userId, "p1", PlaylistSyncStatus.PASSIVE)
+    val result = adapter.updateSyncStatus("p1", PlaylistSyncStatus.PASSIVE)
 
     assertThat(result.isRight()).isTrue()
     val savedSlot = slot<List<PlaylistInfo>>()
@@ -368,43 +381,46 @@ class PlaylistServiceTests {
   fun `syncPlaylists enqueues SyncPlaylistData for active playlist with changed snapshotId`() {
     val user = buildUser()
     every { userRepository.findById(userId) } returns user
+    every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
-    every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(buildSpotifyItem("p1", snapshotId = "snap-2")).right()
+    every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1", snapshotId = "snap-2")).right()
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", snapshotId = "snap-1"))
     every { playlistRepository.replaceAll(any(), any()) } just runs
     every { outboxPort.enqueue(any()) } just runs
 
-    adapter.syncPlaylists(userId)
+    adapter.syncPlaylists()
 
-    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, "p1")) }
+    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData("p1")) }
   }
 
   @Test
   fun `syncPlaylists enqueues SyncPlaylistData for active playlist with no existing playlist data`() {
     val user = buildUser()
     every { userRepository.findById(userId) } returns user
+    every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
-    every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(buildSpotifyItem("p1")).right()
+    every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1")).right()
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1"))
     every { playlistRepository.replaceAll(any(), any()) } just runs
     every { playlistRepository.findByUserIdAndPlaylistId(userId, "p1") } returns null
     every { outboxPort.enqueue(any()) } just runs
 
-    adapter.syncPlaylists(userId)
+    adapter.syncPlaylists()
 
-    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, "p1")) }
+    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData("p1")) }
   }
 
   @Test
   fun `syncPlaylists does not enqueue SyncPlaylistData for passive playlist`() {
     val user = buildUser()
     every { userRepository.findById(userId) } returns user
+    every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
-    every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(buildSpotifyItem("p1")).right()
+    every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1")).right()
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE))
     every { playlistRepository.replaceAll(any(), any()) } just runs
 
-    adapter.syncPlaylists(userId)
+    adapter.syncPlaylists()
 
     verify(exactly = 0) { outboxPort.enqueue(any<DomainOutboxEvent.SyncPlaylistData>()) }
   }
@@ -413,13 +429,14 @@ class PlaylistServiceTests {
   fun `syncPlaylists does not enqueue SyncPlaylistData for active playlist with unchanged snapshotId and existing data`() {
     val user = buildUser()
     every { userRepository.findById(userId) } returns user
+    every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
-    every { spotifyPlaylist.getPlaylists(userId, accessToken) } returns listOf(buildSpotifyItem("p1")).right()
+    every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1")).right()
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1"))
     every { playlistRepository.replaceAll(any(), any()) } just runs
     every { playlistRepository.findByUserIdAndPlaylistId(userId, "p1") } returns mockk()
 
-    adapter.syncPlaylists(userId)
+    adapter.syncPlaylists()
 
     verify(exactly = 0) { outboxPort.enqueue(any<DomainOutboxEvent.SyncPlaylistData>()) }
   }
@@ -446,12 +463,12 @@ class PlaylistServiceTests {
 
   @Test
   fun `syncPlaylistData skips when user not found`() {
-    every { userRepository.findById(userId) } returns null
+    every { currentUserResolver.userId() } returns null
 
-    val result = adapter.syncPlaylistData(userId, "p1")
+    val result = adapter.syncPlaylistData("p1")
 
     assertThat(result.isRight()).isTrue()
-    verify(exactly = 0) { spotifyPlaylist.getPlaylistTracksPage(any(), any(), any(), any()) }
+    verify(exactly = 0) { spotifyPlaylist.getPlaylistTracksPage(any(), any(), any()) }
   }
 
   @Test
@@ -459,13 +476,14 @@ class PlaylistServiceTests {
     val user = buildUser()
     val page = buildTracksPage()
     every { userRepository.findById(userId) } returns user
+    every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
-    every { spotifyPlaylist.getPlaylistTracksPage(userId, accessToken, "p1", null) } returns page.right()
+    every { spotifyPlaylist.getPlaylistTracksPage(accessToken, "p1", null) } returns page.right()
     every { playlistRepository.save(userId, buildPlaylist("p1")) } just runs
     every { outboxPort.enqueue(any()) } just runs
     every { playlistRepository.updateLastSyncTime(userId, "p1", any()) } just runs
 
-    val result = adapter.syncPlaylistData(userId, "p1")
+    val result = adapter.syncPlaylistData("p1")
 
     assertThat(result.isRight()).isTrue()
     verify { playlistRepository.save(userId, buildPlaylist("p1")) }
@@ -476,18 +494,18 @@ class PlaylistServiceTests {
     val user = buildUser()
     val page = buildTracksPage()
     every { userRepository.findById(userId) } returns user
+    every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
-    every { spotifyPlaylist.getPlaylistTracksPage(userId, accessToken, "p1", null) } returns page.right()
+    every { spotifyPlaylist.getPlaylistTracksPage(accessToken, "p1", null) } returns page.right()
     every { playlistRepository.save(userId, any()) } just runs
     every { outboxPort.enqueue(any()) } just runs
     every { playlistRepository.updateLastSyncTime(userId, "p1", any()) } just runs
 
-    adapter.syncPlaylistData(userId, "p1")
+    adapter.syncPlaylistData("p1")
 
     verify {
       syncController.syncForTracks(
         listOf(CatalogSyncRequest("track-1", listOf("artist-1"), SyncCause.Playlist("p1", "track-1"))),
-        userId,
       )
     }
   }
@@ -497,13 +515,14 @@ class PlaylistServiceTests {
     val user = buildUser()
     val page = buildTracksPage()
     every { userRepository.findById(userId) } returns user
+    every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
-    every { spotifyPlaylist.getPlaylistTracksPage(userId, accessToken, "p1", null) } returns page.right()
+    every { spotifyPlaylist.getPlaylistTracksPage(accessToken, "p1", null) } returns page.right()
     every { playlistRepository.save(userId, any()) } just runs
     every { outboxPort.enqueue(any()) } just runs
     every { playlistRepository.updateLastSyncTime(userId, "p1", any()) } just runs
 
-    adapter.syncPlaylistData(userId, "p1")
+    adapter.syncPlaylistData("p1")
 
     verify(exactly = 1) { playlistRepository.updateLastSyncTime(eq(userId), eq("p1"), any()) }
   }
@@ -514,12 +533,13 @@ class PlaylistServiceTests {
     val nextPageUrl = "https://api.spotify.com/v1/playlists/p1/tracks?offset=50&limit=50"
     val page = buildTracksPage(nextUrl = nextPageUrl)
     every { userRepository.findById(userId) } returns user
+    every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
-    every { spotifyPlaylist.getPlaylistTracksPage(userId, accessToken, "p1", null) } returns page.right()
+    every { spotifyPlaylist.getPlaylistTracksPage(accessToken, "p1", null) } returns page.right()
     every { playlistRepository.save(userId, any()) } just runs
     every { outboxPort.enqueue(any()) } just runs
 
-    adapter.syncPlaylistData(userId, "p1")
+    adapter.syncPlaylistData("p1")
 
     verify(exactly = 0) { playlistRepository.updateLastSyncTime(any(), any(), any()) }
   }
@@ -530,14 +550,15 @@ class PlaylistServiceTests {
     val nextPageUrl = "https://api.spotify.com/v1/playlists/p1/tracks?offset=50&limit=50"
     val page = buildTracksPage(nextUrl = nextPageUrl)
     every { userRepository.findById(userId) } returns user
+    every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
-    every { spotifyPlaylist.getPlaylistTracksPage(userId, accessToken, "p1", null) } returns page.right()
+    every { spotifyPlaylist.getPlaylistTracksPage(accessToken, "p1", null) } returns page.right()
     every { playlistRepository.save(userId, any()) } just runs
     every { outboxPort.enqueue(any()) } just runs
 
-    adapter.syncPlaylistData(userId, "p1")
+    adapter.syncPlaylistData("p1")
 
-    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, "p1", nextPageUrl, "snap-1")) }
+    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData("p1", nextPageUrl, "snap-1")) }
     verify(exactly = 0) { outboxPort.enqueue(any<DomainOutboxEvent.RunPlaylistChecks>()) }
   }
 
@@ -546,15 +567,16 @@ class PlaylistServiceTests {
     val user = buildUser()
     val page = buildTracksPage()
     every { userRepository.findById(userId) } returns user
+    every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
-    every { spotifyPlaylist.getPlaylistTracksPage(userId, accessToken, "p1", null) } returns page.right()
+    every { spotifyPlaylist.getPlaylistTracksPage(accessToken, "p1", null) } returns page.right()
     every { playlistRepository.save(userId, any()) } just runs
     every { outboxPort.enqueue(any()) } just runs
     every { playlistRepository.updateLastSyncTime(userId, "p1", any()) } just runs
 
-    adapter.syncPlaylistData(userId, "p1")
+    adapter.syncPlaylistData("p1")
 
-    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.RunPlaylistChecks(userId, "p1")) }
+    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.RunPlaylistChecks("p1")) }
     verify(exactly = 0) { outboxPort.enqueue(any<DomainOutboxEvent.SyncPlaylistData>()) }
   }
 
@@ -564,13 +586,14 @@ class PlaylistServiceTests {
     val nextPageUrl = "https://api.spotify.com/v1/playlists/p1/tracks?offset=50&limit=50"
     val page = buildTracksPage()
     every { userRepository.findById(userId) } returns user
+    every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
-    every { spotifyPlaylist.getPlaylistTracksPage(userId, accessToken, "p1", nextPageUrl) } returns page.right()
+    every { spotifyPlaylist.getPlaylistTracksPage(accessToken, "p1", nextPageUrl) } returns page.right()
     every { playlistRepository.appendTracks(userId, "p1", page.tracks) } just runs
     every { outboxPort.enqueue(any()) } just runs
     every { playlistRepository.updateLastSyncTime(userId, "p1", any()) } just runs
 
-    val result = adapter.syncPlaylistData(userId, "p1", nextPageUrl)
+    val result = adapter.syncPlaylistData("p1", nextPageUrl)
 
     assertThat(result.isRight()).isTrue()
     verify(exactly = 1) { playlistRepository.appendTracks(userId, "p1", page.tracks) }
@@ -583,14 +606,15 @@ class PlaylistServiceTests {
     val nextPageUrl = "https://api.spotify.com/v1/playlists/p1/tracks?offset=50&limit=50"
     val page = buildTracksPage(snapshotId = "snap-2")  // snapshot changed
     every { userRepository.findById(userId) } returns user
+    every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
-    every { spotifyPlaylist.getPlaylistTracksPage(userId, accessToken, "p1", nextPageUrl) } returns page.right()
+    every { spotifyPlaylist.getPlaylistTracksPage(accessToken, "p1", nextPageUrl) } returns page.right()
     every { outboxPort.enqueue(any()) } just runs
 
-    val result = adapter.syncPlaylistData(userId, "p1", nextPageUrl, "snap-1")
+    val result = adapter.syncPlaylistData("p1", nextPageUrl, "snap-1")
 
     assertThat(result.isRight()).isTrue()
-    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, "p1")) }
+    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData("p1")) }
     verify(exactly = 0) { playlistRepository.appendTracks(any(), any(), any()) }
     verify(exactly = 0) { playlistRepository.save(any(), any()) }
   }
@@ -601,17 +625,18 @@ class PlaylistServiceTests {
     val nextPageUrl = "https://api.spotify.com/v1/playlists/p1/tracks?offset=50&limit=50"
     val page = buildTracksPage(snapshotId = "snap-1")
     every { userRepository.findById(userId) } returns user
+    every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
-    every { spotifyPlaylist.getPlaylistTracksPage(userId, accessToken, "p1", nextPageUrl) } returns page.right()
+    every { spotifyPlaylist.getPlaylistTracksPage(accessToken, "p1", nextPageUrl) } returns page.right()
     every { playlistRepository.appendTracks(userId, "p1", page.tracks) } just runs
     every { outboxPort.enqueue(any()) } just runs
     every { playlistRepository.updateLastSyncTime(userId, "p1", any()) } just runs
 
-    val result = adapter.syncPlaylistData(userId, "p1", nextPageUrl, "snap-1")
+    val result = adapter.syncPlaylistData("p1", nextPageUrl, "snap-1")
 
     assertThat(result.isRight()).isTrue()
     verify(exactly = 1) { playlistRepository.appendTracks(userId, "p1", page.tracks) }
-    verify(exactly = 0) { outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, "p1")) }
+    verify(exactly = 0) { outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData("p1")) }
   }
 
 
@@ -619,10 +644,11 @@ class PlaylistServiceTests {
   fun `syncPlaylistData returns Left when tracks fetch fails`() {
     val user = buildUser()
     every { userRepository.findById(userId) } returns user
+    every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
-    every { spotifyPlaylist.getPlaylistTracksPage(userId, accessToken, "p1", null) } returns PlaylistSyncError.PLAYLIST_TRACKS_FETCH_FAILED.left()
+    every { spotifyPlaylist.getPlaylistTracksPage(accessToken, "p1", null) } returns PlaylistSyncError.PLAYLIST_TRACKS_FETCH_FAILED.left()
 
-    val result = adapter.syncPlaylistData(userId, "p1")
+    val result = adapter.syncPlaylistData("p1")
 
     assertThat(result.isLeft()).isTrue()
     verify(exactly = 0) { playlistRepository.save(any(), any()) }
@@ -634,30 +660,32 @@ class PlaylistServiceTests {
   fun `updateSyncStatus enqueues SyncPlaylistData when activating playlist with no existing data`() {
     val user = buildUser()
     every { userRepository.findById(userId) } returns user
+    every { currentUserResolver.userId() } returns userId
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE))
     every { playlistRepository.replaceAll(any(), any()) } just runs
     every { outboxPort.enqueue(any()) } just runs
     every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
 
-    val result = adapter.updateSyncStatus(userId, "p1", PlaylistSyncStatus.ACTIVE)
+    val result = adapter.updateSyncStatus("p1", PlaylistSyncStatus.ACTIVE)
 
     assertThat(result.isRight()).isTrue()
-    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, "p1")) }
+    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData("p1")) }
   }
 
   @Test
   fun `updateSyncStatus enqueues SyncPlaylistData when activating playlist with existing data`() {
     val user = buildUser()
     every { userRepository.findById(userId) } returns user
+    every { currentUserResolver.userId() } returns userId
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE))
     every { playlistRepository.replaceAll(any(), any()) } just runs
     every { outboxPort.enqueue(any()) } just runs
     every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
 
-    val result = adapter.updateSyncStatus(userId, "p1", PlaylistSyncStatus.ACTIVE)
+    val result = adapter.updateSyncStatus("p1", PlaylistSyncStatus.ACTIVE)
 
     assertThat(result.isRight()).isTrue()
-    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, "p1")) }
+    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData("p1")) }
     verify(exactly = 0) { outboxPort.enqueue(any<DomainOutboxEvent.RunPlaylistChecks>()) }
   }
 
@@ -665,13 +693,14 @@ class PlaylistServiceTests {
   fun `updateSyncStatus notifies dashboard refresh after updating sync status`() {
     val user = buildUser()
     every { userRepository.findById(userId) } returns user
+    every { currentUserResolver.userId() } returns userId
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.ACTIVE))
     every { playlistRepository.replaceAll(any(), any()) } just runs
     every { playlistRepository.findByUserIdAndPlaylistId(userId, "p1") } returns mockk()
     every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
     every { playlistCheckRepository.deleteByPlaylistId("p1") } just runs
 
-    val result = adapter.updateSyncStatus(userId, "p1", PlaylistSyncStatus.PASSIVE)
+    val result = adapter.updateSyncStatus("p1", PlaylistSyncStatus.PASSIVE)
 
     assertThat(result.isRight()).isTrue()
     verify(exactly = 1) { dashboardRefresh.notifyUserPlaylistMetadata() }
@@ -681,13 +710,14 @@ class PlaylistServiceTests {
   fun `updateSyncStatus notifies dashboard refresh when activating playlist`() {
     val user = buildUser()
     every { userRepository.findById(userId) } returns user
+    every { currentUserResolver.userId() } returns userId
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE))
     every { playlistRepository.replaceAll(any(), any()) } just runs
     every { playlistRepository.findByUserIdAndPlaylistId(userId, "p1") } returns mockk()
     every { outboxPort.enqueue(any()) } just runs
     every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
 
-    val result = adapter.updateSyncStatus(userId, "p1", PlaylistSyncStatus.ACTIVE)
+    val result = adapter.updateSyncStatus("p1", PlaylistSyncStatus.ACTIVE)
 
     assertThat(result.isRight()).isTrue()
     verify(exactly = 1) { dashboardRefresh.notifyUserPlaylistMetadata() }
@@ -697,13 +727,14 @@ class PlaylistServiceTests {
   fun `updateSyncStatus deletes check documents when deactivating playlist`() {
     val user = buildUser()
     every { userRepository.findById(userId) } returns user
+    every { currentUserResolver.userId() } returns userId
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.ACTIVE))
     every { playlistRepository.replaceAll(any(), any()) } just runs
     every { playlistRepository.findByUserIdAndPlaylistId(userId, "p1") } returns mockk()
     every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
     every { playlistCheckRepository.deleteByPlaylistId("p1") } just runs
 
-    val result = adapter.updateSyncStatus(userId, "p1", PlaylistSyncStatus.PASSIVE)
+    val result = adapter.updateSyncStatus("p1", PlaylistSyncStatus.PASSIVE)
 
     assertThat(result.isRight()).isTrue()
     verify(exactly = 1) { playlistCheckRepository.deleteByPlaylistId("p1") }
@@ -713,13 +744,14 @@ class PlaylistServiceTests {
   fun `updateSyncStatus does not delete check documents when activating playlist`() {
     val user = buildUser()
     every { userRepository.findById(userId) } returns user
+    every { currentUserResolver.userId() } returns userId
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE))
     every { playlistRepository.replaceAll(any(), any()) } just runs
     every { playlistRepository.findByUserIdAndPlaylistId(userId, "p1") } returns mockk()
     every { outboxPort.enqueue(any()) } just runs
     every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
 
-    val result = adapter.updateSyncStatus(userId, "p1", PlaylistSyncStatus.ACTIVE)
+    val result = adapter.updateSyncStatus("p1", PlaylistSyncStatus.ACTIVE)
 
     assertThat(result.isRight()).isTrue()
     verify(exactly = 0) { playlistCheckRepository.deleteByPlaylistId(any()) }
@@ -729,12 +761,13 @@ class PlaylistServiceTests {
   fun `updateSyncStatus sets type ALL when activating playlist named All`() {
     val user = buildUser()
     every { userRepository.findById(userId) } returns user
+    every { currentUserResolver.userId() } returns userId
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE, name = "All"))
     every { playlistRepository.replaceAll(any(), any()) } just runs
     every { outboxPort.enqueue(any()) } just runs
     every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
 
-    val result = adapter.updateSyncStatus(userId, "p1", PlaylistSyncStatus.ACTIVE)
+    val result = adapter.updateSyncStatus("p1", PlaylistSyncStatus.ACTIVE)
 
     assertThat(result.isRight()).isTrue()
     val savedSlot = slot<List<PlaylistInfo>>()
@@ -746,12 +779,13 @@ class PlaylistServiceTests {
   fun `updateSyncStatus sets type ALL when activating playlist named all case-insensitive`() {
     val user = buildUser()
     every { userRepository.findById(userId) } returns user
+    every { currentUserResolver.userId() } returns userId
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE, name = "ALL"))
     every { playlistRepository.replaceAll(any(), any()) } just runs
     every { outboxPort.enqueue(any()) } just runs
     every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
 
-    val result = adapter.updateSyncStatus(userId, "p1", PlaylistSyncStatus.ACTIVE)
+    val result = adapter.updateSyncStatus("p1", PlaylistSyncStatus.ACTIVE)
 
     assertThat(result.isRight()).isTrue()
     val savedSlot = slot<List<PlaylistInfo>>()
@@ -763,9 +797,9 @@ class PlaylistServiceTests {
 
   @Test
   fun `enqueueSyncPlaylistData returns Left when user not found`() {
-    every { userRepository.findById(userId) } returns null
+    every { currentUserResolver.userId() } returns null
 
-    val result = adapter.enqueueSyncPlaylistData(userId, "p1")
+    val result = adapter.enqueueSyncPlaylistData("p1")
 
     assertThat(result.isLeft()).isTrue()
     assertThat(result.leftOrNull()).isEqualTo(PlaylistSyncError.PLAYLIST_NOT_FOUND)
@@ -776,9 +810,10 @@ class PlaylistServiceTests {
   fun `enqueueSyncPlaylistData returns Left when playlist not found`() {
     val user = buildUser()
     every { userRepository.findById(userId) } returns user
+    every { currentUserResolver.userId() } returns userId
     every { playlistRepository.findByUserId(userId) } returns emptyList()
 
-    val result = adapter.enqueueSyncPlaylistData(userId, "p1")
+    val result = adapter.enqueueSyncPlaylistData("p1")
 
     assertThat(result.isLeft()).isTrue()
     assertThat(result.leftOrNull()).isEqualTo(PlaylistSyncError.PLAYLIST_NOT_FOUND)
@@ -789,9 +824,10 @@ class PlaylistServiceTests {
   fun `enqueueSyncPlaylistData returns Left when playlist is not active`() {
     val user = buildUser()
     every { userRepository.findById(userId) } returns user
+    every { currentUserResolver.userId() } returns userId
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE))
 
-    val result = adapter.enqueueSyncPlaylistData(userId, "p1")
+    val result = adapter.enqueueSyncPlaylistData("p1")
 
     assertThat(result.isLeft()).isTrue()
     assertThat(result.leftOrNull()).isEqualTo(PlaylistSyncError.PLAYLIST_SYNC_INACTIVE)
@@ -802,12 +838,13 @@ class PlaylistServiceTests {
   fun `enqueueSyncPlaylistData enqueues SyncPlaylistData and returns Right`() {
     val user = buildUser()
     every { userRepository.findById(userId) } returns user
+    every { currentUserResolver.userId() } returns userId
     every { playlistRepository.findByUserId(userId) } returns listOf(buildPlaylistInfo("p1"))
     every { outboxPort.enqueue(any()) } just runs
 
-    val result = adapter.enqueueSyncPlaylistData(userId, "p1")
+    val result = adapter.enqueueSyncPlaylistData("p1")
 
     assertThat(result.isRight()).isTrue()
-    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, "p1")) }
+    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData("p1")) }
   }
 }

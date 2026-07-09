@@ -3,7 +3,6 @@ package de.chrgroth.spotify.control.domain.outbox
 import de.chrgroth.quarkus.outbox.domain.ApplicationOutboxEvent
 import de.chrgroth.quarkus.outbox.domain.OutboxEventPriority
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationPeriodType
-import de.chrgroth.spotify.control.domain.model.user.UserId
 import kotlinx.datetime.LocalDate
 
 sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
@@ -11,12 +10,12 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
   override val priority: OutboxEventPriority get() = OutboxEventPriority.MEDIUM
   override val serializePayload: String
 
-  data class FetchPlaybackData(val userId: UserId) : DomainOutboxEvent {
+  data class FetchPlaybackData(val placeholder: String = "") : DomainOutboxEvent {
     override val key = KEY
-    override val deduplicationKey = "$KEY:${userId.value}"
+    override val deduplicationKey = KEY
     override val partition = DomainOutboxPartition.ToSpotifyPlayback
     override val priority = OutboxEventPriority.HIGH
-    override val serializePayload = userId.value
+    override val serializePayload = ""
 
     companion object {
       const val KEY = "FetchPlaybackData"
@@ -34,11 +33,11 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
     }
   }
 
-  data class SyncPlaylistInfo(val userId: UserId) : DomainOutboxEvent {
+  data class SyncPlaylistInfo(val placeholder: String = "") : DomainOutboxEvent {
     override val key = KEY
-    override val deduplicationKey = "$KEY:${userId.value}"
+    override val deduplicationKey = KEY
     override val partition = DomainOutboxPartition.ToSpotifyPlaylist
-    override val serializePayload = userId.value
+    override val serializePayload = ""
 
     companion object {
       const val KEY = "SyncPlaylistInfo"
@@ -52,64 +51,59 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
    * If the fetched page's snapshot ID differs from [snapshotId], the sync restarts from the first page.
    * The deduplication key includes both [snapshotId] and [nextUrl] so that each page+snapshot combination
    * can be queued independently while retries of the same page are still correctly deduplicated.
-   * payload: "${userId.value}:$playlistId" for the first page;
-   *          "${userId.value}:$playlistId\n$snapshotId\n$nextUrl" for subsequent pages.
-   * Legacy payload (no snapshotId): "${userId.value}:$playlistId\n$nextUrl" — parsed with snapshotId=null.
+   * payload: "$playlistId" for the first page;
+   *          "$playlistId\n$snapshotId\n$nextUrl" for subsequent pages.
+   * Legacy payload (no snapshotId): "$playlistId\n$nextUrl" — parsed with snapshotId=null.
    */
-  data class SyncPlaylistData(val userId: UserId, val playlistId: String, val nextUrl: String? = null, val snapshotId: String? = null) : DomainOutboxEvent {
+  data class SyncPlaylistData(val playlistId: String, val nextUrl: String? = null, val snapshotId: String? = null) : DomainOutboxEvent {
     override val key = KEY
-    override val deduplicationKey = "$KEY:${userId.value}:$playlistId:${snapshotId ?: ""}:${nextUrl ?: ""}"
+    override val deduplicationKey = "$KEY:$playlistId:${snapshotId ?: ""}:${nextUrl ?: ""}"
     override val partition = DomainOutboxPartition.ToSpotifyPlaylist
     override val serializePayload = when {
-      nextUrl == null -> "${userId.value}:$playlistId"
-      snapshotId != null -> "${userId.value}:$playlistId\n$snapshotId\n$nextUrl"
-      else -> "${userId.value}:$playlistId\n$nextUrl"
+      nextUrl == null -> playlistId
+      snapshotId != null -> "$playlistId\n$snapshotId\n$nextUrl"
+      else -> "$playlistId\n$nextUrl"
     }
 
     companion object {
       const val KEY = "SyncPlaylistData"
       fun fromPayload(payload: String): SyncPlaylistData {
-        val colonIndex = payload.indexOf(':')
-        require(colonIndex > 0 && colonIndex < payload.length - 1) { "Invalid SyncPlaylistData payload: $payload" }
-        val userId = UserId(payload.substring(0, colonIndex))
-        val rest = payload.substring(colonIndex + 1)
-        val firstNewline = rest.indexOf('\n')
-        return if (firstNewline < 0) {
-          SyncPlaylistData(userId, rest)
+        val firstNewline = payload.indexOf('\n')
+        if (firstNewline < 0) {
+          return SyncPlaylistData(playlistId = payload.substringAfter(':'))
+        }
+        val playlistId = payload.substring(0, firstNewline).substringAfter(':')
+        val afterFirst = payload.substring(firstNewline + 1)
+        val secondNewline = afterFirst.indexOf('\n')
+        return if (secondNewline < 0) {
+          // Legacy format: no snapshotId
+          SyncPlaylistData(playlistId, afterFirst)
         } else {
-          val playlistId = rest.substring(0, firstNewline)
-          val afterFirst = rest.substring(firstNewline + 1)
-          val secondNewline = afterFirst.indexOf('\n')
-          if (secondNewline < 0) {
-            // Legacy format: no snapshotId
-            SyncPlaylistData(userId, playlistId, afterFirst)
-          } else {
-            // New format: snapshotId\nnextUrl
-            val snapshotId = afterFirst.substring(0, secondNewline).takeIf { it.isNotEmpty() }
-            val nextUrl = afterFirst.substring(secondNewline + 1)
-            SyncPlaylistData(userId, playlistId, nextUrl, snapshotId)
-          }
+          // New format: snapshotId\nnextUrl
+          val snapshotId = afterFirst.substring(0, secondNewline).takeIf { it.isNotEmpty() }
+          val nextUrl = afterFirst.substring(secondNewline + 1)
+          SyncPlaylistData(playlistId, nextUrl, snapshotId)
         }
       }
     }
   }
 
-  data class RebuildPlaybackData(val userId: UserId) : DomainOutboxEvent {
+  data class RebuildPlaybackData(val placeholder: String = "") : DomainOutboxEvent {
     override val key = KEY
-    override val deduplicationKey = "$KEY:${userId.value}"
+    override val deduplicationKey = KEY
     override val partition = DomainOutboxPartition.Domain
-    override val serializePayload = userId.value
+    override val serializePayload = ""
 
     companion object {
       const val KEY = "RebuildPlaybackData"
     }
   }
 
-  data class AppendPlaybackData(val userId: UserId) : DomainOutboxEvent {
+  data class AppendPlaybackData(val placeholder: String = "") : DomainOutboxEvent {
     override val key = KEY
-    override val deduplicationKey = "$KEY:${userId.value}"
+    override val deduplicationKey = KEY
     override val partition = DomainOutboxPartition.Domain
-    override val serializePayload = userId.value
+    override val serializePayload = ""
 
     companion object {
       const val KEY = "AppendPlaybackData"
@@ -119,25 +113,18 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
   /**
    * Syncs genres and images for a single artist from the Spotify API and updates app_artist.
    * Deduplication is by artistId only (artist data is shared across users).
-   * payload = "$artistId:${userId.value}"
+   * payload = artistId
    */
-  data class SyncArtistDetails(val artistId: String, val userId: UserId) : DomainOutboxEvent {
+  data class SyncArtistDetails(val artistId: String) : DomainOutboxEvent {
     override val key = KEY
     override val deduplicationKey = "$KEY:$artistId"
     override val partition = DomainOutboxPartition.ToSpotifyCatalog
-    override val serializePayload = "$artistId:${userId.value}"
+    override val serializePayload = artistId
 
     companion object {
       const val KEY = "SyncArtistDetails"
       const val LEGACY_KEY = "EnrichArtistDetails"
-      fun fromPayload(payload: String): SyncArtistDetails {
-        val colonIndex = payload.indexOf(':')
-        require(colonIndex > 0 && colonIndex < payload.length - 1) { "Invalid SyncArtistDetails payload: $payload" }
-        return SyncArtistDetails(
-          artistId = payload.substring(0, colonIndex),
-          userId = UserId(payload.substring(colonIndex + 1)),
-        )
-      }
+      fun fromPayload(payload: String): SyncArtistDetails = SyncArtistDetails(artistId = payload.substringBefore(':'))
     }
   }
 
@@ -164,33 +151,28 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
    * SyncAlbumDetails for any albums not yet in the catalog.
    * Each page is fetched in a separate outbox task to avoid rate limit bursts.
    * Deduplication is by artistId and nextUrl so that each page can be queued independently.
-   * payload: "$artistId:${userId.value}" for the first page;
-   *          "$artistId:${userId.value}\n$nextUrl" for subsequent pages.
+   * payload: "$artistId" for the first page;
+   *          "$artistId\n$nextUrl" for subsequent pages.
    */
-  data class SyncArtistAlbums(val artistId: String, val userId: UserId, val nextUrl: String? = null) : DomainOutboxEvent {
+  data class SyncArtistAlbums(val artistId: String, val nextUrl: String? = null) : DomainOutboxEvent {
     override val key = KEY
     override val deduplicationKey = "$KEY:$artistId:${nextUrl ?: ""}"
     override val partition = DomainOutboxPartition.ToSpotifyCatalog
     override val serializePayload = when {
-      nextUrl == null -> "$artistId:${userId.value}"
-      else -> "$artistId:${userId.value}\n$nextUrl"
+      nextUrl == null -> artistId
+      else -> "$artistId\n$nextUrl"
     }
 
     companion object {
       const val KEY = "SyncArtistAlbums"
       fun fromPayload(payload: String): SyncArtistAlbums {
-        val colonIndex = payload.indexOf(':')
-        require(colonIndex > 0 && colonIndex < payload.length - 1) { "Invalid SyncArtistAlbums payload: $payload" }
-        val artistId = payload.substring(0, colonIndex)
-        val rest = payload.substring(colonIndex + 1)
-        val newlineIndex = rest.indexOf('\n')
+        val newlineIndex = payload.indexOf('\n')
         return if (newlineIndex < 0) {
-          SyncArtistAlbums(artistId = artistId, userId = UserId(rest))
+          SyncArtistAlbums(artistId = payload.substringBefore(':'))
         } else {
           SyncArtistAlbums(
-            artistId = artistId,
-            userId = UserId(rest.substring(0, newlineIndex)),
-            nextUrl = rest.substring(newlineIndex + 1),
+            artistId = payload.substring(0, newlineIndex).substringBefore(':'),
+            nextUrl = payload.substring(newlineIndex + 1),
           )
         }
       }
@@ -214,34 +196,30 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
   }
 
   /**
-   * Runs all playlist checks for a given user's playlist.
-   * payload = "${userId.value}:$playlistId"
+   * Runs all playlist checks for the user's playlist.
+   * payload = playlistId
    */
-  data class RunPlaylistChecks(val userId: UserId, val playlistId: String) : DomainOutboxEvent {
+  data class RunPlaylistChecks(val playlistId: String) : DomainOutboxEvent {
     override val key = KEY
-    override val deduplicationKey = "$KEY:${userId.value}:$playlistId"
+    override val deduplicationKey = "$KEY:$playlistId"
     override val partition = DomainOutboxPartition.Domain
-    override val serializePayload = "${userId.value}:$playlistId"
+    override val serializePayload = playlistId
 
     companion object {
       const val KEY = "RunPlaylistChecks"
-      fun fromPayload(payload: String): RunPlaylistChecks {
-        val colonIndex = payload.indexOf(':')
-        require(colonIndex > 0 && colonIndex < payload.length - 1) { "Invalid RunPlaylistChecks payload: $payload" }
-        return RunPlaylistChecks(UserId(payload.substring(0, colonIndex)), payload.substring(colonIndex + 1))
-      }
+      fun fromPayload(payload: String): RunPlaylistChecks = RunPlaylistChecks(payload.substringAfter(':'))
     }
   }
 
   /**
-   * Triggers aggregation of playback data for a specific period and user.
-   * payload = "${userId.value}:${type.name}:${periodStart}"
+   * Triggers aggregation of playback data for a specific period.
+   * payload = "${type.name}:${periodStart}"
    */
-  data class AggregatePlaybackData(val userId: UserId, val type: AggregationPeriodType, val periodStart: LocalDate) : DomainOutboxEvent {
+  data class AggregatePlaybackData(val type: AggregationPeriodType, val periodStart: LocalDate) : DomainOutboxEvent {
     override val key = KEY
-    override val deduplicationKey = "$KEY:${userId.value}:${type.name}:$periodStart"
+    override val deduplicationKey = "$KEY:${type.name}:$periodStart"
     override val partition = DomainOutboxPartition.Domain
-    override val serializePayload = "${userId.value}:${type.name}:$periodStart"
+    override val serializePayload = "${type.name}:$periodStart"
 
     companion object {
       const val KEY = "AggregatePlaybackData"
@@ -249,12 +227,18 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
         val firstColon = payload.indexOf(':')
         require(firstColon > 0) { "Invalid AggregatePlaybackData payload: $payload" }
         val secondColon = payload.indexOf(':', firstColon + 1)
-        require(secondColon > firstColon) { "Invalid AggregatePlaybackData payload: $payload" }
-        return AggregatePlaybackData(
-          userId = UserId(payload.substring(0, firstColon)),
-          type = AggregationPeriodType.valueOf(payload.substring(firstColon + 1, secondColon)),
-          periodStart = LocalDate.parse(payload.substring(secondColon + 1)),
-        )
+        return if (secondColon < 0) {
+          AggregatePlaybackData(
+            type = AggregationPeriodType.valueOf(payload.substring(0, firstColon)),
+            periodStart = LocalDate.parse(payload.substring(firstColon + 1)),
+          )
+        } else {
+          // Legacy format: "${userId}:${type}:${periodStart}"
+          AggregatePlaybackData(
+            type = AggregationPeriodType.valueOf(payload.substring(firstColon + 1, secondColon)),
+            periodStart = LocalDate.parse(payload.substring(secondColon + 1)),
+          )
+        }
       }
     }
   }
@@ -277,12 +261,12 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
 
     @Suppress("CyclomaticComplexMethod")
     fun fromKey(key: String, payload: String): DomainOutboxEvent = when (key) {
-      FetchPlaybackData.KEY -> FetchPlaybackData(UserId(payload))
+      FetchPlaybackData.KEY -> FetchPlaybackData()
       UpdateUserProfile.KEY -> UpdateUserProfile()
-      SyncPlaylistInfo.KEY -> SyncPlaylistInfo(UserId(payload))
+      SyncPlaylistInfo.KEY -> SyncPlaylistInfo()
       SyncPlaylistData.KEY -> SyncPlaylistData.fromPayload(payload)
-      RebuildPlaybackData.KEY -> RebuildPlaybackData(UserId(payload))
-      AppendPlaybackData.KEY -> AppendPlaybackData(UserId(payload))
+      RebuildPlaybackData.KEY -> RebuildPlaybackData()
+      AppendPlaybackData.KEY -> AppendPlaybackData()
       SyncArtistDetails.KEY, SyncArtistDetails.LEGACY_KEY -> SyncArtistDetails.fromPayload(payload)
       SyncArtistAlbums.KEY -> SyncArtistAlbums.fromPayload(payload)
       SyncAlbumDetails.KEY -> SyncAlbumDetails.fromPayload(payload)

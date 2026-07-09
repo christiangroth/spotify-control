@@ -75,15 +75,16 @@ class PlaybackEnrichmentServiceTests {
       lastSync = kotlin.time.Instant.fromEpochSeconds(1),
     )
     every { appArtistRepository.findByArtistIds(setOf(ArtistId(artistId))) } returns emptyList()
+    every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
-    every { spotifyCatalog.getArtist(userId, accessToken, artistId) } returns spotifyArtist.right()
+    every { spotifyCatalog.getArtist(accessToken, artistId) } returns spotifyArtist.right()
     every { appArtistRepository.upsertAll(listOf(spotifyArtist)) } just runs
     every { outboxPort.enqueue(any()) } just runs
 
-    adapter.syncArtistDetails(artistId, userId)
+    adapter.syncArtistDetails(artistId)
 
     verify { appArtistRepository.upsertAll(listOf(spotifyArtist)) }
-    verify { outboxPort.enqueue(de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent.SyncArtistAlbums(artistId, userId)) }
+    verify { outboxPort.enqueue(de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent.SyncArtistAlbums(artistId)) }
   }
 
   @Test
@@ -96,9 +97,9 @@ class PlaybackEnrichmentServiceTests {
     )
     every { appArtistRepository.findByArtistIds(setOf(ArtistId(artistId))) } returns listOf(syncedArtist)
 
-    adapter.syncArtistDetails(artistId, userId)
+    adapter.syncArtistDetails(artistId)
 
-    verify(exactly = 0) { spotifyCatalog.getArtist(any(), any(), any()) }
+    verify(exactly = 0) { spotifyCatalog.getArtist(any(), any()) }
     verify(exactly = 0) { appArtistRepository.upsertAll(any()) }
   }
 }

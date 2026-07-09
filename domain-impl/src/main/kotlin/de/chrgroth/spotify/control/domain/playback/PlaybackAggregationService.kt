@@ -52,28 +52,28 @@ class PlaybackAggregationService(
   // --- Enqueue helpers ---
 
   override fun enqueueAggregateDay(date: LocalDate) {
-    val userId = currentUserResolver.userId() ?: return
-    outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(userId, AggregationPeriodType.DAY, date))
+    currentUserResolver.userId() ?: return
+    outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.DAY, date))
   }
 
   override fun enqueueAggregateWeek(weekStart: LocalDate) {
-    val userId = currentUserResolver.userId() ?: return
-    outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(userId, AggregationPeriodType.WEEK, weekStart))
+    currentUserResolver.userId() ?: return
+    outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.WEEK, weekStart))
   }
 
   override fun enqueueAggregateMonth(monthStart: LocalDate) {
-    val userId = currentUserResolver.userId() ?: return
-    outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(userId, AggregationPeriodType.MONTH, monthStart))
+    currentUserResolver.userId() ?: return
+    outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.MONTH, monthStart))
   }
 
   override fun enqueueAggregateQuarter(quarterStart: LocalDate) {
-    val userId = currentUserResolver.userId() ?: return
-    outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(userId, AggregationPeriodType.QUARTER, quarterStart))
+    currentUserResolver.userId() ?: return
+    outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.QUARTER, quarterStart))
   }
 
   override fun enqueueAggregateYear(yearStart: LocalDate) {
-    val userId = currentUserResolver.userId() ?: return
-    outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(userId, AggregationPeriodType.YEAR, yearStart))
+    currentUserResolver.userId() ?: return
+    outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.YEAR, yearStart))
   }
 
   // --- Rebuild ---
@@ -167,19 +167,20 @@ class PlaybackAggregationService(
   // --- Outbox handler ---
 
   override fun handle(event: DomainOutboxEvent.AggregatePlaybackData): Either<DomainError, Unit> {
+    val userId = currentUserResolver.userId() ?: return Unit.right()
     when (event.type) {
-      AggregationPeriodType.DAY -> aggregateDay(event.userId, event.periodStart)
+      AggregationPeriodType.DAY -> aggregateDay(userId, event.periodStart)
       AggregationPeriodType.WEEK -> aggregateFromDailyAggregations(
-        event.userId, AggregationPeriodType.WEEK, event.periodStart, event.periodStart.plusKDays(DAYS_IN_WEEK),
+        userId, AggregationPeriodType.WEEK, event.periodStart, event.periodStart.plusKDays(DAYS_IN_WEEK),
       )
       AggregationPeriodType.MONTH -> aggregateFromDailyAggregations(
-        event.userId, AggregationPeriodType.MONTH, event.periodStart, event.periodStart.endOfMonth(),
+        userId, AggregationPeriodType.MONTH, event.periodStart, event.periodStart.endOfMonth(),
       )
       AggregationPeriodType.QUARTER -> aggregateFromDailyAggregations(
-        event.userId, AggregationPeriodType.QUARTER, event.periodStart, event.periodStart.plusKMonths(MONTHS_PER_QUARTER).minusKDays(1),
+        userId, AggregationPeriodType.QUARTER, event.periodStart, event.periodStart.plusKMonths(MONTHS_PER_QUARTER).minusKDays(1),
       )
       AggregationPeriodType.YEAR -> aggregateFromDailyAggregations(
-        event.userId, AggregationPeriodType.YEAR, event.periodStart, event.periodStart.plusKMonths(MONTHS_PER_YEAR).minusKDays(1),
+        userId, AggregationPeriodType.YEAR, event.periodStart, event.periodStart.plusKMonths(MONTHS_PER_YEAR).minusKDays(1),
       )
     }
     recordAggregationSuccess(event.type)

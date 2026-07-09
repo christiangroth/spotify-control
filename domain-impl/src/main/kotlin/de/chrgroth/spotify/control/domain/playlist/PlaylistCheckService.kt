@@ -8,7 +8,6 @@ import de.chrgroth.spotify.control.domain.error.PlaylistFixError
 import de.chrgroth.spotify.control.domain.playlist.check.PlaylistCheckRunner
 import de.chrgroth.spotify.control.domain.model.playlist.AppPlaylistCheck
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistCheckDashboard
-import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistCheckPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.AppPlaylistCheckRepositoryPort
@@ -18,6 +17,7 @@ import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistCheckNotific
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
+import de.chrgroth.spotify.control.domain.user.CurrentUserResolver
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Timer
 import jakarta.enterprise.context.ApplicationScoped
@@ -33,6 +33,7 @@ class PlaylistCheckService(
   private val playlistRepository: PlaylistRepositoryPort,
   private val playlistCheckRepository: AppPlaylistCheckRepositoryPort,
   private val userRepository: UserRepositoryPort,
+  private val currentUserResolver: CurrentUserResolver,
   private val dashboardRefresh: DashboardRefreshPort,
   private val notification: PlaylistCheckNotificationPort,
   private val spotifyAccessToken: SpotifyAccessTokenPort,
@@ -42,13 +43,14 @@ class PlaylistCheckService(
 ) : PlaylistCheckPort {
 
   override fun handle(event: DomainOutboxEvent.RunPlaylistChecks): Either<DomainError, Unit> {
-    val playlist = playlistRepository.findByUserIdAndPlaylistId(event.userId, event.playlistId)
+    val userId = currentUserResolver.userId() ?: return Unit.right()
+    val playlist = playlistRepository.findByUserIdAndPlaylistId(userId, event.playlistId)
     if (playlist == null) {
-      logger.warn { "Playlist ${event.playlistId} not found for user ${event.userId.value}, skipping checks" }
+      logger.warn { "Playlist ${event.playlistId} not found for user ${userId.value}, skipping checks" }
       return Unit.right()
     }
 
-    val allPlaylistInfos = playlistRepository.findByUserId(event.userId)
+    val allPlaylistInfos = playlistRepository.findByUserId(userId)
     val currentPlaylistInfo = allPlaylistInfos.find { it.spotifyPlaylistId == event.playlistId }
 
     val applicableRunners = checkRunners.filter { it.isApplicable(currentPlaylistInfo) }
@@ -56,7 +58,7 @@ class PlaylistCheckService(
       .map { runner ->
         managedExecutor.supplyAsync {
           timedCheck(runner.checkId, event.playlistId) {
-            runner.run(event.userId, event.playlistId, playlist, currentPlaylistInfo, allPlaylistInfos)
+            runner.run(userId, event.playlistId, playlist, currentPlaylistInfo, allPlaylistInfos)
           }
         }
       }
@@ -70,12 +72,19 @@ class PlaylistCheckService(
 
     val totalViolations = results.sumOf { it.violations.size }
     val status = if (totalViolations == 0) "all passed" else "$totalViolations violation(s)"
-    logger.info { "Ran playlist checks for playlist ${event.playlistId} (user ${event.userId.value}): $status" }
+    logger.info { "Ran playlist checks for playlist ${event.playlistId} (user ${userId.value}): $status" }
     dashboardRefresh.notifyUserPlaylistChecks()
     return Unit.right()
   }
 
-  override fun getCheckDashboard(userId: UserId): PlaylistCheckDashboard {
+  override fun getCheckDashboard(): PlaylistCheckDashboard {
+    val userId = currentUserResolver.userId() ?: return PlaylistCheckDashboard(
+      displayName = "",
+      checks = emptyList(),
+      playlistNameById = emptyMap(),
+      displayNames = getDisplayNames(),
+      fixableCheckIds = getFixableCheckIds(),
+    )
     val displayNameFuture = managedExecutor.supplyAsync { userRepository.findById(userId)?.displayName ?: userId.value }
     val playlistNamesFuture = managedExecutor.supplyAsync {
       playlistRepository.findByUserId(userId).associateBy({ it.spotifyPlaylistId }, { it.name })
@@ -99,7 +108,8 @@ class PlaylistCheckService(
   override fun getFixableCheckIds(): Set<String> =
     checkRunners.filter { it.canFix() }.map { it.checkId }.toSet()
 
-  override fun runFix(userId: UserId, playlistId: String, checkType: String): Either<DomainError, Unit> {
+  override fun runFix(playlistId: String, checkType: String): Either<DomainError, Unit> {
+    val userId = currentUserResolver.userId() ?: return PlaylistFixError.PLAYLIST_NOT_FOUND.left()
     val runner = checkRunners.find { it.checkId == checkType && it.canFix() } ?: run {
       logger.warn { "No fix runner found for checkType $checkType" }
       return PlaylistFixError.FIX_NOT_FOUND.left()
@@ -115,7 +125,7 @@ class PlaylistCheckService(
     return runner.fix(userId, accessToken, playlistId, playlist, currentPlaylistInfo, allPlaylistInfos).also { result ->
       if (result.isRight()) {
         logger.info { "Fix '$checkType' for playlist $playlistId completed, enqueueing re-check" }
-        outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, playlistId))
+        outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(playlistId))
       }
     }
   }

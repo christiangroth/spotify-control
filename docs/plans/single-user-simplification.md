@@ -64,7 +64,7 @@ afterward, since it becomes structurally impossible.
 
 ---
 
-## Phase 3: Thread removal of `UserId` through ports and services — in progress
+## Phase 3: Thread removal of `UserId` through ports and services — done
 
 **Goal:** Drop `UserId` parameters from ports, services, and outbox events where they only ever
 existed to distinguish between users, once Phase 2 has established that there is exactly one user.
@@ -91,36 +91,33 @@ a `UserId`; `DashboardService` resolves the one stored user internally via `Curr
 there is only ever one possible subscriber. `DashboardResource`, `PlaybackResource`, and
 `DashboardSseResource` updated their call sites accordingly.
 
-Remaining slices (playback, playlist, catalog) are still open. These are substantially larger:
-unlike the slices above, the `UserId` in `PlaybackPort`, `PlaylistPort`, `PlaylistCheckPort`,
-`PlaybackEventViewerPort`, `CatalogPort`, `SpotifyPlaybackPort`, `SpotifyCatalogPort`, and
-`SpotifyPlaylistPort` also flows into repository out-ports (`AppPlaybackRepositoryPort`,
-`PlaylistRepositoryPort`, `CurrentlyPlayingRepositoryPort`, etc.) that still key their MongoDB
-queries by `spotifyUserId` until Phase 4 migrates the schema, and into every `adapter-in-web`
-resource. Per the risk note below, do these as separate, bounded-context PRs rather than one large
-change.
+**Playback, playlist, and catalog slices — done:** `PlaybackPort` (`fetchPlaybackData`,
+`enqueueRebuildPlaybackData`, `rebuildPlaybackData`, `appendPlaybackData`), `PlaybackEventViewerPort
+.getEvents()`, `PlaylistPort` (`getPlaylists`, `getTrackCounts`, `syncPlaylists`,
+`syncPlaylistData`, `updateSyncStatus`, `updatePlaylistType`, `enqueueSyncPlaylistData`),
+`PlaylistCheckPort` (`getCheckDashboard`, `runFix`), and `CatalogPort.syncArtistDetails` no longer
+take a `UserId`; each service resolves the one stored user internally via `CurrentUserResolver`
+(with the pre-existing guard-clause pattern for the "no user yet" case). `SpotifyPlaybackPort`,
+`SpotifyPlaylistPort`, and `SpotifyCatalogPort` also dropped `UserId` — `SpotifyPlaylistPort` and
+`SpotifyCatalogPort` only ever used it for log messages, but `SpotifyPlaybackPort` actually stamped
+it into the returned `CurrentlyPlayingItem`/`RecentlyPlayedItem` domain objects, so `PlaybackService`
+now stamps the real user onto those items itself right after the adapter call, since the adapter no
+longer has a `UserId` to use.
 
-* `domain-api/.../port/out/*` – ports whose only use of `UserId` is to select "which user" (not
-  domain data itself) can drop the parameter: `PlaybackPort`, `PlaybackAggregationPort`,
-  `PlaylistPort`, `SpotifyPlaybackPort`, `SpotifyCatalogPort`, `SpotifyPlaylistPort`.
-  Note that `CatalogPort` needs care — some of the `UserId` usages there are about *which token to
-  use for a Spotify call*, which still needs to resolve to "the one user," not "no user."
-* `domain-api/.../domain/outbox/DomainOutboxEvent.kt` – outbox event payloads that carry `userId`
-  purely to route to "the current user" (`FetchPlaybackData`, `RebuildPlaybackData`,
-  `AppendPlaybackData`, `SyncArtistAlbums`, etc.) can drop the field. Existing in-flight outbox
-  tasks in MongoDB will already contain the old payload shape — deserialization must tolerate
-  (ignore) a stray `userId` field during the transition, or old tasks must be drained before
-  deploying this phase.
-* `adapter-in-web/.../*Resource.kt` – all resources currently resolve "current user" via
-  `UserId(securityIdentity.principal.name)` (`PlaybackResource`, `StatsResource`,
-  `PlaylistsResource`, `PlaylistSettingsResource`, `PlaybackSettingsResource`,
-  `PlaylistChecksResource`, `PlaybackEventViewerResource`, `HealthSseResource`). This resolution
-  can stay as-is (it still identifies the logged-in session), but downstream calls no longer need
-  to pass it further than the point where a Spotify token must be selected.
+The outbox events that only carried `userId` to route to "the current user"
+(`FetchPlaybackData`, `RebuildPlaybackData`, `AppendPlaybackData`, `SyncPlaylistInfo`,
+`SyncPlaylistData`, `SyncArtistDetails`, `SyncArtistAlbums`, `RunPlaylistChecks`,
+`AggregatePlaybackData`) dropped the field, following the same placeholder-payload pattern already
+established by `UpdateUserProfile`/`ResyncCatalog`. Backward compatibility with in-flight outbox
+tasks queued under the old payload format is handled directly in `fromKey`/`fromPayload`: no-arg
+events ignore their payload entirely, and events with real remaining fields (e.g.
+`SyncArtistDetails.artistId`) parse them with `substringBefore/-After(':')`, which transparently
+strips a leading `userId:` prefix if present without needing a separate legacy code path.
 
-**Risk:** High — this phase touches the largest surface area (most of `domain-api` and
-`domain-impl`, and all of `adapter-in-web`). Recommend splitting further into one PR per bounded
-context (playback, playlist, catalog, user profile) rather than one large PR.
+Repository out-ports (`AppPlaybackRepositoryPort`, `PlaylistRepositoryPort`,
+`CurrentlyPlayingRepositoryPort`, etc.) were intentionally left untouched — they still key their
+MongoDB queries by `spotifyUserId` until Phase 4 migrates the schema, and internal service code
+still resolves and threads `UserId` down to those calls, just no longer as a public port parameter.
 
 ---
 
@@ -176,7 +173,7 @@ downtime, and must run after Phase 3 so no code still reads/writes the dropped f
 |---|---|---|
 | 1 – Login/allow-list removal | Low | Permissive change; single real operator already unaffected. |
 | 2 – Scheduler fan-out & catalog-sync shortcut | Medium | Done — "zero users" and "one user" cases covered by tests. |
-| 3 – `UserId` threading removal | High | Split per bounded context; handle in-flight outbox payloads carrying stale `userId` fields during rollout. User-profile, `SpotifyAccessTokenPort`, and SSE/dashboard slices done. |
+| 3 – `UserId` threading removal | High | Done — split per bounded context (user-profile, `SpotifyAccessTokenPort`, SSE/dashboard, then playback/playlist/catalog); in-flight outbox payloads with stale `userId` fields are tolerated by `fromKey`/`fromPayload`. |
 | 4 – MongoDB schema/index cleanup | Medium | Use a one-time `Starter`; sequence after Phase 3; rebuild indexes without downtime. |
 | 5 – Config/tests/deploy cleanup | Low | Cleanup only. |
 

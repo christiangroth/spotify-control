@@ -69,7 +69,7 @@ class TrackFromLatestReleaseCheckRunner(
     // Process in reverse position order so earlier positions are unaffected by later replacements
     violations.sortedByDescending { it.position }.forEach { violation ->
       val result = spotifyPlaylist.replacePlaylistTrack(
-        userId, accessToken, playlistId,
+        accessToken, playlistId,
         violation.oldTrackId, violation.newTrackId, violation.position,
       )
       result.onLeft { error ->

@@ -223,7 +223,7 @@ class TrackFromLatestReleaseCheckRunnerTests {
     val result = runner.fix(userId, accessToken, playlistId, buildPlaylist(track), null, emptyList())
 
     assertThat(result.isRight()).isTrue()
-    verify(exactly = 0) { spotifyPlaylist.replacePlaylistTrack(any(), any(), any(), any(), any(), any()) }
+    verify(exactly = 0) { spotifyPlaylist.replacePlaylistTrack(any(), any(), any(), any(), any()) }
   }
 
   @Test
@@ -238,12 +238,12 @@ class TrackFromLatestReleaseCheckRunnerTests {
     every { appAlbumRepository.findByArtistId(artistId) } returns listOf(albumOld, albumNew)
     every { appTrackRepository.findByAlbumId(AlbumId("album-old")) } returns listOf(appTrackOld)
     every { appTrackRepository.findByAlbumId(AlbumId("album-new")) } returns listOf(appTrackNew)
-    every { spotifyPlaylist.replacePlaylistTrack(userId, accessToken, playlistId, "t1", "t2", 0) } returns Unit.right()
+    every { spotifyPlaylist.replacePlaylistTrack(accessToken, playlistId, "t1", "t2", 0) } returns Unit.right()
 
     val result = runner.fix(userId, accessToken, playlistId, buildPlaylist(track), null, emptyList())
 
     assertThat(result.isRight()).isTrue()
-    verify(exactly = 1) { spotifyPlaylist.replacePlaylistTrack(userId, accessToken, playlistId, "t1", "t2", 0) }
+    verify(exactly = 1) { spotifyPlaylist.replacePlaylistTrack(accessToken, playlistId, "t1", "t2", 0) }
   }
 
   @Test
@@ -266,15 +266,15 @@ class TrackFromLatestReleaseCheckRunnerTests {
     every { appTrackRepository.findByAlbumId(AlbumId("album-old")) } returns listOf(appTrackOld1, appTrackOld2)
     every { appTrackRepository.findByAlbumId(AlbumId("album-new")) } returns listOf(appTrackNew1, appTrackNew2)
     every { appTrackRepository.findByAlbumId(AlbumId("album-current")) } returns listOf(appTrackCurrent)
-    every { spotifyPlaylist.replacePlaylistTrack(userId, accessToken, playlistId, "t5", "t6", 2) } returns Unit.right()
-    every { spotifyPlaylist.replacePlaylistTrack(userId, accessToken, playlistId, "t1", "t2", 0) } returns Unit.right()
+    every { spotifyPlaylist.replacePlaylistTrack(accessToken, playlistId, "t5", "t6", 2) } returns Unit.right()
+    every { spotifyPlaylist.replacePlaylistTrack(accessToken, playlistId, "t1", "t2", 0) } returns Unit.right()
 
     val result = runner.fix(userId, accessToken, playlistId, buildPlaylist(track0, track1, track2), null, emptyList())
 
     assertThat(result.isRight()).isTrue()
     verifyOrder {
-      spotifyPlaylist.replacePlaylistTrack(userId, accessToken, playlistId, "t5", "t6", 2)
-      spotifyPlaylist.replacePlaylistTrack(userId, accessToken, playlistId, "t1", "t2", 0)
+      spotifyPlaylist.replacePlaylistTrack(accessToken, playlistId, "t5", "t6", 2)
+      spotifyPlaylist.replacePlaylistTrack(accessToken, playlistId, "t1", "t2", 0)
     }
   }
 
@@ -293,12 +293,12 @@ class TrackFromLatestReleaseCheckRunnerTests {
     every { appAlbumRepository.findByArtistId(artistId) } returns listOf(albumOld, albumNew)
     every { appTrackRepository.findByAlbumId(AlbumId("album-old")) } returns listOf(appTrackOld1, appTrackOld2)
     every { appTrackRepository.findByAlbumId(AlbumId("album-new")) } returns listOf(appTrackNew1, appTrackNew2)
-    every { spotifyPlaylist.replacePlaylistTrack(userId, accessToken, playlistId, "t3", "t4", 1) } returns PlaylistFixError.FIX_FAILED.left()
+    every { spotifyPlaylist.replacePlaylistTrack(accessToken, playlistId, "t3", "t4", 1) } returns PlaylistFixError.FIX_FAILED.left()
 
     val result = runner.fix(userId, accessToken, playlistId, buildPlaylist(track0, track1), null, emptyList())
 
     assertThat(result.isLeft()).isTrue()
     assertThat((result as Either.Left).value).isEqualTo(PlaylistFixError.FIX_FAILED)
-    verify(exactly = 0) { spotifyPlaylist.replacePlaylistTrack(userId, accessToken, playlistId, "t1", "t2", 0) }
+    verify(exactly = 0) { spotifyPlaylist.replacePlaylistTrack(accessToken, playlistId, "t1", "t2", 0) }
   }
 }

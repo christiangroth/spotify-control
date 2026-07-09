@@ -5,10 +5,10 @@ import de.chrgroth.spotify.control.domain.model.playback.PlaybackEventEntry
 import de.chrgroth.spotify.control.domain.model.playback.PlaybackEventType
 import de.chrgroth.spotify.control.domain.model.playback.PlaybackEventViewerResult
 import de.chrgroth.spotify.control.domain.model.playback.RawPlaybackEvent
-import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackEventViewerPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppAlbumRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playback.PlaybackEventViewerRepositoryPort
+import de.chrgroth.spotify.control.domain.user.CurrentUserResolver
 import jakarta.enterprise.context.ApplicationScoped
 import kotlin.time.Clock
 import kotlinx.datetime.DatePeriod
@@ -23,14 +23,15 @@ import kotlinx.datetime.toLocalDateTime
 class PlaybackEventViewerService(
   private val repository: PlaybackEventViewerRepositoryPort,
   private val appAlbumRepository: AppAlbumRepositoryPort,
+  private val currentUserResolver: CurrentUserResolver,
 ) : PlaybackEventViewerPort {
 
-  override fun getEvents(userId: UserId, date: LocalDate): PlaybackEventViewerResult {
+  override fun getEvents(date: LocalDate): PlaybackEventViewerResult {
     val tz = TimeZone.currentSystemDefault()
+    val isToday = date == Clock.System.now().toLocalDateTime(tz).date
+    val userId = currentUserResolver.userId() ?: return PlaybackEventViewerResult(date = date, isToday = isToday, events = emptyList())
     val from = date.atStartOfDayIn(tz)
     val to = date.plus(DatePeriod(days = 1)).atStartOfDayIn(tz)
-    val today = Clock.System.now().toLocalDateTime(tz).date
-    val isToday = date == today
 
     val rawCurrentlyPlaying = repository.findCurrentlyPlaying(userId, from, to)
     val latestCurrentlyPlayingTimestamp = if (isToday) rawCurrentlyPlaying.maxByOrNull { it.timestamp }?.timestamp else null
