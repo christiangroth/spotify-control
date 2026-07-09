@@ -4,12 +4,10 @@
 
 ## Requirements Overview
 
-spotify-control is a private Spotify playlist manager for a single user. It has always been
-operated by exactly one person; the previous allow-list design supported multiple users in
-theory but that was never actually used (see [ADR-0008](../adr/0008-single-user-architecture.md)).
-The application has been converted to a strict single-user architecture; see the
-[single-user simplification plan](../plans/single-user-simplification.md) for the completed
-migration.
+spotify-control is a private Spotify playlist manager built for exactly one user (see
+[ADR-0008](../adr/0008-single-user-architecture.md)). There is no registration, no allow-list, and
+no user-management UI — any Spotify account that completes the OAuth login flow becomes the
+application's user, and a different account cannot log in once one is registered.
 
 **Implemented features:**
 
@@ -72,7 +70,7 @@ spotify-control interacts with the following external systems:
 - **Hexagonal Architecture** – The application is structured using hexagonal (ports and adapters) architecture to cleanly separate domain logic from infrastructure concerns.
 - **Outbox Pattern** – All Spotify API operations are routed through a persistent outbox to ensure reliability and rate limit handling. No direct Spotify calls are made outside `adapter-out-spotify`.
 - **Server-Side Rendering** – The frontend uses Quarkus Qute templates with vanilla JS (fetch API) for dynamic interactions, eliminating the need for a separate frontend project or JavaScript framework.
-- **Single-User System** – The application is built for exactly one user, logging in via Spotify OAuth. No allow-list, no self-service registration, no user-management UI. See [ADR-0008](../adr/0008-single-user-architecture.md); the migration is tracked in the [single-user simplification plan](../plans/single-user-simplification.md).
+- **Single-User System** – The application is built for exactly one user, logging in via Spotify OAuth. No allow-list, no self-service registration, no user-management UI. See [ADR-0008](../adr/0008-single-user-architecture.md).
 
 # Building Block View
 
@@ -129,7 +127,7 @@ Implements all repository interfaces defined in `domain-api`. Manages the MongoD
 | `app_user`                        | Spotify user profile with encrypted access and refresh tokens.                                                                  |
 | `outbox`                          | Persistent outbox task queue (managed by `de.chrgroth.quarkus.outbox`).                                                        |
 | `outbox_archive`                  | Archived completed/failed outbox tasks (managed by `de.chrgroth.quarkus.outbox`).                                              |
-| `spotify_currently_playing`       | Currently playing track observations per user.                                                                                  |
+| `spotify_currently_playing`       | Currently playing track observations.                                                                                           |
 | `spotify_playlist`                | Full playlist data including all tracks.                                                                                        |
 | `spotify_playlist_metadata`       | Playlist metadata: name, snapshot ID, sync status.                                                                              |
 | `spotify_recently_partial_played` | Partial play events (plays that did not complete a full track).                                                                 |
@@ -199,11 +197,11 @@ Provided via [christiangroth/quarkus-one-time-starters](https://github.com/chris
 
 ```
 CurrentlyPlayingFetchJob (every 20s)
-    → enqueue FetchCurrentlyPlaying (to-spotify-playback partition, per user)
+    → enqueue FetchCurrentlyPlaying (to-spotify-playback partition)
     → Spotify GET /v1/me/player → stored in spotify_currently_playing
 
 RecentlyPlayedFetchJob (every 10min)
-    → enqueue FetchRecentlyPlayed (to-spotify-playback partition, per user)
+    → enqueue FetchRecentlyPlayed (to-spotify-playback partition)
     → Spotify GET /v1/me/player/recently-played → new items stored in spotify_recently_played
     → convert partial plays → new items stored in spotify_recently_partial_played
     → if any new data: enqueue AppendPlaybackData (domain partition)
@@ -226,7 +224,7 @@ Raw playback data from `spotify_recently_played` and `spotify_recently_partial_p
 **Append (triggered automatically):** After new raw data arrives, `AppendPlaybackData` is enqueued on the `domain` partition. The adapter first loads all artists with `INACTIVE` playback processing status, then filters raw playback items to skip tracks whose primary artist is inactive. For remaining items it fetches all source items newer than the most recent `app_playback` entry for the user, deduplicates against existing `app_playback` timestamps, then:
 1. Upserts artist metadata into `app_artist` (artistId, artistName) — enriched imageLink is preserved on re-encounter.
 2. Upserts track metadata into `app_track` (trackId, trackTitle, artistId, additionalArtistIds) — albumId is preserved if already enriched.
-3. Appends new entries to `app_playback` (userId, playedAt, trackId, secondsPlayed). The document `_id` is a composite of `${userId}:${playedAt.toEpochMilli()}` for natural deduplication.
+3. Appends new entries to `app_playback` (playedAt, trackId, secondsPlayed). The document `_id` is `playedAt.toEpochMilli()` for natural deduplication.
 4. Adds artist IDs to `app_sync_pool` and track IDs to `app_sync_pool` for later bulk sync.
 
 **Catalog Sync (bulk-scheduled, `to-spotify` partition):**
@@ -234,8 +232,8 @@ Raw playback data from `spotify_recently_played` and `spotify_recently_partial_p
 - `SyncMissingTracks`: bulk-syncs up to 50 pending track IDs from `app_sync_pool`. For tracks with a known `albumId`, fetches all tracks for that album via `GET /v1/albums/{id}` (all album tracks are stored, not only the requested subset). Tracks without a known `albumId` or not found in the album response fall back to `GET /v1/tracks?ids=`. After syncing, discovered album and track artist IDs are added to `app_sync_pool` for further sync. Runs every 10 minutes (at :05, :15, …).
 
 **Per-item sync (on-demand, `to-spotify` partition):**
-- `SyncArtistDetails(artistId, userId)`: skipped if already synced; otherwise calls `GET /v1/artists/{id}` and updates `app_artist` with imageLink.
-- `SyncTrackDetails(trackId, userId)`: skipped if already synced; otherwise calls `GET /v1/tracks/{id}`, updates `app_track` sync fields and album reference, upserts `app_album`, and enqueues `SyncArtistDetails` for all track artists.
+- `SyncArtistDetails(artistId)`: skipped if already synced; otherwise calls `GET /v1/artists/{id}` and updates `app_artist` with imageLink.
+- `SyncTrackDetails(trackId)`: skipped if already synced; otherwise calls `GET /v1/tracks/{id}`, updates `app_track` sync fields and album reference, upserts `app_album`, and enqueues `SyncArtistDetails` for all track artists.
 
 **Album sync (bulk-scheduled, `to-spotify` partition):**
 - `SyncMissingAlbums`: bulk-syncs up to 10 pending album IDs from `app_sync_pool` via `GET /v1/albums/{id}`. Upserts ALL returned tracks and album metadata. Track artist IDs are added to `app_sync_pool` for artist sync. Albums are added to the pool when discovered during direct track sync (`SyncMissingTracks`) or via `resyncCatalog`. Runs every 10 minutes (at :08, :18, …).
@@ -252,7 +250,7 @@ The Settings page allows users to control which artists are included in playback
 | `ACTIVE`    | Artist tracks are included in playback processing.                                                       |
 | `INACTIVE`  | Artist tracks are excluded. All existing `app_playback` entries for the artist's tracks are deleted on transition to this status. |
 
-When an artist is set from `INACTIVE` back to `ACTIVE` or `UNDECIDED`, a `RebuildPlaybackData` event is enqueued for all users so that previously excluded playback records are recreated.
+When an artist is set from `INACTIVE` back to `ACTIVE` or `UNDECIDED`, a `RebuildPlaybackData` event is enqueued so that previously excluded playback records are recreated.
 
 ## Playlist Sync Flow
 
@@ -260,7 +258,7 @@ When an artist is set from `INACTIVE` back to `ACTIVE` or `UNDECIDED`, a `Rebuil
 
 ```
 PlaylistSyncJob (hourly at :30)
-    → enqueue SyncPlaylistInfo (to-spotify partition, per user)
+    → enqueue SyncPlaylistInfo (to-spotify partition)
     → Spotify GET /v1/me/playlists → compare snapshot IDs
     → for each changed playlist: enqueue SyncPlaylistData
 
@@ -375,7 +373,8 @@ Layer 5 applies to adapter modules where the logic is pure (e.g. `adapter-in-sta
 
 - Spotify OAuth 2.0 Authorization Code Flow.
 - A `User` document is upserted in the `app_user` MongoDB collection on every successful login. Both access and refresh tokens are stored encrypted (AES-256-GCM) using `APP_TOKEN_ENCRYPTION_KEY`.
-- The application is built for a single user (see [ADR-0008](../adr/0008-single-user-architecture.md)); login no longer checks an allow-list — any Spotify account that completes the OAuth flow is upserted as the application's user. Phases 1–4 of the [migration plan](../plans/single-user-simplification.md) are complete: scheduled jobs, catalog sync, and every repository port act directly on the one stored user instead of fanning out over or filtering by a user list, and the MongoDB collections that used to carry a `spotifyUserId` field or key (`app_playback`, `app_playback_aggregation`, `spotify_currently_playing`, `spotify_recently_played`, `spotify_recently_partial_played`, `spotify_playlist`, `spotify_playlist_metadata`) no longer do. Only Phase 5 (config/tests/deploy cleanup) remains.
+- The application is built for a single user (see [ADR-0008](../adr/0008-single-user-architecture.md)); login does not check an allow-list — any Spotify account that completes the OAuth flow is upserted as the application's user. A different Spotify account cannot log in once one user is already registered.
+- Scheduled jobs, catalog sync, and every repository port act directly on the one stored user instead of fanning out over or filtering by a user list. MongoDB collections do not carry a `spotifyUserId` field or key, since only one user can ever exist.
 - Session-based authentication for all endpoints. The session stores only the Spotify user ID – never tokens.
 - `return_to` parameter stored in the session for redirect after login.
 - A CSRF `state` parameter is generated per authorization request and validated in the callback.
@@ -410,19 +409,19 @@ Successfully processed events are moved to `outbox_archive` (audit log). Interna
 
 ## Server-Sent Events (SSE) and Live Updates
 
-Backend services notify SSE streams via CDI events. The SSE endpoint delivers the initial state on connect, then pushes named update events to connected clients via a single shared reactive stream — there is only ever one possible subscriber, so `DashboardSseAdapter` collapsed its per-user emitter map to one emitter list as part of the single-user migration ([ADR-0008](../adr/0008-single-user-architecture.md)).
+Backend services notify SSE streams via CDI events. The SSE endpoint delivers the initial state on connect, then pushes named update events to connected clients via a single shared reactive stream — there is only ever one possible subscriber (see [ADR-0008](../adr/0008-single-user-architecture.md)), so `DashboardSseAdapter` holds one emitter list rather than a per-user map.
 
 ## Scheduler Jobs
 
 | Job                          | Interval                      | Outbox Event(s)                                                       |
 |------------------------------|-------------------------------|-----------------------------------------------------------------------|
-| `CurrentlyPlayingFetchJob`   | every 20 seconds              | `FetchCurrentlyPlaying` (per user)                                    |
-| `RecentlyPlayedFetchJob`     | every 10 minutes              | `FetchRecentlyPlayed` (per user) → auto-enqueues `AppendPlaybackData` |
-| `PlaylistSyncJob`            | hourly (at :30)               | `SyncPlaylistInfo` (per user)                                         |
+| `CurrentlyPlayingFetchJob`   | every 20 seconds              | `FetchCurrentlyPlaying`                                               |
+| `RecentlyPlayedFetchJob`     | every 10 minutes              | `FetchRecentlyPlayed` → auto-enqueues `AppendPlaybackData`            |
+| `PlaylistSyncJob`            | hourly (at :30)               | `SyncPlaylistInfo`                                                    |
 | `SyncMissingArtistsJob`      | every 10 minutes (at :00)     | `SyncMissingArtists`                                                  |
 | `SyncMissingTracksJob`       | every 10 minutes (at :05)     | `SyncMissingTracks`                                                   |
 | `SyncMissingAlbumsJob`       | every 10 minutes (at :08)     | `SyncMissingAlbums`                                                   |
-| `UserProfileUpdateJob`       | daily at 04:00                | `UpdateUserProfile` (per user)                                        |
+| `UserProfileUpdateJob`       | daily at 04:00                | `UpdateUserProfile`                                                   |
 
 All scheduler jobs skip execution via `skipExecutionIf = StarterSkipPredicate::class` until all starters have completed successfully.
 
@@ -514,7 +513,8 @@ SLACK_WEBHOOK_URL
 | Enrichment completeness | `app_artist`, `app_track`, and `app_album` entries that existed before enrichment was introduced may lack imageLink or albumTitle until re-enriched. |
 | Partial-play detection accuracy | Partial play detection relies on polling frequency; very short plays near the end of a track may be missed or misclassified. |
 | Test coverage for domain adapters | Domain adapter integration (e.g. `PlaybackDataAdapter`, `PlaylistSyncAdapter`) is not yet covered by `@QuarkusTest` boundary tests. |
-| `APP_ALLOWED_SPOTIFY_USER_IDS` in CI workflow | `.github/workflows/gradle.yml` still passes `APP_ALLOWED_SPOTIFY_USER_IDS` through as a deploy secret/env var, even though `deploy/docker-stack.yml` no longer reads it (removed in Phase 1 of the [single-user simplification plan](../plans/single-user-simplification.md)). The variable is unused; only a repo maintainer can remove it from the workflow file and the GitHub secret. |
+| `APP_ALLOWED_SPOTIFY_USER_IDS` in CI workflow | `.github/workflows/gradle.yml` still passes `APP_ALLOWED_SPOTIFY_USER_IDS` through as a deploy secret/env var, even though it is not read anywhere in the application (there is no allow-list, see [ADR-0008](../adr/0008-single-user-architecture.md)). The variable is unused; only a repo maintainer can remove it from the workflow file and the GitHub secret. |
+| Residual `UserId` ceremony | Several places still thread `UserId` through method signatures, rebuild it from the security identity, or use list-shaped repository lookups (`UserRepositoryPort.findAll()`/`findById()`) purely to fetch the one existing user. See the [further simplification opportunities](../plans/single-user-simplification.md) doc. |
 
 # Glossary
 

@@ -7,10 +7,10 @@ This review was requested in [issue #732](https://github.com/christiangroth/spot
 The review covers the MongoDB data model and indexes, the playback/catalog processing pipeline, dashboard aggregation, scheduler jobs, and general Kotlin/Quarkus patterns. Findings are based on reading the current source, not assumptions from the architecture docs alone.
 
 > **Update, 2026-07-09:** [ADR-0008](../adr/0008-single-user-architecture.md) converted the
-> application to a strict single-user architecture, completed via the
-> [single-user simplification plan](../plans/single-user-simplification.md). Findings 1 and 2
-> below, and the "what breaks first" multi-user scalability section, are resolved by eliminating
-> their precondition — there is no user count left to scale. See the inline notes on each.
+> application to a strict single-user architecture, implemented incrementally across several
+> follow-up PRs. Findings 1 and 2 below, and the "what breaks first" multi-user scalability
+> section, are resolved by eliminating their precondition — there is no user count left to scale.
+> See the inline notes on each.
 
 ## What is already done well
 
