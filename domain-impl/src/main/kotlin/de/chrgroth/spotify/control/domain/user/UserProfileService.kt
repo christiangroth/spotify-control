@@ -35,7 +35,7 @@ class UserProfileService(
       logger.warn { "User not found for profile update: ${userId.value}" }
       return Unit.right()
     }
-    val accessToken = spotifyAccessToken.getValidAccessToken(userId)
+    val accessToken = spotifyAccessToken.getValidAccessToken()
     return spotifyAuth.getUserProfile(accessToken).map { profile ->
       if (profile.displayName != user.displayName) {
         userRepository.upsert(user.copy(displayName = profile.displayName))

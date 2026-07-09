@@ -72,8 +72,24 @@ existed to distinguish between users, once Phase 2 has established that there is
 **User profile slice — done:** `UserProfilePort.getDisplayName()` and `update()` no longer take a
 `UserId`; both resolve the one stored user internally via `CurrentUserResolver`. The
 `UpdateUserProfile` outbox event dropped its `userId` field (same placeholder-payload pattern as
-`ResyncCatalog`). Remaining slices (playback, playlist, catalog, `SpotifyAccessTokenPort`, SSE) are
-still open.
+`ResyncCatalog`).
+
+**`SpotifyAccessTokenPort` slice — done:** `getValidAccessToken()` no longer takes a `UserId`;
+`SpotifyAccessTokenAdapter` resolves the one stored user directly via `UserRepositoryPort.findAll()`
+(it lives in `adapter-out-spotify`, which has no dependency on `domain-impl`'s `CurrentUserResolver`,
+so it repeats the same "single stored user" lookup instead). All call sites in `PlaybackService`,
+`CatalogService`, `PlaylistService`, `PlaylistCheckService`, `UserProfileService`, and
+`SpotifyDebugResource` already had `userId` in scope for other calls, so only the token-fetch
+argument was dropped.
+
+Remaining slices (playback, playlist, catalog, SSE) are still open. These are substantially larger:
+unlike the two slices above, the `UserId` in `PlaybackPort`, `PlaylistPort`, `PlaylistCheckPort`,
+`PlaybackEventViewerPort`, `DashboardPort`, `CatalogPort`, `SpotifyPlaybackPort`, `SpotifyCatalogPort`,
+`SpotifyPlaylistPort`, and `DashboardRefreshPort` also flows into repository out-ports
+(`AppPlaybackRepositoryPort`, `PlaylistRepositoryPort`, `CurrentlyPlayingRepositoryPort`, etc.) that
+still key their MongoDB queries by `spotifyUserId` until Phase 4 migrates the schema, and into every
+`adapter-in-web` resource. Per the risk note below, do these as separate, bounded-context PRs rather
+than one large change.
 
 * `domain-api/.../port/out/*` – ports whose only use of `UserId` is to select "which user" (not
   domain data itself) can drop the parameter: `PlaybackPort`, `PlaybackAggregationPort`,

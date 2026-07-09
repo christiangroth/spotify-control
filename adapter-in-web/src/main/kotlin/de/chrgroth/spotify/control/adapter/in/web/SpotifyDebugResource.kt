@@ -103,7 +103,7 @@ class SpotifyDebugResource(
     val userId = UserId(securityIdentity.principal.name)
 
     val accessToken = try {
-      spotifyAccessToken.getValidAccessToken(userId)
+      spotifyAccessToken.getValidAccessToken()
     } catch (e: Exception) {
       return errorResponse(operation, "Failed to obtain a valid Spotify access token: ${e.message}")
     }

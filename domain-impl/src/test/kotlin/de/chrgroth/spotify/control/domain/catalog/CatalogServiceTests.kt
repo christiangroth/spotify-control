@@ -246,7 +246,7 @@ class CatalogServiceTests {
   @Test
   fun `handle SyncAlbumDetails fetches only tracks and skips album upsert when album metadata already known`() {
     every { currentUserResolver.userId() } returns userId
-    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"))) } returns listOf(album1)
     every { spotifyCatalog.getAlbumTracks(userId, accessToken, album1) } returns listOf(trackWithAlbum1, trackWithAlbum2).right()
     every { appTrackRepository.upsertAll(any()) } just runs
@@ -264,7 +264,7 @@ class CatalogServiceTests {
   @Test
   fun `handle SyncAlbumDetails falls back to full album fetch and upserts album when metadata not yet known`() {
     every { currentUserResolver.userId() } returns userId
-    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"))) } returns emptyList()
     every { spotifyCatalog.getAlbum(userId, accessToken, "album-1") } returns albumSyncResult.right()
     every { appTrackRepository.upsertAll(any()) } just runs
@@ -283,7 +283,7 @@ class CatalogServiceTests {
   @Test
   fun `handle SyncAlbumDetails does not sync artists found in album tracks`() {
     every { currentUserResolver.userId() } returns userId
-    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"))) } returns emptyList()
     every { spotifyCatalog.getAlbum(userId, accessToken, "album-1") } returns albumSyncResult.right()
     every { appTrackRepository.upsertAll(any()) } just runs
@@ -297,7 +297,7 @@ class CatalogServiceTests {
   @Test
   fun `handle SyncAlbumDetails returns failed when album endpoint returns error`() {
     every { currentUserResolver.userId() } returns userId
-    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"))) } returns emptyList()
     every { spotifyCatalog.getAlbum(userId, accessToken, "album-1") } returns SyncError.TRACK_DETAILS_FETCH_FAILED.left()
 
@@ -311,7 +311,7 @@ class CatalogServiceTests {
   fun `handle SyncAlbumDetails returns rate limited when endpoint returns rate limit error`() {
     val rateLimitError = SpotifyRateLimitError(30.seconds)
     every { currentUserResolver.userId() } returns userId
-    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"))) } returns emptyList()
     every { spotifyCatalog.getAlbum(userId, accessToken, "album-1") } returns rateLimitError.left()
 
@@ -325,7 +325,7 @@ class CatalogServiceTests {
   @Test
   fun `handle SyncArtistAlbums enqueues SyncAlbumDetails for new albums and completes when no next page`() {
     val page = ArtistAlbumsPage(albums = listOf(album1, album2), nextUrl = null)
-    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyCatalog.getArtistAlbumsPage(userId, accessToken, "artist-1", null) } returns page.right()
     every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"), AlbumId("album-2"))) } returns emptyList()
     every { appAlbumRepository.upsertAll(any()) } just runs
@@ -344,7 +344,7 @@ class CatalogServiceTests {
   fun `handle SyncArtistAlbums enqueues next page via outbox when nextUrl is present`() {
     val nextPageUrl = "https://api.spotify.com/v1/artists/artist-1/albums?offset=50&limit=50"
     val page = ArtistAlbumsPage(albums = listOf(album1), nextUrl = nextPageUrl)
-    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyCatalog.getArtistAlbumsPage(userId, accessToken, "artist-1", null) } returns page.right()
     every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"))) } returns emptyList()
     every { appAlbumRepository.upsertAll(any()) } just runs
@@ -361,7 +361,7 @@ class CatalogServiceTests {
   fun `handle SyncArtistAlbums processes subsequent page and fetches using nextUrl`() {
     val nextPageUrl = "https://api.spotify.com/v1/artists/artist-1/albums?offset=50&limit=50"
     val page = ArtistAlbumsPage(albums = listOf(album2), nextUrl = null)
-    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyCatalog.getArtistAlbumsPage(userId, accessToken, "artist-1", nextPageUrl) } returns page.right()
     every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-2"))) } returns emptyList()
     every { appAlbumRepository.upsertAll(any()) } just runs
@@ -377,7 +377,7 @@ class CatalogServiceTests {
   @Test
   fun `handle SyncArtistAlbums enqueues only new albums and skips existing ones`() {
     val page = ArtistAlbumsPage(albums = listOf(album1, album2), nextUrl = null)
-    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyCatalog.getArtistAlbumsPage(userId, accessToken, "artist-1", null) } returns page.right()
     every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"), AlbumId("album-2"))) } returns listOf(album1)
     every { appAlbumRepository.upsertAll(any()) } just runs
@@ -395,7 +395,7 @@ class CatalogServiceTests {
   fun `handle SyncArtistAlbums skips next page when all albums on current page are already in catalog`() {
     val nextPageUrl = "https://api.spotify.com/v1/artists/artist-1/albums?offset=50&limit=50"
     val page = ArtistAlbumsPage(albums = listOf(album1, album2), nextUrl = nextPageUrl)
-    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyCatalog.getArtistAlbumsPage(userId, accessToken, "artist-1", null) } returns page.right()
     every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"), AlbumId("album-2"))) } returns listOf(album1, album2)
     every { outboxPort.enqueue(any()) } just runs
@@ -411,7 +411,7 @@ class CatalogServiceTests {
   fun `handle SyncArtistAlbums enqueues next page when some albums on current page are new`() {
     val nextPageUrl = "https://api.spotify.com/v1/artists/artist-1/albums?offset=50&limit=50"
     val page = ArtistAlbumsPage(albums = listOf(album1, album2), nextUrl = nextPageUrl)
-    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyCatalog.getArtistAlbumsPage(userId, accessToken, "artist-1", null) } returns page.right()
     every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"), AlbumId("album-2"))) } returns listOf(album1)
     every { appAlbumRepository.upsertAll(any()) } just runs
@@ -427,7 +427,7 @@ class CatalogServiceTests {
 
   @Test
   fun `handle SyncArtistAlbums returns error when artist albums page fetch fails`() {
-    every { spotifyAccessToken.getValidAccessToken(userId) } returns accessToken
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyCatalog.getArtistAlbumsPage(userId, accessToken, "artist-1", null) } returns SyncError.ARTIST_DETAILS_FETCH_FAILED.left()
 
     val result = adapter.handle(DomainOutboxEvent.SyncArtistAlbums("artist-1", userId))
