@@ -1,3 +1,12 @@
+# 0.107.6 (2026.07.09)
+
+## Bugfixes / Chore
+* Simplified the user profile update flow to rely on there always being exactly one application user.
+
+
+
+---
+
 # 0.107.5 (2026.07.09)
 
 ## Bugfixes / Chore
