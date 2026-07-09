@@ -1,3 +1,12 @@
+# 0.107.9 (2026.07.09)
+
+## Bugfixes / Chore
+* Simplified the playback, playback-aggregation, currently-playing, recently-played, and playlist database collections to no longer be scoped by user, since the app only ever supports one.
+
+
+
+---
+
 # 0.107.8 (2026.07.09)
 
 ## Bugfixes / Chore
