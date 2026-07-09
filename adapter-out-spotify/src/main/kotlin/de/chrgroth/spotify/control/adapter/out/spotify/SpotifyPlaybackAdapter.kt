@@ -33,13 +33,13 @@ class SpotifyPlaybackAdapter(
   @param:RestClient private val apiClient: SpotifyApiRestClient,
 ) : SpotifyPlaybackPort {
 
-  override fun getCurrentlyPlaying(userId: UserId, accessToken: AccessToken): Either<DomainError, CurrentlyPlayingItem?> {
+  override fun getCurrentlyPlaying(accessToken: AccessToken): Either<DomainError, CurrentlyPlayingItem?> {
     return try {
       SpotifyApiAuthContext.set(accessToken)
       val currentlyPlaying = httpMetrics.timed("/v1/me/player/currently-playing") {
         apiClient.getCurrentlyPlaying()
       }
-      parseCurrentlyPlayingItem(userId, currentlyPlaying).right()
+      parseCurrentlyPlayingItem(currentlyPlaying).right()
     } catch (e: SpotifyNoContentException) {
       logger.debug(e) { "No currently playing item (204 No Content)" }
       null.right()
@@ -56,7 +56,7 @@ class SpotifyPlaybackAdapter(
     }
   }
 
-  private fun parseCurrentlyPlayingItem(userId: UserId, response: CurrentlyPlayingContextObject): CurrentlyPlayingItem? {
+  private fun parseCurrentlyPlayingItem(response: CurrentlyPlayingContextObject): CurrentlyPlayingItem? {
     val track = response.item?.let { decodeTrack(it) } ?: return null
     val trackId = track.id
     if (track.type != TrackObject.Type.TRACK || track.isLocal == true || trackId == null) {
@@ -65,7 +65,8 @@ class SpotifyPlaybackAdapter(
     val progressMs = response.progressMs ?: 0L
     val observedAt = Clock.System.now()
     return CurrentlyPlayingItem(
-      spotifyUserId = userId,
+      // stamped with the real user by PlaybackService, which resolves "the" current user
+      spotifyUserId = PLACEHOLDER_USER_ID,
       trackId = TrackId(trackId),
       trackName = track.name ?: "",
       artistIds = track.artists?.mapNotNull { it.id?.let { id -> ArtistId(id) } } ?: emptyList(),
@@ -79,7 +80,7 @@ class SpotifyPlaybackAdapter(
     )
   }
 
-  override fun getRecentlyPlayed(userId: UserId, accessToken: AccessToken, after: Instant?): Either<DomainError, List<RecentlyPlayedItem>> {
+  override fun getRecentlyPlayed(accessToken: AccessToken, after: Instant?): Either<DomainError, List<RecentlyPlayedItem>> {
     return try {
       SpotifyApiAuthContext.set(accessToken)
       val allItems = mutableListOf<RecentlyPlayedItem>()
@@ -91,7 +92,7 @@ class SpotifyPlaybackAdapter(
         }
         recentlyPlayed.items?.mapNotNullTo(allItems) { item ->
           val track = item.track ?: return@mapNotNullTo null
-          parseRecentlyPlayedItem(userId, track, item.playedAt ?: return@mapNotNullTo null)
+          parseRecentlyPlayedItem(track, item.playedAt ?: return@mapNotNullTo null)
         }
         val nextUrl = recentlyPlayed.next
         if (nextUrl == null) {
@@ -115,7 +116,7 @@ class SpotifyPlaybackAdapter(
     }
   }
 
-  private fun parseRecentlyPlayedItem(userId: UserId, track: TrackObject, playedAt: String): RecentlyPlayedItem? {
+  private fun parseRecentlyPlayedItem(track: TrackObject, playedAt: String): RecentlyPlayedItem? {
     if (track.type != TrackObject.Type.TRACK) {
       return null
     }
@@ -125,7 +126,8 @@ class SpotifyPlaybackAdapter(
     val durationSeconds = track.durationMs?.let { it.toLong() / MS_PER_SECOND }
     val playedAtInstant = Instant.parse(playedAt)
     return RecentlyPlayedItem(
-      spotifyUserId = userId,
+      // stamped with the real user by PlaybackService, which resolves "the" current user
+      spotifyUserId = PLACEHOLDER_USER_ID,
       trackId = TrackId(track.id),
       trackName = track.name ?: "",
       artistIds = track.artists?.mapNotNull { it.id?.let { id -> ArtistId(id) } } ?: emptyList(),
@@ -143,5 +145,6 @@ class SpotifyPlaybackAdapter(
   companion object : KLogging() {
     private const val MS_PER_SECOND = 1_000L
     private const val RECENTLY_PLAYED_LIMIT = 50
+    private val PLACEHOLDER_USER_ID = UserId("")
   }
 }

@@ -24,7 +24,6 @@ import de.chrgroth.spotify.control.domain.model.playlist.PlaylistTrack
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistTracksPage
 import de.chrgroth.spotify.control.domain.model.playlist.SpotifyPlaylistItem
 import de.chrgroth.spotify.control.domain.model.user.AccessToken
-import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
 import de.chrgroth.spotify.control.domain.port.out.playlist.SpotifyPlaylistPort
 import jakarta.enterprise.context.ApplicationScoped
@@ -41,7 +40,7 @@ class SpotifyPlaylistAdapter(
   @param:RestClient private val apiClient: SpotifyApiRestClient,
 ) : SpotifyPlaylistPort {
 
-  override fun getPlaylists(userId: UserId, accessToken: AccessToken): Either<DomainError, List<SpotifyPlaylistItem>> {
+  override fun getPlaylists(accessToken: AccessToken): Either<DomainError, List<SpotifyPlaylistItem>> {
     return try {
       SpotifyApiAuthContext.set(accessToken)
       val items = mutableListOf<SpotifyPlaylistItem>()
@@ -73,14 +72,14 @@ class SpotifyPlaylistAdapter(
       logger.error { "Spotify playlist fetch failed: ${e.statusCode}" }
       PlaylistSyncError.PLAYLIST_FETCH_FAILED.left()
     } catch (e: Exception) {
-      logger.error(e) { "Unexpected error during playlist fetch for user ${userId.value}" }
+      logger.error(e) { "Unexpected error during playlist fetch" }
       PlaylistSyncError.PLAYLIST_FETCH_FAILED.left()
     } finally {
       SpotifyApiAuthContext.clear()
     }
   }
 
-  override fun getPlaylistTracks(userId: UserId, accessToken: AccessToken, playlistId: String): Either<DomainError, Playlist> {
+  override fun getPlaylistTracks(accessToken: AccessToken, playlistId: String): Either<DomainError, Playlist> {
     return try {
       SpotifyApiAuthContext.set(accessToken)
       val tracks = mutableListOf<PlaylistTrack>()
@@ -110,14 +109,14 @@ class SpotifyPlaylistAdapter(
       logger.error { "Spotify playlist tracks fetch failed for $playlistId: ${e.statusCode}" }
       PlaylistSyncError.PLAYLIST_TRACKS_FETCH_FAILED.left()
     } catch (e: Exception) {
-      logger.error(e) { "Unexpected error during playlist tracks fetch for playlist $playlistId (user ${userId.value})" }
+      logger.error(e) { "Unexpected error during playlist tracks fetch for playlist $playlistId" }
       PlaylistSyncError.PLAYLIST_TRACKS_FETCH_FAILED.left()
     } finally {
       SpotifyApiAuthContext.clear()
     }
   }
 
-  override fun getPlaylistTracksPage(userId: UserId, accessToken: AccessToken, playlistId: String, pageUrl: String?): Either<DomainError, PlaylistTracksPage> {
+  override fun getPlaylistTracksPage(accessToken: AccessToken, playlistId: String, pageUrl: String?): Either<DomainError, PlaylistTracksPage> {
     return try {
       SpotifyApiAuthContext.set(accessToken)
       val offset = pageUrl?.queryParamInt("offset")
@@ -136,7 +135,7 @@ class SpotifyPlaylistAdapter(
       logger.error { "Spotify playlist tracks page fetch failed for $playlistId: ${e.statusCode}" }
       PlaylistSyncError.PLAYLIST_TRACKS_FETCH_FAILED.left()
     } catch (e: Exception) {
-      logger.error(e) { "Unexpected error during playlist tracks page fetch for playlist $playlistId (user ${userId.value})" }
+      logger.error(e) { "Unexpected error during playlist tracks page fetch for playlist $playlistId" }
       PlaylistSyncError.PLAYLIST_TRACKS_FETCH_FAILED.left()
     } finally {
       SpotifyApiAuthContext.clear()
@@ -174,7 +173,6 @@ class SpotifyPlaylistAdapter(
     }
 
   override fun removePlaylistTracks(
-    userId: UserId,
     accessToken: AccessToken,
     playlistId: String,
     trackIds: List<String>,
@@ -194,7 +192,7 @@ class SpotifyPlaylistAdapter(
       logger.error { "Spotify track removal failed for playlist $playlistId: ${e.statusCode}" }
       PlaylistFixError.FIX_FAILED.left()
     } catch (e: Exception) {
-      logger.error(e) { "Unexpected error during track removal from playlist $playlistId (user ${userId.value})" }
+      logger.error(e) { "Unexpected error during track removal from playlist $playlistId" }
       PlaylistFixError.FIX_FAILED.left()
     } finally {
       SpotifyApiAuthContext.clear()
@@ -202,7 +200,6 @@ class SpotifyPlaylistAdapter(
   }
 
   override fun addPlaylistTracks(
-    userId: UserId,
     accessToken: AccessToken,
     playlistId: String,
     trackIds: List<String>,
@@ -222,7 +219,7 @@ class SpotifyPlaylistAdapter(
       logger.error { "Spotify track addition failed for playlist $playlistId: ${e.statusCode}" }
       PlaylistFixError.FIX_FAILED.left()
     } catch (e: Exception) {
-      logger.error(e) { "Unexpected error during track addition to playlist $playlistId (user ${userId.value})" }
+      logger.error(e) { "Unexpected error during track addition to playlist $playlistId" }
       PlaylistFixError.FIX_FAILED.left()
     } finally {
       SpotifyApiAuthContext.clear()
@@ -230,7 +227,6 @@ class SpotifyPlaylistAdapter(
   }
 
   override fun replacePlaylistTrack(
-    userId: UserId,
     accessToken: AccessToken,
     playlistId: String,
     oldTrackId: String,
@@ -258,7 +254,7 @@ class SpotifyPlaylistAdapter(
       logger.error { "Spotify track replacement failed for playlist $playlistId: ${e.statusCode}" }
       PlaylistFixError.FIX_FAILED.left()
     } catch (e: Exception) {
-      logger.error(e) { "Unexpected error during track replacement in playlist $playlistId (user ${userId.value})" }
+      logger.error(e) { "Unexpected error during track replacement in playlist $playlistId" }
       PlaylistFixError.FIX_FAILED.left()
     } finally {
       SpotifyApiAuthContext.clear()

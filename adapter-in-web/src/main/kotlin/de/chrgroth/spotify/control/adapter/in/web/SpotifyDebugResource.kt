@@ -15,7 +15,6 @@ import de.chrgroth.spotify.control.domain.model.playlist.PlaylistTracksPage
 import de.chrgroth.spotify.control.domain.model.playlist.SpotifyPlaylistItem
 import de.chrgroth.spotify.control.domain.model.user.AccessToken
 import de.chrgroth.spotify.control.domain.model.user.SpotifyProfile
-import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogBrowserPort
 import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.SpotifyCatalogPort
@@ -27,7 +26,6 @@ import io.quarkus.qute.Location
 import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
 import io.quarkus.security.Authenticated
-import io.quarkus.security.identity.SecurityIdentity
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.POST
@@ -49,7 +47,6 @@ class SpotifyDebugResource(
   private val spotifyDebugTemplate: Template,
   private val catalogBrowser: CatalogBrowserPort,
   private val playlist: PlaylistPort,
-  private val securityIdentity: SecurityIdentity,
   private val spotifyAccessToken: SpotifyAccessTokenPort,
   private val spotifyAuth: SpotifyAuthPort,
   private val spotifyPlayback: SpotifyPlaybackPort,
@@ -86,9 +83,8 @@ class SpotifyDebugResource(
   @Produces(MediaType.APPLICATION_JSON)
   fun searchPlaylists(@QueryParam("filter") filter: String?): List<PickerOption> {
     if (filter.isNullOrBlank()) return emptyList()
-    val userId = UserId(securityIdentity.principal.name)
     val filterLower = filter.lowercase()
-    return playlist.getPlaylists(userId)
+    return playlist.getPlaylists()
       .filter { it.name.lowercase().contains(filterLower) }
       .map { PickerOption(it.spotifyPlaylistId, it.name) }
   }
@@ -100,7 +96,6 @@ class SpotifyDebugResource(
   fun execute(@PathParam("operation") operation: String, @Context uriInfo: UriInfo): Response {
     val params = uriInfo.queryParameters.entries
       .associate { (key, values) -> key to values.firstOrNull()?.takeIf { it.isNotBlank() } }
-    val userId = UserId(securityIdentity.principal.name)
 
     val accessToken = try {
       spotifyAccessToken.getValidAccessToken()
@@ -112,42 +107,42 @@ class SpotifyDebugResource(
       when (operation) {
         "current-user" -> spotifyAuth.getUserProfile(accessToken).toResponse(operation) { it.toJson() }
 
-        "currently-playing" -> spotifyPlayback.getCurrentlyPlaying(userId, accessToken).toResponse(operation) { it?.toJson() }
+        "currently-playing" -> spotifyPlayback.getCurrentlyPlaying(accessToken).toResponse(operation) { it?.toJson() }
 
         "recently-played" -> {
           val after = params["after"]?.toLongOrNull()?.let { Instant.fromEpochMilliseconds(it) }
-          spotifyPlayback.getRecentlyPlayed(userId, accessToken, after).toResponse(operation) { items -> items.map { it.toJson() } }
+          spotifyPlayback.getRecentlyPlayed(accessToken, after).toResponse(operation) { items -> items.map { it.toJson() } }
         }
 
-        "user-playlists" -> spotifyPlaylist.getPlaylists(userId, accessToken).toResponse(operation) { items -> items.map { it.toJson() } }
+        "user-playlists" -> spotifyPlaylist.getPlaylists(accessToken).toResponse(operation) { items -> items.map { it.toJson() } }
 
         "playlist-tracks" -> {
           val playlistId = params["playlistId"] ?: return errorResponse(operation, "playlistId is required")
           val pageUrl = params["pageUrl"]
-          spotifyPlaylist.getPlaylistTracksPage(userId, accessToken, playlistId, pageUrl).toResponse(operation) { it.toJson() }
+          spotifyPlaylist.getPlaylistTracksPage(accessToken, playlistId, pageUrl).toResponse(operation) { it.toJson() }
         }
 
         "artist" -> {
           val artistId = params["artistId"] ?: return errorResponse(operation, "artistId is required")
-          spotifyCatalog.getArtist(userId, accessToken, artistId).toResponse(operation) { it?.toJson() }
+          spotifyCatalog.getArtist(accessToken, artistId).toResponse(operation) { it?.toJson() }
         }
 
         "artist-albums" -> {
           val artistId = params["artistId"] ?: return errorResponse(operation, "artistId is required")
           val nextUrl = params["nextUrl"]
-          spotifyCatalog.getArtistAlbumsPage(userId, accessToken, artistId, nextUrl).toResponse(operation) { it.toJson() }
+          spotifyCatalog.getArtistAlbumsPage(accessToken, artistId, nextUrl).toResponse(operation) { it.toJson() }
         }
 
         "album" -> {
           val albumId = params["albumId"] ?: return errorResponse(operation, "albumId is required")
-          spotifyCatalog.getAlbum(userId, accessToken, albumId).toResponse(operation) { it.toJson() }
+          spotifyCatalog.getAlbum(accessToken, albumId).toResponse(operation) { it.toJson() }
         }
 
         "album-tracks" -> {
           val albumId = params["albumId"] ?: return errorResponse(operation, "albumId is required")
-          spotifyCatalog.getAlbum(userId, accessToken, albumId).fold(
+          spotifyCatalog.getAlbum(accessToken, albumId).fold(
             ifLeft = { errorResponse(operation, it.code) },
-            ifRight = { syncResult -> fetchAlbumTracks(operation, userId, accessToken, syncResult.album) },
+            ifRight = { syncResult -> fetchAlbumTracks(operation, accessToken, syncResult.album) },
           )
         }
 
@@ -158,8 +153,8 @@ class SpotifyDebugResource(
     }
   }
 
-  private fun fetchAlbumTracks(operation: String, userId: UserId, accessToken: AccessToken, album: AppAlbum): Response =
-    spotifyCatalog.getAlbumTracks(userId, accessToken, album).toResponse(operation) { tracks -> tracks.map { it.toJson() } }
+  private fun fetchAlbumTracks(operation: String, accessToken: AccessToken, album: AppAlbum): Response =
+    spotifyCatalog.getAlbumTracks(accessToken, album).toResponse(operation) { tracks -> tracks.map { it.toJson() } }
 
   private fun <T> Either<DomainError, T>.toResponse(operation: String, mapper: (T) -> Any?): Response =
     fold(

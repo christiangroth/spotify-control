@@ -49,8 +49,7 @@ class PlaybackSettingsResource(
   @Path("/rebuild")
   @Produces(MediaType.APPLICATION_JSON)
   fun rebuildPlaybackData(): Response {
-    val userId = UserId(securityIdentity.principal.name)
-    playback.enqueueRebuildPlaybackData(userId)
+    playback.enqueueRebuildPlaybackData()
     return Response.ok(mapOf("status" to "ok")).build()
   }
 

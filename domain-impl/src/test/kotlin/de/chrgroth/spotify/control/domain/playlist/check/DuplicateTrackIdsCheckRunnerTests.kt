@@ -138,70 +138,70 @@ class DuplicateTrackIdsCheckRunnerTests {
     val result = runner.fix(userId, accessToken, playlistId, playlist, null, emptyList())
 
     assertThat(result.isRight()).isTrue()
-    verify(exactly = 0) { spotifyPlaylist.removePlaylistTracks(any(), any(), any(), any()) }
-    verify(exactly = 0) { spotifyPlaylist.addPlaylistTracks(any(), any(), any(), any()) }
+    verify(exactly = 0) { spotifyPlaylist.removePlaylistTracks(any(), any(), any()) }
+    verify(exactly = 0) { spotifyPlaylist.addPlaylistTracks(any(), any(), any()) }
   }
 
   @Test
   fun `fix removes all occurrences and re-adds once when track appears twice`() {
     val playlist = buildPlaylist(listOf(buildTrack("t1"), buildTrack("t2"), buildTrack("t1")))
-    every { spotifyPlaylist.removePlaylistTracks(userId, accessToken, playlistId, listOf("t1")) } returns Unit.right()
-    every { spotifyPlaylist.addPlaylistTracks(userId, accessToken, playlistId, listOf("t1")) } returns Unit.right()
+    every { spotifyPlaylist.removePlaylistTracks(accessToken, playlistId, listOf("t1")) } returns Unit.right()
+    every { spotifyPlaylist.addPlaylistTracks(accessToken, playlistId, listOf("t1")) } returns Unit.right()
 
     val result = runner.fix(userId, accessToken, playlistId, playlist, null, emptyList())
 
     assertThat(result.isRight()).isTrue()
-    verify(exactly = 1) { spotifyPlaylist.removePlaylistTracks(userId, accessToken, playlistId, listOf("t1")) }
-    verify(exactly = 1) { spotifyPlaylist.addPlaylistTracks(userId, accessToken, playlistId, listOf("t1")) }
+    verify(exactly = 1) { spotifyPlaylist.removePlaylistTracks(accessToken, playlistId, listOf("t1")) }
+    verify(exactly = 1) { spotifyPlaylist.addPlaylistTracks(accessToken, playlistId, listOf("t1")) }
   }
 
   @Test
   fun `fix removes all occurrences and re-adds once when track appears three times`() {
     val playlist = buildPlaylist(listOf(buildTrack("t1"), buildTrack("t1"), buildTrack("t1")))
-    every { spotifyPlaylist.removePlaylistTracks(userId, accessToken, playlistId, listOf("t1")) } returns Unit.right()
-    every { spotifyPlaylist.addPlaylistTracks(userId, accessToken, playlistId, listOf("t1")) } returns Unit.right()
+    every { spotifyPlaylist.removePlaylistTracks(accessToken, playlistId, listOf("t1")) } returns Unit.right()
+    every { spotifyPlaylist.addPlaylistTracks(accessToken, playlistId, listOf("t1")) } returns Unit.right()
 
     val result = runner.fix(userId, accessToken, playlistId, playlist, null, emptyList())
 
     assertThat(result.isRight()).isTrue()
-    verify(exactly = 1) { spotifyPlaylist.removePlaylistTracks(userId, accessToken, playlistId, listOf("t1")) }
-    verify(exactly = 1) { spotifyPlaylist.addPlaylistTracks(userId, accessToken, playlistId, listOf("t1")) }
+    verify(exactly = 1) { spotifyPlaylist.removePlaylistTracks(accessToken, playlistId, listOf("t1")) }
+    verify(exactly = 1) { spotifyPlaylist.addPlaylistTracks(accessToken, playlistId, listOf("t1")) }
   }
 
   @Test
   fun `fix handles multiple different duplicate tracks`() {
     val playlist = buildPlaylist(listOf(buildTrack("t1"), buildTrack("t2"), buildTrack("t1"), buildTrack("t2")))
     every {
-      spotifyPlaylist.removePlaylistTracks(userId, accessToken, playlistId, listOf("t1", "t2"))
+      spotifyPlaylist.removePlaylistTracks(accessToken, playlistId, listOf("t1", "t2"))
     } returns Unit.right()
     every {
-      spotifyPlaylist.addPlaylistTracks(userId, accessToken, playlistId, listOf("t1", "t2"))
+      spotifyPlaylist.addPlaylistTracks(accessToken, playlistId, listOf("t1", "t2"))
     } returns Unit.right()
 
     val result = runner.fix(userId, accessToken, playlistId, playlist, null, emptyList())
 
     assertThat(result.isRight()).isTrue()
-    verify(exactly = 1) { spotifyPlaylist.removePlaylistTracks(userId, accessToken, playlistId, listOf("t1", "t2")) }
-    verify(exactly = 1) { spotifyPlaylist.addPlaylistTracks(userId, accessToken, playlistId, listOf("t1", "t2")) }
+    verify(exactly = 1) { spotifyPlaylist.removePlaylistTracks(accessToken, playlistId, listOf("t1", "t2")) }
+    verify(exactly = 1) { spotifyPlaylist.addPlaylistTracks(accessToken, playlistId, listOf("t1", "t2")) }
   }
 
   @Test
   fun `fix propagates error from removePlaylistTracks`() {
     val playlist = buildPlaylist(listOf(buildTrack("t1"), buildTrack("t1")))
-    every { spotifyPlaylist.removePlaylistTracks(any(), any(), any(), any()) } returns PlaylistFixError.FIX_FAILED.left()
+    every { spotifyPlaylist.removePlaylistTracks(any(), any(), any()) } returns PlaylistFixError.FIX_FAILED.left()
 
     val result = runner.fix(userId, accessToken, playlistId, playlist, null, emptyList())
 
     assertThat(result.isLeft()).isTrue()
     assertThat((result as Either.Left).value).isEqualTo(PlaylistFixError.FIX_FAILED)
-    verify(exactly = 0) { spotifyPlaylist.addPlaylistTracks(any(), any(), any(), any()) }
+    verify(exactly = 0) { spotifyPlaylist.addPlaylistTracks(any(), any(), any()) }
   }
 
   @Test
   fun `fix propagates error from addPlaylistTracks`() {
     val playlist = buildPlaylist(listOf(buildTrack("t1"), buildTrack("t1")))
-    every { spotifyPlaylist.removePlaylistTracks(any(), any(), any(), any()) } returns Unit.right()
-    every { spotifyPlaylist.addPlaylistTracks(any(), any(), any(), any()) } returns PlaylistFixError.FIX_FAILED.left()
+    every { spotifyPlaylist.removePlaylistTracks(any(), any(), any()) } returns Unit.right()
+    every { spotifyPlaylist.addPlaylistTracks(any(), any(), any()) } returns PlaylistFixError.FIX_FAILED.left()
 
     val result = runner.fix(userId, accessToken, playlistId, playlist, null, emptyList())
 

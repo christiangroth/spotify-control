@@ -199,7 +199,7 @@ class YearSongsInAllCheckRunnerTests {
 
     assertThat(result.isLeft()).isTrue()
     assertThat((result as Either.Left).value).isEqualTo(PlaylistFixError.FIX_NOT_FOUND)
-    verify(exactly = 0) { spotifyPlaylist.addPlaylistTracks(any(), any(), any(), any()) }
+    verify(exactly = 0) { spotifyPlaylist.addPlaylistTracks(any(), any(), any()) }
   }
 
   @Test
@@ -216,7 +216,7 @@ class YearSongsInAllCheckRunnerTests {
 
     assertThat(result.isLeft()).isTrue()
     assertThat((result as Either.Left).value).isEqualTo(PlaylistFixError.PLAYLIST_NOT_FOUND)
-    verify(exactly = 0) { spotifyPlaylist.addPlaylistTracks(any(), any(), any(), any()) }
+    verify(exactly = 0) { spotifyPlaylist.addPlaylistTracks(any(), any(), any()) }
   }
 
   @Test
@@ -233,7 +233,7 @@ class YearSongsInAllCheckRunnerTests {
     val result = runner.fix(userId, accessToken, playlistId, playlist, currentPlaylistInfo, playlistInfos)
 
     assertThat(result.isRight()).isTrue()
-    verify(exactly = 0) { spotifyPlaylist.addPlaylistTracks(any(), any(), any(), any()) }
+    verify(exactly = 0) { spotifyPlaylist.addPlaylistTracks(any(), any(), any()) }
   }
 
   @Test
@@ -246,13 +246,13 @@ class YearSongsInAllCheckRunnerTests {
       buildPlaylistInfo(spotifyPlaylistId = allPlaylistId, type = PlaylistType.ALL),
     )
     every { playlistRepository.findByUserIdAndPlaylistId(userId, allPlaylistId) } returns allPlaylist
-    every { spotifyPlaylist.addPlaylistTracks(userId, accessToken, allPlaylistId, any()) } returns Unit.right()
+    every { spotifyPlaylist.addPlaylistTracks(accessToken, allPlaylistId, any()) } returns Unit.right()
 
     val result = runner.fix(userId, accessToken, playlistId, playlist, currentPlaylistInfo, playlistInfos)
 
     assertThat(result.isRight()).isTrue()
     verify(exactly = 1) {
-      spotifyPlaylist.addPlaylistTracks(userId, accessToken, allPlaylistId, match { it.containsAll(listOf("t2", "t3")) && it.size == 2 })
+      spotifyPlaylist.addPlaylistTracks(accessToken, allPlaylistId, match { it.containsAll(listOf("t2", "t3")) && it.size == 2 })
     }
   }
 
@@ -266,12 +266,12 @@ class YearSongsInAllCheckRunnerTests {
       buildPlaylistInfo(spotifyPlaylistId = allPlaylistId, type = PlaylistType.ALL),
     )
     every { playlistRepository.findByUserIdAndPlaylistId(userId, allPlaylistId) } returns allPlaylist
-    every { spotifyPlaylist.addPlaylistTracks(userId, accessToken, allPlaylistId, listOf("t2")) } returns Unit.right()
+    every { spotifyPlaylist.addPlaylistTracks(accessToken, allPlaylistId, listOf("t2")) } returns Unit.right()
 
     val result = runner.fix(userId, accessToken, playlistId, playlist, currentPlaylistInfo, playlistInfos)
 
     assertThat(result.isRight()).isTrue()
-    verify(exactly = 1) { spotifyPlaylist.addPlaylistTracks(userId, accessToken, allPlaylistId, listOf("t2")) }
+    verify(exactly = 1) { spotifyPlaylist.addPlaylistTracks(accessToken, allPlaylistId, listOf("t2")) }
   }
 
   @Test
@@ -284,7 +284,7 @@ class YearSongsInAllCheckRunnerTests {
       buildPlaylistInfo(spotifyPlaylistId = allPlaylistId, type = PlaylistType.ALL),
     )
     every { playlistRepository.findByUserIdAndPlaylistId(userId, allPlaylistId) } returns allPlaylist
-    every { spotifyPlaylist.addPlaylistTracks(any(), any(), any(), any()) } returns PlaylistFixError.FIX_FAILED.left()
+    every { spotifyPlaylist.addPlaylistTracks(any(), any(), any()) } returns PlaylistFixError.FIX_FAILED.left()
 
     val result = runner.fix(userId, accessToken, playlistId, playlist, currentPlaylistInfo, playlistInfos)
 

@@ -514,7 +514,7 @@ SLACK_WEBHOOK_URL
 | Enrichment completeness | `app_artist`, `app_track`, and `app_album` entries that existed before enrichment was introduced may lack imageLink or albumTitle until re-enriched. |
 | Partial-play detection accuracy | Partial play detection relies on polling frequency; very short plays near the end of a track may be missed or misclassified. |
 | Test coverage for domain adapters | Domain adapter integration (e.g. `PlaybackDataAdapter`, `PlaylistSyncAdapter`) is not yet covered by `@QuarkusTest` boundary tests. |
-| Multi-user plumbing | `UserId` is still threaded through ports, services, outbox events, and MongoDB document keys even though the application only ever supports a single user. Tracked by [ADR-0008](../adr/0008-single-user-architecture.md) and the [single-user simplification plan](../plans/single-user-simplification.md). |
+| Multi-user plumbing | `UserId` is no longer part of any port's public signature (Phase 3 of the [single-user simplification plan](../plans/single-user-simplification.md) is complete), but repository out-ports and MongoDB document keys still carry `spotifyUserId` internally until Phase 4 migrates the schema. Tracked by [ADR-0008](../adr/0008-single-user-architecture.md). |
 
 # Glossary
 

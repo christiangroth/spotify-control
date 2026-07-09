@@ -68,11 +68,12 @@ class PlaybackService(
   // --- Combined Playback Detection ---
 
   override fun enqueueFetchPlaybackData() {
-    val userId = currentUserResolver.userId() ?: return
-    outboxPort.enqueue(DomainOutboxEvent.FetchPlaybackData(userId))
+    currentUserResolver.userId() ?: return
+    outboxPort.enqueue(DomainOutboxEvent.FetchPlaybackData())
   }
 
-  override fun fetchPlaybackData(userId: UserId): Either<DomainError, Unit> {
+  override fun fetchPlaybackData(): Either<DomainError, Unit> {
+    val userId = currentUserResolver.userId() ?: return Unit.right()
     val currentlyPlayingResult = fetchCurrentlyPlaying(userId)
     val recentlyPlayedResult = fetchRecentlyPlayed(userId)
     return currentlyPlayingResult.flatMap { recentlyPlayedResult }
@@ -82,7 +83,8 @@ class PlaybackService(
 
   internal fun fetchCurrentlyPlaying(userId: UserId): Either<DomainError, Unit> {
     val accessToken = spotifyAccessToken.getValidAccessToken()
-    return spotifyPlayback.getCurrentlyPlaying(userId, accessToken).flatMap { item ->
+    return spotifyPlayback.getCurrentlyPlaying(accessToken).flatMap { rawItem ->
+      val item = rawItem?.copy(spotifyUserId = userId)
       if (item != null && item.isPlaying) {
         playbackState.onPlaybackDetected()
       }
@@ -153,7 +155,8 @@ class PlaybackService(
   internal fun fetchRecentlyPlayed(userId: UserId): Either<DomainError, Unit> {
     val accessToken = spotifyAccessToken.getValidAccessToken()
     val after = recentlyPlayedRepository.findMostRecentPlayedAt(userId)
-    return spotifyPlayback.getRecentlyPlayed(userId, accessToken, after).flatMap { tracks ->
+    return spotifyPlayback.getRecentlyPlayed(accessToken, after).flatMap { rawTracks ->
+      val tracks = rawTracks.map { it.copy(spotifyUserId = userId) }
       val playedAts = tracks.map { it.playedAt }.toSet()
       val existingPlayedAts = recentlyPlayedRepository.findExistingPlayedAts(userId, playedAts)
       val newItems = tracks.filter { it.playedAt !in existingPlayedAts }
@@ -165,7 +168,7 @@ class PlaybackService(
       val computedCount = convertPartialPlays(userId, tracks.map { it.trackId }.toSet())
       if (newItems.isNotEmpty() || computedCount > 0) {
         dashboardRefresh.notifyUserPlaybackData()
-        outboxPort.enqueue(DomainOutboxEvent.AppendPlaybackData(userId))
+        outboxPort.enqueue(DomainOutboxEvent.AppendPlaybackData())
       }
       recordFetchSuccess(userId, "recently_played")
       Unit.right()
@@ -216,7 +219,7 @@ class PlaybackService(
         .map { instant -> JLocalDate.ofInstant(instant.toJavaInstant(), ZoneOffset.UTC).toKotlinLocalDate() }
         .toSet()
         .forEach { day ->
-          outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(userId, AggregationPeriodType.DAY, day))
+          outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.DAY, day))
         }
     }
   }
@@ -267,18 +270,25 @@ class PlaybackService(
 
   // --- Playback Data ---
 
-  override fun enqueueRebuildPlaybackData(userId: UserId) {
+  override fun enqueueRebuildPlaybackData() {
+    val userId = currentUserResolver.userId() ?: return
     logger.info { "Enqueuing playback data rebuild for user: ${userDisplayName(userId)}" }
-    outboxPort.enqueue(DomainOutboxEvent.RebuildPlaybackData(userId))
+    outboxPort.enqueue(DomainOutboxEvent.RebuildPlaybackData())
   }
 
-  override fun rebuildPlaybackData(userId: UserId) {
+  override fun rebuildPlaybackData() {
+    val userId = currentUserResolver.userId() ?: return
     logger.info { "Rebuilding playback data for user: ${userDisplayName(userId)}" }
     appPlaybackRepository.deleteAllByUserId(userId)
-    appendPlaybackData(userId)
+    appendPlaybackDataForUser(userId)
   }
 
-  override fun appendPlaybackData(userId: UserId) {
+  override fun appendPlaybackData() {
+    val userId = currentUserResolver.userId() ?: return
+    appendPlaybackDataForUser(userId)
+  }
+
+  private fun appendPlaybackDataForUser(userId: UserId) {
     val since = appPlaybackRepository.findMostRecentPlayedAt(userId)
     val recentlyPlayed = recentlyPlayedRepository.findSince(userId, since)
     val partialPlayed = recentlyPartialPlayedRepository.findSince(userId, since)
@@ -299,14 +309,14 @@ class PlaybackService(
       .map { item -> JLocalDate.ofInstant(item.playedAt.toJavaInstant(), ZoneOffset.UTC).toKotlinLocalDate() }
       .toSet()
       .forEach { day ->
-        outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(userId, AggregationPeriodType.DAY, day))
+        outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.DAY, day))
       }
 
     val catalogRequests = (
       recentlyPlayed.map { CatalogSyncRequest(it.trackId.value, listOfNotNull(it.artistIds.firstOrNull()?.value), SyncCause.Playback(it.trackId.value)) } +
         partialPlayed.map { CatalogSyncRequest(it.trackId.value, listOfNotNull(it.artistIds.firstOrNull()?.value), SyncCause.Playback(it.trackId.value)) }
     ).distinctBy { it.trackId }
-    syncController.syncForTracks(catalogRequests, userId)
+    syncController.syncForTracks(catalogRequests)
   }
 
   private fun buildPlaybackItems(
@@ -331,15 +341,15 @@ class PlaybackService(
   // --- Outbox Handlers ---
 
   override fun handle(event: DomainOutboxEvent.FetchPlaybackData): Either<DomainError, Unit> =
-    fetchPlaybackData(event.userId)
+    fetchPlaybackData()
 
   override fun handle(event: DomainOutboxEvent.RebuildPlaybackData): Either<DomainError, Unit> {
-    rebuildPlaybackData(event.userId)
+    rebuildPlaybackData()
     return Unit.right()
   }
 
   override fun handle(event: DomainOutboxEvent.AppendPlaybackData): Either<DomainError, Unit> {
-    appendPlaybackData(event.userId)
+    appendPlaybackData()
     return Unit.right()
   }
 

@@ -23,7 +23,6 @@ import de.chrgroth.spotify.control.domain.model.catalog.ArtistAlbumsPage
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
 import de.chrgroth.spotify.control.domain.model.user.AccessToken
-import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
 import de.chrgroth.spotify.control.domain.port.out.catalog.SpotifyCatalogPort
 import jakarta.enterprise.context.ApplicationScoped
@@ -42,7 +41,6 @@ class SpotifyCatalogAdapter(
 ) : SpotifyCatalogPort {
 
   override fun getArtist(
-    userId: UserId,
     accessToken: AccessToken,
     artistId: String,
   ): Either<DomainError, AppArtist?> {
@@ -57,7 +55,7 @@ class SpotifyCatalogAdapter(
       logger.error { "Spotify artist fetch failed for $artistId: ${e.statusCode}" }
       SyncError.ARTIST_DETAILS_FETCH_FAILED.left()
     } catch (e: Exception) {
-      logger.error(e) { "Unexpected error fetching artist details for artist $artistId (user ${userId.value})" }
+      logger.error(e) { "Unexpected error fetching artist details for artist $artistId" }
       SyncError.ARTIST_DETAILS_FETCH_FAILED.left()
     } finally {
       SpotifyApiAuthContext.clear()
@@ -65,7 +63,6 @@ class SpotifyCatalogAdapter(
   }
 
   override fun getAlbum(
-    userId: UserId,
     accessToken: AccessToken,
     albumId: String,
   ): Either<DomainError, AlbumSyncResult> {
@@ -99,11 +96,11 @@ class SpotifyCatalogAdapter(
     } catch (e: SpotifyRateLimitException) {
       SpotifyRateLimitError(e.retryAfterSeconds.seconds).left()
     } catch (e: SpotifyApiException) {
-      logger.error { "Spotify album fetch failed for $albumId (user ${userId.value}): status=${e.statusCode}, body=${e.body.take(500)}" }
+      logger.error { "Spotify album fetch failed for $albumId: status=${e.statusCode}, body=${e.body.take(500)}" }
       SyncError.TRACK_DETAILS_FETCH_FAILED.left()
     } catch (e: Exception) {
       logger.error(e) {
-        "Unexpected error fetching album tracks for album $albumId (user ${userId.value}): ${e::class.simpleName}: ${e.message}"
+        "Unexpected error fetching album tracks for album $albumId: ${e::class.simpleName}: ${e.message}"
       }
       SyncError.TRACK_DETAILS_FETCH_FAILED.left()
     } finally {
@@ -112,7 +109,6 @@ class SpotifyCatalogAdapter(
   }
 
   override fun getAlbumTracks(
-    userId: UserId,
     accessToken: AccessToken,
     album: AppAlbum,
   ): Either<DomainError, List<AppTrack>> {
@@ -142,11 +138,11 @@ class SpotifyCatalogAdapter(
     } catch (e: SpotifyRateLimitException) {
       SpotifyRateLimitError(e.retryAfterSeconds.seconds).left()
     } catch (e: SpotifyApiException) {
-      logger.error { "Spotify album tracks fetch failed for $albumId (user ${userId.value}): status=${e.statusCode}, body=${e.body.take(500)}" }
+      logger.error { "Spotify album tracks fetch failed for $albumId: status=${e.statusCode}, body=${e.body.take(500)}" }
       SyncError.TRACK_DETAILS_FETCH_FAILED.left()
     } catch (e: Exception) {
       logger.error(e) {
-        "Unexpected error fetching album tracks for album $albumId (user ${userId.value}): ${e::class.simpleName}: ${e.message}"
+        "Unexpected error fetching album tracks for album $albumId: ${e::class.simpleName}: ${e.message}"
       }
       SyncError.TRACK_DETAILS_FETCH_FAILED.left()
     } finally {
@@ -155,7 +151,6 @@ class SpotifyCatalogAdapter(
   }
 
   override fun getArtistAlbumsPage(
-    userId: UserId,
     accessToken: AccessToken,
     artistId: String,
     nextUrl: String?,
@@ -174,7 +169,7 @@ class SpotifyCatalogAdapter(
       logger.error { "Spotify artist albums fetch failed for $artistId: ${e.statusCode}" }
       SyncError.ARTIST_DETAILS_FETCH_FAILED.left()
     } catch (e: Exception) {
-      logger.error(e) { "Unexpected error fetching album ids for artist $artistId (user ${userId.value})" }
+      logger.error(e) { "Unexpected error fetching album ids for artist $artistId" }
       SyncError.ARTIST_DETAILS_FETCH_FAILED.left()
     } finally {
       SpotifyApiAuthContext.clear()

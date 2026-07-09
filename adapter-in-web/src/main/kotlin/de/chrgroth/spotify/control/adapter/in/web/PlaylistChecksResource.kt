@@ -1,13 +1,11 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
 import de.chrgroth.spotify.control.domain.model.playlist.AppPlaylistCheck
-import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistCheckPort
 import io.quarkus.qute.Location
 import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
 import io.quarkus.security.Authenticated
-import io.quarkus.security.identity.SecurityIdentity
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.POST
@@ -27,7 +25,6 @@ import kotlin.time.toJavaInstant
 class PlaylistChecksResource(
   @param:Location("playlist-checks.html")
   private val playlistChecksTemplate: Template,
-  private val securityIdentity: SecurityIdentity,
   private val playlistCheckPort: PlaylistCheckPort,
 ) {
 
@@ -35,8 +32,7 @@ class PlaylistChecksResource(
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
   fun playlistChecks(): TemplateInstance {
-    val userId = UserId(securityIdentity.principal.name)
-    val dashboard = playlistCheckPort.getCheckDashboard(userId)
+    val dashboard = playlistCheckPort.getCheckDashboard()
     val groups = dashboard.checks
       .map { check ->
         PlaylistCheckRow(
@@ -64,8 +60,7 @@ class PlaylistChecksResource(
     @PathParam("playlistId") playlistId: String,
     @PathParam("checkType") checkType: String,
   ): Response {
-    val userId = UserId(securityIdentity.principal.name)
-    return playlistCheckPort.runFix(userId, playlistId, checkType).fold(
+    return playlistCheckPort.runFix(playlistId, checkType).fold(
       ifLeft = { error -> Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(mapOf("error" to error.code)).build() },
       ifRight = { Response.ok(mapOf("status" to "ok")).build() },
     )

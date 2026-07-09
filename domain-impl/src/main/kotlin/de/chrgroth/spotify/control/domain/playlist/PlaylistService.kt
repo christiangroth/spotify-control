@@ -57,20 +57,26 @@ class PlaylistService(
       .register(meterRegistry)
   }
 
-  override fun getPlaylists(userId: UserId): List<PlaylistInfo> = playlistRepository.findByUserId(userId)
+  override fun getPlaylists(): List<PlaylistInfo> {
+    val userId = currentUserResolver.userId() ?: return emptyList()
+    return playlistRepository.findByUserId(userId)
+  }
 
-  override fun getTrackCounts(userId: UserId): Map<String, Int> = playlistRepository.findTrackCountsByUserId(userId)
+  override fun getTrackCounts(): Map<String, Int> {
+    val userId = currentUserResolver.userId() ?: return emptyMap()
+    return playlistRepository.findTrackCountsByUserId(userId)
+  }
 
   override fun enqueueUpdates() {
-    val userId = currentUserResolver.userId() ?: return
-    outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistInfo(userId))
+    currentUserResolver.userId() ?: return
+    outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistInfo())
     lastSyncJobSuccessTimestamp.set(Clock.System.now().toEpochMilliseconds() / MILLIS_PER_SECOND)
   }
 
-  override fun syncPlaylists(userId: UserId): Either<DomainError, Unit> {
-    userRepository.findById(userId) ?: return Unit.right()
+  override fun syncPlaylists(): Either<DomainError, Unit> {
+    val userId = currentUserResolver.userId() ?: return Unit.right()
     val accessToken = spotifyAccessToken.getValidAccessToken()
-    return spotifyPlaylist.getPlaylists(userId, accessToken).map { spotifyPlaylists ->
+    return spotifyPlaylist.getPlaylists(accessToken).map { spotifyPlaylists ->
       val now = Clock.System.now()
       val existingById = playlistRepository.findByUserId(userId).associateBy { it.spotifyPlaylistId }
       val updatedPlaylists = spotifyPlaylists.filter { it.ownerId == userId.value }.map { item ->
@@ -97,19 +103,19 @@ class PlaylistService(
             playlistRepository.findByUserIdAndPlaylistId(userId, playlist.spotifyPlaylistId) == null
         }
         .forEach { playlist ->
-          outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, playlist.spotifyPlaylistId))
+          outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(playlist.spotifyPlaylistId))
         }
     }
   }
 
-  override fun syncPlaylistData(userId: UserId, playlistId: String, nextUrl: String?, snapshotId: String?): Either<DomainError, Unit> {
-    userRepository.findById(userId) ?: return Unit.right()
+  override fun syncPlaylistData(playlistId: String, nextUrl: String?, snapshotId: String?): Either<DomainError, Unit> {
+    val userId = currentUserResolver.userId() ?: return Unit.right()
     val accessToken = spotifyAccessToken.getValidAccessToken()
     val isFirstPage = nextUrl == null
-    return spotifyPlaylist.getPlaylistTracksPage(userId, accessToken, playlistId, nextUrl).map { page ->
+    return spotifyPlaylist.getPlaylistTracksPage(accessToken, playlistId, nextUrl).map { page ->
       if (snapshotId != null && page.snapshotId != snapshotId) {
         logger.warn { "Snapshot changed for playlist $playlistId (expected $snapshotId, got ${page.snapshotId}), restarting sync from first page" }
-        outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, playlistId))
+        outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(playlistId))
         return@map
       }
       if (isFirstPage) {
@@ -121,20 +127,20 @@ class PlaylistService(
       val catalogRequests = page.tracks.map {
         CatalogSyncRequest(it.trackId.value, listOfNotNull(it.artistIds.firstOrNull()?.value), SyncCause.Playlist(playlistId, it.trackId.value))
       }
-      syncController.syncForTracks(catalogRequests, userId)
+      syncController.syncForTracks(catalogRequests)
 
       if (page.nextUrl != null) {
-        outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, playlistId, page.nextUrl, page.snapshotId))
+        outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(playlistId, page.nextUrl, page.snapshotId))
       } else {
         logger.info { "Completed all pages for playlist $playlistId (user ${userDisplayName(userId)})" }
         playlistRepository.updateLastSyncTime(userId, playlistId, Clock.System.now())
-        outboxPort.enqueue(DomainOutboxEvent.RunPlaylistChecks(userId, playlistId))
+        outboxPort.enqueue(DomainOutboxEvent.RunPlaylistChecks(playlistId))
       }
     }
   }
 
-  override fun updateSyncStatus(userId: UserId, playlistId: String, syncStatus: PlaylistSyncStatus): Either<DomainError, Unit> {
-    userRepository.findById(userId) ?: return PlaylistSyncError.PLAYLIST_NOT_FOUND.left()
+  override fun updateSyncStatus(playlistId: String, syncStatus: PlaylistSyncStatus): Either<DomainError, Unit> {
+    val userId = currentUserResolver.userId() ?: return PlaylistSyncError.PLAYLIST_NOT_FOUND.left()
     val playlists = playlistRepository.findByUserId(userId)
     val playlist = playlists.find { it.spotifyPlaylistId == playlistId }
       ?: return PlaylistSyncError.PLAYLIST_NOT_FOUND.left()
@@ -161,12 +167,13 @@ class PlaylistService(
       playlistCheckRepository.deleteByPlaylistId(playlistId)
     } else if (syncStatus == PlaylistSyncStatus.ACTIVE) {
       logger.info { "Enqueueing SyncPlaylistData for activated playlist '${playlist.name}' ($playlistId, user ${userDisplayName(userId)})" }
-      outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, playlistId))
+      outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(playlistId))
     }
     return Unit.right()
   }
 
-  override fun updatePlaylistType(userId: UserId, playlistId: String, type: PlaylistType): Either<DomainError, Unit> {
+  override fun updatePlaylistType(playlistId: String, type: PlaylistType): Either<DomainError, Unit> {
+    val userId = currentUserResolver.userId() ?: return PlaylistSyncError.PLAYLIST_NOT_FOUND.left()
     val validationError = validatePlaylistTypeUpdate(userId, playlistId, type)
     if (validationError != null) return validationError.left()
     val playlists = playlistRepository.findByUserId(userId)
@@ -181,7 +188,6 @@ class PlaylistService(
   }
 
   private fun validatePlaylistTypeUpdate(userId: UserId, playlistId: String, type: PlaylistType): PlaylistSyncError? {
-    userRepository.findById(userId) ?: return PlaylistSyncError.PLAYLIST_NOT_FOUND
     val playlists = playlistRepository.findByUserId(userId)
     val playlist = playlists.find { it.spotifyPlaylistId == playlistId }
     return when {
@@ -195,8 +201,8 @@ class PlaylistService(
     }
   }
 
-  override fun enqueueSyncPlaylistData(userId: UserId, playlistId: String): Either<DomainError, Unit> {
-    userRepository.findById(userId) ?: return PlaylistSyncError.PLAYLIST_NOT_FOUND.left()
+  override fun enqueueSyncPlaylistData(playlistId: String): Either<DomainError, Unit> {
+    val userId = currentUserResolver.userId() ?: return PlaylistSyncError.PLAYLIST_NOT_FOUND.left()
     val playlists = playlistRepository.findByUserId(userId)
     val playlist = playlists.find { it.spotifyPlaylistId == playlistId }
       ?: return PlaylistSyncError.PLAYLIST_NOT_FOUND.left()
@@ -204,16 +210,16 @@ class PlaylistService(
       PlaylistSyncError.PLAYLIST_SYNC_INACTIVE.left()
     } else {
       logger.info { "Enqueueing SyncPlaylistData for playlist '${playlist.name}' ($playlistId, user ${userDisplayName(userId)})" }
-      outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(userId, playlistId))
+      outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(playlistId))
       Unit.right()
     }
   }
 
   override fun handle(event: DomainOutboxEvent.SyncPlaylistInfo): Either<DomainError, Unit> =
-    syncPlaylists(event.userId)
+    syncPlaylists()
 
   override fun handle(event: DomainOutboxEvent.SyncPlaylistData): Either<DomainError, Unit> =
-    syncPlaylistData(event.userId, event.playlistId, event.nextUrl, event.snapshotId)
+    syncPlaylistData(event.playlistId, event.nextUrl, event.snapshotId)
 
   private fun userDisplayName(userId: UserId) = userRepository.findById(userId)?.displayName ?: userId.value
 

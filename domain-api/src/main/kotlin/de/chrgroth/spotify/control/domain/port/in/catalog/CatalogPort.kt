@@ -3,14 +3,13 @@ package de.chrgroth.spotify.control.domain.port.`in`.catalog
 import arrow.core.Either
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
-import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 
 interface CatalogPort {
   fun findAllArtists(): List<AppArtist>
   fun blockArtistFromAggregation(artistId: String): Either<DomainError, Unit>
   fun unblockArtistFromAggregation(artistId: String): Either<DomainError, Unit>
-  fun syncArtistDetails(artistId: String, userId: UserId): Either<DomainError, Unit>
+  fun syncArtistDetails(artistId: String): Either<DomainError, Unit>
   fun resyncCatalog(): Either<DomainError, Unit>
   fun resyncArtist(artistId: String): Either<DomainError, Unit>
   fun wipeCatalog(): Either<DomainError, Unit>

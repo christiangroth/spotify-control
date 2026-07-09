@@ -1,12 +1,10 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
-import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackEventViewerPort
 import io.quarkus.qute.Location
 import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
 import io.quarkus.security.Authenticated
-import io.quarkus.security.identity.SecurityIdentity
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.Path
@@ -27,7 +25,6 @@ import kotlinx.datetime.toLocalDateTime
 class PlaybackEventViewerResource(
   @param:Location("playback-event-viewer.html")
   private val template: Template,
-  private val securityIdentity: SecurityIdentity,
   private val playbackEventViewer: PlaybackEventViewerPort,
 ) {
 
@@ -39,8 +36,7 @@ class PlaybackEventViewerResource(
     val requestedDate = dateParam?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: today
     val date = if (requestedDate > today) today else requestedDate
 
-    val userId = UserId(securityIdentity.principal.name)
-    val result = playbackEventViewer.getEvents(userId, date)
+    val result = playbackEventViewer.getEvents(date)
 
     return template
       .data("result", result)

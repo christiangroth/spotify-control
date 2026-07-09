@@ -1,6 +1,5 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
-import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxAdminPort
@@ -9,7 +8,6 @@ import io.quarkus.test.junit.QuarkusTest
 import jakarta.inject.Inject
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import java.util.UUID
 
 @QuarkusTest
 class OutboxAdminPortAdapterTests {
@@ -22,8 +20,7 @@ class OutboxAdminPortAdapterTests {
 
   @Test
   fun `wipeAll removes all enqueued outbox tasks and partition documents`() {
-    val userId = UserId("user-${UUID.randomUUID()}")
-    outbox.enqueue(DomainOutboxEvent.FetchPlaybackData(userId))
+    outbox.enqueue(DomainOutboxEvent.FetchPlaybackData())
 
     outboxAdmin.wipeAll()
 

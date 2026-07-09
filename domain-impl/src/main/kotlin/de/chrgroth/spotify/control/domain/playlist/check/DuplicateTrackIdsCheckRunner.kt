@@ -69,8 +69,8 @@ class DuplicateTrackIdsCheckRunner(
       return Unit.right()
     }
     logger.info { "Removing all occurrences of ${duplicateTrackIds.size} duplicate track(s) from playlist $playlistId (user ${userId.value}), then re-adding once each" }
-    return spotifyPlaylist.removePlaylistTracks(userId, accessToken, playlistId, duplicateTrackIds)
-      .flatMap { spotifyPlaylist.addPlaylistTracks(userId, accessToken, playlistId, duplicateTrackIds) }
+    return spotifyPlaylist.removePlaylistTracks(accessToken, playlistId, duplicateTrackIds)
+      .flatMap { spotifyPlaylist.addPlaylistTracks(accessToken, playlistId, duplicateTrackIds) }
       .onRight { meterRegistry.counter("app.playlist.duplicates_removed", "playlistId", playlistId).increment(duplicateTrackIds.size.toDouble()) }
   }
 
