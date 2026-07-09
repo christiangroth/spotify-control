@@ -3,14 +3,13 @@ package de.chrgroth.spotify.control.adapter.out.mongodb
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationPeriodType
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationRankEntry
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.PlaybackAggregation
-import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.playback.PlaybackAggregationRepositoryPort
 import io.quarkus.test.junit.QuarkusTest
 import jakarta.inject.Inject
 import kotlinx.datetime.LocalDate
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import java.util.UUID
 
 @QuarkusTest
 class PlaybackAggregationRepositoryTests {
@@ -18,8 +17,7 @@ class PlaybackAggregationRepositoryTests {
   @Inject
   lateinit var aggregationRepository: PlaybackAggregationRepositoryPort
 
-  private fun aggregation(userId: UserId, type: AggregationPeriodType, periodStart: LocalDate, eventCount: Long = 1L) = PlaybackAggregation(
-    userId = userId,
+  private fun aggregation(type: AggregationPeriodType, periodStart: LocalDate, eventCount: Long = 1L) = PlaybackAggregation(
     type = type,
     periodStart = periodStart,
     totalPlaybackSeconds = eventCount * SECONDS_PER_EVENT,
@@ -33,34 +31,35 @@ class PlaybackAggregationRepositoryTests {
     activityEntries = emptyList(),
   )
 
-  @Test
-  fun `save persists aggregation and findByUserAndPeriod returns it`() {
-    val userId = UserId("user-${UUID.randomUUID()}")
-    val periodStart = LocalDate(2024, 1, 10)
-    aggregationRepository.save(aggregation(userId, AggregationPeriodType.DAY, periodStart, eventCount = 5L))
+  @BeforeEach
+  fun cleanUp() {
+    // single-user application: the collection is no longer scoped per user, so tests reset it explicitly for isolation
+    aggregationRepository.deleteAll()
+  }
 
-    val result = aggregationRepository.findByUserAndPeriod(userId, AggregationPeriodType.DAY, periodStart)
+  @Test
+  fun `save persists aggregation and findByPeriod returns it`() {
+    val periodStart = LocalDate(2024, 1, 10)
+    aggregationRepository.save(aggregation(AggregationPeriodType.DAY, periodStart, eventCount = 5L))
+
+    val result = aggregationRepository.findByPeriod(AggregationPeriodType.DAY, periodStart)
 
     assertThat(result).isNotNull()
     assertThat(result!!.eventCount).isEqualTo(5L)
   }
 
   @Test
-  fun `findByUserAndPeriod returns null when no aggregation exists`() {
-    val result = aggregationRepository.findByUserAndPeriod(UserId("user-${UUID.randomUUID()}"), AggregationPeriodType.DAY, LocalDate(2024, 1, 1))
+  fun `findByPeriod returns null when no aggregation exists`() {
+    val result = aggregationRepository.findByPeriod(AggregationPeriodType.DAY, LocalDate(2024, 1, 1))
     assertThat(result).isNull()
   }
 
   @Test
-  fun `findByUserAndPeriods resolves multiple type period-start pairs in a single batch`() {
-    val userId = UserId("user-${UUID.randomUUID()}")
-    val otherUserId = UserId("user-${UUID.randomUUID()}")
-    aggregationRepository.save(aggregation(userId, AggregationPeriodType.DAY, LocalDate(2024, 1, 10), eventCount = 3L))
-    aggregationRepository.save(aggregation(userId, AggregationPeriodType.WEEK, LocalDate(2024, 1, 8), eventCount = 5L))
-    aggregationRepository.save(aggregation(otherUserId, AggregationPeriodType.DAY, LocalDate(2024, 1, 10), eventCount = 99L))
+  fun `findByPeriods resolves multiple type period-start pairs in a single batch`() {
+    aggregationRepository.save(aggregation(AggregationPeriodType.DAY, LocalDate(2024, 1, 10), eventCount = 3L))
+    aggregationRepository.save(aggregation(AggregationPeriodType.WEEK, LocalDate(2024, 1, 8), eventCount = 5L))
 
-    val result = aggregationRepository.findByUserAndPeriods(
-      userId,
+    val result = aggregationRepository.findByPeriods(
       listOf(
         AggregationPeriodType.DAY to LocalDate(2024, 1, 10),
         AggregationPeriodType.WEEK to LocalDate(2024, 1, 8),
@@ -75,55 +74,46 @@ class PlaybackAggregationRepositoryTests {
   }
 
   @Test
-  fun `findByUserAndPeriods returns empty map for empty input`() {
-    val result = aggregationRepository.findByUserAndPeriods(UserId("user-${UUID.randomUUID()}"), emptyList())
+  fun `findByPeriods returns empty map for empty input`() {
+    val result = aggregationRepository.findByPeriods(emptyList())
     assertThat(result).isEmpty()
   }
 
   @Test
-  fun `findByUserTypeAndPeriodRange returns only aggregations within range for the given user and type`() {
-    val userId = UserId("user-${UUID.randomUUID()}")
-    val otherUserId = UserId("user-${UUID.randomUUID()}")
-    aggregationRepository.save(aggregation(userId, AggregationPeriodType.DAY, LocalDate(2024, 1, 10)))
-    aggregationRepository.save(aggregation(userId, AggregationPeriodType.DAY, LocalDate(2024, 1, 15)))
-    aggregationRepository.save(aggregation(userId, AggregationPeriodType.DAY, LocalDate(2024, 2, 1)))
-    aggregationRepository.save(aggregation(userId, AggregationPeriodType.WEEK, LocalDate(2024, 1, 15)))
-    aggregationRepository.save(aggregation(otherUserId, AggregationPeriodType.DAY, LocalDate(2024, 1, 15)))
+  fun `findByTypeAndPeriodRange returns only aggregations within range for the given type`() {
+    aggregationRepository.save(aggregation(AggregationPeriodType.DAY, LocalDate(2024, 1, 10)))
+    aggregationRepository.save(aggregation(AggregationPeriodType.DAY, LocalDate(2024, 1, 15)))
+    aggregationRepository.save(aggregation(AggregationPeriodType.DAY, LocalDate(2024, 2, 1)))
+    aggregationRepository.save(aggregation(AggregationPeriodType.WEEK, LocalDate(2024, 1, 15)))
 
-    val result = aggregationRepository.findByUserTypeAndPeriodRange(userId, AggregationPeriodType.DAY, LocalDate(2024, 1, 1), LocalDate(2024, 1, 31))
+    val result = aggregationRepository.findByTypeAndPeriodRange(AggregationPeriodType.DAY, LocalDate(2024, 1, 1), LocalDate(2024, 1, 31))
 
     assertThat(result.map { it.periodStart }).containsExactlyInAnyOrder(LocalDate(2024, 1, 10), LocalDate(2024, 1, 15))
   }
 
   @Test
-  fun `findByUserTypeAndPeriodRange returns empty list when nothing matches`() {
-    val result = aggregationRepository.findByUserTypeAndPeriodRange(
-      UserId("user-${UUID.randomUUID()}"), AggregationPeriodType.DAY, LocalDate(2024, 1, 1), LocalDate(2024, 1, 31),
-    )
+  fun `findByTypeAndPeriodRange returns empty list when nothing matches`() {
+    val result = aggregationRepository.findByTypeAndPeriodRange(AggregationPeriodType.DAY, LocalDate(2024, 1, 1), LocalDate(2024, 1, 31))
     assertThat(result).isEmpty()
   }
 
   @Test
-  fun `findDailySummaryByUserAndPeriodRange returns only DAY aggregations within range for the given user`() {
-    val userId = UserId("user-${UUID.randomUUID()}")
-    val otherUserId = UserId("user-${UUID.randomUUID()}")
-    aggregationRepository.save(aggregation(userId, AggregationPeriodType.DAY, LocalDate(2024, 1, 10)))
-    aggregationRepository.save(aggregation(userId, AggregationPeriodType.DAY, LocalDate(2024, 1, 15)))
-    aggregationRepository.save(aggregation(userId, AggregationPeriodType.DAY, LocalDate(2024, 2, 1)))
-    aggregationRepository.save(aggregation(userId, AggregationPeriodType.WEEK, LocalDate(2024, 1, 15)))
-    aggregationRepository.save(aggregation(otherUserId, AggregationPeriodType.DAY, LocalDate(2024, 1, 15)))
+  fun `findDailySummaryByPeriodRange returns only DAY aggregations within range`() {
+    aggregationRepository.save(aggregation(AggregationPeriodType.DAY, LocalDate(2024, 1, 10)))
+    aggregationRepository.save(aggregation(AggregationPeriodType.DAY, LocalDate(2024, 1, 15)))
+    aggregationRepository.save(aggregation(AggregationPeriodType.DAY, LocalDate(2024, 2, 1)))
+    aggregationRepository.save(aggregation(AggregationPeriodType.WEEK, LocalDate(2024, 1, 15)))
 
-    val result = aggregationRepository.findDailySummaryByUserAndPeriodRange(userId, LocalDate(2024, 1, 1), LocalDate(2024, 1, 31))
+    val result = aggregationRepository.findDailySummaryByPeriodRange(LocalDate(2024, 1, 1), LocalDate(2024, 1, 31))
 
     assertThat(result.map { it.periodStart }).containsExactlyInAnyOrder(LocalDate(2024, 1, 10), LocalDate(2024, 1, 15))
   }
 
   @Test
-  fun `findDailySummaryByUserAndPeriodRange maps event count, playback seconds, track and artist entries`() {
-    val userId = UserId("user-${UUID.randomUUID()}")
-    aggregationRepository.save(aggregation(userId, AggregationPeriodType.DAY, LocalDate(2024, 1, 10), eventCount = 5L))
+  fun `findDailySummaryByPeriodRange maps event count, playback seconds, track and artist entries`() {
+    aggregationRepository.save(aggregation(AggregationPeriodType.DAY, LocalDate(2024, 1, 10), eventCount = 5L))
 
-    val result = aggregationRepository.findDailySummaryByUserAndPeriodRange(userId, LocalDate(2024, 1, 1), LocalDate(2024, 1, 31))
+    val result = aggregationRepository.findDailySummaryByPeriodRange(LocalDate(2024, 1, 1), LocalDate(2024, 1, 31))
 
     assertThat(result).hasSize(1)
     val summary = result.single()
@@ -134,28 +124,25 @@ class PlaybackAggregationRepositoryTests {
   }
 
   @Test
-  fun `findDailySummaryByUserAndPeriodRange returns empty list when nothing matches`() {
-    val result = aggregationRepository.findDailySummaryByUserAndPeriodRange(
-      UserId("user-${UUID.randomUUID()}"), LocalDate(2024, 1, 1), LocalDate(2024, 1, 31),
-    )
+  fun `findDailySummaryByPeriodRange returns empty list when nothing matches`() {
+    val result = aggregationRepository.findDailySummaryByPeriodRange(LocalDate(2024, 1, 1), LocalDate(2024, 1, 31))
     assertThat(result).isEmpty()
   }
 
   @Test
-  fun `sumEventCountByUser sums event counts across all DAY aggregations for the user`() {
-    val userId = UserId("user-${UUID.randomUUID()}")
-    aggregationRepository.save(aggregation(userId, AggregationPeriodType.DAY, LocalDate(2024, 1, 10), eventCount = 3L))
-    aggregationRepository.save(aggregation(userId, AggregationPeriodType.DAY, LocalDate(2024, 1, 11), eventCount = 4L))
-    aggregationRepository.save(aggregation(userId, AggregationPeriodType.WEEK, LocalDate(2024, 1, 8), eventCount = 100L))
+  fun `sumEventCount sums event counts across all DAY aggregations`() {
+    aggregationRepository.save(aggregation(AggregationPeriodType.DAY, LocalDate(2024, 1, 10), eventCount = 3L))
+    aggregationRepository.save(aggregation(AggregationPeriodType.DAY, LocalDate(2024, 1, 11), eventCount = 4L))
+    aggregationRepository.save(aggregation(AggregationPeriodType.WEEK, LocalDate(2024, 1, 8), eventCount = 100L))
 
-    val result = aggregationRepository.sumEventCountByUser(userId)
+    val result = aggregationRepository.sumEventCount()
 
     assertThat(result).isEqualTo(7L)
   }
 
   @Test
-  fun `sumEventCountByUser returns zero when user has no aggregations`() {
-    val result = aggregationRepository.sumEventCountByUser(UserId("user-${UUID.randomUUID()}"))
+  fun `sumEventCount returns zero when no aggregations exist`() {
+    val result = aggregationRepository.sumEventCount()
     assertThat(result).isEqualTo(0L)
   }
 

@@ -7,7 +7,6 @@ import de.chrgroth.spotify.control.domain.model.catalog.displayArtistName
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.ActivityTimeWindow
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationPeriodType
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.PlaybackAggregation
-import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppAlbumRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
@@ -16,7 +15,6 @@ import io.quarkus.qute.Location
 import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
 import io.quarkus.security.Authenticated
-import io.quarkus.security.identity.SecurityIdentity
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.Path
@@ -34,7 +32,6 @@ import java.time.DayOfWeek
 class StatsResource(
   @param:Location("stats.html")
   private val statsTemplate: Template,
-  private val securityIdentity: SecurityIdentity,
   private val aggregationRepository: PlaybackAggregationRepositoryPort,
   private val appTrackRepository: AppTrackRepositoryPort,
   private val appAlbumRepository: AppAlbumRepositoryPort,
@@ -45,10 +42,9 @@ class StatsResource(
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
   fun stats(): TemplateInstance {
-    val userId = UserId(securityIdentity.principal.name)
     val periodStartsByType = AggregationPeriodType.entries.associateWith { threePeriodStarts(it) }
     val requestedPeriods = periodStartsByType.flatMap { (type, periodStarts) -> periodStarts.map { type to it } }
-    val aggregationsByTypeAndPeriod = aggregationRepository.findByUserAndPeriods(userId, requestedPeriods)
+    val aggregationsByTypeAndPeriod = aggregationRepository.findByPeriods(requestedPeriods)
     val tabs = AggregationPeriodType.entries.mapIndexed { index, type ->
       val periodStarts = periodStartsByType.getValue(type)
       AggregationTab(

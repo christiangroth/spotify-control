@@ -13,7 +13,6 @@ import de.chrgroth.spotify.control.domain.model.playlist.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistType
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
 import de.chrgroth.spotify.control.domain.model.user.AccessToken
-import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.SpotifyPlaylistPort
@@ -34,9 +33,9 @@ class YearSongsInAllCheckRunner(
 
   override fun isApplicable(playlistInfo: PlaylistInfo?): Boolean = playlistInfo?.type == PlaylistType.YEAR
 
-  override fun run(userId: UserId, playlistId: String, playlist: Playlist, currentPlaylistInfo: PlaylistInfo?, allPlaylistInfos: List<PlaylistInfo>): AppPlaylistCheck {
+  override fun run(playlistId: String, playlist: Playlist, currentPlaylistInfo: PlaylistInfo?, allPlaylistInfos: List<PlaylistInfo>): AppPlaylistCheck {
     val allPlaylistInfo = allPlaylistInfos.find { it.type == PlaylistType.ALL }
-    val allPlaylist = allPlaylistInfo?.let { playlistRepository.findByUserIdAndPlaylistId(userId, it.spotifyPlaylistId) }
+    val allPlaylist = allPlaylistInfo?.let { playlistRepository.findByPlaylistId(it.spotifyPlaylistId) }
     val violations = if (allPlaylist == null) {
       emptyList()
     } else {
@@ -68,14 +67,13 @@ class YearSongsInAllCheckRunner(
   override fun canFix(): Boolean = true
 
   override fun fix(
-    userId: UserId,
     accessToken: AccessToken,
     playlistId: String,
     playlist: Playlist,
     currentPlaylistInfo: PlaylistInfo?,
     allPlaylistInfos: List<PlaylistInfo>,
   ): Either<DomainError, Unit> =
-    resolveAllPlaylist(userId, playlistId, allPlaylistInfos).flatMap { (allPlaylistInfo, allPlaylist) ->
+    resolveAllPlaylist(playlistId, allPlaylistInfos).flatMap { (allPlaylistInfo, allPlaylist) ->
       val allTrackIds = allPlaylist.tracks.map { it.trackId.value }.toSet()
       val missingTrackIds = playlist.tracks
         .filter { it.trackId.value !in allTrackIds }
@@ -84,18 +82,18 @@ class YearSongsInAllCheckRunner(
       if (missingTrackIds.isEmpty()) {
         Unit.right()
       } else {
-        logger.info { "Adding ${missingTrackIds.size} track(s) to all playlist ${allPlaylistInfo.spotifyPlaylistId} (user ${userId.value})" }
+        logger.info { "Adding ${missingTrackIds.size} track(s) to all playlist ${allPlaylistInfo.spotifyPlaylistId}" }
         spotifyPlaylist.addPlaylistTracks(accessToken, allPlaylistInfo.spotifyPlaylistId, missingTrackIds)
       }
     }
 
-  private fun resolveAllPlaylist(userId: UserId, playlistId: String, allPlaylistInfos: List<PlaylistInfo>): Either<DomainError, Pair<PlaylistInfo, Playlist>> {
+  private fun resolveAllPlaylist(playlistId: String, allPlaylistInfos: List<PlaylistInfo>): Either<DomainError, Pair<PlaylistInfo, Playlist>> {
     val allPlaylistInfo = allPlaylistInfos.find { it.type == PlaylistType.ALL } ?: run {
-      logger.warn { "No all playlist found for user ${userId.value}, cannot fix $checkId for playlist $playlistId" }
+      logger.warn { "No all playlist found, cannot fix $checkId for playlist $playlistId" }
       return PlaylistFixError.FIX_NOT_FOUND.left()
     }
-    val allPlaylist = playlistRepository.findByUserIdAndPlaylistId(userId, allPlaylistInfo.spotifyPlaylistId) ?: run {
-      logger.warn { "All playlist ${allPlaylistInfo.spotifyPlaylistId} not yet synced for user ${userId.value}, cannot fix $checkId" }
+    val allPlaylist = playlistRepository.findByPlaylistId(allPlaylistInfo.spotifyPlaylistId) ?: run {
+      logger.warn { "All playlist ${allPlaylistInfo.spotifyPlaylistId} not yet synced, cannot fix $checkId" }
       return PlaylistFixError.PLAYLIST_NOT_FOUND.left()
     }
     return (allPlaylistInfo to allPlaylist).right()

@@ -206,8 +206,8 @@ class CatalogBrowserService(
     appArtistRepository.findByArtistIds(setOf(ArtistId(artistId))).firstOrNull()?.artistName ?: artistId
 
   private fun playlistName(playlistId: String): String {
-    val userId = currentUserResolver.userId() ?: return playlistId
-    return playlistRepository.findByUserId(userId).firstOrNull { it.spotifyPlaylistId == playlistId }?.name ?: playlistId
+    currentUserResolver.userId() ?: return playlistId
+    return playlistRepository.findAll().firstOrNull { it.spotifyPlaylistId == playlistId }?.name ?: playlistId
   }
 
   companion object {

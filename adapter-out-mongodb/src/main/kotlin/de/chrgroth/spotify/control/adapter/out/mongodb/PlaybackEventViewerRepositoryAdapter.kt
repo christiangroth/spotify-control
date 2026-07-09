@@ -5,7 +5,6 @@ import com.mongodb.client.MongoClient
 import com.mongodb.client.model.Filters
 import com.mongodb.client.model.Sorts
 import de.chrgroth.spotify.control.domain.model.playback.RawPlaybackEvent
-import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.playback.PlaybackEventViewerRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 import kotlin.time.Instant
@@ -28,28 +27,26 @@ class PlaybackEventViewerRepositoryAdapter(
   private val databaseName: String,
 ) : PlaybackEventViewerRepositoryPort {
 
-  override fun findRecentlyPlayed(userId: UserId, from: Instant, to: Instant): List<RawPlaybackEvent> =
-    queryCollection(RECENTLY_PLAYED_COLLECTION, PLAYED_AT_FIELD, DURATION_SECONDS_FIELD, 1L, userId, from, to)
+  override fun findRecentlyPlayed(from: Instant, to: Instant): List<RawPlaybackEvent> =
+    queryCollection(RECENTLY_PLAYED_COLLECTION, PLAYED_AT_FIELD, DURATION_SECONDS_FIELD, 1L, from, to)
 
-  override fun findRecentlyPartialPlayed(userId: UserId, from: Instant, to: Instant): List<RawPlaybackEvent> =
-    queryCollection(RECENTLY_PARTIAL_PLAYED_COLLECTION, PLAYED_AT_FIELD, PLAYED_SECONDS_FIELD, 1L, userId, from, to)
+  override fun findRecentlyPartialPlayed(from: Instant, to: Instant): List<RawPlaybackEvent> =
+    queryCollection(RECENTLY_PARTIAL_PLAYED_COLLECTION, PLAYED_AT_FIELD, PLAYED_SECONDS_FIELD, 1L, from, to)
 
-  override fun findCurrentlyPlaying(userId: UserId, from: Instant, to: Instant): List<RawPlaybackEvent> =
-    queryCollection(CURRENTLY_PLAYING_COLLECTION, OBSERVED_AT_FIELD, DURATION_MS_FIELD, MS_PER_SECOND, userId, from, to)
+  override fun findCurrentlyPlaying(from: Instant, to: Instant): List<RawPlaybackEvent> =
+    queryCollection(CURRENTLY_PLAYING_COLLECTION, OBSERVED_AT_FIELD, DURATION_MS_FIELD, MS_PER_SECOND, from, to)
 
   private fun queryCollection(
     collectionName: String,
     timestampField: String,
     durationField: String,
     durationDivisor: Long,
-    userId: UserId,
     from: Instant,
     to: Instant,
   ): List<RawPlaybackEvent> {
     val coll = mongoClient.getDatabase(databaseName).getCollection(collectionName, BsonDocument::class.java)
     return try {
       val filter = Filters.and(
-        Filters.eq(SPOTIFY_USER_ID_FIELD, userId.value),
         Filters.gte(timestampField, from.toJavaInstant()),
         Filters.lt(timestampField, to.toJavaInstant()),
       )
@@ -86,7 +83,6 @@ class PlaybackEventViewerRepositoryAdapter(
     private const val RECENTLY_PLAYED_COLLECTION = "spotify_recently_played"
     private const val RECENTLY_PARTIAL_PLAYED_COLLECTION = "spotify_recently_partial_played"
     private const val CURRENTLY_PLAYING_COLLECTION = "spotify_currently_playing"
-    private const val SPOTIFY_USER_ID_FIELD = "spotifyUserId"
     private const val PLAYED_AT_FIELD = "playedAt"
     private const val OBSERVED_AT_FIELD = "observedAt"
     private const val TRACK_ID_FIELD = "trackId"

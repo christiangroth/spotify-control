@@ -14,7 +14,6 @@ import de.chrgroth.spotify.control.domain.model.playlist.PlaylistTrack
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistType
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
 import de.chrgroth.spotify.control.domain.model.user.AccessToken
-import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.SpotifyPlaylistPort
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
@@ -33,7 +32,6 @@ class DuplicateTrackIdsCheckRunnerTests {
   private val meterRegistry = SimpleMeterRegistry()
   private val runner = DuplicateTrackIdsCheckRunner(appTrackRepository, spotifyPlaylist, meterRegistry)
 
-  private val userId = UserId("user-1")
   private val accessToken = AccessToken("token")
   private val playlistId = "playlist-1"
 
@@ -77,7 +75,7 @@ class DuplicateTrackIdsCheckRunnerTests {
   fun `run returns no violations for unique tracks`() {
     val playlist = buildPlaylist(listOf(buildTrack("t1"), buildTrack("t2")))
 
-    val result = runner.run(userId, playlistId, playlist, null, emptyList())
+    val result = runner.run(playlistId, playlist, null, emptyList())
 
     assertThat(result.succeeded).isTrue()
     assertThat(result.violations).isEmpty()
@@ -89,7 +87,7 @@ class DuplicateTrackIdsCheckRunnerTests {
     val playlist = buildPlaylist(listOf(buildTrack("t1"), buildTrack("t1"), buildTrack("t2")))
     every { appTrackRepository.findByTrackIds(setOf(TrackId("t1"))) } returns listOf(buildAppTrack("t1", "Song A", "Artist A"))
 
-    val result = runner.run(userId, playlistId, playlist, null, emptyList())
+    val result = runner.run(playlistId, playlist, null, emptyList())
 
     assertThat(result.succeeded).isFalse()
     assertThat(result.violations).containsExactly("Artist A – Song A")
@@ -110,7 +108,7 @@ class DuplicateTrackIdsCheckRunnerTests {
       buildAppTrack("t2", "Song B", "Artist B"),
     )
 
-    val result = runner.run(userId, playlistId, playlist, null, emptyList())
+    val result = runner.run(playlistId, playlist, null, emptyList())
 
     assertThat(result.succeeded).isFalse()
     assertThat(result.violations).containsExactlyInAnyOrder("Artist A – Song A", "Artist B – Song B")
@@ -121,7 +119,7 @@ class DuplicateTrackIdsCheckRunnerTests {
     val playlist = buildPlaylist(listOf(buildTrack("t1"), buildTrack("t1")))
     every { appTrackRepository.findByTrackIds(setOf(TrackId("t1"))) } returns listOf(buildAppTrack("t1", "Song", null))
 
-    val result = runner.run(userId, playlistId, playlist, null, emptyList())
+    val result = runner.run(playlistId, playlist, null, emptyList())
 
     assertThat(result.violations).containsExactly("Unknown Artist – Song")
   }
@@ -135,7 +133,7 @@ class DuplicateTrackIdsCheckRunnerTests {
   fun `fix returns success and makes no Spotify call when no duplicates`() {
     val playlist = buildPlaylist(listOf(buildTrack("t1"), buildTrack("t2")))
 
-    val result = runner.fix(userId, accessToken, playlistId, playlist, null, emptyList())
+    val result = runner.fix(accessToken, playlistId, playlist, null, emptyList())
 
     assertThat(result.isRight()).isTrue()
     verify(exactly = 0) { spotifyPlaylist.removePlaylistTracks(any(), any(), any()) }
@@ -148,7 +146,7 @@ class DuplicateTrackIdsCheckRunnerTests {
     every { spotifyPlaylist.removePlaylistTracks(accessToken, playlistId, listOf("t1")) } returns Unit.right()
     every { spotifyPlaylist.addPlaylistTracks(accessToken, playlistId, listOf("t1")) } returns Unit.right()
 
-    val result = runner.fix(userId, accessToken, playlistId, playlist, null, emptyList())
+    val result = runner.fix(accessToken, playlistId, playlist, null, emptyList())
 
     assertThat(result.isRight()).isTrue()
     verify(exactly = 1) { spotifyPlaylist.removePlaylistTracks(accessToken, playlistId, listOf("t1")) }
@@ -161,7 +159,7 @@ class DuplicateTrackIdsCheckRunnerTests {
     every { spotifyPlaylist.removePlaylistTracks(accessToken, playlistId, listOf("t1")) } returns Unit.right()
     every { spotifyPlaylist.addPlaylistTracks(accessToken, playlistId, listOf("t1")) } returns Unit.right()
 
-    val result = runner.fix(userId, accessToken, playlistId, playlist, null, emptyList())
+    val result = runner.fix(accessToken, playlistId, playlist, null, emptyList())
 
     assertThat(result.isRight()).isTrue()
     verify(exactly = 1) { spotifyPlaylist.removePlaylistTracks(accessToken, playlistId, listOf("t1")) }
@@ -178,7 +176,7 @@ class DuplicateTrackIdsCheckRunnerTests {
       spotifyPlaylist.addPlaylistTracks(accessToken, playlistId, listOf("t1", "t2"))
     } returns Unit.right()
 
-    val result = runner.fix(userId, accessToken, playlistId, playlist, null, emptyList())
+    val result = runner.fix(accessToken, playlistId, playlist, null, emptyList())
 
     assertThat(result.isRight()).isTrue()
     verify(exactly = 1) { spotifyPlaylist.removePlaylistTracks(accessToken, playlistId, listOf("t1", "t2")) }
@@ -190,7 +188,7 @@ class DuplicateTrackIdsCheckRunnerTests {
     val playlist = buildPlaylist(listOf(buildTrack("t1"), buildTrack("t1")))
     every { spotifyPlaylist.removePlaylistTracks(any(), any(), any()) } returns PlaylistFixError.FIX_FAILED.left()
 
-    val result = runner.fix(userId, accessToken, playlistId, playlist, null, emptyList())
+    val result = runner.fix(accessToken, playlistId, playlist, null, emptyList())
 
     assertThat(result.isLeft()).isTrue()
     assertThat((result as Either.Left).value).isEqualTo(PlaylistFixError.FIX_FAILED)
@@ -203,7 +201,7 @@ class DuplicateTrackIdsCheckRunnerTests {
     every { spotifyPlaylist.removePlaylistTracks(any(), any(), any()) } returns Unit.right()
     every { spotifyPlaylist.addPlaylistTracks(any(), any(), any()) } returns PlaylistFixError.FIX_FAILED.left()
 
-    val result = runner.fix(userId, accessToken, playlistId, playlist, null, emptyList())
+    val result = runner.fix(accessToken, playlistId, playlist, null, emptyList())
 
     assertThat(result.isLeft()).isTrue()
     assertThat((result as Either.Left).value).isEqualTo(PlaylistFixError.FIX_FAILED)

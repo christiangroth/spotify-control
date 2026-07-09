@@ -19,7 +19,6 @@ class MongoIndexInitializer(
   private val appAlbumDocumentRepository: AppAlbumDocumentRepository,
   private val appTrackDocumentRepository: AppTrackDocumentRepository,
   private val playlistMetadataDocumentRepository: PlaylistMetadataDocumentRepository,
-  private val playlistDocumentRepository: PlaylistDocumentRepository,
   private val appPlaylistCheckDocumentRepository: AppPlaylistCheckDocumentRepository,
 ) {
 
@@ -34,42 +33,35 @@ class MongoIndexInitializer(
 
   private fun ensurePlaybackCollectionIndexes() {
     recentlyPlayedDocumentRepository.mongoCollection().createIndex(
-      Document(AppPlaybackRepositoryAdapter.SPOTIFY_USER_ID_FIELD, 1).append(AppPlaybackRepositoryAdapter.PLAYED_AT_FIELD, 1),
-      IndexOptions().name("spotifyUserId_1_playedAt_1"),
+      Document(AppPlaybackRepositoryAdapter.PLAYED_AT_FIELD, 1),
+      IndexOptions().name("playedAt_1"),
     )
     currentlyPlayingDocumentRepository.mongoCollection().createIndex(
-      Document(CurrentlyPlayingRepositoryAdapter.SPOTIFY_USER_ID_FIELD, 1)
-        .append(CurrentlyPlayingRepositoryAdapter.TRACK_ID_FIELD, 1)
+      Document(CurrentlyPlayingRepositoryAdapter.TRACK_ID_FIELD, 1)
         .append(CurrentlyPlayingRepositoryAdapter.OBSERVED_AT_FIELD, 1),
-      IndexOptions().name("spotifyUserId_1_trackId_1_observedAt_1"),
+      IndexOptions().name("trackId_1_observedAt_1"),
     )
     recentlyPartialPlayedDocumentRepository.mongoCollection().createIndex(
-      Document(AppPlaybackRepositoryAdapter.SPOTIFY_USER_ID_FIELD, 1).append(AppPlaybackRepositoryAdapter.PLAYED_AT_FIELD, 1),
-      IndexOptions().name("rpp_spotifyUserId_1_playedAt_1"),
-    )
-    appPlaybackDocumentRepository.mongoCollection().createIndex(
-      Document(AppPlaybackRepositoryAdapter.SPOTIFY_USER_ID_FIELD, 1).append(AppPlaybackRepositoryAdapter.PLAYED_AT_FIELD, 1),
-      IndexOptions().name("app_playback_spotifyUserId_1_playedAt_1"),
+      Document(AppPlaybackRepositoryAdapter.PLAYED_AT_FIELD, 1),
+      IndexOptions().name("rpp_playedAt_1"),
     )
     appPlaybackDocumentRepository.mongoCollection().createIndex(
       Document(AppPlaybackRepositoryAdapter.TRACK_ID_FIELD, 1),
       IndexOptions().name("app_playback_trackId_1"),
     )
     appPlaybackDocumentRepository.mongoCollection().createIndex(
-      Document(AppPlaybackRepositoryAdapter.SPOTIFY_USER_ID_FIELD, 1)
-        .append(AppPlaybackRepositoryAdapter.PLAYED_AT_FIELD, 1)
+      Document(AppPlaybackRepositoryAdapter.PLAYED_AT_FIELD, 1)
         .append(AppPlaybackRepositoryAdapter.TRACK_ID_FIELD, 1)
         .append(AppPlaybackRepositoryAdapter.SECONDS_PLAYED_FIELD, 1),
-      IndexOptions().name("app_playback_spotifyUserId_1_playedAt_1_trackId_1_secondsPlayed_1"),
+      IndexOptions().name("app_playback_playedAt_1_trackId_1_secondsPlayed_1"),
     )
   }
 
   private fun ensurePlaybackAggregationCollectionIndexes() {
     playbackAggregationDocumentRepository.mongoCollection().createIndex(
-      Document(PlaybackAggregationRepositoryAdapter.SPOTIFY_USER_ID_FIELD, 1)
-        .append(PlaybackAggregationRepositoryAdapter.TYPE_FIELD, 1)
+      Document(PlaybackAggregationRepositoryAdapter.TYPE_FIELD, 1)
         .append(PlaybackAggregationRepositoryAdapter.PERIOD_START_FIELD, 1),
-      IndexOptions().name("app_playback_aggregation_spotifyUserId_1_type_1_periodStart_1"),
+      IndexOptions().name("app_playback_aggregation_type_1_periodStart_1"),
     )
   }
 
@@ -101,14 +93,6 @@ class MongoIndexInitializer(
   }
 
   private fun ensurePlaylistCollectionIndexes() {
-    playlistDocumentRepository.mongoCollection().createIndex(
-      Document(AppPlaybackRepositoryAdapter.SPOTIFY_USER_ID_FIELD, 1),
-      IndexOptions().name("spotify_playlist_spotifyUserId_1"),
-    )
-    playlistMetadataDocumentRepository.mongoCollection().createIndex(
-      Document(AppPlaybackRepositoryAdapter.SPOTIFY_USER_ID_FIELD, 1),
-      IndexOptions().name("spotify_playlist_metadata_spotifyUserId_1"),
-    )
     playlistMetadataDocumentRepository.mongoCollection().createIndex(
       Document(PlaylistRepositoryAdapter.SYNC_STATUS_FIELD, 1),
       IndexOptions().name("spotify_playlist_metadata_syncStatus_1"),

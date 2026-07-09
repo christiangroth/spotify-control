@@ -8,12 +8,10 @@ import de.chrgroth.spotify.control.domain.model.playback.aggregation.Aggregation
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationRankEntry
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.DailyPlaybackSummary
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.PlaybackAggregation
-import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.playback.PlaybackAggregationRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 import java.time.DayOfWeek
 import kotlinx.datetime.LocalDate
-
 
 @ApplicationScoped
 class PlaybackAggregationRepositoryAdapter(
@@ -34,20 +32,17 @@ class PlaybackAggregationRepositoryAdapter(
     }
   }
 
-  override fun findByUserAndPeriod(userId: UserId, type: AggregationPeriodType, periodStart: LocalDate): PlaybackAggregation? {
-    val id = documentId(userId, type, periodStart)
-    return mongoQueryMetrics.timed("app_playback_aggregation.findByUserAndPeriod") {
+  override fun findByPeriod(type: AggregationPeriodType, periodStart: LocalDate): PlaybackAggregation? {
+    val id = documentId(type, periodStart)
+    return mongoQueryMetrics.timed("app_playback_aggregation.findByPeriod") {
       repository.findById(id)?.toDomain()
     }
   }
 
-  override fun findByUserAndPeriods(
-    userId: UserId,
-    periods: List<Pair<AggregationPeriodType, LocalDate>>,
-  ): Map<Pair<AggregationPeriodType, LocalDate>, PlaybackAggregation> {
+  override fun findByPeriods(periods: List<Pair<AggregationPeriodType, LocalDate>>): Map<Pair<AggregationPeriodType, LocalDate>, PlaybackAggregation> {
     if (periods.isEmpty()) return emptyMap()
-    val keyByDocumentId = periods.associateBy { documentId(userId, it.first, it.second) }
-    return mongoQueryMetrics.timed("app_playback_aggregation.findByUserAndPeriods") {
+    val keyByDocumentId = periods.associateBy { documentId(it.first, it.second) }
+    return mongoQueryMetrics.timed("app_playback_aggregation.findByPeriods") {
       repository.mongoCollection()
         .find(Filters.`in`("_id", keyByDocumentId.keys.toList()))
         .toList()
@@ -56,12 +51,11 @@ class PlaybackAggregationRepositoryAdapter(
     }
   }
 
-  override fun findByUserTypeAndPeriodRange(userId: UserId, type: AggregationPeriodType, from: LocalDate, to: LocalDate): List<PlaybackAggregation> =
-    mongoQueryMetrics.timed("app_playback_aggregation.findByUserTypeAndPeriodRange") {
+  override fun findByTypeAndPeriodRange(type: AggregationPeriodType, from: LocalDate, to: LocalDate): List<PlaybackAggregation> =
+    mongoQueryMetrics.timed("app_playback_aggregation.findByTypeAndPeriodRange") {
       repository.mongoCollection()
         .find(
           Filters.and(
-            Filters.eq(SPOTIFY_USER_ID_FIELD, userId.value),
             Filters.eq(TYPE_FIELD, type.name),
             Filters.gte(PERIOD_START_FIELD, from.toString()),
             Filters.lte(PERIOD_START_FIELD, to.toString()),
@@ -71,12 +65,11 @@ class PlaybackAggregationRepositoryAdapter(
         .map { it.toDomain() }
     }
 
-  override fun findDailySummaryByUserAndPeriodRange(userId: UserId, from: LocalDate, to: LocalDate): List<DailyPlaybackSummary> =
-    mongoQueryMetrics.timed("app_playback_aggregation.findDailySummaryByUserAndPeriodRange") {
+  override fun findDailySummaryByPeriodRange(from: LocalDate, to: LocalDate): List<DailyPlaybackSummary> =
+    mongoQueryMetrics.timed("app_playback_aggregation.findDailySummaryByPeriodRange") {
       repository.mongoCollection()
         .find(
           Filters.and(
-            Filters.eq(SPOTIFY_USER_ID_FIELD, userId.value),
             Filters.eq(TYPE_FIELD, AggregationPeriodType.DAY.name),
             Filters.gte(PERIOD_START_FIELD, from.toString()),
             Filters.lte(PERIOD_START_FIELD, to.toString()),
@@ -87,18 +80,17 @@ class PlaybackAggregationRepositoryAdapter(
         .map { it.toSummary() }
     }
 
-  override fun sumEventCountByUser(userId: UserId): Long =
-    mongoQueryMetrics.timed("app_playback_aggregation.sumEventCountByUser") {
+  override fun sumEventCount(): Long =
+    mongoQueryMetrics.timed("app_playback_aggregation.sumEventCount") {
       repository.mongoCollection()
-        .find(Filters.and(Filters.eq(SPOTIFY_USER_ID_FIELD, userId.value), Filters.eq(TYPE_FIELD, AggregationPeriodType.DAY.name)))
+        .find(Filters.eq(TYPE_FIELD, AggregationPeriodType.DAY.name))
         .projection(Projections.include(EVENT_COUNT_FIELD))
         .toList()
         .sumOf { it.eventCount }
     }
 
   private fun PlaybackAggregation.toDocument(): PlaybackAggregationDocument = PlaybackAggregationDocument().apply {
-    id = documentId(this@toDocument.userId, this@toDocument.type, this@toDocument.periodStart)
-    spotifyUserId = this@toDocument.userId.value
+    id = documentId(this@toDocument.type, this@toDocument.periodStart)
     type = this@toDocument.type.name
     periodStart = this@toDocument.periodStart.toString()
     totalPlaybackSeconds = this@toDocument.totalPlaybackSeconds
@@ -125,7 +117,6 @@ class PlaybackAggregationRepositoryAdapter(
   }
 
   private fun PlaybackAggregationDocument.toDomain(): PlaybackAggregation = PlaybackAggregation(
-    userId = UserId(spotifyUserId),
     type = AggregationPeriodType.valueOf(type),
     periodStart = LocalDate.parse(periodStart),
     totalPlaybackSeconds = totalPlaybackSeconds,
@@ -160,7 +151,6 @@ class PlaybackAggregationRepositoryAdapter(
   )
 
   companion object {
-    internal const val SPOTIFY_USER_ID_FIELD = "spotifyUserId"
     internal const val TYPE_FIELD = "type"
     internal const val PERIOD_START_FIELD = "periodStart"
     internal const val EVENT_COUNT_FIELD = "eventCount"
@@ -168,7 +158,7 @@ class PlaybackAggregationRepositoryAdapter(
     internal const val ARTIST_ENTRIES_FIELD = "artistEntries"
     internal const val TRACK_ENTRIES_FIELD = "trackEntries"
 
-    internal fun documentId(userId: UserId, type: AggregationPeriodType, periodStart: LocalDate): String =
-      "${userId.value}:${type.name}:$periodStart"
+    internal fun documentId(type: AggregationPeriodType, periodStart: LocalDate): String =
+      "${type.name}:$periodStart"
   }
 }

@@ -5,7 +5,6 @@ import de.chrgroth.spotify.control.domain.port.out.catalog.AppAlbumRepositoryPor
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
 import io.micrometer.core.instrument.Gauge
 import io.micrometer.core.instrument.MeterRegistry
 import io.quarkus.runtime.StartupEvent
@@ -20,7 +19,6 @@ import mu.KLogging
 @ApplicationScoped
 @Suppress("Unused", "UnusedParameter")
 class DomainMetrics(
-  private val userRepository: UserRepositoryPort,
   private val playlistRepository: PlaylistRepositoryPort,
   private val appArtistRepository: AppArtistRepositoryPort,
   private val appTrackRepository: AppTrackRepositoryPort,
@@ -69,11 +67,9 @@ class DomainMetrics(
   }
 
   private fun outOfSyncPlaylistCount(): Int =
-    userRepository.findAll().sumOf { user ->
-      playlistRepository.findByUserId(user.spotifyUserId).count { playlist ->
-        val lastSyncTime = playlist.lastSyncTime
-        playlist.syncStatus == PlaylistSyncStatus.ACTIVE && (lastSyncTime == null || lastSyncTime < playlist.lastSnapshotIdSyncTime)
-      }
+    playlistRepository.findAll().count { playlist ->
+      val lastSyncTime = playlist.lastSyncTime
+      playlist.syncStatus == PlaylistSyncStatus.ACTIVE && (lastSyncTime == null || lastSyncTime < playlist.lastSnapshotIdSyncTime)
     }
 
   companion object : KLogging()

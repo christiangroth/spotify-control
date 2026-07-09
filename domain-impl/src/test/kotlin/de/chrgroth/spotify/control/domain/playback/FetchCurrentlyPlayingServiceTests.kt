@@ -78,7 +78,6 @@ class FetchCurrentlyPlayingServiceTests {
     observedAt: Instant = now,
     durationMs: Long = 600_000L,
   ) = CurrentlyPlayingItem(
-    spotifyUserId = userId,
     trackId = TrackId(trackId),
     trackName = "Track $trackId",
     artistIds = listOf(ArtistId("artist-$trackId")),
@@ -120,7 +119,7 @@ class FetchCurrentlyPlayingServiceTests {
     val item = currentlyPlayingItem("track-1", progressMs = 30_000L)
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlayback.getCurrentlyPlaying(accessToken) } returns item.right()
-    every { currentlyPlayingRepository.findMostRecentByUserAndTrack(userId, item.trackId) } returns null
+    every { currentlyPlayingRepository.findMostRecentByTrack(item.trackId) } returns null
 
     service.fetchCurrentlyPlaying(userId)
 
@@ -137,7 +136,7 @@ class FetchCurrentlyPlayingServiceTests {
 
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlayback.getCurrentlyPlaying(accessToken) } returns newItem.right()
-    every { currentlyPlayingRepository.findMostRecentByUserAndTrack(userId, newItem.trackId) } returns existingItem
+    every { currentlyPlayingRepository.findMostRecentByTrack(newItem.trackId) } returns existingItem
 
     service.fetchCurrentlyPlaying(userId)
 
@@ -154,7 +153,7 @@ class FetchCurrentlyPlayingServiceTests {
 
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlayback.getCurrentlyPlaying(accessToken) } returns newItem.right()
-    every { currentlyPlayingRepository.findMostRecentByUserAndTrack(userId, newItem.trackId) } returns existingItem
+    every { currentlyPlayingRepository.findMostRecentByTrack(newItem.trackId) } returns existingItem
 
     service.fetchCurrentlyPlaying(userId)
 
@@ -173,7 +172,7 @@ class FetchCurrentlyPlayingServiceTests {
 
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlayback.getCurrentlyPlaying(accessToken) } returns afterResumeItem.right()
-    every { currentlyPlayingRepository.findMostRecentByUserAndTrack(userId, afterResumeItem.trackId) } returns existingItem
+    every { currentlyPlayingRepository.findMostRecentByTrack(afterResumeItem.trackId) } returns existingItem
 
     service.fetchCurrentlyPlaying(userId)
 
@@ -191,11 +190,11 @@ class FetchCurrentlyPlayingServiceTests {
 
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlayback.getCurrentlyPlaying(accessToken) } returns restartedItem.right()
-    every { currentlyPlayingRepository.findMostRecentByUserAndTrack(userId, restartedItem.trackId) } returns existingItem
+    every { currentlyPlayingRepository.findMostRecentByTrack(restartedItem.trackId) } returns existingItem
 
     service.fetchCurrentlyPlaying(userId)
 
-    verify { currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, setOf("track-1")) }
+    verify { currentlyPlayingRepository.deleteByTrackIds(setOf("track-1")) }
     verify { currentlyPlayingRepository.save(restartedItem) }
     verify(exactly = 0) { currentlyPlayingRepository.updateProgress(any()) }
   }
@@ -206,12 +205,12 @@ class FetchCurrentlyPlayingServiceTests {
 
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlayback.getCurrentlyPlaying(accessToken) } returns newItem.right()
-    every { currentlyPlayingRepository.findMostRecentByUserAndTrack(userId, newItem.trackId) } returns null
+    every { currentlyPlayingRepository.findMostRecentByTrack(newItem.trackId) } returns null
 
     service.fetchCurrentlyPlaying(userId)
 
     verify { currentlyPlayingRepository.save(newItem) }
-    verify(exactly = 0) { currentlyPlayingRepository.deleteByUserIdAndTrackIds(any(), any()) }
+    verify(exactly = 0) { currentlyPlayingRepository.deleteByTrackIds(any()) }
     verify(exactly = 0) { currentlyPlayingRepository.updateProgress(any()) }
   }
 
@@ -223,9 +222,9 @@ class FetchCurrentlyPlayingServiceTests {
     val orphanedTrackA = currentlyPlayingItem("track-a", progressMs = 50_000L, observedAt = now - 5.minutes)
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlayback.getCurrentlyPlaying(accessToken) } returns trackB.right()
-    every { currentlyPlayingRepository.findMostRecentByUserAndTrack(userId, trackB.trackId) } returns null
-    every { currentlyPlayingRepository.findByUserId(userId) } returns listOf(orphanedTrackA)
-    every { recentlyPartialPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
+    every { currentlyPlayingRepository.findMostRecentByTrack(trackB.trackId) } returns null
+    every { currentlyPlayingRepository.findAll() } returns listOf(orphanedTrackA)
+    every { recentlyPartialPlayedRepository.findExistingPlayedAts(any()) } returns emptySet()
     every { recentlyPartialPlayedRepository.saveAll(any()) } just runs
 
     service.fetchCurrentlyPlaying(userId)
@@ -235,7 +234,7 @@ class FetchCurrentlyPlayingServiceTests {
     assertThat(savedSlot.captured).hasSize(1)
     assertThat(savedSlot.captured[0].trackId).isEqualTo(TrackId("track-a"))
     assertThat(savedSlot.captured[0].playedSeconds).isEqualTo(50L)
-    verify { currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, setOf("track-a")) }
+    verify { currentlyPlayingRepository.deleteByTrackIds(setOf("track-a")) }
     verify { dashboardRefresh.notifyUserPlaybackData() }
   }
 
@@ -245,13 +244,13 @@ class FetchCurrentlyPlayingServiceTests {
     val orphanedTrackA = currentlyPlayingItem("track-a", progressMs = 5_000L, observedAt = now - 5.minutes)
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlayback.getCurrentlyPlaying(accessToken) } returns trackB.right()
-    every { currentlyPlayingRepository.findMostRecentByUserAndTrack(userId, trackB.trackId) } returns null
-    every { currentlyPlayingRepository.findByUserId(userId) } returns listOf(orphanedTrackA)
+    every { currentlyPlayingRepository.findMostRecentByTrack(trackB.trackId) } returns null
+    every { currentlyPlayingRepository.findAll() } returns listOf(orphanedTrackA)
 
     service.fetchCurrentlyPlaying(userId)
 
     verify(exactly = 0) { recentlyPartialPlayedRepository.saveAll(any()) }
-    verify { currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, setOf("track-a")) }
+    verify { currentlyPlayingRepository.deleteByTrackIds(setOf("track-a")) }
     verify(exactly = 0) { dashboardRefresh.notifyUserPlaybackData() }
   }
 
@@ -263,9 +262,9 @@ class FetchCurrentlyPlayingServiceTests {
     val trackB = currentlyPlayingItem("track-b", progressMs = 60_000L)
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlayback.getCurrentlyPlaying(accessToken) } returns trackB.right()
-    every { currentlyPlayingRepository.findMostRecentByUserAndTrack(userId, trackB.trackId) } returns null
-    every { currentlyPlayingRepository.findByUserId(userId) } returns listOf(trackA)
-    every { recentlyPartialPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
+    every { currentlyPlayingRepository.findMostRecentByTrack(trackB.trackId) } returns null
+    every { currentlyPlayingRepository.findAll() } returns listOf(trackA)
+    every { recentlyPartialPlayedRepository.findExistingPlayedAts(any()) } returns emptySet()
     every { recentlyPartialPlayedRepository.saveAll(any()) } just runs
 
     service.fetchCurrentlyPlaying(userId)
@@ -276,20 +275,20 @@ class FetchCurrentlyPlayingServiceTests {
     assertThat(savedSlot.captured[0].trackId).isEqualTo(TrackId("track-a"))
     assertThat(savedSlot.captured[0].startTime).isEqualTo(trackA.startTime)
     // Track A's currently playing entry is deleted
-    verify { currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, setOf("track-a")) }
+    verify { currentlyPlayingRepository.deleteByTrackIds(setOf("track-a")) }
   }
 
   @Test
   fun `fetchCurrentlyPlaying cleans up orphaned entries when nothing is playing`() {
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlayback.getCurrentlyPlaying(accessToken) } returns null.right()
-    every { currentlyPlayingRepository.findByUserId(userId) } returns emptyList()
+    every { currentlyPlayingRepository.findAll() } returns emptyList()
 
     service.fetchCurrentlyPlaying(userId)
 
-    verify { currentlyPlayingRepository.findByUserId(userId) }
+    verify { currentlyPlayingRepository.findAll() }
     verify(exactly = 0) { recentlyPartialPlayedRepository.saveAll(any()) }
-    verify(exactly = 0) { currentlyPlayingRepository.deleteByUserIdAndTrackIds(any(), any()) }
+    verify(exactly = 0) { currentlyPlayingRepository.deleteByTrackIds(any()) }
   }
 
   @Test
@@ -297,8 +296,8 @@ class FetchCurrentlyPlayingServiceTests {
     val lingeringTrack = currentlyPlayingItem("track-a", progressMs = 50_000L, observedAt = now - 5.minutes)
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlayback.getCurrentlyPlaying(accessToken) } returns null.right()
-    every { currentlyPlayingRepository.findByUserId(userId) } returns listOf(lingeringTrack)
-    every { recentlyPartialPlayedRepository.findExistingPlayedAts(userId, any()) } returns emptySet()
+    every { currentlyPlayingRepository.findAll() } returns listOf(lingeringTrack)
+    every { recentlyPartialPlayedRepository.findExistingPlayedAts(any()) } returns emptySet()
     every { recentlyPartialPlayedRepository.saveAll(any()) } just runs
 
     service.fetchCurrentlyPlaying(userId)
@@ -308,7 +307,7 @@ class FetchCurrentlyPlayingServiceTests {
     assertThat(savedSlot.captured).hasSize(1)
     assertThat(savedSlot.captured[0].trackId).isEqualTo(TrackId("track-a"))
     assertThat(savedSlot.captured[0].playedSeconds).isEqualTo(50L)
-    verify { currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, setOf("track-a")) }
+    verify { currentlyPlayingRepository.deleteByTrackIds(setOf("track-a")) }
     verify { dashboardRefresh.notifyUserPlaybackData() }
   }
 
@@ -317,12 +316,12 @@ class FetchCurrentlyPlayingServiceTests {
     val lingeringTrack = currentlyPlayingItem("track-a", progressMs = 5_000L, observedAt = now - 5.minutes)
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlayback.getCurrentlyPlaying(accessToken) } returns null.right()
-    every { currentlyPlayingRepository.findByUserId(userId) } returns listOf(lingeringTrack)
+    every { currentlyPlayingRepository.findAll() } returns listOf(lingeringTrack)
 
     service.fetchCurrentlyPlaying(userId)
 
     verify(exactly = 0) { recentlyPartialPlayedRepository.saveAll(any()) }
-    verify { currentlyPlayingRepository.deleteByUserIdAndTrackIds(userId, setOf("track-a")) }
+    verify { currentlyPlayingRepository.deleteByTrackIds(setOf("track-a")) }
     verify(exactly = 0) { dashboardRefresh.notifyUserPlaybackData() }
   }
 
@@ -333,7 +332,7 @@ class FetchCurrentlyPlayingServiceTests {
     val item = currentlyPlayingItem("track-1", progressMs = 30_000L)
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlayback.getCurrentlyPlaying(accessToken) } returns item.right()
-    every { currentlyPlayingRepository.findMostRecentByUserAndTrack(userId, item.trackId) } returns null
+    every { currentlyPlayingRepository.findMostRecentByTrack(item.trackId) } returns null
 
     service.fetchCurrentlyPlaying(userId)
 
@@ -345,7 +344,7 @@ class FetchCurrentlyPlayingServiceTests {
     val item = currentlyPlayingItem("track-1", progressMs = 30_000L).copy(isPlaying = false)
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlayback.getCurrentlyPlaying(accessToken) } returns item.right()
-    every { currentlyPlayingRepository.findMostRecentByUserAndTrack(userId, item.trackId) } returns null
+    every { currentlyPlayingRepository.findMostRecentByTrack(item.trackId) } returns null
 
     service.fetchCurrentlyPlaying(userId)
 
@@ -357,7 +356,7 @@ class FetchCurrentlyPlayingServiceTests {
     val item = currentlyPlayingItem("track-1", progressMs = 30_000L)
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlayback.getCurrentlyPlaying(accessToken) } returns item.right()
-    every { currentlyPlayingRepository.findMostRecentByUserAndTrack(userId, item.trackId) } returns null
+    every { currentlyPlayingRepository.findMostRecentByTrack(item.trackId) } returns null
 
     service.fetchCurrentlyPlaying(userId)
 

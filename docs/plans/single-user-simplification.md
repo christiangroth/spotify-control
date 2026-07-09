@@ -121,31 +121,44 @@ still resolves and threads `UserId` down to those calls, just no longer as a pub
 
 ---
 
-## Phase 4: MongoDB schema and index cleanup
+## Phase 4: MongoDB schema and index cleanup — done
 
 **Goal:** Simplify collections and indexes that currently exist to disambiguate between users.
 
-| Collection | Current key | Proposed change |
+| Collection | Old key | New key |
 |---|---|---|
-| `app_user` | `_id = spotifyUserId` | Keep as-is; still the single source of truth for "who is the user," now guaranteed to have at most one document. |
-| `app_playback` | `_id = "${spotifyUserId}:${playedAt.epochMilli}"` | Drop `spotifyUserId` from the key; `_id = playedAt.epochMilli` (or keep the compound key — see risk note below). |
-| `app_playback_aggregation` | `_id = "${spotifyUserId}:${type}:${periodStart}"` | Drop `spotifyUserId` from the key: `_id = "${type}:${periodStart}"`. |
-| `spotify_currently_playing` | `spotifyUserId` field + compound index `(spotifyUserId, trackId, observedAt)` | Drop `spotifyUserId` field and shrink index to `(trackId, observedAt)`. |
-| `spotify_recently_played` | `spotifyUserId` field + index `(spotifyUserId, playedAt)` | Drop field, shrink index to `(playedAt)`. |
-| `spotify_recently_partial_played` | same pattern | Drop field, shrink index to `(playedAt)`. |
-| `spotify_playlist` | `spotifyUserId` field + index `spotify_playlist_spotifyUserId_1` | Drop field and index. |
-| `spotify_playlist_metadata` | `spotifyUserId` field + index | Drop field and index. |
+| `app_user` | `_id = spotifyUserId` | Unchanged; still the single source of truth for "who is the user," now guaranteed to have at most one document. |
+| `app_playback` | `_id = "${spotifyUserId}:${playedAt.epochMilli}"` | `_id = playedAt.epochMilli` |
+| `app_playback_aggregation` | `_id = "${spotifyUserId}:${type}:${periodStart}"` | `_id = "${type}:${periodStart}"` |
+| `spotify_currently_playing` | `spotifyUserId` field + compound index `(spotifyUserId, trackId, observedAt)` | Field dropped; index shrunk to `(trackId, observedAt)`. |
+| `spotify_recently_played` | `spotifyUserId` field + index `(spotifyUserId, playedAt)` | Field dropped; index shrunk to `(playedAt)`. |
+| `spotify_recently_partial_played` | same pattern | Field dropped; index shrunk to `(playedAt)`. |
+| `spotify_playlist` | `_id = "${spotifyUserId}:${playlistId}"` + index `spotify_playlist_spotifyUserId_1` | `_id = spotifyPlaylistId`; index dropped. |
+| `spotify_playlist_metadata` | `_id = "${spotifyUserId}:${playlistId}"` + index | `_id = spotifyPlaylistId`; index dropped. |
 
-`app_artist`, `app_album`, `app_track` already have no `userId` and are unaffected.
+`app_artist`, `app_album`, `app_track` already had no `userId` and were unaffected.
 
-**Migration approach:** use a one-time `Starter` (per the existing pattern in
-`adapter-in-starter`, see arc42 "Starters" section) to strip `spotifyUserId` from existing
-documents and rebuild indexes, rather than a manual migration script — this matches how the
-project already handles one-time schema changes. Because there has only ever been one real user,
-this is a low-risk, single-pass rewrite, not a multi-tenant data migration.
+**Migration approach:** a one-time `SimplifySingleUserSchemaStarter` (per the existing pattern in
+`adapter-in-starter`, see arc42 "Starters" section) strips `spotifyUserId` from existing
+`spotify_currently_playing`/`spotify_recently_played`/`spotify_recently_partial_played` documents,
+and rewrites the composite `_id`s (insert-then-delete, since MongoDB can't change an existing
+`_id` in place) for `app_playback`, `app_playback_aggregation`, `spotify_playlist`, and
+`spotify_playlist_metadata`.
 
-**Risk:** Medium. Requires careful index rebuild sequencing (`MongoIndexInitializer.kt`) to avoid
-downtime, and must run after Phase 3 so no code still reads/writes the dropped field.
+Beyond the schema/index/migration work, this phase also went further than originally scoped and
+removed the now-dead `UserId`/`spotifyUserId` parameters and fields from the repository out-ports
+themselves (`AppPlaybackRepositoryPort`, `PlaybackAggregationRepositoryPort`,
+`CurrentlyPlayingRepositoryPort`, `RecentlyPlayedRepositoryPort`,
+`RecentlyPartialPlayedRepositoryPort`, `PlaylistRepositoryPort`, `PlaybackEventViewerRepositoryPort`)
+and from the in-memory domain models (`AppPlaybackItem`, `CurrentlyPlayingItem`,
+`RecentlyPlayedItem`, `RecentlyPartialPlayedItem`, `PlaybackAggregation`), since those fields were
+never read once Phase 3 moved user resolution to `CurrentUserResolver` — leaving them in place
+would just have been dead weight passed around for no reason. All call sites in `domain-impl` and
+`adapter-in-web`, and the `PlaylistCheckRunner` interface (which took a `UserId` purely to forward
+into playlist lookups), were updated accordingly.
+
+**Risk:** Medium. Required careful index rebuild sequencing (`MongoIndexInitializer.kt`) and ran
+only after Phase 3 confirmed no code still reads/writes the dropped fields.
 
 ---
 
@@ -174,7 +187,7 @@ downtime, and must run after Phase 3 so no code still reads/writes the dropped f
 | 1 – Login/allow-list removal | Low | Permissive change; single real operator already unaffected. |
 | 2 – Scheduler fan-out & catalog-sync shortcut | Medium | Done — "zero users" and "one user" cases covered by tests. |
 | 3 – `UserId` threading removal | High | Done — split per bounded context (user-profile, `SpotifyAccessTokenPort`, SSE/dashboard, then playback/playlist/catalog); in-flight outbox payloads with stale `userId` fields are tolerated by `fromKey`/`fromPayload`. |
-| 4 – MongoDB schema/index cleanup | Medium | Use a one-time `Starter`; sequence after Phase 3; rebuild indexes without downtime. |
+| 4 – MongoDB schema/index cleanup | Medium | Done — one-time `SimplifySingleUserSchemaStarter`; sequenced after Phase 3; also removed the now-dead `UserId` parameters from repository ports and domain models. |
 | 5 – Config/tests/deploy cleanup | Low | Cleanup only. |
 
 ## Out of scope

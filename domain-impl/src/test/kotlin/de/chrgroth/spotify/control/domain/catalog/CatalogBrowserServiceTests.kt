@@ -109,7 +109,7 @@ class CatalogBrowserServiceTests {
     every { appTrackRepository.findByTrackIds(setOf(TrackId("track-1"))) } returns
       listOf(AppTrack(id = TrackId("track-1"), title = "Some Song", artistId = ArtistId("artist-1"), lastSync = triggeredAt))
     every { currentUserResolver.userId() } returns userId
-    every { playlistRepository.findByUserId(userId) } returns listOf(
+    every { playlistRepository.findAll() } returns listOf(
       PlaylistInfo(
         spotifyPlaylistId = "playlist-1",
         snapshotId = "snap-1",

@@ -37,9 +37,7 @@ class OverviewMetrics(
   private fun activeUserCount(): Int = userRepository.findAll().size
 
   private fun trackedPlaylistCount(): Int =
-    userRepository.findAll().sumOf { user ->
-      playlistRepository.findByUserId(user.spotifyUserId).count { it.syncStatus == PlaylistSyncStatus.ACTIVE }
-    }
+    playlistRepository.findAll().count { it.syncStatus == PlaylistSyncStatus.ACTIVE }
 
   private fun pendingAlbumUpgradeCount(): Int =
     playlistCheckRepository.findAll().count { !it.succeeded && it.checkId.endsWith(":$ALBUM_UPGRADE_CHECK_ID") }

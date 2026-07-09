@@ -56,10 +56,10 @@ class PlaybackAggregationServiceTests {
     every { currentUserResolver.userId() } returns userId
     val savedAggregation = slot<PlaybackAggregation>()
     every { aggregationRepository.save(capture(savedAggregation)) } returns Unit
-    every { appPlaybackRepository.findAllBetween(userId, any(), any()) } returns listOf(
-      AppPlaybackItem(userId, Instant.fromEpochSeconds(1), "track-1", 120L),
-      AppPlaybackItem(userId, Instant.fromEpochSeconds(2), "track-2", 180L),
-      AppPlaybackItem(userId, Instant.fromEpochSeconds(3), "track-3", 60L),
+    every { appPlaybackRepository.findAllBetween(any(), any()) } returns listOf(
+      AppPlaybackItem(Instant.fromEpochSeconds(1), "track-1", 120L),
+      AppPlaybackItem(Instant.fromEpochSeconds(2), "track-2", 180L),
+      AppPlaybackItem(Instant.fromEpochSeconds(3), "track-3", 60L),
     )
     every { appTrackRepository.findByTrackIds(setOf(TrackId("track-1"), TrackId("track-2"), TrackId("track-3"))) } returns listOf(
       AppTrack(
@@ -110,8 +110,7 @@ class PlaybackAggregationServiceTests {
     val savedAggregation = slot<PlaybackAggregation>()
     every { aggregationRepository.save(capture(savedAggregation)) } returns Unit
     every {
-      aggregationRepository.findByUserTypeAndPeriodRange(
-        userId,
+      aggregationRepository.findByTypeAndPeriodRange(
         AggregationPeriodType.DAY,
         weekStart,
         LocalDate(2024, 1, 21),
@@ -135,7 +134,7 @@ class PlaybackAggregationServiceTests {
       AggregationRankEntry("album-1", "Album One", 300L),
       AggregationRankEntry("album-2", "Album Two", 60L),
     )
-    verify(exactly = 1) { aggregationRepository.findByUserTypeAndPeriodRange(userId, AggregationPeriodType.DAY, weekStart, LocalDate(2024, 1, 21)) }
+    verify(exactly = 1) { aggregationRepository.findByTypeAndPeriodRange(AggregationPeriodType.DAY, weekStart, LocalDate(2024, 1, 21)) }
   }
 
   @Test
@@ -146,7 +145,7 @@ class PlaybackAggregationServiceTests {
     every { aggregationRepository.save(capture(savedAggregation)) } returns Unit
     val manyTrackEntries = (1..STORED_ENTRIES_LIMIT_PLUS_MARGIN).map { AggregationRankEntry(id = "track-$it", name = "Track $it", totalSeconds = it.toLong()) }
     every {
-      aggregationRepository.findByUserTypeAndPeriodRange(userId, AggregationPeriodType.DAY, weekStart, LocalDate(2024, 1, 21))
+      aggregationRepository.findByTypeAndPeriodRange(AggregationPeriodType.DAY, weekStart, LocalDate(2024, 1, 21))
     } returns listOf(dayAggregation(weekStart, trackEntries = manyTrackEntries))
 
     val result = service.handle(DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.WEEK, weekStart))
@@ -164,7 +163,6 @@ class PlaybackAggregationServiceTests {
     albumEntries: List<AggregationRankEntry> = emptyList(),
     trackEntries: List<AggregationRankEntry> = emptyList(),
   ) = PlaybackAggregation(
-    userId = userId,
     type = AggregationPeriodType.DAY,
     periodStart = periodStart,
     totalPlaybackSeconds = albumEntries.sumOf { it.totalSeconds } + trackEntries.sumOf { it.totalSeconds },

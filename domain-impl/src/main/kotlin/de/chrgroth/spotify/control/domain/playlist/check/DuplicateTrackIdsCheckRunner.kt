@@ -9,7 +9,6 @@ import de.chrgroth.spotify.control.domain.model.playlist.Playlist
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistId
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.user.AccessToken
-import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.SpotifyPlaylistPort
 import io.micrometer.core.instrument.MeterRegistry
@@ -28,7 +27,7 @@ class DuplicateTrackIdsCheckRunner(
   override val checkId = "duplicate-track-ids"
   override val displayName = "Duplicate Track IDs"
 
-  override fun run(userId: UserId, playlistId: String, playlist: Playlist, currentPlaylistInfo: PlaylistInfo?, allPlaylistInfos: List<PlaylistInfo>): AppPlaylistCheck {
+  override fun run(playlistId: String, playlist: Playlist, currentPlaylistInfo: PlaylistInfo?, allPlaylistInfos: List<PlaylistInfo>): AppPlaylistCheck {
     val countByTrackId = playlist.tracks.groupingBy { it.trackId }.eachCount()
     val duplicateTrackIds = playlist.tracks
       .distinctBy { it.trackId }
@@ -56,7 +55,6 @@ class DuplicateTrackIdsCheckRunner(
   override fun canFix(): Boolean = true
 
   override fun fix(
-    userId: UserId,
     accessToken: AccessToken,
     playlistId: String,
     playlist: Playlist,
@@ -68,7 +66,7 @@ class DuplicateTrackIdsCheckRunner(
     if (duplicateTrackIds.isEmpty()) {
       return Unit.right()
     }
-    logger.info { "Removing all occurrences of ${duplicateTrackIds.size} duplicate track(s) from playlist $playlistId (user ${userId.value}), then re-adding once each" }
+    logger.info { "Removing all occurrences of ${duplicateTrackIds.size} duplicate track(s) from playlist $playlistId, then re-adding once each" }
     return spotifyPlaylist.removePlaylistTracks(accessToken, playlistId, duplicateTrackIds)
       .flatMap { spotifyPlaylist.addPlaylistTracks(accessToken, playlistId, duplicateTrackIds) }
       .onRight { meterRegistry.counter("app.playlist.duplicates_removed", "playlistId", playlistId).increment(duplicateTrackIds.size.toDouble()) }

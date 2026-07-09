@@ -3,7 +3,6 @@ package de.chrgroth.spotify.control.adapter.out.mongodb
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.model.playback.RecentlyPlayedItem
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
-import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.playback.RecentlyPlayedRepositoryPort
 import io.quarkus.test.junit.QuarkusTest
 import jakarta.inject.Inject
@@ -11,8 +10,8 @@ import kotlin.time.Clock
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Instant
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import java.util.UUID
 
 @QuarkusTest
 class RecentlyPlayedRepositoryTests {
@@ -20,11 +19,17 @@ class RecentlyPlayedRepositoryTests {
   @Inject
   lateinit var recentlyPlayedRepository: RecentlyPlayedRepositoryPort
 
-  private val userId = UserId("test-${UUID.randomUUID()}")
+  @Inject
+  lateinit var recentlyPlayedDocumentRepository: RecentlyPlayedDocumentRepository
+
   private val now = Clock.System.now().let { Instant.fromEpochMilliseconds(it.toEpochMilliseconds()) }
 
+  @BeforeEach
+  fun cleanUp() {
+    recentlyPlayedDocumentRepository.deleteAll()
+  }
+
   private fun item(index: Int) = RecentlyPlayedItem(
-    spotifyUserId = userId,
     trackId = TrackId("track-$index"),
     trackName = "Track $index",
     artistIds = listOf(ArtistId("artist-id-$index")),
@@ -37,14 +42,14 @@ class RecentlyPlayedRepositoryTests {
   fun `findMostRecentPlayedAt returns most recent playedAt`() {
     recentlyPlayedRepository.saveAll(listOf(item(1), item(2), item(3)))
 
-    val mostRecent = recentlyPlayedRepository.findMostRecentPlayedAt(userId)
+    val mostRecent = recentlyPlayedRepository.findMostRecentPlayedAt()
 
     assertThat(mostRecent).isEqualTo(item(1).playedAt)
   }
 
   @Test
   fun `findMostRecentPlayedAt returns null when no items exist`() {
-    val result = recentlyPlayedRepository.findMostRecentPlayedAt(userId)
+    val result = recentlyPlayedRepository.findMostRecentPlayedAt()
     assertThat(result).isNull()
   }
 
@@ -54,7 +59,7 @@ class RecentlyPlayedRepositoryTests {
     recentlyPlayedRepository.saveAll(items)
 
     val playedAts = items.map { it.playedAt }.toSet()
-    val existing = recentlyPlayedRepository.findExistingPlayedAts(userId, playedAts)
+    val existing = recentlyPlayedRepository.findExistingPlayedAts(playedAts)
 
     assertThat(existing).containsExactlyInAnyOrderElementsOf(playedAts)
   }
@@ -62,13 +67,13 @@ class RecentlyPlayedRepositoryTests {
   @Test
   fun `findExistingPlayedAts returns empty set when no items exist`() {
     val playedAts = setOf(now - 10.hours)
-    val existing = recentlyPlayedRepository.findExistingPlayedAts(userId, playedAts)
+    val existing = recentlyPlayedRepository.findExistingPlayedAts(playedAts)
     assertThat(existing).isEmpty()
   }
 
   @Test
   fun `findExistingPlayedAts returns empty set for empty input`() {
-    val existing = recentlyPlayedRepository.findExistingPlayedAts(userId, emptySet())
+    val existing = recentlyPlayedRepository.findExistingPlayedAts(emptySet())
     assertThat(existing).isEmpty()
   }
 
@@ -78,14 +83,13 @@ class RecentlyPlayedRepositoryTests {
     recentlyPlayedRepository.saveAll(listOf(savedItem))
 
     val newPlayedAt = now - 5.hours
-    val result = recentlyPlayedRepository.findExistingPlayedAts(userId, setOf(savedItem.playedAt, newPlayedAt))
+    val result = recentlyPlayedRepository.findExistingPlayedAts(setOf(savedItem.playedAt, newPlayedAt))
 
     assertThat(result).containsOnly(savedItem.playedAt)
     assertThat(result).doesNotContain(newPlayedAt)
   }
 
   private fun nonTrackItem(index: Int) = RecentlyPlayedItem(
-    spotifyUserId = userId,
     trackId = TrackId("episode-$index"),
     trackName = "Episode $index",
     artistIds = emptyList(),
@@ -100,7 +104,7 @@ class RecentlyPlayedRepositoryTests {
     val deleted = recentlyPlayedRepository.deleteNonTracks()
 
     assertThat(deleted).isEqualTo(2L)
-    val remaining = recentlyPlayedRepository.findExistingPlayedAts(userId, setOf(item(1).playedAt, nonTrackItem(2).playedAt, nonTrackItem(3).playedAt))
+    val remaining = recentlyPlayedRepository.findExistingPlayedAts(setOf(item(1).playedAt, nonTrackItem(2).playedAt, nonTrackItem(3).playedAt))
     assertThat(remaining).containsOnly(item(1).playedAt)
   }
 
@@ -118,7 +122,7 @@ class RecentlyPlayedRepositoryTests {
     val itemWithDuration = item(1)
     recentlyPlayedRepository.saveAll(listOf(itemWithDuration))
 
-    val result = recentlyPlayedRepository.findSince(userId, null)
+    val result = recentlyPlayedRepository.findSince(null)
 
     assertThat(result).hasSize(1)
     assertThat(result[0].durationSeconds).isEqualTo(itemWithDuration.durationSeconds)
@@ -127,7 +131,6 @@ class RecentlyPlayedRepositoryTests {
   @Test
   fun `findSince returns zero durationSeconds when not set`() {
     val itemWithoutDuration = RecentlyPlayedItem(
-      spotifyUserId = userId,
       trackId = TrackId("track-noduration"),
       trackName = "Track No Duration",
       artistIds = listOf(ArtistId("artist-id-1")),
@@ -137,7 +140,7 @@ class RecentlyPlayedRepositoryTests {
     )
     recentlyPlayedRepository.saveAll(listOf(itemWithoutDuration))
 
-    val result = recentlyPlayedRepository.findSince(userId, null)
+    val result = recentlyPlayedRepository.findSince(null)
 
     val found = result.first { it.trackId == TrackId("track-noduration") }
     assertThat(found.durationSeconds).isEqualTo(0L)

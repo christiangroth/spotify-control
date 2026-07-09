@@ -13,7 +13,6 @@ import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.playback.RecentlyPlayedItem
 import de.chrgroth.spotify.control.domain.model.playback.TopEntry
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
-import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogBrowserPort
 import de.chrgroth.spotify.control.domain.port.`in`.infra.DashboardPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppAlbumRepositoryPort
@@ -54,12 +53,12 @@ class DashboardService(
 ) : DashboardPort {
 
   override fun getStats(): DashboardStats {
-    val userId = currentUserResolver.userId() ?: return DashboardStats.EMPTY
-    val dailyAggsFuture = managedExecutor.supplyAsync { fetchDailyAggregations(userId) }
-    val totalPlaybackEventsFuture = managedExecutor.supplyAsync { aggregationRepository.sumEventCountByUser(userId) }
-    val playlistMetadataFuture = managedExecutor.supplyAsync { computePlaylistMetadata(userId) }
+    currentUserResolver.userId() ?: return DashboardStats.EMPTY
+    val dailyAggsFuture = managedExecutor.supplyAsync { fetchDailyAggregations() }
+    val totalPlaybackEventsFuture = managedExecutor.supplyAsync { aggregationRepository.sumEventCount() }
+    val playlistMetadataFuture = managedExecutor.supplyAsync { computePlaylistMetadata() }
     val playlistCheckStatsFuture = managedExecutor.supplyAsync { computePlaylistCheckStats() }
-    val recentlyPlayedFuture = managedExecutor.supplyAsync { buildRecentlyPlayedTracks(userId) }
+    val recentlyPlayedFuture = managedExecutor.supplyAsync { buildRecentlyPlayedTracks() }
     val catalogStatsFuture = managedExecutor.supplyAsync { catalogBrowser.getCatalogStats() }
 
     val dailyAggs = dailyAggsFuture.join()
@@ -80,23 +79,23 @@ class DashboardService(
   }
 
   override fun getPlaybackStats(): DashboardStats {
-    val userId = currentUserResolver.userId() ?: return DashboardStats.EMPTY
-    return buildPlaybackStats(fetchDailyAggregations(userId), aggregationRepository.sumEventCountByUser(userId))
+    currentUserResolver.userId() ?: return DashboardStats.EMPTY
+    return buildPlaybackStats(fetchDailyAggregations(), aggregationRepository.sumEventCount())
   }
 
   override fun getPlaylistMetadata(): DashboardStats {
-    val userId = currentUserResolver.userId() ?: return DashboardStats.EMPTY
-    return computePlaylistMetadata(userId)
+    currentUserResolver.userId() ?: return DashboardStats.EMPTY
+    return computePlaylistMetadata()
   }
 
   override fun getRecentlyPlayed(): DashboardStats {
-    val userId = currentUserResolver.userId() ?: return DashboardStats.EMPTY
-    return DashboardStats.EMPTY.copy(recentlyPlayedTracks = buildRecentlyPlayedTracks(userId))
+    currentUserResolver.userId() ?: return DashboardStats.EMPTY
+    return DashboardStats.EMPTY.copy(recentlyPlayedTracks = buildRecentlyPlayedTracks())
   }
 
   override fun getListeningStats(): DashboardStats {
-    val userId = currentUserResolver.userId() ?: return DashboardStats.EMPTY
-    return DashboardStats.EMPTY.copy(listeningStats = buildListeningStats(fetchDailyAggregations(userId)))
+    currentUserResolver.userId() ?: return DashboardStats.EMPTY
+    return DashboardStats.EMPTY.copy(listeningStats = buildListeningStats(fetchDailyAggregations()))
   }
 
   override fun getPlaylistCheckStats(): DashboardStats =
@@ -110,9 +109,9 @@ class DashboardService(
     return (today - DatePeriod(days = STATS_DAYS - 1)) to today
   }
 
-  private fun fetchDailyAggregations(userId: UserId): List<DailyPlaybackSummary> {
+  private fun fetchDailyAggregations(): List<DailyPlaybackSummary> {
     val (from, to) = statsDateRange()
-    return aggregationRepository.findDailySummaryByUserAndPeriodRange(userId, from, to)
+    return aggregationRepository.findDailySummaryByPeriodRange(from, to)
   }
 
   private fun buildPlaybackStats(dailyAggs: List<DailyPlaybackSummary>, total: Long): DashboardStats {
@@ -138,8 +137,8 @@ class DashboardService(
     )
   }
 
-  private fun computePlaylistMetadata(userId: UserId): DashboardStats {
-    val playlists = playlistRepository.findByUserId(userId)
+  private fun computePlaylistMetadata(): DashboardStats {
+    val playlists = playlistRepository.findAll()
     val totalPlaylists = playlists.size.toLong()
     val syncedPlaylists = playlists.count { it.syncStatus == PlaylistSyncStatus.ACTIVE }.toLong()
     return DashboardStats.EMPTY.copy(
@@ -160,8 +159,8 @@ class DashboardService(
     )
   }
 
-  private fun buildRecentlyPlayedTracks(userId: UserId): List<RecentlyPlayedItem> {
-    val recentPlaybackItems = appPlaybackRepository.findRecentlyPlayed(userId, recentlyPlayedLimit)
+  private fun buildRecentlyPlayedTracks(): List<RecentlyPlayedItem> {
+    val recentPlaybackItems = appPlaybackRepository.findRecentlyPlayed(recentlyPlayedLimit)
     val trackIds = recentPlaybackItems.map { it.trackId }.toSet()
     val trackMap = appTrackRepository.findByTrackIds(trackIds.map { TrackId(it) }.toSet()).associateBy { it.id.value }
     val albumIds = trackMap.values.mapNotNull { it.albumId }.toSet()
@@ -177,7 +176,6 @@ class DashboardService(
       val trackArtistIds = track?.allArtistIds() ?: emptyList()
       val album = track?.albumId?.let { albumMap[it.value] }
       RecentlyPlayedItem(
-        spotifyUserId = playback.userId,
         trackId = TrackId(playback.trackId),
         trackName = track?.title ?: playback.trackId,
         artistIds = trackArtistIds.map { ArtistId(it) },

@@ -100,7 +100,6 @@ class CatalogServiceTests {
   private val albumSyncResult = AlbumSyncResult(album = album1, tracks = listOf(trackWithAlbum1, trackWithAlbum2))
 
   private fun recentlyPlayedItem(trackId: String, vararg artistIds: String) = RecentlyPlayedItem(
-    spotifyUserId = userId,
     trackId = TrackId(trackId),
     trackName = "Track $trackId",
     artistIds = artistIds.map { ArtistId(it) },
@@ -109,7 +108,6 @@ class CatalogServiceTests {
   )
 
   private fun recentlyPartialPlayedItem(trackId: String, vararg artistIds: String) = RecentlyPartialPlayedItem(
-    spotifyUserId = userId,
     trackId = TrackId(trackId),
     trackName = "Track $trackId",
     artistIds = artistIds.map { ArtistId(it) },
@@ -161,8 +159,8 @@ class CatalogServiceTests {
   fun `resyncCatalog enqueues playback-based sync when catalog is empty`() {
     every { appArtistRepository.findAll() } returns emptyList()
     every { currentUserResolver.userId() } returns userId
-    every { recentlyPlayedRepository.findSince(userId, null) } returns listOf(recentlyPlayedItem("track-1", "artist-1", "artist-1b"))
-    every { recentlyPartialPlayedRepository.findSince(userId, null) } returns listOf(recentlyPartialPlayedItem("track-2", "artist-2"))
+    every { recentlyPlayedRepository.findSince(null) } returns listOf(recentlyPlayedItem("track-1", "artist-1", "artist-1b"))
+    every { recentlyPartialPlayedRepository.findSince(null) } returns listOf(recentlyPartialPlayedItem("track-2", "artist-2"))
 
     val result = adapter.resyncCatalog()
 
@@ -184,8 +182,8 @@ class CatalogServiceTests {
     every { appArtistRepository.findAll() } returns listOf(artist1, artist2)
     every { currentUserResolver.userId() } returns userId
     every { outboxPort.enqueue(any()) } just runs
-    every { recentlyPlayedRepository.findSince(userId, null) } returns emptyList()
-    every { recentlyPartialPlayedRepository.findSince(userId, null) } returns emptyList()
+    every { recentlyPlayedRepository.findSince(null) } returns emptyList()
+    every { recentlyPartialPlayedRepository.findSince(null) } returns emptyList()
 
     val result = adapter.resyncCatalog()
 
@@ -212,8 +210,8 @@ class CatalogServiceTests {
     every { appArtistRepository.findAll() } returns listOf(artist1)
     every { currentUserResolver.userId() } returns userId
     every { outboxPort.enqueue(any()) } just runs
-    every { recentlyPlayedRepository.findSince(userId, null) } returns emptyList()
-    every { recentlyPartialPlayedRepository.findSince(userId, null) } returns emptyList()
+    every { recentlyPlayedRepository.findSince(null) } returns emptyList()
+    every { recentlyPartialPlayedRepository.findSince(null) } returns emptyList()
 
     val result = adapter.handle(DomainOutboxEvent.ResyncCatalog())
 
@@ -458,8 +456,8 @@ class CatalogServiceTests {
   @Test
   fun `enqueuePlaybackArtistsForSync delegates playback tracks to syncController using only primary artist per track`() {
     every { currentUserResolver.userId() } returns userId
-    every { recentlyPlayedRepository.findSince(userId, null) } returns listOf(recentlyPlayedItem("track-1", "artist-1", "artist-1b"))
-    every { recentlyPartialPlayedRepository.findSince(userId, null) } returns listOf(recentlyPartialPlayedItem("track-2", "artist-2"))
+    every { recentlyPlayedRepository.findSince(null) } returns listOf(recentlyPlayedItem("track-1", "artist-1", "artist-1b"))
+    every { recentlyPartialPlayedRepository.findSince(null) } returns listOf(recentlyPartialPlayedItem("track-2", "artist-2"))
 
     adapter.enqueuePlaybackArtistsForSync()
 

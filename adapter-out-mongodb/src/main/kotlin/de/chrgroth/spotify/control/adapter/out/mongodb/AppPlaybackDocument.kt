@@ -8,13 +8,11 @@ import java.time.Instant
 class AppPlaybackDocument {
 
   /**
-   * Single key: "${spotifyUserId}:${playedAt.toEpochMilli()}"
-   * A user can only play one track at any given moment, so the combination of
-   * user + playedAt is a natural unique identifier for a playback event.
+   * Single key: "${playedAt.toEpochMilli()}"
+   * Single-user application: playedAt alone is a natural unique identifier for a playback event.
    */
   @BsonId
   lateinit var id: String
-  lateinit var spotifyUserId: String
   lateinit var playedAt: Instant
   lateinit var trackId: String
   var secondsPlayed: Long = 0L

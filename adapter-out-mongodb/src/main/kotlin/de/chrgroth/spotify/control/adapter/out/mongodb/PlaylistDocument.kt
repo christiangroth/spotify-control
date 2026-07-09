@@ -8,7 +8,6 @@ class PlaylistDocument {
 
   @BsonId
   lateinit var id: String
-  lateinit var spotifyUserId: String
   lateinit var spotifyPlaylistId: String
   lateinit var tracks: List<PlaylistTrackSubdocument>
 }

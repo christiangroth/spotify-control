@@ -9,7 +9,6 @@ import de.chrgroth.spotify.control.domain.model.playlist.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistTrack
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistType
-import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
 import io.mockk.every
 import io.mockk.mockk
@@ -23,7 +22,6 @@ class SingleArtistTrackCheckRunnerTests {
   private val appTrackRepository: AppTrackRepositoryPort = mockk()
   private val runner = SingleArtistTrackCheckRunner(appTrackRepository)
 
-  private val userId = UserId("user-1")
   private val playlistId = "playlist-1"
 
   private fun buildPlaylistTrack(trackId: String, vararg artistIds: String, albumId: String? = null) = PlaylistTrack(
@@ -65,7 +63,7 @@ class SingleArtistTrackCheckRunnerTests {
 
   @Test
   fun `run returns no violations for empty playlist`() {
-    val result = runner.run(userId, playlistId, buildPlaylist(), null, emptyList())
+    val result = runner.run(playlistId, buildPlaylist(), null, emptyList())
 
     assertThat(result.succeeded).isTrue()
     assertThat(result.violations).isEmpty()
@@ -80,7 +78,7 @@ class SingleArtistTrackCheckRunnerTests {
       buildAppTrack("t2", "Song B", "artist-2", "Artist Two"),
     )
 
-    val result = runner.run(userId, playlistId, buildPlaylist(t1, t2), null, emptyList())
+    val result = runner.run(playlistId, buildPlaylist(t1, t2), null, emptyList())
 
     assertThat(result.succeeded).isTrue()
     assertThat(result.violations).isEmpty()
@@ -96,7 +94,7 @@ class SingleArtistTrackCheckRunnerTests {
       buildAppTrack("t2", "Song B", "artist-1", "Artist One"),
     )
 
-    val result = runner.run(userId, playlistId, buildPlaylist(t1, t2), null, emptyList())
+    val result = runner.run(playlistId, buildPlaylist(t1, t2), null, emptyList())
 
     assertThat(result.succeeded).isFalse()
     assertThat(result.violations).containsExactlyInAnyOrder(
@@ -116,7 +114,7 @@ class SingleArtistTrackCheckRunnerTests {
       buildAppTrack("t3", "Song C", "artist-2", "Artist Two"),
     )
 
-    val result = runner.run(userId, playlistId, buildPlaylist(t1, t2, t3), null, emptyList())
+    val result = runner.run(playlistId, buildPlaylist(t1, t2, t3), null, emptyList())
 
     assertThat(result.succeeded).isFalse()
     assertThat(result.violations).containsExactlyInAnyOrder("Artist One – Song A", "Artist One – Song B")
@@ -133,7 +131,7 @@ class SingleArtistTrackCheckRunnerTests {
       buildAppTrack("t3", "Middle Song", "artist-1", "Artist One"),
     )
 
-    val result = runner.run(userId, playlistId, buildPlaylist(t1, t2, t3), null, emptyList())
+    val result = runner.run(playlistId, buildPlaylist(t1, t2, t3), null, emptyList())
 
     assertThat(result.succeeded).isFalse()
     assertThat(result.violations).containsExactly(
@@ -152,7 +150,7 @@ class SingleArtistTrackCheckRunnerTests {
       buildAppTrack("t2", "Song B", "artist-1", artistName = null),
     )
 
-    val result = runner.run(userId, playlistId, buildPlaylist(t1, t2), null, emptyList())
+    val result = runner.run(playlistId, buildPlaylist(t1, t2), null, emptyList())
 
     assertThat(result.succeeded).isFalse()
     assertThat(result.violations).containsExactlyInAnyOrder("artist-1 – Song A", "artist-1 – Song B")
@@ -164,7 +162,7 @@ class SingleArtistTrackCheckRunnerTests {
     val t2 = buildPlaylistTrack("t2", "artist-1")
     every { appTrackRepository.findByTrackIds(setOf(TrackId("t1"), TrackId("t2"))) } returns emptyList()
 
-    val result = runner.run(userId, playlistId, buildPlaylist(t1, t2), null, emptyList())
+    val result = runner.run(playlistId, buildPlaylist(t1, t2), null, emptyList())
 
     assertThat(result.succeeded).isFalse()
     assertThat(result.violations).containsExactlyInAnyOrder("artist-1 – t1", "artist-1 – t2")
@@ -176,7 +174,7 @@ class SingleArtistTrackCheckRunnerTests {
     val t2 = buildPlaylistTrack("t2")
     every { appTrackRepository.findByTrackIds(setOf(TrackId("t1"), TrackId("t2"))) } returns emptyList()
 
-    val result = runner.run(userId, playlistId, buildPlaylist(t1, t2), null, emptyList())
+    val result = runner.run(playlistId, buildPlaylist(t1, t2), null, emptyList())
 
     assertThat(result.succeeded).isTrue()
     assertThat(result.violations).isEmpty()

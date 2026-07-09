@@ -7,11 +7,10 @@ import org.bson.codecs.pojo.annotations.BsonId
 class PlaybackAggregationDocument {
 
   /**
-   * Composite key: "${spotifyUserId}:${type}:${periodStart}"
+   * Composite key: "${type}:${periodStart}"
    */
   @BsonId
   lateinit var id: String
-  lateinit var spotifyUserId: String
   lateinit var type: String
   lateinit var periodStart: String
   var totalPlaybackSeconds: Long = 0L
