@@ -1,5 +1,6 @@
 package de.chrgroth.spotify.control.domain.catalog
 
+import de.chrgroth.spotify.control.domain.infra.CatalogStatsCache
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumBrowseItem
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistBrowseItem
@@ -31,18 +32,10 @@ class CatalogBrowserService(
   private val syncTraceRepository: SyncTraceRepositoryPort,
   private val playlistRepository: PlaylistRepositoryPort,
   private val currentUserResolver: CurrentUserResolver,
+  private val catalogStatsCache: CatalogStatsCache,
 ) : CatalogBrowserPort {
 
-  override fun getCatalogStats(): CatalogStats {
-    val artistCount = appArtistRepository.countAll()
-    val albumCount = appAlbumRepository.countAll()
-    val trackCount = appTrackRepository.countAll()
-    return CatalogStats(
-      artistCount = artistCount,
-      albumCount = albumCount,
-      trackCount = trackCount,
-    )
-  }
+  override fun getCatalogStats(): CatalogStats = catalogStatsCache.current()
 
   override fun getArtists(filter: String?): List<ArtistBrowseItem> {
     val filterTrimmed = filter?.trim()
