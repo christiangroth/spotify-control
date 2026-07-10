@@ -1,3 +1,14 @@
+# 0.107.12 (2026.07.10)
+
+## Bugfixes / Chore
+* Removed the "Active Users" panel and its underlying metric from the Grafana overview dashboard, since the application only ever has one user.
+* Simplified several Grafana playback panels that grouped by user, since there is only ever one user to show.
+* Updated the architecture documentation and ADR for the single-user redesign to describe only the current state, and removed the completed migration plan content, keeping only remaining simplification ideas.
+
+
+
+---
+
 # 0.107.9 (2026.07.09)
 
 ## Bugfixes / Chore
