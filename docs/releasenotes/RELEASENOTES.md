@@ -1,3 +1,12 @@
+# 0.108.2 (2026.07.10)
+
+## Bugfixes / Chore
+* Improved the release notes accordion header: removed the redundant ".x" suffix, moved the date to the right without parentheses, and moved the version list into the panel body.
+
+
+
+---
+
 # 0.108.1 (2026.07.10)
 
 ## Bugfixes / Chore
