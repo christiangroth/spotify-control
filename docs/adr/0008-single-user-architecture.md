@@ -58,34 +58,26 @@ it is simpler than hardening code paths for a scenario that doesn't occur, and i
 resolves the performance review's multi-user scaling findings by eliminating their precondition
 rather than defending against it.
 
-This was a large, cross-cutting change, implemented incrementally across several follow-up PRs
-rather than as a single change. The migration is complete: the allow-list, per-user scheduler
-fan-out, `UserId` threading through ports/services/outbox events, and `spotifyUserId`-keyed
-MongoDB schema have all been removed.
+The application has no allow-list, no per-user scheduler fan-out, no `UserId` threading through
+ports/services/outbox events beyond the single stored user's own identity, and no
+`spotifyUserId`-keyed MongoDB schema.
 
 ### Positive Consequences
 
-* Removes the allow-list and OAuth "not allowed" error path entirely — login becomes "log in with
-  Spotify, done."
-* Eliminates the arbitrary-user catalog-sync shortcut (performance review Finding 1) by
-  construction, instead of hardening it.
-* Removes the multi-user outbox scaling risk (performance review Finding 2) and the "currently
-  playing scales with user count" risk, since there is exactly one user.
-* Removes `UserId` from ports, services, and outbox events where it only ever distinguished
-  between users that never coexisted, simplifying method signatures across `domain-api` and
-  `domain-impl`.
-* MongoDB documents and indexes keyed by `spotifyUserId` were simplified once there was no more
-  per-user partitioning to maintain.
+* No allow-list and no OAuth "not allowed" error path — login is "log in with Spotify, done."
+* No arbitrary-user catalog-sync shortcut (performance review Finding 1) — catalog sync always
+  resolves the one stored user.
+* No multi-user outbox scaling risk (performance review Finding 2) and no "currently playing
+  scales with user count" risk, since there is exactly one user.
+* Ports, services, and outbox events do not carry `UserId` where it would only ever distinguish
+  between users that never coexisted, keeping method signatures in `domain-api` and `domain-impl`
+  minimal.
+* MongoDB documents and indexes carry no `spotifyUserId` partition key.
 
 ### Negative Consequences
 
 * Re-introducing multi-user support later would require re-adding this plumbing rather than just
   enabling a flag.
-* Existing MongoDB data and indexes needed a migration path once `userId` was dropped from
-  document keys; this was handled with a one-time startup migration bean rather than a manual
-  operator step.
-* Touches nearly every module in the system, so the migration must be done incrementally with a
-  green build at every step, per this repository's [CI requirements](../../CLAUDE.md).
 
 ## Pros and Cons of the Options
 

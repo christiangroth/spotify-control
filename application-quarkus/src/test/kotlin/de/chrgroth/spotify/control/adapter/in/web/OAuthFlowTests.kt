@@ -60,7 +60,7 @@ class OAuthFlowTests {
   }
 
   @Test
-  fun `full oauth callback flow succeeds for allowed user`() {
+  fun `full oauth callback flow succeeds`() {
     // Trigger authorize to get a valid state
     val authorizeResponse = given()
       .redirects().follow(false)

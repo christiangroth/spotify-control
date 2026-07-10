@@ -1,6 +1,6 @@
 # spotify-control
 
-A private Spotify playlist manager for a small, allow-listed set of users.  
+A private Spotify playlist manager for a single user.  
 It provides smarter playlist management than Spotify itself, personal listening statistics, and automatic playlist maintenance.
 
 ## Features
