@@ -1,5 +1,7 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
+import com.mongodb.client.model.Accumulators
+import com.mongodb.client.model.Aggregates
 import com.mongodb.client.model.Filters
 import com.mongodb.client.model.Projections
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.ActivityEntry
@@ -12,6 +14,7 @@ import de.chrgroth.spotify.control.domain.port.out.playback.PlaybackAggregationR
 import jakarta.enterprise.context.ApplicationScoped
 import java.time.DayOfWeek
 import kotlinx.datetime.LocalDate
+import org.bson.Document
 
 @ApplicationScoped
 class PlaybackAggregationRepositoryAdapter(
@@ -80,14 +83,19 @@ class PlaybackAggregationRepositoryAdapter(
         .map { it.toSummary() }
     }
 
-  override fun sumEventCount(): Long =
-    mongoQueryMetrics.timed("app_playback_aggregation.sumEventCount") {
+  override fun sumEventCount(): Long {
+    val pipeline = listOf(
+      Aggregates.match(Filters.eq(TYPE_FIELD, AggregationPeriodType.DAY.name)),
+      Aggregates.group(null, Accumulators.sum("total", "\$$EVENT_COUNT_FIELD")),
+    )
+    return mongoQueryMetrics.timed("app_playback_aggregation.sumEventCount") {
       repository.mongoCollection()
-        .find(Filters.eq(TYPE_FIELD, AggregationPeriodType.DAY.name))
-        .projection(Projections.include(EVENT_COUNT_FIELD))
-        .toList()
-        .sumOf { it.eventCount }
+        .aggregate(pipeline, Document::class.java)
+        .firstOrNull()
+        ?.let { (it["total"] as? Int)?.toLong() ?: it.getLong("total") }
+        ?: 0L
     }
+  }
 
   private fun PlaybackAggregation.toDocument(): PlaybackAggregationDocument = PlaybackAggregationDocument().apply {
     id = documentId(this@toDocument.type, this@toDocument.periodStart)
