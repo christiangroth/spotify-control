@@ -10,14 +10,15 @@
                     <button class="accordion-button app-accordion-button {#if !group.expanded}collapsed{/if}" type="button"
                             data-bs-toggle="collapse" data-bs-target="#{group.id}-collapse"
                             aria-expanded="{group.expanded}" aria-controls="{group.id}-collapse">
-                        <span>
-                            <span class="d-block app-accordion-title">{group.title}</span>
-                            <span class="d-block app-section-label">{group.versionsLabel}</span>
+                        <span class="d-flex justify-content-between align-items-center flex-grow-1 me-2">
+                            <span class="app-accordion-title">{group.title}</span>
+                            <span class="app-accordion-date">{group.dateRange}</span>
                         </span>
                     </button>
                 </h2>
                 <div id="{group.id}-collapse" class="accordion-collapse collapse {#if group.expanded}show{/if}" aria-labelledby="{group.id}-heading">
                     <div class="accordion-body docs-content">
+                        <p class="app-section-label mb-3">{group.versionsLabel}</p>
                         <div class="release-notes-rendered" data-target="{group.id}"></div>
                         <textarea class="d-none release-notes-raw" data-group="{group.id}">{group.markdownContent}</textarea>
                     </div>

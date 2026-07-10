@@ -14,6 +14,7 @@ import jakarta.ws.rs.core.MediaType
 data class ReleaseNotesGroupView(
   val id: String,
   val title: String,
+  val dateRange: String,
   val versionsLabel: String,
   val markdownContent: String,
   val expanded: Boolean,
@@ -43,7 +44,8 @@ class ReleaseNotesResource(
     val versionCount = group.versions.size
     return ReleaseNotesGroupView(
       id = "release-notes-group-${group.minorVersion.replace(".", "-")}",
-      title = "${group.minorVersion}.x ($dateRange)",
+      title = group.minorVersion,
+      dateRange = dateRange,
       versionsLabel = "$versionCount version${if (versionCount == 1) "" else "s"}: ${group.versions.joinToString(", ")}",
       markdownContent = toMarkdown(group),
       expanded = expanded,
