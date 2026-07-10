@@ -1,3 +1,12 @@
+# 0.107.15 (2026.07.10)
+
+## Bugfixes / Chore
+* Fixed a slow database query on the Catalog Sync page by computing per-artist album counts directly in the database instead of loading full album records.
+
+
+
+---
+
 # 0.107.14 (2026.07.10)
 
 ## Bugfixes / Chore
