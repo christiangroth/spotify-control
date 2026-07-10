@@ -271,15 +271,15 @@ class PlaybackService(
     currentUserResolver.userId() ?: return
     logger.info { "Rebuilding playback data" }
     appPlaybackRepository.deleteAll()
-    appendPlaybackDataForUser()
+    appendNewPlaybackData()
   }
 
   override fun appendPlaybackData() {
     currentUserResolver.userId() ?: return
-    appendPlaybackDataForUser()
+    appendNewPlaybackData()
   }
 
-  private fun appendPlaybackDataForUser() {
+  private fun appendNewPlaybackData() {
     val since = appPlaybackRepository.findMostRecentPlayedAt()
     val recentlyPlayed = recentlyPlayedRepository.findSince(since)
     val partialPlayed = recentlyPartialPlayedRepository.findSince(since)
