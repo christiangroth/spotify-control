@@ -30,8 +30,8 @@ class LoginService(
       val profile = spotifyAuth.getUserProfile(tokens.accessToken).bind()
       val userId = UserId(profile.id.value)
 
-      val existingUsers = userRepository.findAll()
-      if (existingUsers.isNotEmpty() && existingUsers.none { it.spotifyUserId == userId }) {
+      val existingUser = userRepository.get()
+      if (existingUser != null && existingUser.spotifyUserId != userId) {
         logger.warn { "Login denied for user: ${userId.value} - a different user is already registered" }
         raise(AuthError.ANOTHER_USER_ALREADY_REGISTERED)
       }

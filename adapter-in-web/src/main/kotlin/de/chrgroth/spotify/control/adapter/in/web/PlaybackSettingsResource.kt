@@ -3,7 +3,6 @@ package de.chrgroth.spotify.control.adapter.`in`.web
 import arrow.core.Either
 import de.chrgroth.spotify.control.domain.error.ArtistSettingsError
 import de.chrgroth.spotify.control.domain.error.DomainError
-import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogPort
 import de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackPort
 import de.chrgroth.spotify.control.domain.port.`in`.user.UserProfilePort
@@ -38,8 +37,7 @@ class PlaybackSettingsResource(
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
   fun playback(): TemplateInstance {
-    val userId = UserId(securityIdentity.principal.name)
-    val displayName = userProfile.getDisplayName() ?: userId.value
+    val displayName = userProfile.getDisplayName() ?: securityIdentity.principal.name
     return playbackTemplate
       .data("displayName", displayName)
   }

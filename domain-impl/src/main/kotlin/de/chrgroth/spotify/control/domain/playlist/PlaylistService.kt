@@ -22,7 +22,6 @@ import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.catalog.SyncController
 import de.chrgroth.spotify.control.domain.catalog.CatalogSyncRequest
 import de.chrgroth.spotify.control.domain.port.out.playlist.SpotifyPlaylistPort
-import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
 import de.chrgroth.spotify.control.domain.user.CurrentUserResolver
 import io.micrometer.core.instrument.Gauge
 import io.micrometer.core.instrument.MeterRegistry
@@ -36,7 +35,6 @@ import kotlin.time.Clock
 @ApplicationScoped
 @Suppress("Unused", "TooGenericExceptionCaught")
 class PlaylistService(
-  private val userRepository: UserRepositoryPort,
   private val currentUserResolver: CurrentUserResolver,
   private val playlistRepository: PlaylistRepositoryPort,
   private val spotifyAccessToken: SpotifyAccessTokenPort,
@@ -109,7 +107,7 @@ class PlaylistService(
   }
 
   override fun syncPlaylistData(playlistId: String, nextUrl: String?, snapshotId: String?): Either<DomainError, Unit> {
-    val userId = currentUserResolver.userId() ?: return Unit.right()
+    currentUserResolver.userId() ?: return Unit.right()
     val accessToken = spotifyAccessToken.getValidAccessToken()
     val isFirstPage = nextUrl == null
     return spotifyPlaylist.getPlaylistTracksPage(accessToken, playlistId, nextUrl).map { page ->
@@ -132,7 +130,7 @@ class PlaylistService(
       if (page.nextUrl != null) {
         outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(playlistId, page.nextUrl, page.snapshotId))
       } else {
-        logger.info { "Completed all pages for playlist $playlistId (user ${userDisplayName(userId)})" }
+        logger.info { "Completed all pages for playlist $playlistId" }
         playlistRepository.updateLastSyncTime(playlistId, Clock.System.now())
         outboxPort.enqueue(DomainOutboxEvent.RunPlaylistChecks(playlistId))
       }
@@ -140,7 +138,7 @@ class PlaylistService(
   }
 
   override fun updateSyncStatus(playlistId: String, syncStatus: PlaylistSyncStatus): Either<DomainError, Unit> {
-    val userId = currentUserResolver.userId() ?: return PlaylistSyncError.PLAYLIST_NOT_FOUND.left()
+    currentUserResolver.userId() ?: return PlaylistSyncError.PLAYLIST_NOT_FOUND.left()
     val playlists = playlistRepository.findAll()
     val playlist = playlists.find { it.spotifyPlaylistId == playlistId }
       ?: return PlaylistSyncError.PLAYLIST_NOT_FOUND.left()
@@ -159,21 +157,21 @@ class PlaylistService(
         it
       }
     }
-    logger.info { "Updated sync status for playlist '${playlist.name}' ($playlistId, user ${userDisplayName(userId)}) to $syncStatus" }
+    logger.info { "Updated sync status for playlist '${playlist.name}' ($playlistId) to $syncStatus" }
     playlistRepository.replaceAll(updatedPlaylists)
     dashboardRefresh.notifyUserPlaylistMetadata()
     if (syncStatus == PlaylistSyncStatus.PASSIVE) {
-      logger.info { "Deleting checks for deactivated playlist '${playlist.name}' ($playlistId, user ${userDisplayName(userId)})" }
+      logger.info { "Deleting checks for deactivated playlist '${playlist.name}' ($playlistId)" }
       playlistCheckRepository.deleteByPlaylistId(playlistId)
     } else if (syncStatus == PlaylistSyncStatus.ACTIVE) {
-      logger.info { "Enqueueing SyncPlaylistData for activated playlist '${playlist.name}' ($playlistId, user ${userDisplayName(userId)})" }
+      logger.info { "Enqueueing SyncPlaylistData for activated playlist '${playlist.name}' ($playlistId)" }
       outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(playlistId))
     }
     return Unit.right()
   }
 
   override fun updatePlaylistType(playlistId: String, type: PlaylistType): Either<DomainError, Unit> {
-    val userId = currentUserResolver.userId() ?: return PlaylistSyncError.PLAYLIST_NOT_FOUND.left()
+    currentUserResolver.userId() ?: return PlaylistSyncError.PLAYLIST_NOT_FOUND.left()
     val validationError = validatePlaylistTypeUpdate(playlistId, type)
     if (validationError != null) return validationError.left()
     val playlists = playlistRepository.findAll()
@@ -181,7 +179,7 @@ class PlaylistService(
       if (it.spotifyPlaylistId == playlistId) it.copy(type = type) else it
     }
     val playlistName = playlists.find { it.spotifyPlaylistId == playlistId }?.name ?: playlistId
-    logger.info { "Updated type for playlist '$playlistName' ($playlistId, user ${userDisplayName(userId)}) to $type" }
+    logger.info { "Updated type for playlist '$playlistName' ($playlistId) to $type" }
     playlistRepository.replaceAll(updatedPlaylists)
     dashboardRefresh.notifyUserPlaylistMetadata()
     return Unit.right()
@@ -220,8 +218,6 @@ class PlaylistService(
 
   override fun handle(event: DomainOutboxEvent.SyncPlaylistData): Either<DomainError, Unit> =
     syncPlaylistData(event.playlistId, event.nextUrl, event.snapshotId)
-
-  private fun userDisplayName(userId: UserId) = userRepository.findById(userId)?.displayName ?: userId.value
 
   companion object : KLogging() {
     private val YEAR_NAME_REGEX = Regex("\\d{4}")

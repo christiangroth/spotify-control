@@ -11,7 +11,6 @@ import de.chrgroth.spotify.control.domain.model.playback.RecentlyPlayedItem
 import de.chrgroth.spotify.control.domain.model.catalog.SyncCause
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationPeriodType
-import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackPort
 import de.chrgroth.spotify.control.domain.port.out.playback.AppPlaybackRepositoryPort
@@ -25,7 +24,6 @@ import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.catalog.SyncController
 import de.chrgroth.spotify.control.domain.catalog.CatalogSyncRequest
 import de.chrgroth.spotify.control.domain.port.out.playback.SpotifyPlaybackPort
-import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
 import de.chrgroth.spotify.control.domain.user.CurrentUserResolver
 import io.micrometer.core.instrument.Gauge
 import io.micrometer.core.instrument.MeterRegistry
@@ -45,7 +43,6 @@ import org.eclipse.microprofile.config.inject.ConfigProperty
 @ApplicationScoped
 @Suppress("Unused", "TooGenericExceptionCaught")
 class PlaybackService(
-  private val userRepository: UserRepositoryPort,
   private val currentUserResolver: CurrentUserResolver,
   private val spotifyAccessToken: SpotifyAccessTokenPort,
   private val spotifyPlayback: SpotifyPlaybackPort,
@@ -73,15 +70,15 @@ class PlaybackService(
   }
 
   override fun fetchPlaybackData(): Either<DomainError, Unit> {
-    val userId = currentUserResolver.userId() ?: return Unit.right()
-    val currentlyPlayingResult = fetchCurrentlyPlaying(userId)
-    val recentlyPlayedResult = fetchRecentlyPlayed(userId)
+    currentUserResolver.userId() ?: return Unit.right()
+    val currentlyPlayingResult = fetchCurrentlyPlaying()
+    val recentlyPlayedResult = fetchRecentlyPlayed()
     return currentlyPlayingResult.flatMap { recentlyPlayedResult }
   }
 
   // --- Currently Playing ---
 
-  internal fun fetchCurrentlyPlaying(userId: UserId): Either<DomainError, Unit> {
+  internal fun fetchCurrentlyPlaying(): Either<DomainError, Unit> {
     val accessToken = spotifyAccessToken.getValidAccessToken()
     return spotifyPlayback.getCurrentlyPlaying(accessToken).flatMap { item ->
       if (item != null && item.isPlaying) {
@@ -97,14 +94,14 @@ class PlaybackService(
           }
           currentlyPlayingRepository.save(item)
         }
-        convertAndDeleteOrphanedItems(userId, item.trackId)
+        convertAndDeleteOrphanedItems(item.trackId)
       } else {
-        convertAndDeleteOrphanedItems(userId, null)
+        convertAndDeleteOrphanedItems(null)
       }
       if (orphanedItemsConverted) {
         dashboardRefresh.notifyUserPlaybackData()
       }
-      recordFetchSuccess(userId, "currently_playing")
+      recordFetchSuccess("currently_playing")
       Unit.right()
     }
   }
@@ -112,7 +109,7 @@ class PlaybackService(
   private fun isTrackRestart(newItem: CurrentlyPlayingItem, existingItem: CurrentlyPlayingItem): Boolean =
     newItem.progressMs < RESTART_THRESHOLD_MS && existingItem.progressMs > minimumProgressMs
 
-  private fun convertAndDeleteOrphanedItems(userId: UserId, currentTrackId: TrackId?): Boolean {
+  private fun convertAndDeleteOrphanedItems(currentTrackId: TrackId?): Boolean {
     val orphanedItems = currentlyPlayingRepository.findAll()
       .let { items -> if (currentTrackId != null) items.filter { it.trackId != currentTrackId } else items }
     if (orphanedItems.isEmpty()) return false
@@ -136,7 +133,7 @@ class PlaybackService(
       val newPartial = partialItems.filter { it.playedAt !in existingPlayedAts }
       if (newPartial.isNotEmpty()) {
         recentlyPartialPlayedRepository.saveAll(newPartial)
-        recordEventsIngested(userId, "partial_played", newPartial.size)
+        recordEventsIngested("partial_played", newPartial.size)
       }
       newPartial.isNotEmpty()
     } else {
@@ -150,7 +147,7 @@ class PlaybackService(
 
   // --- Recently Played ---
 
-  internal fun fetchRecentlyPlayed(userId: UserId): Either<DomainError, Unit> {
+  internal fun fetchRecentlyPlayed(): Either<DomainError, Unit> {
     val accessToken = spotifyAccessToken.getValidAccessToken()
     val after = recentlyPlayedRepository.findMostRecentPlayedAt()
     return spotifyPlayback.getRecentlyPlayed(accessToken, after).flatMap { tracks ->
@@ -159,26 +156,24 @@ class PlaybackService(
       val newItems = tracks.filter { it.playedAt !in existingPlayedAts }
       if (newItems.isNotEmpty()) {
         recentlyPlayedRepository.saveAll(newItems)
-        recordEventsIngested(userId, "recently_played", newItems.size)
+        recordEventsIngested("recently_played", newItems.size)
         deduplicateWithPartialPlays(newItems)
       }
-      val computedCount = convertPartialPlays(userId, tracks.map { it.trackId }.toSet())
+      val computedCount = convertPartialPlays(tracks.map { it.trackId }.toSet())
       if (newItems.isNotEmpty() || computedCount > 0) {
         dashboardRefresh.notifyUserPlaybackData()
         outboxPort.enqueue(DomainOutboxEvent.AppendPlaybackData())
       }
-      recordFetchSuccess(userId, "recently_played")
+      recordFetchSuccess("recently_played")
       Unit.right()
     }
   }
 
-  private fun recordFetchSuccess(userId: UserId, operation: String) {
-    val key = "${userId.value}:$operation"
-    val timestamp = lastFetchSuccessTimestamps.getOrPut(key) {
+  private fun recordFetchSuccess(operation: String) {
+    val timestamp = lastFetchSuccessTimestamps.getOrPut(operation) {
       AtomicLong().also { atomic ->
         Gauge.builder("app.playback.last_success_timestamp", atomic) { it.get().toDouble() }
           .description("Epoch second timestamp of the last successful playback fetch")
-          .tag("userId", userId.value)
           .tag("operation", operation)
           .register(meterRegistry)
       }
@@ -186,8 +181,8 @@ class PlaybackService(
     timestamp.set(Clock.System.now().toEpochMilliseconds() / MS_PER_SECOND)
   }
 
-  private fun recordEventsIngested(userId: UserId, source: String, count: Int) {
-    meterRegistry.counter("app.playback.events_ingested", "userId", userId.value, "source", source).increment(count.toDouble())
+  private fun recordEventsIngested(source: String, count: Int) {
+    meterRegistry.counter("app.playback.events_ingested", "source", source).increment(count.toDouble())
   }
 
   private fun deduplicateWithPartialPlays(newRecentlyPlayedItems: List<RecentlyPlayedItem>) {
@@ -221,7 +216,7 @@ class PlaybackService(
     }
   }
 
-  private fun convertPartialPlays(userId: UserId, completedTrackIds: Set<TrackId>): Int {
+  private fun convertPartialPlays(completedTrackIds: Set<TrackId>): Int {
     val sortedItems = currentlyPlayingRepository.findAll().sortedBy { it.observedAt }
 
     // The single latest item is protected — it may still be active
@@ -250,7 +245,7 @@ class PlaybackService(
       val newPartial = partialItems.filter { it.playedAt !in existingPlayedAts }
       if (newPartial.isNotEmpty()) {
         recentlyPartialPlayedRepository.saveAll(newPartial)
-        recordEventsIngested(userId, "partial_played", newPartial.size)
+        recordEventsIngested("partial_played", newPartial.size)
       }
       newPartial.size
     } else {
@@ -267,14 +262,14 @@ class PlaybackService(
   // --- Playback Data ---
 
   override fun enqueueRebuildPlaybackData() {
-    val userId = currentUserResolver.userId() ?: return
-    logger.info { "Enqueuing playback data rebuild for user: ${userDisplayName(userId)}" }
+    currentUserResolver.userId() ?: return
+    logger.info { "Enqueuing playback data rebuild" }
     outboxPort.enqueue(DomainOutboxEvent.RebuildPlaybackData())
   }
 
   override fun rebuildPlaybackData() {
-    val userId = currentUserResolver.userId() ?: return
-    logger.info { "Rebuilding playback data for user: ${userDisplayName(userId)}" }
+    currentUserResolver.userId() ?: return
+    logger.info { "Rebuilding playback data" }
     appPlaybackRepository.deleteAll()
     appendPlaybackDataForUser()
   }
@@ -343,8 +338,6 @@ class PlaybackService(
     appendPlaybackData()
     return Unit.right()
   }
-
-  private fun userDisplayName(userId: UserId) = userRepository.findById(userId)?.displayName ?: userId.value
 
   companion object : KLogging() {
     private const val MS_PER_SECOND = 1_000L

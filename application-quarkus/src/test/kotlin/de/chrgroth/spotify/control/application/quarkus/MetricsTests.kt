@@ -39,7 +39,6 @@ class MetricsTests {
       .extract()
       .asString()
 
-    assertThat(metrics).contains("app_users_active")
     assertThat(metrics).contains("app_playlist_tracked")
     assertThat(metrics).contains("app_playlist_album_upgrade_pending")
     assertThat(metrics).contains("app_playlist_sync_job_last_success_timestamp")

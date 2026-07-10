@@ -514,7 +514,6 @@ SLACK_WEBHOOK_URL
 | Partial-play detection accuracy | Partial play detection relies on polling frequency; very short plays near the end of a track may be missed or misclassified. |
 | Test coverage for domain adapters | Domain adapter integration (e.g. `PlaybackDataAdapter`, `PlaylistSyncAdapter`) is not yet covered by `@QuarkusTest` boundary tests. |
 | `APP_ALLOWED_SPOTIFY_USER_IDS` in CI workflow | `.github/workflows/gradle.yml` still passes `APP_ALLOWED_SPOTIFY_USER_IDS` through as a deploy secret/env var, even though it is not read anywhere in the application (there is no allow-list, see [ADR-0008](../adr/0008-single-user-architecture.md)). The variable is unused; only a repo maintainer can remove it from the workflow file and the GitHub secret. |
-| Residual `UserId` ceremony | Several places still thread `UserId` through method signatures, rebuild it from the security identity, or use list-shaped repository lookups (`UserRepositoryPort.findAll()`/`findById()`) purely to fetch the one existing user. See the [further simplification opportunities](../plans/single-user-simplification.md) doc. |
 
 # Glossary
 

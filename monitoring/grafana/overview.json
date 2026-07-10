@@ -376,67 +376,6 @@
         "x": 0,
         "y": 6
       },
-      "id": 11,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "expr": "app_users_active{job=\"prometheus.scrape.spotify_control\"}",
-          "legendFormat": "active users",
-          "refId": "A",
-          "instant": false,
-          "range": true
-        }
-      ],
-      "title": "Active Users",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "text",
-                "value": null
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 6,
-        "y": 6
-      },
       "id": 12,
       "options": {
         "colorMode": "value",
@@ -499,7 +438,7 @@
       "gridPos": {
         "h": 4,
         "w": 6,
-        "x": 12,
+        "x": 6,
         "y": 6
       },
       "id": 13,
@@ -564,7 +503,7 @@
       "gridPos": {
         "h": 4,
         "w": 6,
-        "x": 18,
+        "x": 12,
         "y": 6
       },
       "id": 14,
@@ -666,8 +605,8 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "time() - max(app_playback_last_success_timestamp{job=\"prometheus.scrape.spotify_control\",operation=\"currently_playing\"}) by (userId)",
-          "legendFormat": "{{userId}}",
+          "expr": "time() - app_playback_last_success_timestamp{job=\"prometheus.scrape.spotify_control\",operation=\"currently_playing\"}",
+          "legendFormat": "currently playing",
           "refId": "A",
           "instant": false,
           "range": true
@@ -731,8 +670,8 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "time() - max(app_playback_last_success_timestamp{job=\"prometheus.scrape.spotify_control\",operation=\"recently_played\"}) by (userId)",
-          "legendFormat": "{{userId}}",
+          "expr": "time() - app_playback_last_success_timestamp{job=\"prometheus.scrape.spotify_control\",operation=\"recently_played\"}",
+          "legendFormat": "recently played",
           "refId": "A",
           "instant": false,
           "range": true

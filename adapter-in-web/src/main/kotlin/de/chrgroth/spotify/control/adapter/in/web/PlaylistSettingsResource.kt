@@ -5,7 +5,6 @@ import mu.KLogging
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistType
-import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistPort
 import de.chrgroth.spotify.control.domain.port.`in`.user.UserProfilePort
 import io.quarkus.qute.Location
@@ -40,8 +39,7 @@ class PlaylistSettingsResource(
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
   fun playlist(): TemplateInstance {
-    val userId = UserId(securityIdentity.principal.name)
-    val displayName = userProfile.getDisplayName() ?: userId.value
+    val displayName = userProfile.getDisplayName() ?: securityIdentity.principal.name
     val sortedPlaylists = playlist.getPlaylists().sortedBy { it.name }
     val padWidth = sortedPlaylists.size.toString().length
     val trackCounts = playlist.getTrackCounts()
@@ -72,7 +70,6 @@ class PlaylistSettingsResource(
     @PathParam("playlistId") playlistId: String,
     request: SyncStatusRequest,
   ): Response {
-    val userId = UserId(securityIdentity.principal.name)
     val syncStatus = PlaylistSyncStatus.entries.find { it.name == request.syncStatus }
       ?: return Response.status(Response.Status.BAD_REQUEST)
         .entity(mapOf("error" to "Invalid sync status: ${request.syncStatus}"))
@@ -83,7 +80,7 @@ class PlaylistSettingsResource(
         Response.ok(mapOf("syncStatus" to syncStatus.name, "type" to updated?.type?.name)).build()
       }
       false -> {
-        logger.warn { "Playlist $playlistId not found for user ${userId.value} during sync status update" }
+        logger.warn { "Playlist $playlistId not found during sync status update" }
         Response.status(Response.Status.NOT_FOUND)
           .entity(mapOf("error" to "Playlist not found"))
           .build()
@@ -102,7 +99,6 @@ class PlaylistSettingsResource(
     @PathParam("playlistId") playlistId: String,
     request: PlaylistTypeRequest,
   ): Response {
-    val userId = UserId(securityIdentity.principal.name)
     val type = PlaylistType.entries.find { it.name == request.type }
       ?: return Response.status(Response.Status.BAD_REQUEST)
         .entity(mapOf("error" to "Invalid playlist type: ${request.type}"))
@@ -111,19 +107,19 @@ class PlaylistSettingsResource(
       ifLeft = { error ->
         when (error) {
           PlaylistSyncError.PLAYLIST_TYPE_CONFLICT -> {
-            logger.warn { "Playlist type update conflict for $playlistId (user ${userId.value}): ${error.code}" }
+            logger.warn { "Playlist type update conflict for $playlistId: ${error.code}" }
             Response.status(Response.Status.CONFLICT)
               .entity(mapOf("error" to "Only one playlist of type ALL is allowed"))
               .build()
           }
           PlaylistSyncError.PLAYLIST_NOT_ACTIVE -> {
-            logger.warn { "Playlist type update rejected for inactive playlist $playlistId (user ${userId.value}): ${error.code}" }
+            logger.warn { "Playlist type update rejected for inactive playlist $playlistId: ${error.code}" }
             Response.status(Response.Status.BAD_REQUEST)
               .entity(mapOf("error" to "Playlist type can only be set for active playlists"))
               .build()
           }
           else -> {
-            logger.warn { "Playlist $playlistId not found for user ${userId.value} during type update: ${error.code}" }
+            logger.warn { "Playlist $playlistId not found during type update: ${error.code}" }
             Response.status(Response.Status.NOT_FOUND)
               .entity(mapOf("error" to "Playlist not found"))
               .build()
@@ -141,10 +137,9 @@ class PlaylistSettingsResource(
   @Path("/sync")
   @Produces(MediaType.APPLICATION_JSON)
   fun syncNow(): Response {
-    val userId = UserId(securityIdentity.principal.name)
     return playlist.syncPlaylists().fold(
       ifLeft = { error ->
-        logger.error { "Playlist sync failed for user ${userId.value}: ${error.code}" }
+        logger.error { "Playlist sync failed: ${error.code}" }
         Response.status(Response.Status.INTERNAL_SERVER_ERROR)
           .entity(mapOf("error" to "Sync failed: ${error.code}"))
           .build()
@@ -158,18 +153,17 @@ class PlaylistSettingsResource(
   @Path("/{playlistId}/sync")
   @Produces(MediaType.APPLICATION_JSON)
   fun syncPlaylist(@PathParam("playlistId") playlistId: String): Response {
-    val userId = UserId(securityIdentity.principal.name)
     return playlist.enqueueSyncPlaylistData(playlistId).fold(
       ifLeft = { error ->
         when (error) {
           PlaylistSyncError.PLAYLIST_SYNC_INACTIVE -> {
-            logger.warn { "Sync enqueue rejected for inactive playlist $playlistId (user ${userId.value}): ${error.code}" }
+            logger.warn { "Sync enqueue rejected for inactive playlist $playlistId: ${error.code}" }
             Response.status(Response.Status.BAD_REQUEST)
               .entity(mapOf("error" to "Sync enqueue failed: ${error.code}"))
               .build()
           }
           else -> {
-            logger.warn { "Sync enqueue failed for playlist $playlistId (user ${userId.value}): ${error.code}" }
+            logger.warn { "Sync enqueue failed for playlist $playlistId: ${error.code}" }
             Response.status(Response.Status.NOT_FOUND)
               .entity(mapOf("error" to "Sync enqueue failed: ${error.code}"))
               .build()

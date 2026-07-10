@@ -18,7 +18,7 @@ class CurrentUserResolver(
   fun userId(): UserId? {
     val current = cached
     if (current != null) return current
-    val resolved = userRepository.findAll().firstOrNull()?.spotifyUserId
+    val resolved = userRepository.get()?.spotifyUserId
     if (resolved != null) cached = resolved
     return resolved
   }

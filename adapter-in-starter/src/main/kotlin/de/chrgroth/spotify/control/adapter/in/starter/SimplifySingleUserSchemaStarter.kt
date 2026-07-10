@@ -11,7 +11,7 @@ import mu.KLogging
 import org.bson.Document
 import org.eclipse.microprofile.config.inject.ConfigProperty
 
-// Phase 4 of the single-user simplification (docs/plans/single-user-simplification.md): the app_playback,
+// Single-user migration cleanup (see ADR-0008): the app_playback,
 // app_playback_aggregation, spotify_playlist and spotify_playlist_metadata collections used to key documents by
 // "${spotifyUserId}:...", and spotify_currently_playing/spotify_recently_played/spotify_recently_partial_played
 // carried a spotifyUserId field, all to disambiguate between users. Since there is now only ever one user, this

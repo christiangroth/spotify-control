@@ -3,7 +3,6 @@ package de.chrgroth.spotify.control.domain.infra
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.port.out.playlist.AppPlaylistCheckRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
 import io.micrometer.core.instrument.Gauge
 import io.micrometer.core.instrument.MeterRegistry
 import io.quarkus.runtime.StartupEvent
@@ -14,27 +13,20 @@ import jakarta.enterprise.event.Observes
 @ApplicationScoped
 @Suppress("Unused", "UnusedParameter")
 class OverviewMetrics(
-  private val userRepository: UserRepositoryPort,
   private val playlistRepository: PlaylistRepositoryPort,
   private val playlistCheckRepository: AppPlaylistCheckRepositoryPort,
   private val meterRegistry: MeterRegistry,
 ) {
 
   fun onStartup(@Observes event: StartupEvent) {
-    Gauge.builder("app.users.active", this) { it.activeUserCount().toDouble() }
-      .description("Number of registered users")
-      .register(meterRegistry)
-
     Gauge.builder("app.playlist.tracked", this) { it.trackedPlaylistCount().toDouble() }
-      .description("Number of playlists with sync status active, across all users")
+      .description("Number of playlists with sync status active")
       .register(meterRegistry)
 
     Gauge.builder("app.playlist.album_upgrade_pending", this) { it.pendingAlbumUpgradeCount().toDouble() }
       .description("Number of playlist checks with a pending track-from-latest-release violation")
       .register(meterRegistry)
   }
-
-  private fun activeUserCount(): Int = userRepository.findAll().size
 
   private fun trackedPlaylistCount(): Int =
     playlistRepository.findAll().count { it.syncStatus == PlaylistSyncStatus.ACTIVE }

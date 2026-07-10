@@ -24,7 +24,7 @@ class SpotifyAccessTokenAdapter(
 ) : SpotifyAccessTokenPort {
 
   override fun getValidAccessToken(): AccessToken {
-    val user = requireNotNull(userRepository.findAll().firstOrNull()) { "No user found" }
+    val user = requireNotNull(userRepository.get()) { "No user found" }
     return if (isTokenExpiringSoon(user)) {
       refreshAndPersist(user).fold(
         ifLeft = { error("Failed to refresh access token for user ${user.spotifyUserId.value}: ${it.code}") },

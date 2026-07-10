@@ -56,7 +56,7 @@ Whenever a human-readable name is available on the domain object being logged, i
 - Tracks: `'${item.trackName}' by ${item.artistNames.joinToString()} (${item.trackId.value})`
 - Artists: `'${artist.artistName}' ($artistId)`
 - Albums: `'${album.title ?: albumId}' ($albumId)`
-- Playlists: `'${playlist.name}' ($playlistId, user ${userId.value})`
+- Playlists: `'${playlist.name}' ($playlistId)`
 
 Do not add a database lookup solely to obtain a name for a log message.
 
@@ -64,12 +64,12 @@ Do not add a database lookup solely to obtain a name for a log message.
 
 | Pattern | Example |
 |---------|---------|
-| Scheduled job triggers one meaningful outcome | `"Scheduling playback data fetch for ${users.size} user(s)"` |
-| Explicit rebuild / resync initiated | `"Rebuilding playback data for user: ${userId.value}"` |
+| Scheduled job triggers one meaningful outcome | `"Running scheduled playlist sync"` |
+| Explicit rebuild / resync initiated | `"Rebuilding playback data"` |
 | New catalog entity synced with name | `"Synced album '${title}' ($id): ${n} track(s)"` |
-| Outbox pagination completed | `"Completed all pages for playlist '${name}' ($id, user $userId)"` |
+| Outbox pagination completed | `"Completed all pages for playlist '${name}' ($id)"` |
 | Batch rebuild summary | `"Enqueued daily aggregations from $from to $to"` |
-| User-visible state change | `"Updated sync status for playlist '${name}' ($id, user $userId) to $syncStatus"` |
+| User-visible state change | `"Updated sync status for playlist '${name}' ($id) to $syncStatus"` |
 
 ## Release Note Snippets
 

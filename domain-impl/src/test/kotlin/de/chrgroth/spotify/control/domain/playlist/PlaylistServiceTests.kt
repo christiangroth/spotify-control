@@ -16,7 +16,6 @@ import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistTracksPage
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistType
 import de.chrgroth.spotify.control.domain.model.playlist.SpotifyPlaylistItem
-import de.chrgroth.spotify.control.domain.model.user.User
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.out.playlist.AppPlaylistCheckRepositoryPort
@@ -25,7 +24,6 @@ import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.SpotifyPlaylistPort
-import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
 import de.chrgroth.spotify.control.domain.catalog.SyncController
 import de.chrgroth.spotify.control.domain.catalog.CatalogSyncRequest
 import de.chrgroth.spotify.control.domain.user.CurrentUserResolver
@@ -45,7 +43,6 @@ import kotlin.time.Duration.Companion.seconds
 @Suppress("LargeClass")
 class PlaylistServiceTests {
 
-  private val userRepository: UserRepositoryPort = mockk()
   private val currentUserResolver: CurrentUserResolver = mockk()
   private val playlistRepository: PlaylistRepositoryPort = mockk()
   private val spotifyAccessToken: SpotifyAccessTokenPort = mockk()
@@ -57,7 +54,7 @@ class PlaylistServiceTests {
   private val meterRegistry = SimpleMeterRegistry()
 
   private val adapter = PlaylistService(
-    userRepository, currentUserResolver, playlistRepository,
+    currentUserResolver, playlistRepository,
     spotifyAccessToken, spotifyPlaylist,
     outboxPort, dashboardRefresh,
     playlistCheckRepository,
@@ -68,15 +65,6 @@ class PlaylistServiceTests {
   private val userId = UserId("user-1")
   private val accessToken = AccessToken("access-token")
   private val now = Clock.System.now()
-
-  private fun buildUser(id: String = "user-1") = User(
-    spotifyUserId = UserId(id),
-    displayName = "User $id",
-    encryptedAccessToken = "enc-access",
-    encryptedRefreshToken = "enc-refresh",
-    tokenExpiresAt = now + 1.hours,
-    lastLoginAt = now,
-  )
 
   private fun buildPlaylistInfo(
     id: String,
@@ -133,8 +121,6 @@ class PlaylistServiceTests {
 
   @Test
   fun `syncPlaylists filters out playlists not owned by user`() {
-    val user = buildUser()
-    every { userRepository.findById(userId) } returns user
     every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(
@@ -156,8 +142,6 @@ class PlaylistServiceTests {
 
   @Test
   fun `syncPlaylists persists new playlists with PASSIVE status`() {
-    val user = buildUser()
-    every { userRepository.findById(userId) } returns user
     every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1")).right()
@@ -177,8 +161,6 @@ class PlaylistServiceTests {
 
   @Test
   fun `syncPlaylists preserves existing syncStatus`() {
-    val user = buildUser()
-    every { userRepository.findById(userId) } returns user
     every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1")).right()
@@ -194,8 +176,6 @@ class PlaylistServiceTests {
 
   @Test
   fun `syncPlaylists uses latest playlist state after Spotify API call to preserve syncStatus changes made in the meantime`() {
-    val user = buildUser()
-    every { userRepository.findById(userId) } returns user
     every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1")).right()
@@ -212,8 +192,6 @@ class PlaylistServiceTests {
 
   @Test
   fun `syncPlaylists preserves lastSnapshotIdSyncTime when snapshotId is unchanged`() {
-    val user = buildUser()
-    every { userRepository.findById(userId) } returns user
     every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1", snapshotId = "snap-1")).right()
@@ -230,8 +208,6 @@ class PlaylistServiceTests {
 
   @Test
   fun `syncPlaylists updates lastSnapshotIdSyncTime when snapshotId changes`() {
-    val user = buildUser()
-    every { userRepository.findById(userId) } returns user
     every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1", snapshotId = "snap-2")).right()
@@ -248,8 +224,6 @@ class PlaylistServiceTests {
 
   @Test
   fun `syncPlaylists notifies dashboard when playlist count increases`() {
-    val user = buildUser()
-    every { userRepository.findById(userId) } returns user
     every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1"), buildSpotifyItem("p2")).right()
@@ -267,8 +241,6 @@ class PlaylistServiceTests {
 
   @Test
   fun `syncPlaylists notifies dashboard when playlist count decreases`() {
-    val user = buildUser()
-    every { userRepository.findById(userId) } returns user
     every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1")).right()
@@ -285,8 +257,6 @@ class PlaylistServiceTests {
 
   @Test
   fun `syncPlaylists does not notify dashboard when playlist count is unchanged`() {
-    val user = buildUser()
-    every { userRepository.findById(userId) } returns user
     every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1")).right()
@@ -302,8 +272,6 @@ class PlaylistServiceTests {
 
   @Test
   fun `syncPlaylists returns Left when spotify fetch fails`() {
-    val user = buildUser()
-    every { userRepository.findById(userId) } returns user
     every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylists(accessToken) } returns PlaylistSyncError.PLAYLIST_FETCH_FAILED.left()
@@ -316,8 +284,6 @@ class PlaylistServiceTests {
 
   @Test
   fun `syncPlaylists returns Left with SpotifyRateLimitError when rate limited`() {
-    val user = buildUser()
-    every { userRepository.findById(userId) } returns user
     every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylists(accessToken) } returns SpotifyRateLimitError(30.seconds).left()
@@ -342,8 +308,6 @@ class PlaylistServiceTests {
 
   @Test
   fun `updateSyncStatus returns Left when playlist not found`() {
-    val user = buildUser()
-    every { userRepository.findById(userId) } returns user
     every { currentUserResolver.userId() } returns userId
     every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1"))
 
@@ -355,8 +319,6 @@ class PlaylistServiceTests {
 
   @Test
   fun `updateSyncStatus updates only the target playlist`() {
-    val user = buildUser()
-    every { userRepository.findById(userId) } returns user
     every { currentUserResolver.userId() } returns userId
     every { playlistRepository.findAll() } returns listOf(
       buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.ACTIVE),
@@ -379,8 +341,6 @@ class PlaylistServiceTests {
 
   @Test
   fun `syncPlaylists enqueues SyncPlaylistData for active playlist with changed snapshotId`() {
-    val user = buildUser()
-    every { userRepository.findById(userId) } returns user
     every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1", snapshotId = "snap-2")).right()
@@ -395,8 +355,6 @@ class PlaylistServiceTests {
 
   @Test
   fun `syncPlaylists enqueues SyncPlaylistData for active playlist with no existing playlist data`() {
-    val user = buildUser()
-    every { userRepository.findById(userId) } returns user
     every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1")).right()
@@ -412,8 +370,6 @@ class PlaylistServiceTests {
 
   @Test
   fun `syncPlaylists does not enqueue SyncPlaylistData for passive playlist`() {
-    val user = buildUser()
-    every { userRepository.findById(userId) } returns user
     every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1")).right()
@@ -427,8 +383,6 @@ class PlaylistServiceTests {
 
   @Test
   fun `syncPlaylists does not enqueue SyncPlaylistData for active playlist with unchanged snapshotId and existing data`() {
-    val user = buildUser()
-    every { userRepository.findById(userId) } returns user
     every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1")).right()
@@ -473,9 +427,7 @@ class PlaylistServiceTests {
 
   @Test
   fun `syncPlaylistData fetches and saves playlist tracks on first page`() {
-    val user = buildUser()
     val page = buildTracksPage()
-    every { userRepository.findById(userId) } returns user
     every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylistTracksPage(accessToken, "p1", null) } returns page.right()
@@ -491,9 +443,7 @@ class PlaylistServiceTests {
 
   @Test
   fun `syncPlaylistData delegates catalog sync to syncController`() {
-    val user = buildUser()
     val page = buildTracksPage()
-    every { userRepository.findById(userId) } returns user
     every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylistTracksPage(accessToken, "p1", null) } returns page.right()
@@ -512,9 +462,7 @@ class PlaylistServiceTests {
 
   @Test
   fun `syncPlaylistData updates lastSyncTime only on last page`() {
-    val user = buildUser()
     val page = buildTracksPage()
-    every { userRepository.findById(userId) } returns user
     every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylistTracksPage(accessToken, "p1", null) } returns page.right()
@@ -529,10 +477,8 @@ class PlaylistServiceTests {
 
   @Test
   fun `syncPlaylistData does not update lastSyncTime when there is a next page`() {
-    val user = buildUser()
     val nextPageUrl = "https://api.spotify.com/v1/playlists/p1/tracks?offset=50&limit=50"
     val page = buildTracksPage(nextUrl = nextPageUrl)
-    every { userRepository.findById(userId) } returns user
     every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylistTracksPage(accessToken, "p1", null) } returns page.right()
@@ -546,10 +492,8 @@ class PlaylistServiceTests {
 
   @Test
   fun `syncPlaylistData enqueues next page event when nextUrl is present`() {
-    val user = buildUser()
     val nextPageUrl = "https://api.spotify.com/v1/playlists/p1/tracks?offset=50&limit=50"
     val page = buildTracksPage(nextUrl = nextPageUrl)
-    every { userRepository.findById(userId) } returns user
     every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylistTracksPage(accessToken, "p1", null) } returns page.right()
@@ -564,9 +508,7 @@ class PlaylistServiceTests {
 
   @Test
   fun `syncPlaylistData enqueues RunPlaylistChecks only on last page`() {
-    val user = buildUser()
     val page = buildTracksPage()
-    every { userRepository.findById(userId) } returns user
     every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylistTracksPage(accessToken, "p1", null) } returns page.right()
@@ -582,10 +524,8 @@ class PlaylistServiceTests {
 
   @Test
   fun `syncPlaylistData appends tracks on subsequent pages`() {
-    val user = buildUser()
     val nextPageUrl = "https://api.spotify.com/v1/playlists/p1/tracks?offset=50&limit=50"
     val page = buildTracksPage()
-    every { userRepository.findById(userId) } returns user
     every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylistTracksPage(accessToken, "p1", nextPageUrl) } returns page.right()
@@ -602,10 +542,8 @@ class PlaylistServiceTests {
 
   @Test
   fun `syncPlaylistData restarts from first page when snapshotId changes mid-paging`() {
-    val user = buildUser()
     val nextPageUrl = "https://api.spotify.com/v1/playlists/p1/tracks?offset=50&limit=50"
     val page = buildTracksPage(snapshotId = "snap-2")  // snapshot changed
-    every { userRepository.findById(userId) } returns user
     every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylistTracksPage(accessToken, "p1", nextPageUrl) } returns page.right()
@@ -621,10 +559,8 @@ class PlaylistServiceTests {
 
   @Test
   fun `syncPlaylistData proceeds normally when snapshotId matches on subsequent page`() {
-    val user = buildUser()
     val nextPageUrl = "https://api.spotify.com/v1/playlists/p1/tracks?offset=50&limit=50"
     val page = buildTracksPage(snapshotId = "snap-1")
-    every { userRepository.findById(userId) } returns user
     every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylistTracksPage(accessToken, "p1", nextPageUrl) } returns page.right()
@@ -642,8 +578,6 @@ class PlaylistServiceTests {
 
   @Test
   fun `syncPlaylistData returns Left when tracks fetch fails`() {
-    val user = buildUser()
-    every { userRepository.findById(userId) } returns user
     every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylistTracksPage(accessToken, "p1", null) } returns PlaylistSyncError.PLAYLIST_TRACKS_FETCH_FAILED.left()
@@ -658,8 +592,6 @@ class PlaylistServiceTests {
 
   @Test
   fun `updateSyncStatus enqueues SyncPlaylistData when activating playlist with no existing data`() {
-    val user = buildUser()
-    every { userRepository.findById(userId) } returns user
     every { currentUserResolver.userId() } returns userId
     every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE))
     every { playlistRepository.replaceAll(any()) } just runs
@@ -674,8 +606,6 @@ class PlaylistServiceTests {
 
   @Test
   fun `updateSyncStatus enqueues SyncPlaylistData when activating playlist with existing data`() {
-    val user = buildUser()
-    every { userRepository.findById(userId) } returns user
     every { currentUserResolver.userId() } returns userId
     every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE))
     every { playlistRepository.replaceAll(any()) } just runs
@@ -691,8 +621,6 @@ class PlaylistServiceTests {
 
   @Test
   fun `updateSyncStatus notifies dashboard refresh after updating sync status`() {
-    val user = buildUser()
-    every { userRepository.findById(userId) } returns user
     every { currentUserResolver.userId() } returns userId
     every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.ACTIVE))
     every { playlistRepository.replaceAll(any()) } just runs
@@ -708,8 +636,6 @@ class PlaylistServiceTests {
 
   @Test
   fun `updateSyncStatus notifies dashboard refresh when activating playlist`() {
-    val user = buildUser()
-    every { userRepository.findById(userId) } returns user
     every { currentUserResolver.userId() } returns userId
     every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE))
     every { playlistRepository.replaceAll(any()) } just runs
@@ -725,8 +651,6 @@ class PlaylistServiceTests {
 
   @Test
   fun `updateSyncStatus deletes check documents when deactivating playlist`() {
-    val user = buildUser()
-    every { userRepository.findById(userId) } returns user
     every { currentUserResolver.userId() } returns userId
     every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.ACTIVE))
     every { playlistRepository.replaceAll(any()) } just runs
@@ -742,8 +666,6 @@ class PlaylistServiceTests {
 
   @Test
   fun `updateSyncStatus does not delete check documents when activating playlist`() {
-    val user = buildUser()
-    every { userRepository.findById(userId) } returns user
     every { currentUserResolver.userId() } returns userId
     every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE))
     every { playlistRepository.replaceAll(any()) } just runs
@@ -759,8 +681,6 @@ class PlaylistServiceTests {
 
   @Test
   fun `updateSyncStatus sets type ALL when activating playlist named All`() {
-    val user = buildUser()
-    every { userRepository.findById(userId) } returns user
     every { currentUserResolver.userId() } returns userId
     every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE, name = "All"))
     every { playlistRepository.replaceAll(any()) } just runs
@@ -777,8 +697,6 @@ class PlaylistServiceTests {
 
   @Test
   fun `updateSyncStatus sets type ALL when activating playlist named all case-insensitive`() {
-    val user = buildUser()
-    every { userRepository.findById(userId) } returns user
     every { currentUserResolver.userId() } returns userId
     every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE, name = "ALL"))
     every { playlistRepository.replaceAll(any()) } just runs
@@ -808,8 +726,6 @@ class PlaylistServiceTests {
 
   @Test
   fun `enqueueSyncPlaylistData returns Left when playlist not found`() {
-    val user = buildUser()
-    every { userRepository.findById(userId) } returns user
     every { currentUserResolver.userId() } returns userId
     every { playlistRepository.findAll() } returns emptyList()
 
@@ -822,8 +738,6 @@ class PlaylistServiceTests {
 
   @Test
   fun `enqueueSyncPlaylistData returns Left when playlist is not active`() {
-    val user = buildUser()
-    every { userRepository.findById(userId) } returns user
     every { currentUserResolver.userId() } returns userId
     every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE))
 
@@ -836,8 +750,6 @@ class PlaylistServiceTests {
 
   @Test
   fun `enqueueSyncPlaylistData enqueues SyncPlaylistData and returns Right`() {
-    val user = buildUser()
-    every { userRepository.findById(userId) } returns user
     every { currentUserResolver.userId() } returns userId
     every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1"))
     every { outboxPort.enqueue(any()) } just runs

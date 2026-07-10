@@ -37,7 +37,7 @@ class LoginServiceTests {
   fun `login succeeds and user is upserted when no user is registered yet`() {
     every { spotifyAuth.exchangeCode("code") } returns tokens.right()
     every { spotifyAuth.getUserProfile(AccessToken("access")) } returns profile.right()
-    every { userRepository.findAll() } returns emptyList()
+    every { userRepository.get() } returns null
     every { tokenEncryption.encrypt(any()) } returns "encrypted".right()
     every { userRepository.upsert(any()) } just runs
 
@@ -52,7 +52,7 @@ class LoginServiceTests {
   fun `login succeeds when the already registered user logs in again`() {
     every { spotifyAuth.exchangeCode("code") } returns tokens.right()
     every { spotifyAuth.getUserProfile(AccessToken("access")) } returns profile.right()
-    every { userRepository.findAll() } returns listOf(existingUser(UserId("user-1")))
+    every { userRepository.get() } returns existingUser(UserId("user-1"))
     every { tokenEncryption.encrypt(any()) } returns "encrypted".right()
     every { userRepository.upsert(any()) } just runs
 
@@ -67,7 +67,7 @@ class LoginServiceTests {
   fun `login is denied when a different user is already registered`() {
     every { spotifyAuth.exchangeCode("code") } returns tokens.right()
     every { spotifyAuth.getUserProfile(AccessToken("access")) } returns profile.right()
-    every { userRepository.findAll() } returns listOf(existingUser(UserId("other-user")))
+    every { userRepository.get() } returns existingUser(UserId("other-user"))
 
     val result = adapter.handleCallback("code")
 
@@ -103,7 +103,7 @@ class LoginServiceTests {
   fun `unexpected exception during upsert returns UNEXPECTED error`() {
     every { spotifyAuth.exchangeCode("code") } returns tokens.right()
     every { spotifyAuth.getUserProfile(AccessToken("access")) } returns profile.right()
-    every { userRepository.findAll() } returns emptyList()
+    every { userRepository.get() } returns null
     every { tokenEncryption.encrypt(any()) } returns "encrypted".right()
     every { userRepository.upsert(any()) } throws RuntimeException("DB connection failed")
 
