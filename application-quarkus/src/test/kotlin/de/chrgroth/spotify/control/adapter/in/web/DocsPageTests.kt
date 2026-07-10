@@ -74,32 +74,6 @@ class DocsPageTests {
       .statusCode(404)
   }
 
-  @Test
-  fun `docs releasenotes page is available and renders markdown content`() {
-    given()
-      .`when`()
-      .get("/docs/releasenotes/RELEASENOTES.md")
-      .then()
-      .statusCode(200)
-      .contentType(containsString("text/html"))
-      .body(containsString("docs-rendered"))
-      .body(containsString("Bugfixes"))
-  }
-
-  @Test
-  fun `docs releasenotes page contains raw markdown in textarea and rendering script`() {
-    val body = given()
-      .`when`()
-      .get("/docs/releasenotes/RELEASENOTES.md")
-      .then()
-      .statusCode(200)
-      .extract()
-      .body()
-      .asString()
-
-    assertMarkdownRenderingPipeline(body, "# 0.9")
-  }
-
   private fun assertMarkdownRenderingPipeline(body: String, expectedMarkdownContent: String) {
     assertThat(body).contains("""id="docs-raw"""")
     assertThat(body).contains(expectedMarkdownContent)

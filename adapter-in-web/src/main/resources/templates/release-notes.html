@@ -1,0 +1,38 @@
+{#include layout.html}
+    {#title}SpCtl – Release Notes{/title}
+    {#content}
+    <div class="container py-4">
+        <h1 class="mb-4">Release Notes</h1>
+        <div class="accordion" id="release-notes-accordion">
+            {#for group in groups}
+            <div class="accordion-item app-card app-accordion-item mb-2">
+                <h2 class="accordion-header" id="{group.id}-heading">
+                    <button class="accordion-button app-accordion-button {#if !group.expanded}collapsed{/if}" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#{group.id}-collapse"
+                            aria-expanded="{group.expanded}" aria-controls="{group.id}-collapse">
+                        <span>
+                            <span class="d-block">{group.title}</span>
+                            <span class="d-block app-section-label">{group.versionsLabel}</span>
+                        </span>
+                    </button>
+                </h2>
+                <div id="{group.id}-collapse" class="accordion-collapse collapse {#if group.expanded}show{/if}" aria-labelledby="{group.id}-heading">
+                    <div class="accordion-body docs-content">
+                        <div class="release-notes-rendered" data-target="{group.id}"></div>
+                        <textarea class="d-none release-notes-raw" data-group="{group.id}">{group.markdownContent}</textarea>
+                    </div>
+                </div>
+            </div>
+            {/for}
+        </div>
+    </div>
+    <script>
+        document.querySelectorAll('.release-notes-raw').forEach(function (textarea) {
+            var target = document.querySelector('.release-notes-rendered[data-target="' + textarea.dataset.group + '"]');
+            if (target) {
+                target.innerHTML = marked.parse(textarea.value);
+            }
+        });
+    </script>
+    {/content}
+{/include}
