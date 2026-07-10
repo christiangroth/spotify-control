@@ -1,3 +1,13 @@
+# 0.107.16 (2026.07.10)
+
+## Bugfixes / Chore
+* Renamed the "Users & Playlists" row on the Overview dashboard to "Playlists" and made its three panels equal width.
+* Unified the slow MongoDB query warning to a single consistent log format.
+
+
+
+---
+
 # 0.107.15 (2026.07.10)
 
 ## Bugfixes / Chore
