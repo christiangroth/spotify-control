@@ -147,9 +147,7 @@ class CatalogBrowserService(
     val boundedArtists = artistCandidates.take(limit)
     val boundedAlbums = albumCandidates.take(limit)
 
-    val albumCountByArtistId = appAlbumRepository.findByArtistIds(boundedArtists.map { it.id }.toSet())
-      .groupingBy { it.artistId?.value }
-      .eachCount()
+    val albumCountByArtistId = appAlbumRepository.countByArtistIds(boundedArtists.map { it.id }.toSet())
 
     val artistEntries = boundedArtists.map { artist ->
       CatalogSyncTimelineEntry(
@@ -157,7 +155,7 @@ class CatalogBrowserService(
         syncedAt = artist.lastSync,
         artistId = artist.id.value,
         artistName = artist.artistName,
-        albumCount = albumCountByArtistId[artist.id.value] ?: 0,
+        albumCount = (albumCountByArtistId[artist.id.value] ?: 0L).toInt(),
       )
     }
     val albumEntries = boundedAlbums.map { album ->

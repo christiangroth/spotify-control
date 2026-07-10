@@ -1,5 +1,7 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
+import com.mongodb.client.model.Accumulators
+import com.mongodb.client.model.Aggregates
 import com.mongodb.client.model.BulkWriteOptions
 import com.mongodb.client.model.Filters
 import com.mongodb.client.model.Sorts
@@ -13,6 +15,7 @@ import de.chrgroth.spotify.control.domain.port.out.catalog.AppAlbumRepositoryPor
 import jakarta.enterprise.context.ApplicationScoped
 import java.util.regex.Pattern
 import kotlin.time.toKotlinInstant
+import org.bson.Document
 
 
 @ApplicationScoped
@@ -91,6 +94,23 @@ class AppAlbumRepositoryAdapter(
         .find(Filters.`in`(ARTIST_ID_FIELD, artistIds.map { it.value }))
         .toList()
         .map { it.toDomain() }
+    }
+  }
+
+  override fun countByArtistIds(artistIds: Set<ArtistId>): Map<String, Long> {
+    if (artistIds.isEmpty()) return emptyMap()
+    val pipeline = listOf(
+      Aggregates.match(Filters.`in`(ARTIST_ID_FIELD, artistIds.map { it.value })),
+      Aggregates.group("\$$ARTIST_ID_FIELD", Accumulators.sum("count", 1)),
+    )
+    return mongoQueryMetrics.timed("app_album.countByArtistIds") {
+      appAlbumDocumentRepository.mongoCollection()
+        .aggregate(pipeline, Document::class.java)
+        .associate { doc ->
+          val artistId = doc.getString("_id")
+          val count = (doc["count"] as? Int)?.toLong() ?: doc.getLong("count") ?: 0L
+          artistId to count
+        }
     }
   }
 

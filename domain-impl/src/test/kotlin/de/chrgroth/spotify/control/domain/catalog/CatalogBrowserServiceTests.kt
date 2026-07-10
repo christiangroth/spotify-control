@@ -196,10 +196,7 @@ class CatalogBrowserServiceTests {
     )
     every { appArtistRepository.findRecentlySynced(0, 3) } returns listOf(artistA, artistB, AppArtist(id = ArtistId("artist-z"), artistName = "Z", lastSync = Instant.fromEpochSeconds(50)))
     every { appAlbumRepository.findRecentlySynced(0, 3) } returns listOf(albumX)
-    every { appAlbumRepository.findByArtistIds(setOf(artistA.id, artistB.id)) } returns listOf(
-      AppAlbum(id = AlbumId("album-a1"), artistId = artistA.id, lastSync = triggeredAt),
-      AppAlbum(id = AlbumId("album-a2"), artistId = artistA.id, lastSync = triggeredAt),
-    )
+    every { appAlbumRepository.countByArtistIds(setOf(artistA.id, artistB.id)) } returns mapOf(artistA.id.value to 2L)
 
     val result = service.getSyncTimeline(artistOffset = 0, albumOffset = 0, limit = 2)
 
@@ -222,7 +219,7 @@ class CatalogBrowserServiceTests {
       AppArtist(id = ArtistId("artist-a"), artistName = "Artist A", lastSync = Instant.fromEpochSeconds(100)),
     )
     every { appAlbumRepository.findRecentlySynced(0, 3) } returns emptyList()
-    every { appAlbumRepository.findByArtistIds(setOf(ArtistId("artist-a"))) } returns emptyList()
+    every { appAlbumRepository.countByArtistIds(setOf(ArtistId("artist-a"))) } returns emptyMap()
 
     val result = service.getSyncTimeline(artistOffset = 0, albumOffset = 0, limit = 2)
 
