@@ -25,17 +25,19 @@ class ReleaseNotesPageTests {
   }
 
   @Test
-  fun `newest minor version group is expanded, older groups are collapsed`() {
+  fun `newest 3 minor version groups are expanded, older groups are collapsed`() {
     val groups = groupsFromRealFile()
-    assertThat(groups.size).isGreaterThan(1)
+    assertThat(groups.size).isGreaterThan(3)
 
     val body = renderedBody()
 
-    val newestGroupId = groupId(groups[0])
-    assertThat(body).contains("""id="$newestGroupId-collapse" class="accordion-collapse collapse show"""")
-    assertThat(body).contains("""aria-expanded="true" aria-controls="$newestGroupId-collapse"""")
+    groups.take(3).forEach { group ->
+      val groupId = groupId(group)
+      assertThat(body).contains("""id="$groupId-collapse" class="accordion-collapse collapse show"""")
+      assertThat(body).contains("""aria-expanded="true" aria-controls="$groupId-collapse"""")
+    }
 
-    val olderGroupId = groupId(groups[1])
+    val olderGroupId = groupId(groups[3])
     assertThat(body).contains("""id="$olderGroupId-collapse" class="accordion-collapse collapse """")
     assertThat(body).contains("""aria-expanded="false" aria-controls="$olderGroupId-collapse"""")
   }
