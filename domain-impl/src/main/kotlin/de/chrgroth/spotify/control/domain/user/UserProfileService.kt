@@ -21,7 +21,19 @@ class UserProfileService(
   private val outboxPort: OutboxPort,
 ) : UserProfilePort {
 
-  override fun getDisplayName(): String? = userRepository.get()?.displayName
+  // Single-user application: displayName only changes via the daily UpdateUserProfile job, so it
+  // is cached the same way CurrentUserResolver caches the user id, and refreshed in update() when
+  // it actually changes.
+  @Volatile
+  private var cachedDisplayName: String? = null
+
+  override fun getDisplayName(): String? {
+    val current = cachedDisplayName
+    if (current != null) return current
+    val resolved = userRepository.get()?.displayName
+    if (resolved != null) cachedDisplayName = resolved
+    return resolved
+  }
 
   override fun enqueueUpdates() {
     userRepository.get() ?: return
@@ -34,6 +46,7 @@ class UserProfileService(
     return spotifyAuth.getUserProfile(accessToken).map { profile ->
       if (profile.displayName != user.displayName) {
         userRepository.upsert(user.copy(displayName = profile.displayName))
+        cachedDisplayName = profile.displayName
       }
     }
   }
