@@ -1,10 +1,12 @@
 package de.chrgroth.spotify.control.domain.catalog
 
+import de.chrgroth.spotify.control.domain.infra.CatalogStatsCache
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
 import de.chrgroth.spotify.control.domain.model.catalog.AppAlbum
 import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
 import de.chrgroth.spotify.control.domain.model.catalog.AppTrack
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
+import de.chrgroth.spotify.control.domain.model.catalog.CatalogStats
 import de.chrgroth.spotify.control.domain.model.catalog.CatalogSyncEntityType
 import de.chrgroth.spotify.control.domain.model.catalog.SyncCause
 import de.chrgroth.spotify.control.domain.model.catalog.SyncTrace
@@ -33,6 +35,7 @@ class CatalogBrowserServiceTests {
   private val syncTraceRepository: SyncTraceRepositoryPort = mockk()
   private val playlistRepository: PlaylistRepositoryPort = mockk()
   private val currentUserResolver: CurrentUserResolver = mockk()
+  private val catalogStatsCache: CatalogStatsCache = mockk()
 
   private val service = CatalogBrowserService(
     appArtistRepository,
@@ -41,10 +44,21 @@ class CatalogBrowserServiceTests {
     syncTraceRepository,
     playlistRepository,
     currentUserResolver,
+    catalogStatsCache,
   )
 
   private val userId = UserId("user-1")
   private val triggeredAt = Instant.fromEpochSeconds(100)
+
+  @Test
+  fun `getCatalogStats reads through the shared catalog stats cache`() {
+    val stats = CatalogStats(artistCount = 3L, albumCount = 5L, trackCount = 42L)
+    every { catalogStatsCache.current() } returns stats
+
+    val result = service.getCatalogStats()
+
+    assertThat(result).isEqualTo(stats)
+  }
 
   @Test
   fun `getAlbums returns empty list when filter is blank`() {
