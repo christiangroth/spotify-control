@@ -134,6 +134,27 @@ class AppAlbumRepositoryTests {
   }
 
   @Test
+  fun `countByArtistIds returns album counts per artist for all given artists in a single batch`() {
+    val artistId1 = ArtistId("artist-count1-${UUID.randomUUID()}")
+    val artistId2 = ArtistId("artist-count2-${UUID.randomUUID()}")
+    val album1 = album("count-bulk1").copy(artistId = artistId1)
+    val album2 = album("count-bulk2").copy(artistId = artistId1)
+    val album3 = album("count-bulk3").copy(artistId = artistId2)
+    val other = album("count-bulk-other").copy(artistId = ArtistId("other-artist-${UUID.randomUUID()}"))
+    appAlbumRepository.upsertAll(listOf(album1, album2, album3, other))
+
+    val result = appAlbumRepository.countByArtistIds(setOf(artistId1, artistId2))
+
+    assertThat(result).containsExactlyInAnyOrderEntriesOf(mapOf(artistId1.value to 2L, artistId2.value to 1L))
+  }
+
+  @Test
+  fun `countByArtistIds returns empty map for empty input`() {
+    val result = appAlbumRepository.countByArtistIds(emptySet())
+    assertThat(result).isEmpty()
+  }
+
+  @Test
   fun `findRecentlySynced returns albums ordered by lastSync descending`() {
     val older = album("recent-older")
     appAlbumRepository.upsertAll(listOf(older))
