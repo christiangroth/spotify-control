@@ -1,3 +1,12 @@
+# 0.109.1 (2026.07.10)
+
+## Bugfixes / Chore
+* Changed the Catalog nav icon to a book and the Playlists nav icon to a document.
+
+
+
+---
+
 # 0.109.0 (2026.07.10)
 
 ## New Features
