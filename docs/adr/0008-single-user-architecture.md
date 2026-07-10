@@ -12,9 +12,8 @@ operator/user. This assumption of "possibly a few users" threads a `UserId` thro
 port, service, MongoDB collection, and outbox event in the system, without ever being exercised
 beyond one active account.
 
-The [2026-07-08 performance review](../reviews/2026-07-08-performance-review.md) surfaced two
-concrete problems that trace back to this mismatch between the multi-user design and the
-single-user reality:
+A 2026-07-08 performance review surfaced two concrete problems that trace back to this mismatch
+between the multi-user design and the single-user reality:
 
 * **Finding 1** – catalog sync picks an arbitrary user's Spotify token
   (`userRepository.findAll().firstOrNull()` in `CatalogService`) to sync *shared* catalog data.
@@ -102,6 +101,5 @@ ports/services/outbox events beyond the single stored user's own identity, and n
 
 ## Links
 
-* [Performance review, 2026-07-08](../reviews/2026-07-08-performance-review.md)
 * [No Separate Frontend Project ADR](0003-no-separate-frontend-project.md)
 * [arc42.md](../arc42/arc42.md)
