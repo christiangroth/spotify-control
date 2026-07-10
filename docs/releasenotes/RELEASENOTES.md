@@ -1,3 +1,15 @@
+# 0.108.0 (2026.07.10)
+
+## New Features
+* The Release Notes page now groups patch releases together by minor version, with collapsible panels showing the newest version group expanded by default.
+
+## Bugfixes / Chore
+* Added the groundwork for parsing and grouping release notes by minor version, in preparation for a more compact release notes view.
+
+
+
+---
+
 # 0.107.16 (2026.07.10)
 
 ## Bugfixes / Chore
