@@ -1,3 +1,12 @@
+# 0.108.4 (2026.07.10)
+
+## Bugfixes / Chore
+* Playback event totals shown on the dashboard are now summed by the database instead of the application, reducing memory use as listening history grows.
+
+
+
+---
+
 # 0.108.3 (2026.07.10)
 
 ## Bugfixes / Chore
