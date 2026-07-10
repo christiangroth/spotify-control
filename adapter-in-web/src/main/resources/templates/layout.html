@@ -57,6 +57,21 @@
             background-color: var(--color-bg-card);
             border-color: var(--color-border) !important;
         }
+        /* Cross-page navigation tiles shown below the top navbar */
+        .app-page-nav {
+            background-color: #000000;
+            border-bottom: 1px solid var(--color-border);
+        }
+        .nav-tile-label {
+            color: var(--color-text-primary);
+        }
+        .nav-tile.active {
+            background-color: var(--spotify-green) !important;
+            border-color: var(--spotify-green) !important;
+        }
+        .nav-tile.active .nav-tile-label {
+            color: #000000;
+        }
         /* Section label / card subtitle */
         .app-section-label {
             color: var(--color-text-muted);
@@ -284,6 +299,66 @@
         <a href="/logout" class="btn btn-sm btn-outline-secondary" data-testid="logout-link">Logout</a>
         {/insert}
     </nav>
+    {#insert pageNav}
+    <div class="app-page-nav px-3 py-2">
+        <div class="row g-2" data-testid="nav-tiles">
+            <div class="col-6 col-sm">
+                <a href="/dashboard" class="text-decoration-none" data-testid="nav-tile-dashboard">
+                <div class="card app-card nav-tile h-100">
+                    <div class="card-body py-2 px-3 d-flex align-items-center justify-content-center">
+                        <span class="fw-semibold nav-tile-label" style="font-size:.9rem;">Dashboard</span>
+                    </div>
+                </div>
+                </a>
+            </div>
+            <div class="col-6 col-sm">
+                <a href="/stats" class="text-decoration-none" data-testid="nav-tile-stats">
+                <div class="card app-card nav-tile h-100">
+                    <div class="card-body py-2 px-3 d-flex align-items-center justify-content-center">
+                        <span class="fw-semibold nav-tile-label" style="font-size:.9rem;">Stats</span>
+                    </div>
+                </div>
+                </a>
+            </div>
+            <div class="col-6 col-sm">
+                <a href="/playlists/settings" class="text-decoration-none" data-testid="nav-tile-playlists">
+                <div class="card app-card nav-tile h-100">
+                    <div class="card-body py-2 px-3 d-flex align-items-center justify-content-center">
+                        <span class="fw-semibold nav-tile-label" style="font-size:.9rem;">Playlists</span>
+                    </div>
+                </div>
+                </a>
+            </div>
+            <div class="col-6 col-sm">
+                <a href="/playlists/checks" class="text-decoration-none" data-testid="nav-tile-checks">
+                <div class="card app-card nav-tile h-100">
+                    <div class="card-body py-2 px-3 d-flex align-items-center justify-content-center">
+                        <span class="fw-semibold nav-tile-label" style="font-size:.9rem;">Checks</span>
+                    </div>
+                </div>
+                </a>
+            </div>
+            <div class="col-6 col-sm">
+                <a href="/catalog" class="text-decoration-none" data-testid="nav-tile-catalog">
+                <div class="card app-card nav-tile h-100">
+                    <div class="card-body py-2 px-3 d-flex align-items-center justify-content-center">
+                        <span class="fw-semibold nav-tile-label" style="font-size:.9rem;">Catalog</span>
+                    </div>
+                </div>
+                </a>
+            </div>
+            <div class="col-6 col-sm">
+                <a href="/playback" class="text-decoration-none" data-testid="nav-tile-playback">
+                <div class="card app-card nav-tile h-100">
+                    <div class="card-body py-2 px-3 d-flex align-items-center justify-content-center">
+                        <span class="fw-semibold nav-tile-label" style="font-size:.9rem;">Playback</span>
+                    </div>
+                </div>
+                </a>
+            </div>
+        </div>
+    </div>
+    {/insert}
     <script src="/webjars/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script src="/webjars/marked/lib/marked.umd.js"></script>
     <script src="/sse-utils.js"></script>
@@ -388,6 +463,12 @@
             document.querySelectorAll('.dropdown-menu a.dropdown-item[href]').forEach(function(link) {
                 if (link.getAttribute('href') === path) {
                     link.classList.add('active');
+                }
+            });
+            document.querySelectorAll('[data-testid="nav-tiles"] a[href]').forEach(function(link) {
+                if (link.getAttribute('href') === path) {
+                    const tile = link.querySelector('.nav-tile');
+                    if (tile) tile.classList.add('active');
                 }
             });
         })();
