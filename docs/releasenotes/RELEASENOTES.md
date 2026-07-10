@@ -1,3 +1,12 @@
+# 0.107.14 (2026.07.10)
+
+## Bugfixes / Chore
+* The displayed user name is now cached instead of being fetched from the database on every page load.
+
+
+
+---
+
 # 0.107.13 (2026.07.10)
 
 ## Bugfixes / Chore
