@@ -1,0 +1,1 @@
+* Fixed the release notes page: the newest 3 version groups are now expanded by default, bullet point text is readable again, and the accordion headers are now at least as large as the section headings inside them.

@@ -35,7 +35,7 @@ class ReleaseNotesResource(
       ?: throw NotFoundException("Release notes not found")
     val groups = ReleaseNotesParser.groupByMinorVersion(ReleaseNotesParser.parse(content))
     return releaseNotesTemplate.instance()
-      .data("groups", groups.mapIndexed { index, group -> toView(group, expanded = index == 0) })
+      .data("groups", groups.mapIndexed { index, group -> toView(group, expanded = index < 3) })
   }
 
   private fun toView(group: ReleaseNotesMinorGroup, expanded: Boolean): ReleaseNotesGroupView {
