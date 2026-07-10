@@ -44,9 +44,9 @@ class ReleaseNotesResource(
     val versionCount = group.versions.size
     return ReleaseNotesGroupView(
       id = "release-notes-group-${group.minorVersion.replace(".", "-")}",
-      title = group.minorVersion,
+      title = "v${group.minorVersion}",
       dateRange = dateRange,
-      versionsLabel = "$versionCount version${if (versionCount == 1) "" else "s"}: ${group.versions.joinToString(", ")}",
+      versionsLabel = "$versionCount version${if (versionCount == 1) "" else "s"}: ${group.versions.joinToString(", ") { "v$it" }}",
       markdownContent = toMarkdown(group),
       expanded = expanded,
     )
