@@ -1,3 +1,12 @@
+# 0.108.3 (2026.07.10)
+
+## Bugfixes / Chore
+* Prefixed release notes version numbers with "v" (e.g. "v0.107") in the Release Notes page.
+
+
+
+---
+
 # 0.108.2 (2026.07.10)
 
 ## Bugfixes / Chore
