@@ -46,7 +46,7 @@ class SpotifyAccessTokenAdapterTests {
   @Test
   fun `returns existing access token when not expiring soon`() {
     val user = buildUser(Clock.System.now() + 1.hours)
-    every { userRepository.findAll() } returns listOf(user)
+    every { userRepository.get() } returns user
     every { tokenEncryption.decrypt("enc-access") } returns "plain-access".right()
 
     val result = adapter.getValidAccessToken()
@@ -58,7 +58,7 @@ class SpotifyAccessTokenAdapterTests {
   @Test
   fun `refreshes token when expiring within 5 minutes`() {
     val user = buildUser(Clock.System.now() + 3.minutes)
-    every { userRepository.findAll() } returns listOf(user)
+    every { userRepository.get() } returns user
     every { tokenEncryption.decrypt("enc-refresh") } returns "plain-refresh".right()
     every { spotifyAuth.refreshToken(RefreshToken("plain-refresh")) } returns SpotifyRefreshedTokens(
       accessToken = AccessToken("new-access"),
@@ -81,7 +81,7 @@ class SpotifyAccessTokenAdapterTests {
   @Test
   fun `persists rotated refresh token when spotify returns a new one`() {
     val user = buildUser(Clock.System.now() + 1.minutes)
-    every { userRepository.findAll() } returns listOf(user)
+    every { userRepository.get() } returns user
     every { tokenEncryption.decrypt("enc-refresh") } returns "plain-refresh".right()
     every { spotifyAuth.refreshToken(RefreshToken("plain-refresh")) } returns SpotifyRefreshedTokens(
       accessToken = AccessToken("new-access"),
@@ -101,7 +101,7 @@ class SpotifyAccessTokenAdapterTests {
 
   @Test
   fun `throws when user not found`() {
-    every { userRepository.findAll() } returns emptyList()
+    every { userRepository.get() } returns null
 
     assertThatThrownBy { adapter.getValidAccessToken() }
       .isInstanceOf(IllegalArgumentException::class.java)
@@ -111,7 +111,7 @@ class SpotifyAccessTokenAdapterTests {
   @Test
   fun `throws when token refresh fails`() {
     val user = buildUser(Clock.System.now() + 1.minutes)
-    every { userRepository.findAll() } returns listOf(user)
+    every { userRepository.get() } returns user
     every { tokenEncryption.decrypt("enc-refresh") } returns "plain-refresh".right()
     every { spotifyAuth.refreshToken(RefreshToken("plain-refresh")) } returns AuthError.TOKEN_REFRESH_FAILED.left()
 

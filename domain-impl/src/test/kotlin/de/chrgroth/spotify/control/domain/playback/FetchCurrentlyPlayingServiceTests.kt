@@ -8,7 +8,6 @@ import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.model.playback.CurrentlyPlayingItem
 import de.chrgroth.spotify.control.domain.model.playback.RecentlyPartialPlayedItem
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
-import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.playback.AppPlaybackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playback.CurrentlyPlayingRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.infra.DashboardRefreshPort
@@ -18,7 +17,6 @@ import de.chrgroth.spotify.control.domain.port.out.playback.RecentlyPartialPlaye
 import de.chrgroth.spotify.control.domain.port.out.playback.RecentlyPlayedRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.playback.SpotifyPlaybackPort
-import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
 import de.chrgroth.spotify.control.domain.catalog.SyncController
 import de.chrgroth.spotify.control.domain.user.CurrentUserResolver
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
@@ -37,7 +35,6 @@ import org.junit.jupiter.api.Test
 
 class FetchCurrentlyPlayingServiceTests {
 
-  private val userRepository: UserRepositoryPort = mockk()
   private val currentUserResolver: CurrentUserResolver = mockk()
   private val spotifyAccessToken: SpotifyAccessTokenPort = mockk()
   private val spotifyPlayback: SpotifyPlaybackPort = mockk(relaxed = true)
@@ -52,7 +49,6 @@ class FetchCurrentlyPlayingServiceTests {
   private val meterRegistry = SimpleMeterRegistry()
 
   private val service = PlaybackService(
-    userRepository,
     currentUserResolver,
     spotifyAccessToken,
     spotifyPlayback,
@@ -68,7 +64,6 @@ class FetchCurrentlyPlayingServiceTests {
     minimumProgressSeconds = 25L,
   )
 
-  private val userId = UserId("user-1")
   private val accessToken = AccessToken("token")
   private val now = Clock.System.now()
 
@@ -96,7 +91,7 @@ class FetchCurrentlyPlayingServiceTests {
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlayback.getCurrentlyPlaying(accessToken) } returns PlaybackError.CURRENTLY_PLAYING_FETCH_FAILED.left()
 
-    val result = service.fetchCurrentlyPlaying(userId)
+    val result = service.fetchCurrentlyPlaying()
 
     assertThat(result.isLeft()).isTrue()
     verify(exactly = 0) { currentlyPlayingRepository.save(any()) }
@@ -107,7 +102,7 @@ class FetchCurrentlyPlayingServiceTests {
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlayback.getCurrentlyPlaying(accessToken) } returns null.right()
 
-    service.fetchCurrentlyPlaying(userId)
+    service.fetchCurrentlyPlaying()
 
     verify(exactly = 0) { currentlyPlayingRepository.save(any()) }
     verify(exactly = 0) { currentlyPlayingRepository.updateProgress(any()) }
@@ -121,7 +116,7 @@ class FetchCurrentlyPlayingServiceTests {
     every { spotifyPlayback.getCurrentlyPlaying(accessToken) } returns item.right()
     every { currentlyPlayingRepository.findMostRecentByTrack(item.trackId) } returns null
 
-    service.fetchCurrentlyPlaying(userId)
+    service.fetchCurrentlyPlaying()
 
     verify { currentlyPlayingRepository.save(item) }
     verify(exactly = 0) { currentlyPlayingRepository.updateProgress(any()) }
@@ -138,7 +133,7 @@ class FetchCurrentlyPlayingServiceTests {
     every { spotifyPlayback.getCurrentlyPlaying(accessToken) } returns newItem.right()
     every { currentlyPlayingRepository.findMostRecentByTrack(newItem.trackId) } returns existingItem
 
-    service.fetchCurrentlyPlaying(userId)
+    service.fetchCurrentlyPlaying()
 
     verify(exactly = 0) { currentlyPlayingRepository.save(any()) }
     verify { currentlyPlayingRepository.updateProgress(newItem.copy(startTime = startTime)) }
@@ -155,7 +150,7 @@ class FetchCurrentlyPlayingServiceTests {
     every { spotifyPlayback.getCurrentlyPlaying(accessToken) } returns newItem.right()
     every { currentlyPlayingRepository.findMostRecentByTrack(newItem.trackId) } returns existingItem
 
-    service.fetchCurrentlyPlaying(userId)
+    service.fetchCurrentlyPlaying()
 
     verify(exactly = 0) { currentlyPlayingRepository.save(any()) }
     verify { currentlyPlayingRepository.updateProgress(newItem.copy(startTime = startTime)) }
@@ -174,7 +169,7 @@ class FetchCurrentlyPlayingServiceTests {
     every { spotifyPlayback.getCurrentlyPlaying(accessToken) } returns afterResumeItem.right()
     every { currentlyPlayingRepository.findMostRecentByTrack(afterResumeItem.trackId) } returns existingItem
 
-    service.fetchCurrentlyPlaying(userId)
+    service.fetchCurrentlyPlaying()
 
     // Must update with original start time, not the drifted one
     verify { currentlyPlayingRepository.updateProgress(afterResumeItem.copy(startTime = originalStartTime)) }
@@ -192,7 +187,7 @@ class FetchCurrentlyPlayingServiceTests {
     every { spotifyPlayback.getCurrentlyPlaying(accessToken) } returns restartedItem.right()
     every { currentlyPlayingRepository.findMostRecentByTrack(restartedItem.trackId) } returns existingItem
 
-    service.fetchCurrentlyPlaying(userId)
+    service.fetchCurrentlyPlaying()
 
     verify { currentlyPlayingRepository.deleteByTrackIds(setOf("track-1")) }
     verify { currentlyPlayingRepository.save(restartedItem) }
@@ -207,7 +202,7 @@ class FetchCurrentlyPlayingServiceTests {
     every { spotifyPlayback.getCurrentlyPlaying(accessToken) } returns newItem.right()
     every { currentlyPlayingRepository.findMostRecentByTrack(newItem.trackId) } returns null
 
-    service.fetchCurrentlyPlaying(userId)
+    service.fetchCurrentlyPlaying()
 
     verify { currentlyPlayingRepository.save(newItem) }
     verify(exactly = 0) { currentlyPlayingRepository.deleteByTrackIds(any()) }
@@ -227,7 +222,7 @@ class FetchCurrentlyPlayingServiceTests {
     every { recentlyPartialPlayedRepository.findExistingPlayedAts(any()) } returns emptySet()
     every { recentlyPartialPlayedRepository.saveAll(any()) } just runs
 
-    service.fetchCurrentlyPlaying(userId)
+    service.fetchCurrentlyPlaying()
 
     val savedSlot = slot<List<RecentlyPartialPlayedItem>>()
     verify { recentlyPartialPlayedRepository.saveAll(capture(savedSlot)) }
@@ -247,7 +242,7 @@ class FetchCurrentlyPlayingServiceTests {
     every { currentlyPlayingRepository.findMostRecentByTrack(trackB.trackId) } returns null
     every { currentlyPlayingRepository.findAll() } returns listOf(orphanedTrackA)
 
-    service.fetchCurrentlyPlaying(userId)
+    service.fetchCurrentlyPlaying()
 
     verify(exactly = 0) { recentlyPartialPlayedRepository.saveAll(any()) }
     verify { currentlyPlayingRepository.deleteByTrackIds(setOf("track-a")) }
@@ -267,7 +262,7 @@ class FetchCurrentlyPlayingServiceTests {
     every { recentlyPartialPlayedRepository.findExistingPlayedAts(any()) } returns emptySet()
     every { recentlyPartialPlayedRepository.saveAll(any()) } just runs
 
-    service.fetchCurrentlyPlaying(userId)
+    service.fetchCurrentlyPlaying()
 
     // Track A is converted to a partial play
     val savedSlot = slot<List<RecentlyPartialPlayedItem>>()
@@ -284,7 +279,7 @@ class FetchCurrentlyPlayingServiceTests {
     every { spotifyPlayback.getCurrentlyPlaying(accessToken) } returns null.right()
     every { currentlyPlayingRepository.findAll() } returns emptyList()
 
-    service.fetchCurrentlyPlaying(userId)
+    service.fetchCurrentlyPlaying()
 
     verify { currentlyPlayingRepository.findAll() }
     verify(exactly = 0) { recentlyPartialPlayedRepository.saveAll(any()) }
@@ -300,7 +295,7 @@ class FetchCurrentlyPlayingServiceTests {
     every { recentlyPartialPlayedRepository.findExistingPlayedAts(any()) } returns emptySet()
     every { recentlyPartialPlayedRepository.saveAll(any()) } just runs
 
-    service.fetchCurrentlyPlaying(userId)
+    service.fetchCurrentlyPlaying()
 
     val savedSlot = slot<List<RecentlyPartialPlayedItem>>()
     verify { recentlyPartialPlayedRepository.saveAll(capture(savedSlot)) }
@@ -318,7 +313,7 @@ class FetchCurrentlyPlayingServiceTests {
     every { spotifyPlayback.getCurrentlyPlaying(accessToken) } returns null.right()
     every { currentlyPlayingRepository.findAll() } returns listOf(lingeringTrack)
 
-    service.fetchCurrentlyPlaying(userId)
+    service.fetchCurrentlyPlaying()
 
     verify(exactly = 0) { recentlyPartialPlayedRepository.saveAll(any()) }
     verify { currentlyPlayingRepository.deleteByTrackIds(setOf("track-a")) }
@@ -334,7 +329,7 @@ class FetchCurrentlyPlayingServiceTests {
     every { spotifyPlayback.getCurrentlyPlaying(accessToken) } returns item.right()
     every { currentlyPlayingRepository.findMostRecentByTrack(item.trackId) } returns null
 
-    service.fetchCurrentlyPlaying(userId)
+    service.fetchCurrentlyPlaying()
 
     verify { playbackState.onPlaybackDetected() }
   }
@@ -346,7 +341,7 @@ class FetchCurrentlyPlayingServiceTests {
     every { spotifyPlayback.getCurrentlyPlaying(accessToken) } returns item.right()
     every { currentlyPlayingRepository.findMostRecentByTrack(item.trackId) } returns null
 
-    service.fetchCurrentlyPlaying(userId)
+    service.fetchCurrentlyPlaying()
 
     verify(exactly = 0) { playbackState.onPlaybackDetected() }
   }
@@ -358,7 +353,7 @@ class FetchCurrentlyPlayingServiceTests {
     every { spotifyPlayback.getCurrentlyPlaying(accessToken) } returns item.right()
     every { currentlyPlayingRepository.findMostRecentByTrack(item.trackId) } returns null
 
-    service.fetchCurrentlyPlaying(userId)
+    service.fetchCurrentlyPlaying()
 
     verify(exactly = 0) { dashboardRefresh.notifyUserPlaybackData() }
   }
@@ -368,7 +363,7 @@ class FetchCurrentlyPlayingServiceTests {
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlayback.getCurrentlyPlaying(accessToken) } returns null.right()
 
-    service.fetchCurrentlyPlaying(userId)
+    service.fetchCurrentlyPlaying()
 
     verify(exactly = 0) { dashboardRefresh.notifyUserPlaybackData() }
   }

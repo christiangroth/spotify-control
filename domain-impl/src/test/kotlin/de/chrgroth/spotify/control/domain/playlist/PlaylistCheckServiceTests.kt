@@ -267,8 +267,7 @@ class PlaylistCheckServiceTests {
     )
     val check = buildCheck(succeeded = true)
     val playlistInfo = buildPlaylistInfo()
-    every { currentUserResolver.userId() } returns userId
-    every { userRepository.findById(userId) } returns user
+    every { userRepository.get() } returns user
     every { playlistRepository.findAll() } returns listOf(playlistInfo)
     every { playlistCheckRepository.findAll() } returns listOf(check)
     every { checkRunners.iterator() } answers { mutableListOf(checkRunner).iterator() }
@@ -286,16 +285,13 @@ class PlaylistCheckServiceTests {
   }
 
   @Test
-  fun `getCheckDashboard falls back to userId when user not found`() {
-    every { currentUserResolver.userId() } returns userId
-    every { userRepository.findById(userId) } returns null
-    every { playlistRepository.findAll() } returns emptyList()
-    every { playlistCheckRepository.findAll() } returns emptyList()
+  fun `getCheckDashboard returns empty dashboard when no user exists`() {
+    every { userRepository.get() } returns null
     every { checkRunners.iterator() } answers { mutableListOf<PlaylistCheckRunner>().iterator() }
 
     val dashboard = adapter.getCheckDashboard()
 
-    assertThat(dashboard.displayName).isEqualTo(userId.value)
+    assertThat(dashboard.displayName).isEqualTo("")
   }
 
   @Test

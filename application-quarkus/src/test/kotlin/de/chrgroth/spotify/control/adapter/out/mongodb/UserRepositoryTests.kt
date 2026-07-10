@@ -9,6 +9,7 @@ import kotlin.time.Clock
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Instant
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.util.UUID
 
@@ -18,13 +19,21 @@ class UserRepositoryTests {
   @Inject
   lateinit var userRepository: UserRepositoryPort
 
-  @Test
-  fun `findById returns null when user does not exist`() {
-    assertThat(userRepository.findById(UserId("unknown-user"))).isNull()
+  @Inject
+  lateinit var userDocumentRepository: UserDocumentRepository
+
+  @BeforeEach
+  fun cleanUp() {
+    userDocumentRepository.deleteAll()
   }
 
   @Test
-  fun `upsert creates user on first login and findById retrieves it`() {
+  fun `get returns null when no user exists`() {
+    assertThat(userRepository.get()).isNull()
+  }
+
+  @Test
+  fun `upsert creates user on first login and get retrieves it`() {
     val userId = UserId("test-${UUID.randomUUID()}")
     val now = Clock.System.now().let { Instant.fromEpochMilliseconds(it.toEpochMilliseconds()) }
     val user = User(
@@ -38,7 +47,7 @@ class UserRepositoryTests {
 
     userRepository.upsert(user)
 
-    val found = userRepository.findById(userId)
+    val found = userRepository.get()
     assertThat(found).isNotNull()
     assertThat(found!!.spotifyUserId).isEqualTo(userId)
     assertThat(found.displayName).isEqualTo("Test User")
@@ -69,7 +78,7 @@ class UserRepositoryTests {
     )
     userRepository.upsert(secondLogin)
 
-    val found = userRepository.findById(userId)!!
+    val found = userRepository.get()!!
     assertThat(found.encryptedAccessToken).isEqualTo("second-access")
     assertThat(found.encryptedRefreshToken).isEqualTo("second-refresh")
     assertThat(found.lastLoginAt).isEqualTo(laterLogin)

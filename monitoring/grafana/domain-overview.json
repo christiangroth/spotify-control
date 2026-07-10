@@ -228,14 +228,14 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (userId) (rate(app_playback_events_ingested_total{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval]))",
-          "legendFormat": "{{userId}}",
+          "expr": "sum(rate(app_playback_events_ingested_total{job=\"prometheus.scrape.spotify_control\"}[$__rate_interval]))",
+          "legendFormat": "events ingested",
           "refId": "A",
           "instant": false,
           "range": true
         }
       ],
-      "title": "Playback Events Ingested Rate (by User)",
+      "title": "Playback Events Ingested Rate",
       "type": "timeseries"
     },
     {

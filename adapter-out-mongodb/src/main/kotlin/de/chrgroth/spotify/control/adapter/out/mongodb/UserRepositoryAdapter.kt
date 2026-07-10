@@ -16,14 +16,9 @@ class UserRepositoryAdapter(
   private val mongoQueryMetrics: MongoQueryMetrics,
 ) : UserRepositoryPort {
 
-  override fun findById(spotifyUserId: UserId): User? =
-    mongoQueryMetrics.timed("app_user.findById") {
-      userDocumentRepository.findById(spotifyUserId.value)?.toDomain()
-    }
-
-  override fun findAll(): List<User> =
-    mongoQueryMetrics.timed("app_user.findAll") {
-      userDocumentRepository.listAll().map { it.toDomain() }
+  override fun get(): User? =
+    mongoQueryMetrics.timed("app_user.get") {
+      userDocumentRepository.listAll().firstOrNull()?.toDomain()
     }
 
   override fun upsert(user: User) {

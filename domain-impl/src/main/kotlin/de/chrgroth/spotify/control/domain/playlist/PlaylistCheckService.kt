@@ -78,14 +78,14 @@ class PlaylistCheckService(
   }
 
   override fun getCheckDashboard(): PlaylistCheckDashboard {
-    val userId = currentUserResolver.userId() ?: return PlaylistCheckDashboard(
+    val user = userRepository.get() ?: return PlaylistCheckDashboard(
       displayName = "",
       checks = emptyList(),
       playlistNameById = emptyMap(),
       displayNames = getDisplayNames(),
       fixableCheckIds = getFixableCheckIds(),
     )
-    val displayNameFuture = managedExecutor.supplyAsync { userRepository.findById(userId)?.displayName ?: userId.value }
+    val displayNameFuture = managedExecutor.supplyAsync { user.displayName }
     val playlistNamesFuture = managedExecutor.supplyAsync {
       playlistRepository.findAll().associateBy({ it.spotifyPlaylistId }, { it.name })
     }

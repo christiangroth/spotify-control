@@ -1,7 +1,6 @@
 package de.chrgroth.spotify.control.adapter.`in`.web
 
 import de.chrgroth.spotify.control.adapter.`in`.web.HealthSseAdapter
-import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxTaskCountObserver
 import de.chrgroth.spotify.control.domain.port.out.infra.OutgoingRequestStatsObserver
 import io.quarkus.test.junit.QuarkusTest
@@ -28,11 +27,10 @@ class HealthSseTests {
 
   @Test
   fun `sse endpoint delivers refresh-outgoing-http-calls event when outgoing request is recorded`() {
-    val userId = UserId("test-user-health-sse-http")
     val received = CopyOnWriteArrayList<String>()
     val latch = CountDownLatch(1)
 
-    val cancellable: Cancellable = healthSseService.stream(userId)
+    val cancellable: Cancellable = healthSseService.stream()
       .subscribe().with(
         { event: String -> received.add(event); latch.countDown() },
         { _: Throwable -> /* ignore errors */ },
@@ -48,11 +46,10 @@ class HealthSseTests {
 
   @Test
   fun `sse endpoint delivers refresh-outbox-partitions event when partition is activated`() {
-    val userId = UserId("test-user-health-sse-outbox")
     val received = CopyOnWriteArrayList<String>()
     val latch = CountDownLatch(1)
 
-    val cancellable: Cancellable = healthSseService.stream(userId)
+    val cancellable: Cancellable = healthSseService.stream()
       .subscribe().with(
         { event: String -> received.add(event); latch.countDown() },
         { _: Throwable -> /* ignore errors */ },
@@ -68,11 +65,10 @@ class HealthSseTests {
 
   @Test
   fun `sse endpoint delivers refresh-outbox-partitions event when outbox task count changes`() {
-    val userId = UserId("test-user-health-sse-outbox-count")
     val received = CopyOnWriteArrayList<String>()
     val latch = CountDownLatch(1)
 
-    val cancellable: Cancellable = healthSseService.stream(userId)
+    val cancellable: Cancellable = healthSseService.stream()
       .subscribe().with(
         { event: String -> received.add(event); latch.countDown() },
         { _: Throwable -> /* ignore errors */ },
@@ -88,11 +84,10 @@ class HealthSseTests {
 
   @Test
   fun `sse endpoint delivers refresh-playback-state event when playback is detected`() {
-    val userId = UserId("test-user-health-sse-playback")
     val received = CopyOnWriteArrayList<String>()
     val latch = CountDownLatch(1)
 
-    val cancellable: Cancellable = healthSseService.stream(userId)
+    val cancellable: Cancellable = healthSseService.stream()
       .subscribe().with(
         { event: String -> received.add(event); latch.countDown() },
         { _: Throwable -> /* ignore errors */ },

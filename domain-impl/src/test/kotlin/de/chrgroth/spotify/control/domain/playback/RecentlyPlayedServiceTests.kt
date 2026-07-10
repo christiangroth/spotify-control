@@ -23,7 +23,6 @@ import de.chrgroth.spotify.control.domain.port.out.playback.RecentlyPartialPlaye
 import de.chrgroth.spotify.control.domain.port.out.playback.RecentlyPlayedRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.playback.SpotifyPlaybackPort
-import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
 import de.chrgroth.spotify.control.domain.catalog.SyncController
 import de.chrgroth.spotify.control.domain.catalog.CatalogSyncRequest
 import de.chrgroth.spotify.control.domain.user.CurrentUserResolver
@@ -45,7 +44,6 @@ import org.junit.jupiter.api.Test
 
 class RecentlyPlayedServiceTests {
 
-  private val userRepository: UserRepositoryPort = mockk()
   private val currentUserResolver: CurrentUserResolver = mockk()
   private val spotifyAccessToken: SpotifyAccessTokenPort = mockk()
   private val spotifyPlayback: SpotifyPlaybackPort = mockk(relaxed = true)
@@ -60,7 +58,6 @@ class RecentlyPlayedServiceTests {
   private val meterRegistry = SimpleMeterRegistry()
 
   private val adapter = PlaybackService(
-    userRepository,
     currentUserResolver,
     spotifyAccessToken,
     spotifyPlayback,
@@ -143,7 +140,7 @@ class RecentlyPlayedServiceTests {
     every { recentlyPlayedRepository.saveAll(any()) } just runs
     setupNoConsolidation()
 
-    adapter.fetchRecentlyPlayed(userId)
+    adapter.fetchRecentlyPlayed()
 
     val savedSlot = slot<List<RecentlyPlayedItem>>()
     verify { recentlyPlayedRepository.saveAll(capture(savedSlot)) }
@@ -161,7 +158,7 @@ class RecentlyPlayedServiceTests {
     every { recentlyPlayedRepository.saveAll(any()) } just runs
     setupNoConsolidation()
 
-    adapter.fetchRecentlyPlayed(userId)
+    adapter.fetchRecentlyPlayed()
 
     verify { dashboardRefresh.notifyUserPlaybackData() }
   }
@@ -175,7 +172,7 @@ class RecentlyPlayedServiceTests {
     every { recentlyPlayedRepository.findExistingPlayedAts(any()) } returns setOf(items[0].playedAt)
     setupNoConsolidation()
 
-    adapter.fetchRecentlyPlayed(userId)
+    adapter.fetchRecentlyPlayed()
 
     verify(exactly = 0) { dashboardRefresh.notifyUserPlaybackData() }
   }
@@ -191,7 +188,7 @@ class RecentlyPlayedServiceTests {
     every { recentlyPlayedRepository.saveAll(any()) } just runs
     setupNoConsolidation()
 
-    adapter.fetchRecentlyPlayed(userId)
+    adapter.fetchRecentlyPlayed()
 
     verify { spotifyPlayback.getRecentlyPlayed(accessToken, after) }
   }
@@ -206,7 +203,7 @@ class RecentlyPlayedServiceTests {
     every { recentlyPlayedRepository.saveAll(any()) } just runs
     setupNoConsolidation()
 
-    adapter.fetchRecentlyPlayed(userId)
+    adapter.fetchRecentlyPlayed()
 
     val savedSlot = slot<List<RecentlyPlayedItem>>()
     verify { recentlyPlayedRepository.saveAll(capture(savedSlot)) }
@@ -223,7 +220,7 @@ class RecentlyPlayedServiceTests {
     every { recentlyPlayedRepository.findExistingPlayedAts(any()) } returns setOf(items[0].playedAt)
     setupNoConsolidation()
 
-    adapter.fetchRecentlyPlayed(userId)
+    adapter.fetchRecentlyPlayed()
 
     verify(exactly = 0) { recentlyPlayedRepository.saveAll(any()) }
   }
@@ -236,7 +233,7 @@ class RecentlyPlayedServiceTests {
     every { recentlyPlayedRepository.findExistingPlayedAts(any()) } returns emptySet()
     setupNoConsolidation()
 
-    adapter.fetchRecentlyPlayed(userId)
+    adapter.fetchRecentlyPlayed()
 
     verify(exactly = 0) { recentlyPlayedRepository.saveAll(any()) }
   }
@@ -247,7 +244,7 @@ class RecentlyPlayedServiceTests {
     every { recentlyPlayedRepository.findMostRecentPlayedAt() } returns null
     every { spotifyPlayback.getRecentlyPlayed(accessToken, null) } returns PlaybackError.RECENTLY_PLAYED_FETCH_FAILED.left()
 
-    val result = adapter.fetchRecentlyPlayed(userId)
+    val result = adapter.fetchRecentlyPlayed()
 
     assertThat(result.isLeft()).isTrue()
     verify(exactly = 0) { recentlyPlayedRepository.saveAll(any()) }
@@ -265,7 +262,7 @@ class RecentlyPlayedServiceTests {
     every { recentlyPlayedRepository.saveAll(any()) } just runs
     setupNoConsolidation()
 
-    adapter.fetchRecentlyPlayed(userId)
+    adapter.fetchRecentlyPlayed()
 
     verify { currentlyPlayingRepository.deleteByTrackIds(setOf("track-1")) }
   }
@@ -283,7 +280,7 @@ class RecentlyPlayedServiceTests {
     val latestTrack = currentlyPlayingItem("track-latest", progressMs = 10_000L, observedAt = now)
     every { currentlyPlayingRepository.findAll() } returns listOf(olderItem, latestTrack)
 
-    adapter.fetchRecentlyPlayed(userId)
+    adapter.fetchRecentlyPlayed()
 
     val savedSlot = slot<List<RecentlyPartialPlayedItem>>()
     verify { recentlyPartialPlayedRepository.saveAll(capture(savedSlot)) }
@@ -304,7 +301,7 @@ class RecentlyPlayedServiceTests {
     val latestTrack = currentlyPlayingItem("track-latest", progressMs = 10_000L, observedAt = now - 1.minutes)
     every { currentlyPlayingRepository.findAll() } returns listOf(olderItem, latestTrack)
 
-    adapter.fetchRecentlyPlayed(userId)
+    adapter.fetchRecentlyPlayed()
 
     val savedSlot = slot<List<RecentlyPartialPlayedItem>>()
     verify { recentlyPartialPlayedRepository.saveAll(capture(savedSlot)) }
@@ -327,7 +324,7 @@ class RecentlyPlayedServiceTests {
     val latestTrack = currentlyPlayingItem("track-latest", progressMs = 10_000L, observedAt = now)
     every { currentlyPlayingRepository.findAll() } returns listOf(olderFirst, olderSecond, olderThird, latestTrack)
 
-    adapter.fetchRecentlyPlayed(userId)
+    adapter.fetchRecentlyPlayed()
 
     val savedSlot = slot<List<RecentlyPartialPlayedItem>>()
     verify { recentlyPartialPlayedRepository.saveAll(capture(savedSlot)) }
@@ -352,7 +349,7 @@ class RecentlyPlayedServiceTests {
     val latestTrack = currentlyPlayingItem("track-latest", progressMs = 10_000L, observedAt = now)
     every { currentlyPlayingRepository.findAll() } returns listOf(olderItem, latestTrack)
 
-    adapter.fetchRecentlyPlayed(userId)
+    adapter.fetchRecentlyPlayed()
 
     val savedSlot = slot<List<RecentlyPartialPlayedItem>>()
     verify { recentlyPartialPlayedRepository.saveAll(capture(savedSlot)) }
@@ -376,7 +373,7 @@ class RecentlyPlayedServiceTests {
     val latestTrack = currentlyPlayingItem("track-latest", progressMs = 10_000L, observedAt = now)
     every { currentlyPlayingRepository.findAll() } returns listOf(olderItem, latestTrack)
 
-    adapter.fetchRecentlyPlayed(userId)
+    adapter.fetchRecentlyPlayed()
 
     val savedSlot = slot<List<RecentlyPartialPlayedItem>>()
     verify { recentlyPartialPlayedRepository.saveAll(capture(savedSlot)) }
@@ -396,7 +393,7 @@ class RecentlyPlayedServiceTests {
     val olderItem = currentlyPlayingItem("track-old", progressMs = 45_000L, observedAt = now - 5.minutes)
     every { currentlyPlayingRepository.findAll() } returns listOf(olderItem)
 
-    adapter.fetchRecentlyPlayed(userId)
+    adapter.fetchRecentlyPlayed()
 
     verify(exactly = 0) { recentlyPartialPlayedRepository.saveAll(any()) }
   }
@@ -418,7 +415,7 @@ class RecentlyPlayedServiceTests {
     val latestTrack = currentlyPlayingItem("track-latest", progressMs = 10_000L, observedAt = now - 2.minutes)
     every { currentlyPlayingRepository.findAll() } returns listOf(olderTrackFirst, olderTrackSecond, completedEntry, latestTrack)
 
-    adapter.fetchRecentlyPlayed(userId)
+    adapter.fetchRecentlyPlayed()
 
     val savedSlot = slot<List<RecentlyPartialPlayedItem>>()
     verify { recentlyPartialPlayedRepository.saveAll(capture(savedSlot)) }
@@ -451,7 +448,7 @@ class RecentlyPlayedServiceTests {
       session1First, session1Second, differentTrack, session2First, session2Second, latestTrack,
     )
 
-    adapter.fetchRecentlyPlayed(userId)
+    adapter.fetchRecentlyPlayed()
 
     val savedSlot = slot<List<RecentlyPartialPlayedItem>>()
     verify { recentlyPartialPlayedRepository.saveAll(capture(savedSlot)) }
@@ -485,7 +482,7 @@ class RecentlyPlayedServiceTests {
       firstPlay1, firstPlay2, secondPlay1, secondPlay2, latestTrack,
     )
 
-    adapter.fetchRecentlyPlayed(userId)
+    adapter.fetchRecentlyPlayed()
 
     val savedSlot = slot<List<RecentlyPartialPlayedItem>>()
     verify { recentlyPartialPlayedRepository.saveAll(capture(savedSlot)) }
@@ -507,7 +504,7 @@ class RecentlyPlayedServiceTests {
     val latestTrack = currentlyPlayingItem("track-latest", progressMs = 60_000L, observedAt = now)
     every { currentlyPlayingRepository.findAll() } returns listOf(latestTrack)
 
-    adapter.fetchRecentlyPlayed(userId)
+    adapter.fetchRecentlyPlayed()
 
     verify(exactly = 0) { recentlyPartialPlayedRepository.saveAll(any()) }
   }
@@ -523,7 +520,7 @@ class RecentlyPlayedServiceTests {
     val latestTrack = currentlyPlayingItem("track-latest", progressMs = 5_000L, observedAt = now)
     every { currentlyPlayingRepository.findAll() } returns listOf(olderTrack, latestTrack)
 
-    adapter.fetchRecentlyPlayed(userId)
+    adapter.fetchRecentlyPlayed()
 
     verify(exactly = 0) { recentlyPartialPlayedRepository.saveAll(any()) }
     verify { currentlyPlayingRepository.deleteByTrackIds(setOf("track-old")) }
@@ -542,7 +539,7 @@ class RecentlyPlayedServiceTests {
     val latestTrack = currentlyPlayingItem("track-latest", progressMs = 10_000L, observedAt = now)
     every { currentlyPlayingRepository.findAll() } returns listOf(olderTrack, latestTrack)
 
-    adapter.fetchRecentlyPlayed(userId)
+    adapter.fetchRecentlyPlayed()
 
     verify { dashboardRefresh.notifyUserPlaybackData() }
   }
@@ -560,7 +557,7 @@ class RecentlyPlayedServiceTests {
     val latestTrack = currentlyPlayingItem("track-latest", progressMs = 10_000L, observedAt = now)
     every { currentlyPlayingRepository.findAll() } returns listOf(olderTrack, latestTrack)
 
-    adapter.fetchRecentlyPlayed(userId)
+    adapter.fetchRecentlyPlayed()
 
     verify { currentlyPlayingRepository.deleteByTrackIds(setOf("track-old")) }
   }
@@ -580,7 +577,7 @@ class RecentlyPlayedServiceTests {
     val latestTrack = currentlyPlayingItem("track-latest", progressMs = 10_000L, observedAt = now)
     every { currentlyPlayingRepository.findAll() } returns listOf(olderTrack, latestTrack)
 
-    adapter.fetchRecentlyPlayed(userId)
+    adapter.fetchRecentlyPlayed()
 
     verify { currentlyPlayingRepository.deleteByTrackIds(setOf("track-1", "track-old")) }
   }
@@ -600,7 +597,7 @@ class RecentlyPlayedServiceTests {
     val session2 = currentlyPlayingItem("track-a", progressMs = 5_000L, observedAt = now)
     every { currentlyPlayingRepository.findAll() } returns listOf(session1, different, session2)
 
-    adapter.fetchRecentlyPlayed(userId)
+    adapter.fetchRecentlyPlayed()
 
     // track-a must NOT be deleted (session2 is the latest item, its trackId is protected)
     // track-b IS deleted even though it's below the conversion threshold — it must not accumulate forever
@@ -621,7 +618,7 @@ class RecentlyPlayedServiceTests {
     val latestTrack = currentlyPlayingItem("track-latest", progressMs = 10_000L, observedAt = now)
     every { currentlyPlayingRepository.findAll() } returns listOf(olderTrack, latestTrack)
 
-    adapter.fetchRecentlyPlayed(userId)
+    adapter.fetchRecentlyPlayed()
 
     val savedSlot = slot<List<RecentlyPartialPlayedItem>>()
     verify { recentlyPartialPlayedRepository.saveAll(capture(savedSlot)) }
@@ -641,7 +638,7 @@ class RecentlyPlayedServiceTests {
     val latestTrack = currentlyPlayingItem("track-latest", progressMs = 10_000L, observedAt = now)
     every { currentlyPlayingRepository.findAll() } returns listOf(olderTrack, latestTrack)
 
-    adapter.fetchRecentlyPlayed(userId)
+    adapter.fetchRecentlyPlayed()
 
     verify(exactly = 0) { recentlyPlayedRepository.saveAll(any()) }
   }

@@ -16,25 +16,20 @@ import mu.KLogging
 @Suppress("Unused")
 class UserProfileService(
   private val userRepository: UserRepositoryPort,
-  private val currentUserResolver: CurrentUserResolver,
   private val spotifyAccessToken: SpotifyAccessTokenPort,
   private val spotifyAuth: SpotifyAuthPort,
   private val outboxPort: OutboxPort,
 ) : UserProfilePort {
 
-  override fun getDisplayName(): String? = currentUserResolver.userId()?.let { userRepository.findById(it)?.displayName }
+  override fun getDisplayName(): String? = userRepository.get()?.displayName
 
   override fun enqueueUpdates() {
-    currentUserResolver.userId() ?: return
+    userRepository.get() ?: return
     outboxPort.enqueue(DomainOutboxEvent.UpdateUserProfile())
   }
 
   override fun update(): Either<DomainError, Unit> {
-    val userId = currentUserResolver.userId() ?: return Unit.right()
-    val user = userRepository.findById(userId) ?: run {
-      logger.warn { "User not found for profile update: ${userId.value}" }
-      return Unit.right()
-    }
+    val user = userRepository.get() ?: return Unit.right()
     val accessToken = spotifyAccessToken.getValidAccessToken()
     return spotifyAuth.getUserProfile(accessToken).map { profile ->
       if (profile.displayName != user.displayName) {
