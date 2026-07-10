@@ -74,6 +74,18 @@ class NavPageTests {
       .body(containsString("""[data-testid="nav-tiles"] a[href]"""))
       .body(containsString("nav-tile"))
   }
+
+  @Test
+  fun `cross-page navigation tiles show icon only on smallest breakpoint and icon with text on larger ones`() {
+    given()
+      .`when`()
+      .get("/dashboard")
+      .then()
+      .statusCode(200)
+      .body(containsString("nav-tile-icon"))
+      .body(containsString("d-inline-block d-sm-none d-md-inline-block"))
+      .body(containsString("nav-tile-label d-none d-sm-inline"))
+  }
 }
 
 @QuarkusTest
