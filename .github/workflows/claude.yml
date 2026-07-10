@@ -51,3 +51,4 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GHCR_PAT: ${{ secrets.GHCR_PAT }}
+          DEBUG: true
