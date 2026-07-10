@@ -22,7 +22,7 @@ class DocsFileResource(
   private val docsTemplate: Template,
 ) {
 
-  private val allowedSubdirs = setOf("arc42", "adr", "coding-guidelines", "releasenotes")
+  private val allowedSubdirs = setOf("arc42", "adr", "coding-guidelines")
 
   @GET
   @Authenticated
