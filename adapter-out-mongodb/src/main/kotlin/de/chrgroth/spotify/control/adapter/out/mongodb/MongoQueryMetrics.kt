@@ -64,7 +64,7 @@ class MongoQueryMetrics(
     pruneOldEntries(execDeque)
 
     if (durationMs >= slowQueryThresholdMs) {
-      logger.warn { "Slow MongoDB query detected: operation=$operation duration=${durationMs}ms threshold=${slowQueryThresholdMs}ms" }
+      logger.warn { "Slow MongoDB query detected: operation=$operation duration=${durationMs}/${slowQueryThresholdMs}ms" }
       slowQueryCounters.getOrPut(operation) {
         meterRegistry.counter("mongodb.slow.queries", "operation", operation)
       }.increment()
