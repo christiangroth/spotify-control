@@ -1,3 +1,14 @@
+# 0.107.13 (2026.07.10)
+
+## Bugfixes / Chore
+* Replaced the outdated multi-user performance review with a new one reflecting the single-user architecture, focused on the data model and caching gaps.
+* Sped up catalog artist/album search with a database index.
+* Catalog statistics on the dashboard and catalog page now come from a shared cache instead of running fresh database queries on every page load.
+
+
+
+---
+
 # 0.107.12 (2026.07.10)
 
 ## Bugfixes / Chore
