@@ -103,9 +103,10 @@ Spotify-Artist-Liste) ausschlaggebend – dasselbe Prinzip verwendet bereits `Ca
    - `→ SYNC`: enqueued `SyncArtistAlbums(artistId)`.
    - `→ SHALLOW`: löscht alle `AppAlbum`/`AppTrack`-Einträge, deren Main-Artist (siehe oben) diesem Artist entspricht
      (neue Repository-Methoden `deleteByMainArtistId` in `AppAlbumRepositoryPort`/`AppTrackRepositoryPort`, aktuell nicht
-     vorhanden). Alben/Tracks, bei denen der Artist nur als Nebenkünstler auftaucht, bleiben erhalten (siehe Offene Frage
-     zu Playlist-Referenzen auf so gelöschte Tracks). Playback-Events (`app_playback`) werden nicht gelöscht. Danach
-     `rebuildAllAggregations()`, damit die Aggregations-/Query-Zeit-Filterung (Schritt 7) greift.
+     vorhanden). Alben/Tracks, bei denen der Artist nur als Nebenkünstler auftaucht, bleiben erhalten. Mögliche
+     Playlist-Referenzen auf so gelöschte Tracks/Alben werden vorerst nicht behandelt (Lücke bleibt bestehen, da die
+     Playlist-UI ohnehin keine einzelnen Track-Einträge rendert). Playback-Events (`app_playback`) werden nicht gelöscht.
+     Danach `rebuildAllAggregations()`, damit die Aggregations-/Query-Zeit-Filterung (Schritt 7) greift.
    - Bereits laufende Outbox-Tasks (`SyncArtistAlbums`/`SyncAlbumDetails`) für den Artist werden beim Wechsel zu
      `SHALLOW` **nicht** aktiv gelöscht – eine gezielte Lösch-API in `OutboxPort`/`OutboxAdminPort` wäre für die
      Outbox-Bibliothek unüblich und wird nicht angefragt. Stattdessen prüft der `SyncArtistAlbums`-/
@@ -131,8 +132,3 @@ Spotify-Artist-Liste) ausschlaggebend – dasselbe Prinzip verwendet bereits `Ca
 9. **`docs/arc42/arc42.md` aktualisieren:** Die dort beschriebene, im Code nicht existierende
    `playbackProcessingStatus`/`ACTIVE`/`INACTIVE`/`UNDECIDED`-Doku durch das tatsächlich implementierte
    `ArtistSyncStatus`-Konzept ersetzen.
-
-## Offene Fragen
-
-1. Referenzieren Playlist-Items (`AppPlaylistTrack` o. ä.) Tracks/Alben, die durch den Wechsel zu `SHALLOW` gelöscht
-   würden? Falls ja, wie verhält sich die Playlist-Anzeige für dann fehlende Track-Metadaten?
