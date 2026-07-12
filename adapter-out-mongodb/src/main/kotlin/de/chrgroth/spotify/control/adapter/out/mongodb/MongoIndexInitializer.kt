@@ -74,6 +74,10 @@ class MongoIndexInitializer(
       Document(AppArtistRepositoryAdapter.ARTIST_NAME_FIELD, 1),
       IndexOptions().name("app_artist_artistName_1"),
     )
+    appArtistDocumentRepository.mongoCollection().createIndex(
+      Document(AppArtistRepositoryAdapter.SYNC_STATUS_FIELD, 1),
+      IndexOptions().name("app_artist_syncStatus_1"),
+    )
     appAlbumDocumentRepository.mongoCollection().createIndex(
       Document(AppAlbumRepositoryAdapter.ARTIST_ID_FIELD, 1),
       IndexOptions().name("app_album_artistId_1"),

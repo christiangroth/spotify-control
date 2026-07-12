@@ -92,7 +92,10 @@ class CatalogBrowserServiceTests {
       id = ArtistId("artist-1"), artistName = "Alpha", lastSync = triggeredAt, syncStatus = ArtistSyncStatus.SHALLOW_ASSUMPTION,
     )
     every {
-      appArtistRepository.findByStatuses(setOf(ArtistSyncStatus.SYNC_ASSUMPTION, ArtistSyncStatus.SHALLOW_ASSUMPTION))
+      appArtistRepository.findByStatuses(
+        setOf(ArtistSyncStatus.SYNC_ASSUMPTION, ArtistSyncStatus.SHALLOW_ASSUMPTION),
+        CatalogBrowserService.UNDECIDED_ARTISTS_LIMIT,
+      )
     } returns listOf(syncAssumptionArtist, shallowAssumptionArtist)
     every { appAlbumRepository.findByArtistIds(setOf(ArtistId("artist-2"), ArtistId("artist-1"))) } returns emptyList()
     every { appTrackRepository.findByArtistIds(setOf(ArtistId("artist-2"), ArtistId("artist-1"))) } returns emptyList()

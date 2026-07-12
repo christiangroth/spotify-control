@@ -47,7 +47,7 @@ class CatalogBrowserService(
   }
 
   override fun getUndecidedArtists(): List<ArtistBrowseItem> =
-    toBrowseItems(appArtistRepository.findByStatuses(ASSUMPTION_STATUSES))
+    toBrowseItems(appArtistRepository.findByStatuses(ASSUMPTION_STATUSES, UNDECIDED_ARTISTS_LIMIT))
 
   private fun toBrowseItems(artists: List<AppArtist>): List<ArtistBrowseItem> {
     val artistIds = artists.map { it.id }.toSet()
@@ -211,6 +211,7 @@ class CatalogBrowserService(
 
   companion object {
     internal const val SEARCH_RESULT_LIMIT = 50
+    internal const val UNDECIDED_ARTISTS_LIMIT = 200
     private val ASSUMPTION_STATUSES = setOf(ArtistSyncStatus.SYNC_ASSUMPTION, ArtistSyncStatus.SHALLOW_ASSUMPTION)
   }
 }

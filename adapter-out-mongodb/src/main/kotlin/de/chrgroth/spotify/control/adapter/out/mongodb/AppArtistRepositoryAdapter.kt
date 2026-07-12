@@ -60,10 +60,11 @@ class AppArtistRepositoryAdapter(
         .countDocuments(Filters.`in`(SYNC_STATUS_FIELD, statuses.map { it.name }))
     }
 
-  override fun findByStatuses(statuses: Set<ArtistSyncStatus>): List<AppArtist> =
+  override fun findByStatuses(statuses: Set<ArtistSyncStatus>, limit: Int): List<AppArtist> =
     mongoQueryMetrics.timed("app_artist.findByStatuses") {
       appArtistDocumentRepository.mongoCollection()
         .find(Filters.`in`(SYNC_STATUS_FIELD, statuses.map { it.name }))
+        .limit(limit)
         .toList()
         .map { it.toDomain() }
     }

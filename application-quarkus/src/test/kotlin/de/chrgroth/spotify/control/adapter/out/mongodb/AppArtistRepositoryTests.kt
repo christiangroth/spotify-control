@@ -220,10 +220,25 @@ class AppArtistRepositoryTests {
     val sync = artist("status-sync").copy(syncStatus = ArtistSyncStatus.SYNC)
     appArtistRepository.upsertAll(listOf(syncAssumption, shallowAssumption, sync))
 
-    val result = appArtistRepository.findByStatuses(setOf(ArtistSyncStatus.SYNC_ASSUMPTION, ArtistSyncStatus.SHALLOW_ASSUMPTION))
+    val result = appArtistRepository.findByStatuses(setOf(ArtistSyncStatus.SYNC_ASSUMPTION, ArtistSyncStatus.SHALLOW_ASSUMPTION), 10000)
 
     assertThat(result.map { it.id }).contains(syncAssumption.id, shallowAssumption.id)
     assertThat(result.map { it.id }).doesNotContain(sync.id)
+  }
+
+  @Test
+  fun `findByStatuses honors limit`() {
+    val suffix = UUID.randomUUID().toString()
+    appArtistRepository.upsertAll(
+      listOf(
+        artist("status-limit1-$suffix").copy(syncStatus = ArtistSyncStatus.SYNC_ASSUMPTION),
+        artist("status-limit2-$suffix").copy(syncStatus = ArtistSyncStatus.SYNC_ASSUMPTION),
+      ),
+    )
+
+    val result = appArtistRepository.findByStatuses(setOf(ArtistSyncStatus.SYNC_ASSUMPTION), 1)
+
+    assertThat(result).hasSize(1)
   }
 
   @Test

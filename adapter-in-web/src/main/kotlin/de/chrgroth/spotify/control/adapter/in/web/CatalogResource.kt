@@ -69,7 +69,10 @@ class CatalogResource(
   @Produces(MediaType.TEXT_HTML)
   fun artistSettings(): TemplateInstance {
     val artists = catalogBrowser.getUndecidedArtists()
-    return artistSettingsTemplate.data("artists", artists)
+    val totalUndecidedCount = catalogBrowser.getCatalogStats().undecidedArtistCount
+    return artistSettingsTemplate
+      .data("artists", artists)
+      .data("truncated", totalUndecidedCount > artists.size)
   }
 
   @GET
