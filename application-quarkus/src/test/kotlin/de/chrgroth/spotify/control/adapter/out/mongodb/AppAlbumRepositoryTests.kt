@@ -199,6 +199,20 @@ class AppAlbumRepositoryTests {
   }
 
   @Test
+  fun `deleteByArtistId deletes only albums for the given artist`() {
+    val artistId = ArtistId("artist-delete-${UUID.randomUUID()}")
+    val toDelete1 = album("delete1").copy(artistId = artistId)
+    val toDelete2 = album("delete2").copy(artistId = artistId)
+    val other = album("keep").copy(artistId = ArtistId("other-artist-${UUID.randomUUID()}"))
+    appAlbumRepository.upsertAll(listOf(toDelete1, toDelete2, other))
+
+    appAlbumRepository.deleteByArtistId(artistId)
+
+    assertThat(appAlbumRepository.findByArtistId(artistId)).isEmpty()
+    assertThat(appAlbumRepository.findByAlbumIds(setOf(other.id))).hasSize(1)
+  }
+
+  @Test
   fun `countAll returns total number of albums`() {
     val before = appAlbumRepository.countAll()
     val album1 = album("count1")

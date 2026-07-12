@@ -95,17 +95,17 @@ class PlaybackSettingsResource(
 
   @POST
   @Authenticated
-  @Path("/artists/{artistId}/block")
+  @Path("/artists/{artistId}/set-sync")
   @Produces(MediaType.APPLICATION_JSON)
-  fun blockArtist(@PathParam("artistId") artistId: String): Response =
-    handleArtistAction(artistId, "block") { catalog.blockArtistFromAggregation(artistId) }
+  fun setArtistSync(@PathParam("artistId") artistId: String): Response =
+    handleArtistAction(artistId, "set-sync") { catalog.setArtistSync(artistId) }
 
   @POST
   @Authenticated
-  @Path("/artists/{artistId}/unblock")
+  @Path("/artists/{artistId}/set-shallow")
   @Produces(MediaType.APPLICATION_JSON)
-  fun unblockArtist(@PathParam("artistId") artistId: String): Response =
-    handleArtistAction(artistId, "unblock") { catalog.unblockArtistFromAggregation(artistId) }
+  fun setArtistShallow(@PathParam("artistId") artistId: String): Response =
+    handleArtistAction(artistId, "set-shallow") { catalog.setArtistShallow(artistId) }
 
   private fun handleArtistAction(artistId: String, action: String, block: () -> Either<DomainError, Unit>): Response =
     block().fold(

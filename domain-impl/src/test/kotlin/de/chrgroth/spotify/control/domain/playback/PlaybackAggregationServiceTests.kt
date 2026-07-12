@@ -4,6 +4,7 @@ import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
 import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
 import de.chrgroth.spotify.control.domain.model.catalog.AppTrack
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
+import de.chrgroth.spotify.control.domain.model.catalog.ArtistSyncStatus
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
 import de.chrgroth.spotify.control.domain.model.playback.AppPlaybackItem
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationPeriodType
@@ -99,6 +100,31 @@ class PlaybackAggregationServiceTests {
       AggregationRankEntry(id = "album-1", name = "Album One", totalSeconds = 300L),
       AggregationRankEntry(id = "fallback:Loose Single", name = "Loose Single", totalSeconds = 60L),
     )
+  }
+
+  @Test
+  fun `aggregate day excludes playback from shallow artists`() {
+    every { currentUserResolver.userId() } returns userId
+    val savedAggregation = slot<PlaybackAggregation>()
+    every { aggregationRepository.save(capture(savedAggregation)) } returns Unit
+    every { appPlaybackRepository.findAllBetween(any(), any()) } returns listOf(
+      AppPlaybackItem(Instant.fromEpochSeconds(1), "track-1", 120L),
+      AppPlaybackItem(Instant.fromEpochSeconds(2), "track-2", 180L),
+    )
+    every { appTrackRepository.findByTrackIds(setOf(TrackId("track-1"), TrackId("track-2"))) } returns listOf(
+      AppTrack(id = TrackId("track-1"), title = "Track One", artistId = ArtistId("artist-1"), lastSync = syncTimestamp),
+      AppTrack(id = TrackId("track-2"), title = "Track Two", artistId = ArtistId("artist-2"), lastSync = syncTimestamp),
+    )
+    every { appArtistRepository.findByArtistIds(any()) } returns listOf(
+      AppArtist(id = ArtistId("artist-1"), artistName = "Artist One", lastSync = syncTimestamp, syncStatus = ArtistSyncStatus.SYNC),
+      AppArtist(id = ArtistId("artist-2"), artistName = "Artist Two", lastSync = syncTimestamp, syncStatus = ArtistSyncStatus.SHALLOW),
+    )
+
+    val result = service.handle(DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.DAY, date))
+
+    assertThat(result.isRight()).isTrue()
+    assertThat(savedAggregation.captured.totalPlaybackSeconds).isEqualTo(120L)
+    assertThat(savedAggregation.captured.artistEntries.map { it.id }).containsExactly("artist-1")
   }
 
   @Test

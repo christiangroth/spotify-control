@@ -1,5 +1,6 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
+import de.chrgroth.spotify.control.domain.model.catalog.ArtistSyncStatus
 import io.quarkus.mongodb.panache.common.MongoEntity
 import org.bson.codecs.pojo.annotations.BsonId
 import java.time.Instant
@@ -13,5 +14,5 @@ class AppArtistDocument {
   var imageLink: String? = null
   var type: String? = null
   var lastSync: Instant? = null
-  var blockedFromAggregation: Boolean = false
+  var syncStatus: String = ArtistSyncStatus.SYNC.name
 }

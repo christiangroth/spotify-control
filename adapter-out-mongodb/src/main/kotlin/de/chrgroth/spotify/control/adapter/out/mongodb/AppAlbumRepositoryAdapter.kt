@@ -125,6 +125,12 @@ class AppAlbumRepositoryAdapter(
         .map { it.toDomain() }
     }
 
+  override fun deleteByArtistId(artistId: ArtistId) {
+    mongoQueryMetrics.timed("app_album.deleteByArtistId") {
+      appAlbumDocumentRepository.delete("artistId = ?1", artistId.value)
+    }
+  }
+
   override fun deleteAll() {
     mongoQueryMetrics.timed("app_album.deleteAll") {
       appAlbumDocumentRepository.deleteAll()

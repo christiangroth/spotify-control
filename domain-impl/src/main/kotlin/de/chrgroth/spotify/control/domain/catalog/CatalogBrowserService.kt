@@ -55,7 +55,7 @@ class CatalogBrowserService(
           imageLink = artist.imageLink,
           albumCount = albumCountByArtistId[artist.id.value] ?: 0,
           trackCount = trackCountByArtistId[artist.id.value] ?: 0,
-          blockedFromAggregation = artist.blockedFromAggregation,
+          syncStatus = artist.syncStatus,
         )
       }
   }

@@ -223,7 +223,7 @@ class SpotifyDebugResource(
     "imageLink" to imageLink,
     "type" to type,
     "lastSync" to lastSync.toString(),
-    "blockedFromAggregation" to blockedFromAggregation,
+    "syncStatus" to syncStatus.name,
   )
 
   private fun AppAlbum.toJson() = mapOf(

@@ -11,6 +11,7 @@ import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
 import de.chrgroth.spotify.control.domain.model.catalog.AppTrack
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistAlbumsPage
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
+import de.chrgroth.spotify.control.domain.model.catalog.ArtistSyncStatus
 import de.chrgroth.spotify.control.domain.model.catalog.SyncCause
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
 import de.chrgroth.spotify.control.domain.model.playback.RecentlyPartialPlayedItem
@@ -117,6 +118,58 @@ class CatalogServiceTests {
     playedSeconds = 42,
   )
 
+  // --- setArtistSync / setArtistShallow tests ---
+
+  @Test
+  fun `setArtistSync returns error when artist not found`() {
+    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns emptyList()
+
+    val result = adapter.setArtistSync("artist-1")
+
+    assertThat(result.isLeft()).isTrue()
+    verify(exactly = 0) { appArtistRepository.setSyncStatus(any(), any()) }
+  }
+
+  @Test
+  fun `setArtistSync updates status, enqueues album sync and rebuilds aggregations`() {
+    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns listOf(artist1)
+    every { appArtistRepository.setSyncStatus(ArtistId("artist-1"), ArtistSyncStatus.SYNC) } just runs
+    every { outboxPort.enqueue(any()) } just runs
+
+    val result = adapter.setArtistSync("artist-1")
+
+    assertThat(result.isRight()).isTrue()
+    verify { appArtistRepository.setSyncStatus(ArtistId("artist-1"), ArtistSyncStatus.SYNC) }
+    verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums("artist-1")) }
+    verify { playbackAggregation.rebuildAllAggregations() }
+  }
+
+  @Test
+  fun `setArtistShallow returns error when artist not found`() {
+    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns emptyList()
+
+    val result = adapter.setArtistShallow("artist-1")
+
+    assertThat(result.isLeft()).isTrue()
+    verify(exactly = 0) { appArtistRepository.setSyncStatus(any(), any()) }
+  }
+
+  @Test
+  fun `setArtistShallow updates status, deletes albums and tracks and rebuilds aggregations`() {
+    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns listOf(artist1)
+    every { appArtistRepository.setSyncStatus(ArtistId("artist-1"), ArtistSyncStatus.SHALLOW) } just runs
+    every { appTrackRepository.deleteByArtistId(ArtistId("artist-1")) } just runs
+    every { appAlbumRepository.deleteByArtistId(ArtistId("artist-1")) } just runs
+
+    val result = adapter.setArtistShallow("artist-1")
+
+    assertThat(result.isRight()).isTrue()
+    verify { appArtistRepository.setSyncStatus(ArtistId("artist-1"), ArtistSyncStatus.SHALLOW) }
+    verify { appTrackRepository.deleteByArtistId(ArtistId("artist-1")) }
+    verify { appAlbumRepository.deleteByArtistId(ArtistId("artist-1")) }
+    verify { playbackAggregation.rebuildAllAggregations() }
+  }
+
   // --- resyncArtist tests ---
 
   @Test
@@ -193,6 +246,22 @@ class CatalogServiceTests {
   }
 
   @Test
+  fun `resyncCatalog does not enqueue SyncArtistAlbums for shallow artists`() {
+    val shallowArtist = artist2.copy(syncStatus = ArtistSyncStatus.SHALLOW)
+    every { appArtistRepository.findAll() } returns listOf(artist1, shallowArtist)
+    every { currentUserResolver.userId() } returns userId
+    every { outboxPort.enqueue(any()) } just runs
+    every { recentlyPlayedRepository.findSince(null) } returns emptyList()
+    every { recentlyPartialPlayedRepository.findSince(null) } returns emptyList()
+
+    val result = adapter.resyncCatalog()
+
+    assertThat(result.isRight()).isTrue()
+    verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums("artist-1")) }
+    verify(exactly = 0) { outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums("artist-2")) }
+  }
+
+  @Test
   fun `resyncCatalog does not enqueue events when no users available`() {
     every { appArtistRepository.findAll() } returns listOf(artist1)
     every { currentUserResolver.userId() } returns null
@@ -245,6 +314,7 @@ class CatalogServiceTests {
     every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"))) } returns listOf(album1)
+    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns emptyList()
     every { spotifyCatalog.getAlbumTracks(accessToken, album1) } returns listOf(trackWithAlbum1, trackWithAlbum2).right()
     every { appTrackRepository.upsertAll(any()) } just runs
     every { outboxPort.enqueue(any()) } just runs
@@ -263,6 +333,7 @@ class CatalogServiceTests {
     every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"))) } returns emptyList()
+    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns emptyList()
     every { spotifyCatalog.getAlbum(accessToken, "album-1") } returns albumSyncResult.right()
     every { appTrackRepository.upsertAll(any()) } just runs
     every { appAlbumRepository.upsertAll(any()) } just runs
@@ -282,6 +353,7 @@ class CatalogServiceTests {
     every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"))) } returns emptyList()
+    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns emptyList()
     every { spotifyCatalog.getAlbum(accessToken, "album-1") } returns albumSyncResult.right()
     every { appTrackRepository.upsertAll(any()) } just runs
     every { appAlbumRepository.upsertAll(any()) } just runs
@@ -317,11 +389,40 @@ class CatalogServiceTests {
     assertThat(result.isLeft()).isTrue()
   }
 
+  @Test
+  fun `handle SyncAlbumDetails skips sync when known album's artist is shallow`() {
+    every { currentUserResolver.userId() } returns userId
+    every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"))) } returns listOf(album1)
+    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns listOf(artist1.copy(syncStatus = ArtistSyncStatus.SHALLOW))
+
+    val result = adapter.handle(DomainOutboxEvent.SyncAlbumDetails("album-1"))
+
+    assertThat(result.isRight()).isTrue()
+    verify(exactly = 0) { spotifyCatalog.getAlbumTracks(any(), any()) }
+    verify(exactly = 0) { appTrackRepository.upsertAll(any()) }
+  }
+
+  @Test
+  fun `handle SyncAlbumDetails discards result when fetched album's artist is shallow`() {
+    every { currentUserResolver.userId() } returns userId
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
+    every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"))) } returns emptyList()
+    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns listOf(artist1.copy(syncStatus = ArtistSyncStatus.SHALLOW))
+    every { spotifyCatalog.getAlbum(accessToken, "album-1") } returns albumSyncResult.right()
+
+    val result = adapter.handle(DomainOutboxEvent.SyncAlbumDetails("album-1"))
+
+    assertThat(result.isRight()).isTrue()
+    verify(exactly = 0) { appTrackRepository.upsertAll(any()) }
+    verify(exactly = 0) { appAlbumRepository.upsertAll(any()) }
+  }
+
   // --- handle(SyncArtistAlbums) tests ---
 
   @Test
   fun `handle SyncArtistAlbums enqueues SyncAlbumDetails for new albums and completes when no next page`() {
     val page = ArtistAlbumsPage(albums = listOf(album1, album2), nextUrl = null)
+    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns emptyList()
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyCatalog.getArtistAlbumsPage(accessToken, "artist-1", null) } returns page.right()
     every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"), AlbumId("album-2"))) } returns emptyList()
@@ -341,6 +442,7 @@ class CatalogServiceTests {
   fun `handle SyncArtistAlbums enqueues next page via outbox when nextUrl is present`() {
     val nextPageUrl = "https://api.spotify.com/v1/artists/artist-1/albums?offset=50&limit=50"
     val page = ArtistAlbumsPage(albums = listOf(album1), nextUrl = nextPageUrl)
+    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns emptyList()
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyCatalog.getArtistAlbumsPage(accessToken, "artist-1", null) } returns page.right()
     every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"))) } returns emptyList()
@@ -358,6 +460,7 @@ class CatalogServiceTests {
   fun `handle SyncArtistAlbums processes subsequent page and fetches using nextUrl`() {
     val nextPageUrl = "https://api.spotify.com/v1/artists/artist-1/albums?offset=50&limit=50"
     val page = ArtistAlbumsPage(albums = listOf(album2), nextUrl = null)
+    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns emptyList()
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyCatalog.getArtistAlbumsPage(accessToken, "artist-1", nextPageUrl) } returns page.right()
     every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-2"))) } returns emptyList()
@@ -374,6 +477,7 @@ class CatalogServiceTests {
   @Test
   fun `handle SyncArtistAlbums enqueues only new albums and skips existing ones`() {
     val page = ArtistAlbumsPage(albums = listOf(album1, album2), nextUrl = null)
+    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns emptyList()
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyCatalog.getArtistAlbumsPage(accessToken, "artist-1", null) } returns page.right()
     every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"), AlbumId("album-2"))) } returns listOf(album1)
@@ -392,6 +496,7 @@ class CatalogServiceTests {
   fun `handle SyncArtistAlbums skips next page when all albums on current page are already in catalog`() {
     val nextPageUrl = "https://api.spotify.com/v1/artists/artist-1/albums?offset=50&limit=50"
     val page = ArtistAlbumsPage(albums = listOf(album1, album2), nextUrl = nextPageUrl)
+    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns emptyList()
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyCatalog.getArtistAlbumsPage(accessToken, "artist-1", null) } returns page.right()
     every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"), AlbumId("album-2"))) } returns listOf(album1, album2)
@@ -408,6 +513,7 @@ class CatalogServiceTests {
   fun `handle SyncArtistAlbums enqueues next page when some albums on current page are new`() {
     val nextPageUrl = "https://api.spotify.com/v1/artists/artist-1/albums?offset=50&limit=50"
     val page = ArtistAlbumsPage(albums = listOf(album1, album2), nextUrl = nextPageUrl)
+    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns emptyList()
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyCatalog.getArtistAlbumsPage(accessToken, "artist-1", null) } returns page.right()
     every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"), AlbumId("album-2"))) } returns listOf(album1)
@@ -424,6 +530,7 @@ class CatalogServiceTests {
 
   @Test
   fun `handle SyncArtistAlbums returns error when artist albums page fetch fails`() {
+    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns emptyList()
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyCatalog.getArtistAlbumsPage(accessToken, "artist-1", null) } returns SyncError.ARTIST_DETAILS_FETCH_FAILED.left()
 
@@ -431,6 +538,16 @@ class CatalogServiceTests {
 
     assertThat(result.isLeft()).isTrue()
     verify(exactly = 0) { outboxPort.enqueue(any()) }
+  }
+
+  @Test
+  fun `handle SyncArtistAlbums skips sync when artist is shallow`() {
+    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns listOf(artist1.copy(syncStatus = ArtistSyncStatus.SHALLOW))
+
+    val result = adapter.handle(DomainOutboxEvent.SyncArtistAlbums("artist-1"))
+
+    assertThat(result.isRight()).isTrue()
+    verify(exactly = 0) { spotifyCatalog.getArtistAlbumsPage(any(), any(), any()) }
   }
 
   // --- wipeCatalog tests ---
@@ -451,6 +568,31 @@ class CatalogServiceTests {
     verify { appTrackRepository.deleteAll() }
     verify { playlistRepository.setAllSyncInactive() }
     verify { playlistCheckRepository.deleteAll() }
+  }
+
+  // --- enqueueArtistAlbumsSync tests ---
+
+  @Test
+  fun `enqueueArtistAlbumsSync only enqueues syncable artists`() {
+    val shallowArtist = artist2.copy(syncStatus = ArtistSyncStatus.SHALLOW)
+    every { appArtistRepository.findAll() } returns listOf(artist1, shallowArtist)
+    every { currentUserResolver.userId() } returns userId
+    every { outboxPort.enqueue(any()) } just runs
+
+    adapter.enqueueArtistAlbumsSync(partition = 0, totalPartitions = 1)
+
+    verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums("artist-1")) }
+    verify(exactly = 0) { outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums("artist-2")) }
+  }
+
+  @Test
+  fun `enqueueArtistAlbumsSync does nothing when no users available`() {
+    every { appArtistRepository.findAll() } returns listOf(artist1)
+    every { currentUserResolver.userId() } returns null
+
+    adapter.enqueueArtistAlbumsSync(partition = 0, totalPartitions = 1)
+
+    verify(exactly = 0) { outboxPort.enqueue(any()) }
   }
 
   @Test

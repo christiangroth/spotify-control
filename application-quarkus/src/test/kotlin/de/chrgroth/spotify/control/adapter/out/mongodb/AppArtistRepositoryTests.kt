@@ -2,6 +2,7 @@ package de.chrgroth.spotify.control.adapter.out.mongodb
 
 import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
+import de.chrgroth.spotify.control.domain.model.catalog.ArtistSyncStatus
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
 import io.quarkus.test.junit.QuarkusTest
 import jakarta.inject.Inject
@@ -101,35 +102,35 @@ class AppArtistRepositoryTests {
   }
 
   @Test
-  fun `setBlockedFromAggregation blocks an artist`() {
-    val item = artist("block")
+  fun `setSyncStatus sets an artist to SHALLOW`() {
+    val item = artist("shallow")
     appArtistRepository.upsertAll(listOf(item))
 
-    appArtistRepository.setBlockedFromAggregation(item.id, true)
+    appArtistRepository.setSyncStatus(item.id, ArtistSyncStatus.SHALLOW)
 
     val result = appArtistRepository.findByArtistIds(setOf(item.id))
     assertThat(result).hasSize(1)
-    assertThat(result[0].blockedFromAggregation).isTrue()
+    assertThat(result[0].syncStatus).isEqualTo(ArtistSyncStatus.SHALLOW)
   }
 
   @Test
-  fun `setBlockedFromAggregation unblocks an artist`() {
-    val item = artist("unblock")
+  fun `setSyncStatus sets an artist back to SYNC`() {
+    val item = artist("sync-again")
     appArtistRepository.upsertAll(listOf(item))
-    appArtistRepository.setBlockedFromAggregation(item.id, true)
+    appArtistRepository.setSyncStatus(item.id, ArtistSyncStatus.SHALLOW)
 
-    appArtistRepository.setBlockedFromAggregation(item.id, false)
+    appArtistRepository.setSyncStatus(item.id, ArtistSyncStatus.SYNC)
 
     val result = appArtistRepository.findByArtistIds(setOf(item.id))
     assertThat(result).hasSize(1)
-    assertThat(result[0].blockedFromAggregation).isFalse()
+    assertThat(result[0].syncStatus).isEqualTo(ArtistSyncStatus.SYNC)
   }
 
   @Test
-  fun `upsertAll does not reset blockedFromAggregation flag`() {
-    val item = artist("preserve-block")
+  fun `upsertAll does not reset syncStatus`() {
+    val item = artist("preserve-status")
     appArtistRepository.upsertAll(listOf(item))
-    appArtistRepository.setBlockedFromAggregation(item.id, true)
+    appArtistRepository.setSyncStatus(item.id, ArtistSyncStatus.SHALLOW)
 
     val updated = item.copy(artistName = "Updated Name")
     appArtistRepository.upsertAll(listOf(updated))
@@ -137,17 +138,17 @@ class AppArtistRepositoryTests {
     val result = appArtistRepository.findByArtistIds(setOf(item.id))
     assertThat(result).hasSize(1)
     assertThat(result[0].artistName).isEqualTo("Updated Name")
-    assertThat(result[0].blockedFromAggregation).isTrue()
+    assertThat(result[0].syncStatus).isEqualTo(ArtistSyncStatus.SHALLOW)
   }
 
   @Test
-  fun `new artist inserted via upsertAll has blockedFromAggregation false by default`() {
-    val item = artist("default-not-blocked")
+  fun `new artist inserted via upsertAll keeps its given syncStatus`() {
+    val item = artist("default-status").copy(syncStatus = ArtistSyncStatus.SHALLOW_ASSUMPTION)
     appArtistRepository.upsertAll(listOf(item))
 
     val result = appArtistRepository.findByArtistIds(setOf(item.id))
     assertThat(result).hasSize(1)
-    assertThat(result[0].blockedFromAggregation).isFalse()
+    assertThat(result[0].syncStatus).isEqualTo(ArtistSyncStatus.SHALLOW_ASSUMPTION)
   }
 
   @Test

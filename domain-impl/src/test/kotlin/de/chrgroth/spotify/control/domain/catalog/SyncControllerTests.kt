@@ -132,6 +132,24 @@ class SyncControllerTests {
   }
 
   @Test
+  fun `syncArtists enqueues SyncArtistDetails with fromPlaylist true when cause is Playlist`() {
+    every { appArtistRepository.findByArtistIds(any()) } returns emptyList()
+
+    controller.syncArtists(listOf("artist-1"), SyncCause.Playlist("playlist-1", "track-1"))
+
+    verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails("artist-1", fromPlaylist = true)) }
+  }
+
+  @Test
+  fun `syncArtists enqueues SyncArtistDetails with fromPlaylist false when cause is Playback`() {
+    every { appArtistRepository.findByArtistIds(any()) } returns emptyList()
+
+    controller.syncArtists(listOf("artist-1"), SyncCause.Playback("track-1"))
+
+    verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails("artist-1", fromPlaylist = false)) }
+  }
+
+  @Test
   fun `syncArtists skips artists already in catalog`() {
     every { appArtistRepository.findByArtistIds(any()) } returns listOf(artist("artist-1"))
 

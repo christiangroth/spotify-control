@@ -50,8 +50,9 @@ class SyncController(
     if (newArtistIds.isEmpty()) return
     val now = Clock.System.now()
     newArtistIds.forEach { artistId ->
-      syncTraceRepository.upsert(SyncTrace(SyncTraceEntityType.ARTIST, artistId, artistCauses.getValue(artistId), now))
-      outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails(artistId))
+      val cause = artistCauses.getValue(artistId)
+      syncTraceRepository.upsert(SyncTrace(SyncTraceEntityType.ARTIST, artistId, cause, now))
+      outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails(artistId, fromPlaylist = cause is SyncCause.Playlist))
     }
   }
 }

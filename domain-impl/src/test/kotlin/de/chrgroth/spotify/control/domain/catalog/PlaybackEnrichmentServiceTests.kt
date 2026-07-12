@@ -4,7 +4,9 @@ import arrow.core.right
 import de.chrgroth.spotify.control.domain.model.user.AccessToken
 import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
+import de.chrgroth.spotify.control.domain.model.catalog.ArtistSyncStatus
 import de.chrgroth.spotify.control.domain.model.user.UserId
+import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppAlbumRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.AppPlaylistCheckRepositoryPort
@@ -65,7 +67,7 @@ class PlaybackEnrichmentServiceTests {
   private val accessToken = AccessToken("access-token")
 
   @Test
-  fun `syncArtistDetails stores artist from Spotify response`() {
+  fun `syncArtistDetails stores artist as SYNC_ASSUMPTION and enqueues album sync when discovered from playlist`() {
     val artistId = "artist-1"
     val spotifyArtist = AppArtist(
       id = ArtistId(artistId),
@@ -78,13 +80,33 @@ class PlaybackEnrichmentServiceTests {
     every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyCatalog.getArtist(accessToken, artistId) } returns spotifyArtist.right()
-    every { appArtistRepository.upsertAll(listOf(spotifyArtist)) } just runs
+    every { appArtistRepository.upsertAll(any()) } just runs
     every { outboxPort.enqueue(any()) } just runs
 
-    adapter.syncArtistDetails(artistId)
+    adapter.syncArtistDetails(artistId, fromPlaylist = true)
 
-    verify { appArtistRepository.upsertAll(listOf(spotifyArtist)) }
-    verify { outboxPort.enqueue(de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent.SyncArtistAlbums(artistId)) }
+    verify { appArtistRepository.upsertAll(listOf(spotifyArtist.copy(syncStatus = ArtistSyncStatus.SYNC_ASSUMPTION))) }
+    verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums(artistId)) }
+  }
+
+  @Test
+  fun `syncArtistDetails stores artist as SHALLOW_ASSUMPTION and does not enqueue album sync when not discovered from playlist`() {
+    val artistId = "artist-1"
+    val spotifyArtist = AppArtist(
+      id = ArtistId(artistId),
+      artistName = "Real Artist Name",
+      lastSync = kotlin.time.Instant.fromEpochSeconds(1),
+    )
+    every { appArtistRepository.findByArtistIds(setOf(ArtistId(artistId))) } returns emptyList()
+    every { currentUserResolver.userId() } returns userId
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
+    every { spotifyCatalog.getArtist(accessToken, artistId) } returns spotifyArtist.right()
+    every { appArtistRepository.upsertAll(any()) } just runs
+
+    adapter.syncArtistDetails(artistId, fromPlaylist = false)
+
+    verify { appArtistRepository.upsertAll(listOf(spotifyArtist.copy(syncStatus = ArtistSyncStatus.SHALLOW_ASSUMPTION))) }
+    verify(exactly = 0) { outboxPort.enqueue(any()) }
   }
 
   @Test
@@ -97,7 +119,7 @@ class PlaybackEnrichmentServiceTests {
     )
     every { appArtistRepository.findByArtistIds(setOf(ArtistId(artistId))) } returns listOf(syncedArtist)
 
-    adapter.syncArtistDetails(artistId)
+    adapter.syncArtistDetails(artistId, fromPlaylist = false)
 
     verify(exactly = 0) { spotifyCatalog.getArtist(any(), any()) }
     verify(exactly = 0) { appArtistRepository.upsertAll(any()) }
