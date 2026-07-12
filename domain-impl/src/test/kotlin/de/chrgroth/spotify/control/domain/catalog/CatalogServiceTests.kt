@@ -39,6 +39,7 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.verify
+import io.mockk.verifyOrder
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -141,7 +142,7 @@ class CatalogServiceTests {
     assertThat(result.isRight()).isTrue()
     verify { appArtistRepository.setSyncStatus(ArtistId("artist-1"), ArtistSyncStatus.SYNC) }
     verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums("artist-1")) }
-    verify { playbackAggregation.rebuildAllAggregations() }
+    verify { playbackAggregation.rebuildAggregationsForArtist(ArtistId("artist-1")) }
   }
 
   @Test
@@ -167,7 +168,11 @@ class CatalogServiceTests {
     verify { appArtistRepository.setSyncStatus(ArtistId("artist-1"), ArtistSyncStatus.SHALLOW) }
     verify { appTrackRepository.deleteByArtistId(ArtistId("artist-1")) }
     verify { appAlbumRepository.deleteByArtistId(ArtistId("artist-1")) }
-    verify { playbackAggregation.rebuildAllAggregations() }
+    verify { playbackAggregation.rebuildAggregationsForArtist(ArtistId("artist-1")) }
+    verifyOrder {
+      playbackAggregation.rebuildAggregationsForArtist(ArtistId("artist-1"))
+      appTrackRepository.deleteByArtistId(ArtistId("artist-1"))
+    }
   }
 
   // --- resyncArtist tests ---

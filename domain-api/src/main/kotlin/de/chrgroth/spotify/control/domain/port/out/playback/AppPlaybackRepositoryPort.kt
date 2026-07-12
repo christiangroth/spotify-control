@@ -20,4 +20,5 @@ interface AppPlaybackRepositoryPort {
   fun findAllBetween(from: Instant, to: Instant): List<AppPlaybackItem>
   fun sumSecondsPlayedByTrackIdSince(since: Instant): Map<String, Long>
   fun findAllDistinctTrackIds(): Set<String>
+  fun findDistinctPlayedDatesByTrackIds(trackIds: Set<String>): Set<LocalDate>
 }

@@ -153,4 +153,25 @@ class AppPlaybackRepositoryTests {
 
     assertThat(result.map { it.trackId }).containsExactlyInAnyOrder("inside-1", "inside-2")
   }
+
+  @Test
+  fun `findDistinctPlayedDatesByTrackIds returns only dates for the given tracks`() {
+    val matchingSameDay = AppPlaybackItem(playedAt = now - 1.hours, trackId = "track-a", secondsPlayed = 60L)
+    val matchingOtherDay = AppPlaybackItem(playedAt = now - 30.hours, trackId = "track-a", secondsPlayed = 60L)
+    val nonMatching = AppPlaybackItem(playedAt = now - 2.hours, trackId = "track-b", secondsPlayed = 60L)
+    appPlaybackRepository.saveAll(listOf(matchingSameDay, matchingOtherDay, nonMatching))
+
+    val result = appPlaybackRepository.findDistinctPlayedDatesByTrackIds(setOf("track-a"))
+
+    assertThat(result).hasSize(2)
+  }
+
+  @Test
+  fun `findDistinctPlayedDatesByTrackIds returns empty set for empty input`() {
+    appPlaybackRepository.saveAll(listOf(item(1)))
+
+    val result = appPlaybackRepository.findDistinctPlayedDatesByTrackIds(emptySet())
+
+    assertThat(result).isEmpty()
+  }
 }

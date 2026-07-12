@@ -102,6 +102,22 @@ class PlaybackAggregationService(
     logger.info { "Aggregation rebuild enqueuing complete" }
   }
 
+  override fun rebuildAggregationsForArtist(artistId: ArtistId) {
+    val trackIds = appTrackRepository.findByArtistId(artistId).map { it.id.value }.toSet()
+    if (trackIds.isEmpty()) return
+
+    val affectedDates = appPlaybackRepository.findDistinctPlayedDatesByTrackIds(trackIds).map { it.toJavaLocalDate() }
+    if (affectedDates.isEmpty()) return
+
+    affectedDates.toSet().forEach { enqueueAggregateDay(it.toKotlin()) }
+    affectedDates.map { it.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)) }.toSet().forEach { enqueueAggregateWeek(it.toKotlin()) }
+    affectedDates.map { it.withDayOfMonth(1) }.toSet().forEach { enqueueAggregateMonth(it.toKotlin()) }
+    affectedDates.map { firstDayOfQuarter(it) }.toSet().forEach { enqueueAggregateQuarter(it.toKotlin()) }
+    affectedDates.map { it.withDayOfYear(1) }.toSet().forEach { enqueueAggregateYear(it.toKotlin()) }
+
+    logger.info { "Rebuilding aggregations for artist $artistId across ${affectedDates.toSet().size} affected day(s)" }
+  }
+
   private fun enqueueDays(from: JLocalDate, to: JLocalDate) {
     var date = from
     while (!date.isAfter(to)) {

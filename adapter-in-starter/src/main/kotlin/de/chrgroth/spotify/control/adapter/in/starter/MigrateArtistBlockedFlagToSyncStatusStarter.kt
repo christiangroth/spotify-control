@@ -10,9 +10,10 @@ import mu.KLogging
 import org.eclipse.microprofile.config.inject.ConfigProperty
 
 // Migrates app_artist.blockedFromAggregation (Boolean) to the new syncStatus field (see #748 Shallow Artists).
-// Every existing artist becomes SYNC_ASSUMPTION so the user can confirm/correct it, except artists that were
-// previously blocked from aggregation, which become SHALLOW_ASSUMPTION so nothing gets retroactively synced
-// that was deliberately excluded before.
+// Assumption statuses are reserved for artists newly discovered after this feature ships (see
+// CatalogService.syncArtistDetails); every artist that already exists in the catalog at migration time was already
+// being treated as fully syncable (blockedFromAggregation only ever filtered aggregation, never catalog sync), so
+// it is migrated straight to its definitive status: SHALLOW if it was previously blocked, SYNC otherwise.
 @ApplicationScoped
 @Suppress("Unused")
 class MigrateArtistBlockedFlagToSyncStatusStarter(
@@ -29,20 +30,20 @@ class MigrateArtistBlockedFlagToSyncStatusStarter(
     val blockedResult = collection.updateMany(
       Filters.eq(BLOCKED_FROM_AGGREGATION_FIELD, true),
       Updates.combine(
-        Updates.set(SYNC_STATUS_FIELD, ArtistSyncStatus.SHALLOW_ASSUMPTION.name),
+        Updates.set(SYNC_STATUS_FIELD, ArtistSyncStatus.SHALLOW.name),
         Updates.unset(BLOCKED_FROM_AGGREGATION_FIELD),
       ),
     )
-    logger.info { "Migrated ${blockedResult.modifiedCount} previously blocked artist(s) to ${ArtistSyncStatus.SHALLOW_ASSUMPTION}" }
+    logger.info { "Migrated ${blockedResult.modifiedCount} previously blocked artist(s) to ${ArtistSyncStatus.SHALLOW}" }
 
     val remainingResult = collection.updateMany(
       Filters.exists(SYNC_STATUS_FIELD, false),
       Updates.combine(
-        Updates.set(SYNC_STATUS_FIELD, ArtistSyncStatus.SYNC_ASSUMPTION.name),
+        Updates.set(SYNC_STATUS_FIELD, ArtistSyncStatus.SYNC.name),
         Updates.unset(BLOCKED_FROM_AGGREGATION_FIELD),
       ),
     )
-    logger.info { "Migrated ${remainingResult.modifiedCount} artist(s) to ${ArtistSyncStatus.SYNC_ASSUMPTION}" }
+    logger.info { "Migrated ${remainingResult.modifiedCount} artist(s) to ${ArtistSyncStatus.SYNC}" }
   }
 
   companion object : KLogging() {

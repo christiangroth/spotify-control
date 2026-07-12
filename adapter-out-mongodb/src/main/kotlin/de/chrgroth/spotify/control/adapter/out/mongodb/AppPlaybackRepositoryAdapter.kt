@@ -173,6 +173,20 @@ class AppPlaybackRepositoryAdapter(
         .toSet()
     }
 
+  override fun findDistinctPlayedDatesByTrackIds(trackIds: Set<String>): Set<LocalDate> {
+    if (trackIds.isEmpty()) return emptySet()
+    val pipeline = listOf(
+      Aggregates.match(Filters.`in`(TRACK_ID_FIELD, trackIds)),
+      Aggregates.group(Document("\$dateToString", Document("format", "%Y-%m-%d").append("date", "\$$PLAYED_AT_FIELD"))),
+    )
+    return mongoQueryMetrics.timed("app_playback.findDistinctPlayedDatesByTrackIds") {
+      appPlaybackDocumentRepository.mongoCollection()
+        .aggregate(pipeline, Document::class.java)
+        .map { doc -> LocalDate.parse(doc.getString("_id")) }
+        .toSet()
+    }
+  }
+
   private fun AppPlaybackDocument.toItem() = AppPlaybackItem(
     playedAt = playedAt.toKotlinInstant(),
     trackId = trackId,

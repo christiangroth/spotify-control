@@ -184,6 +184,51 @@ class PlaybackAggregationServiceTests {
     )
   }
 
+  @Test
+  fun `rebuildAggregationsForArtist enqueues only day, week, month, quarter and year buckets touched by the artist's plays`() {
+    every { currentUserResolver.userId() } returns userId
+    every { appTrackRepository.findByArtistId(ArtistId("artist-1")) } returns listOf(
+      AppTrack(id = TrackId("track-1"), title = "Track One", artistId = ArtistId("artist-1"), lastSync = syncTimestamp),
+      AppTrack(id = TrackId("track-2"), title = "Track Two", artistId = ArtistId("artist-1"), lastSync = syncTimestamp),
+    )
+    every { appPlaybackRepository.findDistinctPlayedDatesByTrackIds(setOf("track-1", "track-2")) } returns setOf(
+      LocalDate(2024, 1, 15),
+      LocalDate(2024, 1, 22),
+    )
+
+    service.rebuildAggregationsForArtist(ArtistId("artist-1"))
+
+    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.DAY, LocalDate(2024, 1, 15))) }
+    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.DAY, LocalDate(2024, 1, 22))) }
+    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.WEEK, LocalDate(2024, 1, 15))) }
+    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.WEEK, LocalDate(2024, 1, 22))) }
+    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.MONTH, LocalDate(2024, 1, 1))) }
+    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.QUARTER, LocalDate(2024, 1, 1))) }
+    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.YEAR, LocalDate(2024, 1, 1))) }
+  }
+
+  @Test
+  fun `rebuildAggregationsForArtist does nothing when artist has no tracks`() {
+    every { appTrackRepository.findByArtistId(ArtistId("artist-1")) } returns emptyList()
+
+    service.rebuildAggregationsForArtist(ArtistId("artist-1"))
+
+    verify(exactly = 0) { appPlaybackRepository.findDistinctPlayedDatesByTrackIds(any()) }
+    verify(exactly = 0) { outboxPort.enqueue(any()) }
+  }
+
+  @Test
+  fun `rebuildAggregationsForArtist does nothing when the artist was never played`() {
+    every { appTrackRepository.findByArtistId(ArtistId("artist-1")) } returns listOf(
+      AppTrack(id = TrackId("track-1"), title = "Track One", artistId = ArtistId("artist-1"), lastSync = syncTimestamp),
+    )
+    every { appPlaybackRepository.findDistinctPlayedDatesByTrackIds(setOf("track-1")) } returns emptySet()
+
+    service.rebuildAggregationsForArtist(ArtistId("artist-1"))
+
+    verify(exactly = 0) { outboxPort.enqueue(any()) }
+  }
+
   private fun dayAggregation(
     periodStart: LocalDate,
     albumEntries: List<AggregationRankEntry> = emptyList(),

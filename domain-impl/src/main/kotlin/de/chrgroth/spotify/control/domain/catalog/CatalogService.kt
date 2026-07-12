@@ -64,7 +64,7 @@ class CatalogService(
     logger.info { "Updated sync status for artist '${existing.artistName}' ($artistId) to ${ArtistSyncStatus.SYNC}" }
     appArtistRepository.setSyncStatus(ArtistId(artistId), ArtistSyncStatus.SYNC)
     outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums(artistId))
-    playbackAggregation.rebuildAllAggregations()
+    playbackAggregation.rebuildAggregationsForArtist(ArtistId(artistId))
     return Unit.right()
   }
 
@@ -73,9 +73,9 @@ class CatalogService(
       ?: return ArtistSettingsError.ARTIST_NOT_FOUND.left()
     logger.info { "Updated sync status for artist '${existing.artistName}' ($artistId) to ${ArtistSyncStatus.SHALLOW}" }
     appArtistRepository.setSyncStatus(ArtistId(artistId), ArtistSyncStatus.SHALLOW)
+    playbackAggregation.rebuildAggregationsForArtist(ArtistId(artistId))
     appTrackRepository.deleteByArtistId(ArtistId(artistId))
     appAlbumRepository.deleteByArtistId(ArtistId(artistId))
-    playbackAggregation.rebuildAllAggregations()
     return Unit.right()
   }
 
