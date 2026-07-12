@@ -6,6 +6,7 @@ import de.chrgroth.spotify.control.domain.model.catalog.AppAlbum
 import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
 import de.chrgroth.spotify.control.domain.model.catalog.AppTrack
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
+import de.chrgroth.spotify.control.domain.model.catalog.ArtistSyncStatus
 import de.chrgroth.spotify.control.domain.model.catalog.CatalogStats
 import de.chrgroth.spotify.control.domain.model.catalog.CatalogSyncEntityType
 import de.chrgroth.spotify.control.domain.model.catalog.SyncCause
@@ -80,6 +81,28 @@ class CatalogBrowserServiceTests {
     assertThat(result.first().albumId).isEqualTo("album-1")
     assertThat(result.first().title).isEqualTo("Greatest Hits")
     assertThat(result.first().artistName).isEqualTo("Artist One")
+  }
+
+  @Test
+  fun `getUndecidedArtists returns only SYNC_ASSUMPTION and SHALLOW_ASSUMPTION artists sorted by name with counts`() {
+    val syncAssumptionArtist = AppArtist(
+      id = ArtistId("artist-2"), artistName = "Bravo", lastSync = triggeredAt, syncStatus = ArtistSyncStatus.SYNC_ASSUMPTION,
+    )
+    val shallowAssumptionArtist = AppArtist(
+      id = ArtistId("artist-1"), artistName = "Alpha", lastSync = triggeredAt, syncStatus = ArtistSyncStatus.SHALLOW_ASSUMPTION,
+    )
+    every {
+      appArtistRepository.findByStatuses(setOf(ArtistSyncStatus.SYNC_ASSUMPTION, ArtistSyncStatus.SHALLOW_ASSUMPTION))
+    } returns listOf(syncAssumptionArtist, shallowAssumptionArtist)
+    every { appAlbumRepository.findByArtistIds(setOf(ArtistId("artist-2"), ArtistId("artist-1"))) } returns emptyList()
+    every { appTrackRepository.findByArtistIds(setOf(ArtistId("artist-2"), ArtistId("artist-1"))) } returns emptyList()
+
+    val result = service.getUndecidedArtists()
+
+    assertThat(result.map { it.artistId }).containsExactly("artist-1", "artist-2")
+    assertThat(result.first { it.artistId == "artist-1" }.isShallow).isTrue()
+    assertThat(result.first { it.artistId == "artist-2" }.isShallow).isFalse()
+    assertThat(result).allSatisfy { assertThat(it.isAssumption).isTrue() }
   }
 
   @Test

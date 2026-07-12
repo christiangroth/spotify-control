@@ -212,4 +212,29 @@ class AppArtistRepositoryTests {
 
     assertThat(after).isEqualTo(before + 2)
   }
+
+  @Test
+  fun `findByStatuses returns only artists matching the given statuses`() {
+    val syncAssumption = artist("status-sync-assumption").copy(syncStatus = ArtistSyncStatus.SYNC_ASSUMPTION)
+    val shallowAssumption = artist("status-shallow-assumption").copy(syncStatus = ArtistSyncStatus.SHALLOW_ASSUMPTION)
+    val sync = artist("status-sync").copy(syncStatus = ArtistSyncStatus.SYNC)
+    appArtistRepository.upsertAll(listOf(syncAssumption, shallowAssumption, sync))
+
+    val result = appArtistRepository.findByStatuses(setOf(ArtistSyncStatus.SYNC_ASSUMPTION, ArtistSyncStatus.SHALLOW_ASSUMPTION))
+
+    assertThat(result.map { it.id }).contains(syncAssumption.id, shallowAssumption.id)
+    assertThat(result.map { it.id }).doesNotContain(sync.id)
+  }
+
+  @Test
+  fun `countByStatuses counts only artists matching the given statuses`() {
+    val before = appArtistRepository.countByStatuses(setOf(ArtistSyncStatus.SYNC_ASSUMPTION))
+    val syncAssumption = artist("count-sync-assumption").copy(syncStatus = ArtistSyncStatus.SYNC_ASSUMPTION)
+    val sync = artist("count-sync").copy(syncStatus = ArtistSyncStatus.SYNC)
+    appArtistRepository.upsertAll(listOf(syncAssumption, sync))
+
+    val after = appArtistRepository.countByStatuses(setOf(ArtistSyncStatus.SYNC_ASSUMPTION))
+
+    assertThat(after).isEqualTo(before + 1)
+  }
 }

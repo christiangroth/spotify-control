@@ -7,7 +7,9 @@ import de.chrgroth.spotify.control.domain.model.catalog.ArtistSyncStatus
 interface AppArtistRepositoryPort {
   fun upsertAll(items: List<AppArtist>)
   fun countAll(): Long
+  fun countByStatuses(statuses: Set<ArtistSyncStatus>): Long
   fun findAll(): List<AppArtist>
+  fun findByStatuses(statuses: Set<ArtistSyncStatus>): List<AppArtist>
   fun searchByName(filter: String, limit: Int): List<AppArtist>
   fun findByArtistIds(artistIds: Set<ArtistId>): List<AppArtist>
   fun findWithImageLinkAndBlankName(): List<AppArtist>

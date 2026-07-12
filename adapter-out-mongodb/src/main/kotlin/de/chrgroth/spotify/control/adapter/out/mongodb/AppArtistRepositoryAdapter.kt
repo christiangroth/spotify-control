@@ -54,6 +54,20 @@ class AppArtistRepositoryAdapter(
       appArtistDocumentRepository.count()
     }
 
+  override fun countByStatuses(statuses: Set<ArtistSyncStatus>): Long =
+    mongoQueryMetrics.timed("app_artist.countByStatuses") {
+      appArtistDocumentRepository.mongoCollection()
+        .countDocuments(Filters.`in`(SYNC_STATUS_FIELD, statuses.map { it.name }))
+    }
+
+  override fun findByStatuses(statuses: Set<ArtistSyncStatus>): List<AppArtist> =
+    mongoQueryMetrics.timed("app_artist.findByStatuses") {
+      appArtistDocumentRepository.mongoCollection()
+        .find(Filters.`in`(SYNC_STATUS_FIELD, statuses.map { it.name }))
+        .toList()
+        .map { it.toDomain() }
+    }
+
   override fun findByArtistIds(artistIds: Set<ArtistId>): List<AppArtist> {
     if (artistIds.isEmpty()) return emptyList()
     return mongoQueryMetrics.timed("app_artist.findByArtistIds") {

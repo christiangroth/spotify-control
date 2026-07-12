@@ -8,12 +8,17 @@
 
         <div class="row g-3 mb-4">
             <div class="col-6 col-sm-4">
+                <a href="/catalog/artists/settings" class="text-decoration-none">
                 <div class="card app-card">
                     <div class="card-body">
                         <p class="card-subtitle mb-1 app-section-label">Artists</p>
                         <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{catalogStats.artistCount.formatted}</p>
+                        {#if catalogStats.undecidedArtistCount > 0}
+                        <p class="mb-0" style="color:#e0b870;font-size:.75rem;">{catalogStats.undecidedArtistCount.formatted} undecided</p>
+                        {/if}
                     </div>
                 </div>
+                </a>
             </div>
             <div class="col-6 col-sm-4">
                 <div class="card app-card">

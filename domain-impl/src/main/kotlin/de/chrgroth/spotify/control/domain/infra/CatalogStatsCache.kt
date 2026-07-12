@@ -1,5 +1,6 @@
 package de.chrgroth.spotify.control.domain.infra
 
+import de.chrgroth.spotify.control.domain.model.catalog.ArtistSyncStatus
 import de.chrgroth.spotify.control.domain.model.catalog.CatalogStats
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppAlbumRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
@@ -31,11 +32,14 @@ class CatalogStatsCache(
         artistCount = appArtistRepository.countAll(),
         albumCount = appAlbumRepository.countAll(),
         trackCount = appTrackRepository.countAll(),
+        undecidedArtistCount = appArtistRepository.countByStatuses(ASSUMPTION_STATUSES),
       )
     } catch (e: Exception) {
       logger.warn(e) { "Failed to refresh catalog stats cache, keeping previous values" }
     }
   }
 
-  companion object : KLogging()
+  companion object : KLogging() {
+    private val ASSUMPTION_STATUSES = setOf(ArtistSyncStatus.SYNC_ASSUMPTION, ArtistSyncStatus.SHALLOW_ASSUMPTION)
+  }
 }

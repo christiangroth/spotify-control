@@ -370,13 +370,16 @@
                 </a>
             </div>
             <div class="col-2 col-sm">
-                <a href="/catalog" class="text-decoration-none" data-testid="nav-tile-catalog">
+                <a href="/catalog" class="text-decoration-none position-relative d-block" data-testid="nav-tile-catalog">
                 <div class="card app-card nav-tile h-100">
                     <div class="card-body py-2 px-1 px-sm-2 px-md-3 d-flex align-items-center justify-content-center gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" class="nav-tile-icon flex-shrink-0 d-inline-block d-sm-none d-md-inline-block" fill="currentColor" viewBox="0 0 16 16"><use href="#icon-nav-page-catalog"/></svg>
                         <span class="fw-semibold nav-tile-label d-none d-sm-inline" style="font-size:.9rem;">Catalog</span>
                     </div>
                 </div>
+                {#if undecidedArtistCount > 0}
+                <span class="badge rounded-pill" style="position:absolute;top:-6px;right:-6px;background-color:#e0b870;color:#1a1a1a;font-size:.65rem;" data-testid="nav-tile-catalog-badge" title="{undecidedArtistCount.formatted} artist(s) awaiting sync decision">{undecidedArtistCount.formatted}</span>
+                {/if}
                 </a>
             </div>
             <div class="col-2 col-sm">

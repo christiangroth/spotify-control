@@ -27,6 +27,8 @@ import mu.KLogging
 class CatalogResource(
   @param:Location("catalog.html")
   private val catalogTemplate: Template,
+  @param:Location("catalog-artists-settings.html")
+  private val artistSettingsTemplate: Template,
   private val catalogBrowser: CatalogBrowserPort,
   private val catalog: CatalogPort,
   private val dashboard: DashboardPort,
@@ -59,6 +61,15 @@ class CatalogResource(
       .data("artists", artists)
       .data("filter", filter ?: "")
       .data("filterActive", filterActive)
+  }
+
+  @GET
+  @Path("/artists/settings")
+  @Authenticated
+  @Produces(MediaType.TEXT_HTML)
+  fun artistSettings(): TemplateInstance {
+    val artists = catalogBrowser.getUndecidedArtists()
+    return artistSettingsTemplate.data("artists", artists)
   }
 
   @GET
