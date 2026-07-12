@@ -113,18 +113,30 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
   /**
    * Syncs genres and images for a single artist from the Spotify API and updates app_artist.
    * Deduplication is by artistId only (artist data is shared across users).
-   * payload = artistId
+   * [fromPlaylist] records whether this artist was discovered via a synced playlist rather than playback history,
+   * which determines whether a newly discovered artist starts out as SYNC_ASSUMPTION or SHALLOW_ASSUMPTION.
+   * payload: "$artistId" for legacy events (fromPlaylist=false); "$artistId\n$fromPlaylist" otherwise.
    */
-  data class SyncArtistDetails(val artistId: String) : DomainOutboxEvent {
+  data class SyncArtistDetails(val artistId: String, val fromPlaylist: Boolean = false) : DomainOutboxEvent {
     override val key = KEY
     override val deduplicationKey = "$KEY:$artistId"
     override val partition = DomainOutboxPartition.ToSpotifyCatalog
-    override val serializePayload = artistId
+    override val serializePayload = "$artistId\n$fromPlaylist"
 
     companion object {
       const val KEY = "SyncArtistDetails"
       const val LEGACY_KEY = "EnrichArtistDetails"
-      fun fromPayload(payload: String): SyncArtistDetails = SyncArtistDetails(artistId = payload.substringBefore(':'))
+      fun fromPayload(payload: String): SyncArtistDetails {
+        val newlineIndex = payload.indexOf('\n')
+        return if (newlineIndex < 0) {
+          SyncArtistDetails(artistId = payload.substringBefore(':'))
+        } else {
+          SyncArtistDetails(
+            artistId = payload.substring(0, newlineIndex).substringBefore(':'),
+            fromPlaylist = payload.substring(newlineIndex + 1).toBoolean(),
+          )
+        }
+      }
     }
   }
 

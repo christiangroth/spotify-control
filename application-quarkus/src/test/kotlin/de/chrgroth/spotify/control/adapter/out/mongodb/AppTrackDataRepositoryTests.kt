@@ -228,6 +228,20 @@ class AppTrackDataRepositoryTests {
   }
 
   @Test
+  fun `deleteByArtistId deletes only tracks for the given artist`() {
+    val artistId = ArtistId("artist-delete-${UUID.randomUUID()}")
+    val toDelete1 = trackData("delete1").copy(artistId = artistId)
+    val toDelete2 = trackData("delete2").copy(artistId = artistId)
+    val other = trackData("keep").copy(artistId = ArtistId("other-artist-${UUID.randomUUID()}"))
+    appTrackRepository.upsertAll(listOf(toDelete1, toDelete2, other))
+
+    appTrackRepository.deleteByArtistId(artistId)
+
+    assertThat(appTrackRepository.findByArtistId(artistId)).isEmpty()
+    assertThat(appTrackRepository.findByTrackIds(setOf(other.id))).hasSize(1)
+  }
+
+  @Test
   fun `countAll returns total number of tracks`() {
     val before = appTrackRepository.countAll()
     val track1 = trackData("count1")

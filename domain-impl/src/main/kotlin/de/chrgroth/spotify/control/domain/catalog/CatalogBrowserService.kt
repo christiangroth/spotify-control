@@ -3,8 +3,10 @@ package de.chrgroth.spotify.control.domain.catalog
 import de.chrgroth.spotify.control.domain.infra.CatalogStatsCache
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumBrowseItem
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
+import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistBrowseItem
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
+import de.chrgroth.spotify.control.domain.model.catalog.ArtistSyncStatus
 import de.chrgroth.spotify.control.domain.model.catalog.CatalogStats
 import de.chrgroth.spotify.control.domain.model.catalog.CatalogSyncEntityType
 import de.chrgroth.spotify.control.domain.model.catalog.CatalogSyncTimelineEntry
@@ -41,7 +43,13 @@ class CatalogBrowserService(
     val filterTrimmed = filter?.trim()
     if (filterTrimmed.isNullOrBlank()) return emptyList()
 
-    val artists = appArtistRepository.searchByName(filterTrimmed, SEARCH_RESULT_LIMIT)
+    return toBrowseItems(appArtistRepository.searchByName(filterTrimmed, SEARCH_RESULT_LIMIT))
+  }
+
+  override fun getUndecidedArtists(): List<ArtistBrowseItem> =
+    toBrowseItems(appArtistRepository.findByStatuses(ASSUMPTION_STATUSES, UNDECIDED_ARTISTS_LIMIT))
+
+  private fun toBrowseItems(artists: List<AppArtist>): List<ArtistBrowseItem> {
     val artistIds = artists.map { it.id }.toSet()
     val albumCountByArtistId = appAlbumRepository.findByArtistIds(artistIds).groupingBy { it.artistId?.value }.eachCount()
     val trackCountByArtistId = appTrackRepository.findByArtistIds(artistIds).groupingBy { it.artistId.value }.eachCount()
@@ -55,7 +63,7 @@ class CatalogBrowserService(
           imageLink = artist.imageLink,
           albumCount = albumCountByArtistId[artist.id.value] ?: 0,
           trackCount = trackCountByArtistId[artist.id.value] ?: 0,
-          blockedFromAggregation = artist.blockedFromAggregation,
+          syncStatus = artist.syncStatus,
         )
       }
   }
@@ -203,5 +211,7 @@ class CatalogBrowserService(
 
   companion object {
     internal const val SEARCH_RESULT_LIMIT = 50
+    internal const val UNDECIDED_ARTISTS_LIMIT = 200
+    private val ASSUMPTION_STATUSES = setOf(ArtistSyncStatus.SYNC_ASSUMPTION, ArtistSyncStatus.SHALLOW_ASSUMPTION)
   }
 }

@@ -21,6 +21,7 @@ class DomainOutboxContractTests {
     DomainOutboxEvent.RebuildPlaybackData(),
     DomainOutboxEvent.AppendPlaybackData(),
     DomainOutboxEvent.SyncArtistDetails("artist-1"),
+    DomainOutboxEvent.SyncArtistDetails("artist-2", fromPlaylist = true),
     DomainOutboxEvent.SyncArtistAlbums("artist-1"),
     DomainOutboxEvent.SyncArtistAlbums("artist-1", "https://api.spotify.com/v1/artists/artist-1/albums?offset=50&limit=50"),
     DomainOutboxEvent.SyncAlbumDetails("album-1"),
@@ -48,6 +49,12 @@ class DomainOutboxContractTests {
         .describedAs("round-trip for ${event::class.simpleName}")
         .isEqualTo(event)
     }
+  }
+
+  @Test
+  fun `SyncArtistDetails parses legacy payload without fromPlaylist as false`() {
+    val restored = DomainOutboxEvent.fromKey(DomainOutboxEvent.SyncArtistDetails.KEY, "artist-1")
+    assertThat(restored).isEqualTo(DomainOutboxEvent.SyncArtistDetails("artist-1", fromPlaylist = false))
   }
 
   @Test

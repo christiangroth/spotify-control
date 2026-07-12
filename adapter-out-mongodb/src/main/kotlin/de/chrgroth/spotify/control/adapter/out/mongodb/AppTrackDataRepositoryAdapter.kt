@@ -112,6 +112,12 @@ class AppTrackRepositoryAdapter(
     }
   }
 
+  override fun deleteByArtistId(artistId: ArtistId) {
+    mongoQueryMetrics.timed("app_track.deleteByArtistId") {
+      appTrackDocumentRepository.delete("artistId = ?1", artistId.value)
+    }
+  }
+
   override fun deleteAll() {
     mongoQueryMetrics.timed("app_track.deleteAll") {
       appTrackDocumentRepository.deleteAll()

@@ -10,6 +10,7 @@ import de.chrgroth.spotify.control.domain.model.catalog.AlbumSyncResult
 import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
+import de.chrgroth.spotify.control.domain.model.catalog.ArtistSyncStatus
 import de.chrgroth.spotify.control.domain.model.catalog.SyncCause
 import de.chrgroth.spotify.control.domain.model.catalog.SyncTrace
 import de.chrgroth.spotify.control.domain.model.catalog.SyncTraceEntityType
@@ -57,27 +58,30 @@ class CatalogService(
 
   override fun findAllArtists(): List<AppArtist> = appArtistRepository.findAll()
 
-  override fun blockArtistFromAggregation(artistId: String): Either<DomainError, Unit> {
-    appArtistRepository.findByArtistIds(setOf(ArtistId(artistId))).firstOrNull()
+  override fun setArtistSync(artistId: String): Either<DomainError, Unit> {
+    val existing = appArtistRepository.findByArtistIds(setOf(ArtistId(artistId))).firstOrNull()
       ?: return ArtistSettingsError.ARTIST_NOT_FOUND.left()
-    logger.info { "Blocking artist $artistId from aggregation" }
-    appArtistRepository.setBlockedFromAggregation(ArtistId(artistId), true)
+    logger.info { "Updated sync status for artist '${existing.artistName}' ($artistId) to ${ArtistSyncStatus.SYNC}" }
+    appArtistRepository.setSyncStatus(ArtistId(artistId), ArtistSyncStatus.SYNC)
+    outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums(artistId))
     playbackAggregation.rebuildAllAggregations()
     return Unit.right()
   }
 
-  override fun unblockArtistFromAggregation(artistId: String): Either<DomainError, Unit> {
-    appArtistRepository.findByArtistIds(setOf(ArtistId(artistId))).firstOrNull()
+  override fun setArtistShallow(artistId: String): Either<DomainError, Unit> {
+    val existing = appArtistRepository.findByArtistIds(setOf(ArtistId(artistId))).firstOrNull()
       ?: return ArtistSettingsError.ARTIST_NOT_FOUND.left()
-    logger.info { "Unblocking artist $artistId from aggregation" }
-    appArtistRepository.setBlockedFromAggregation(ArtistId(artistId), false)
+    logger.info { "Updated sync status for artist '${existing.artistName}' ($artistId) to ${ArtistSyncStatus.SHALLOW}" }
+    appArtistRepository.setSyncStatus(ArtistId(artistId), ArtistSyncStatus.SHALLOW)
+    appTrackRepository.deleteByArtistId(ArtistId(artistId))
+    appAlbumRepository.deleteByArtistId(ArtistId(artistId))
     playbackAggregation.rebuildAllAggregations()
     return Unit.right()
   }
 
   // --- Catalog Sync ---
 
-  override fun syncArtistDetails(artistId: String): Either<DomainError, Unit> {
+  override fun syncArtistDetails(artistId: String, fromPlaylist: Boolean): Either<DomainError, Unit> {
     val existing = appArtistRepository.findByArtistIds(setOf(ArtistId(artistId))).firstOrNull()
     if (existing != null) {
       logger.debug { "Artist $artistId already synced, skipping" }
@@ -88,11 +92,14 @@ class CatalogService(
       return Unit.right()
     }
     val accessToken = spotifyAccessToken.getValidAccessToken()
+    val discoveryStatus = if (fromPlaylist) ArtistSyncStatus.SYNC_ASSUMPTION else ArtistSyncStatus.SHALLOW_ASSUMPTION
     return spotifyCatalog.getArtist(accessToken, artistId)
       .flatMap { detail ->
         if (detail != null) {
-          appArtistRepository.upsertAll(listOf(detail))
-          outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums(artistId))
+          appArtistRepository.upsertAll(listOf(detail.copy(syncStatus = discoveryStatus)))
+          if (discoveryStatus == ArtistSyncStatus.SYNC_ASSUMPTION) {
+            outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums(artistId))
+          }
           dashboardRefresh.notifyCatalogData()
         } else {
           logger.warn { "No data returned from Spotify for artist $artistId" }
@@ -102,11 +109,11 @@ class CatalogService(
   }
 
   override fun resyncCatalog(): Either<DomainError, Unit> {
-    val allArtistIds = appArtistRepository.findAll().map { it.id.value }
+    val syncableArtistIds = appArtistRepository.findAll().filter { it.syncStatus.isSyncable() }.map { it.id.value }
     currentUserResolver.userId() ?: return Unit.right()
     val playbackCatalogRequests = buildPlaybackCatalogRequests()
-    logger.info { "Re-syncing catalog: ${allArtistIds.size} catalog artist(s), ${playbackCatalogRequests.size} playback track(s)" }
-    allArtistIds.forEach { outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums(it)) }
+    logger.info { "Re-syncing catalog: ${syncableArtistIds.size} catalog artist(s), ${playbackCatalogRequests.size} playback track(s)" }
+    syncableArtistIds.forEach { outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums(it)) }
     syncController.syncForTracks(playbackCatalogRequests)
     return Unit.right()
   }
@@ -138,8 +145,12 @@ class CatalogService(
       logger.debug { "No users available, skipping syncAlbumDetails" }
       return 0.right()
     }
-    val accessToken = spotifyAccessToken.getValidAccessToken()
     val knownAlbum = appAlbumRepository.findByAlbumIds(setOf(AlbumId(albumId))).firstOrNull()
+    if (knownAlbum != null && knownAlbum.artistId?.let { isArtistShallow(it) } == true) {
+      logger.debug { "Album '${knownAlbum.title ?: albumId}' ($albumId): artist is shallow, skipping" }
+      return 0.right()
+    }
+    val accessToken = spotifyAccessToken.getValidAccessToken()
     val result = if (knownAlbum != null) {
       // metadata already captured from the artist discography response, only tracks are missing
       spotifyCatalog.getAlbumTracks(accessToken, knownAlbum).map { tracks -> AlbumSyncResult(knownAlbum, tracks) }
@@ -151,6 +162,10 @@ class CatalogService(
       is Either.Left -> result.value.left()
       is Either.Right -> {
         val albumResult = result.value
+        if (knownAlbum == null && albumResult.album.artistId?.let { isArtistShallow(it) } == true) {
+          logger.debug { "Album '${albumResult.album.title ?: albumId}' ($albumId): artist is shallow, skipping" }
+          return 0.right()
+        }
         if (albumResult.tracks.isNotEmpty()) {
           appTrackRepository.upsertAll(albumResult.tracks)
           if (knownAlbum == null) {
@@ -171,7 +186,7 @@ class CatalogService(
   // --- Outbox Handlers ---
 
   override fun handle(event: DomainOutboxEvent.SyncArtistDetails): Either<DomainError, Unit> =
-    syncArtistDetails(event.artistId)
+    syncArtistDetails(event.artistId, event.fromPlaylist)
 
   override fun handle(event: DomainOutboxEvent.SyncArtistAlbums): Either<DomainError, Unit> =
     syncArtistAlbums(event.artistId, event.nextUrl)
@@ -183,12 +198,12 @@ class CatalogService(
     resyncCatalog()
 
   override fun enqueueArtistAlbumsSync(partition: Int, totalPartitions: Int) {
-    val allArtists = appArtistRepository.findAll()
+    val syncableArtists = appArtistRepository.findAll().filter { it.syncStatus.isSyncable() }
     currentUserResolver.userId() ?: run {
       logger.warn { "No users available for artist albums sync, skipping partition $partition/$totalPartitions" }
       return
     }
-    val partitioned = allArtists.filterIndexed { idx, _ -> idx % totalPartitions == partition }
+    val partitioned = syncableArtists.filterIndexed { idx, _ -> idx % totalPartitions == partition }
     partitioned.forEach { artist ->
       outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums(artist.id.value))
     }
@@ -221,6 +236,10 @@ class CatalogService(
   )
 
   private fun syncArtistAlbums(artistId: String, nextUrl: String?): Either<DomainError, Unit> {
+    if (isArtistShallow(ArtistId(artistId))) {
+      logger.debug { "Artist $artistId is shallow, skipping album sync" }
+      return Unit.right()
+    }
     val accessToken = spotifyAccessToken.getValidAccessToken()
     return spotifyCatalog.getArtistAlbumsPage(accessToken, artistId, nextUrl)
       .flatMap { page ->
@@ -245,5 +264,12 @@ class CatalogService(
       }
   }
 
+  private fun isArtistShallow(artistId: ArtistId): Boolean =
+    appArtistRepository.findByArtistIds(setOf(artistId)).firstOrNull()?.syncStatus?.isShallow() == true
+
   companion object : KLogging()
 }
+
+private fun ArtistSyncStatus.isSyncable() = this == ArtistSyncStatus.SYNC || this == ArtistSyncStatus.SYNC_ASSUMPTION
+
+private fun ArtistSyncStatus.isShallow() = this == ArtistSyncStatus.SHALLOW || this == ArtistSyncStatus.SHALLOW_ASSUMPTION

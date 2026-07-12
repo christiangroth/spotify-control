@@ -14,5 +14,6 @@ interface AppAlbumRepositoryPort {
   fun findByArtistIds(artistIds: Set<ArtistId>): List<AppAlbum>
   fun countByArtistIds(artistIds: Set<ArtistId>): Map<String, Long>
   fun findRecentlySynced(offset: Int, limit: Int): List<AppAlbum>
+  fun deleteByArtistId(artistId: ArtistId)
   fun deleteAll()
 }

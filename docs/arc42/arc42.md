@@ -19,7 +19,7 @@ application's user, and a different account cannot log in once one is registered
 
 4. **Listening Statistics** – Playback data is aggregated into a dashboard showing total play counts, daily play trends, top artists, top tracks, and recently played items.
 
-5. **Artist Playback Filtering** – Users can mark artists as `ACTIVE`, `INACTIVE`, or `UNDECIDED`. Tracks from `INACTIVE` artists are excluded from playback processing.
+5. **Shallow Artists** – Artists can be confirmed as `SYNC` (full catalog sync) or `SHALLOW` (artist metadata only, no albums/tracks). Newly discovered artists start in an `_ASSUMPTION` variant of one of these, guessed from discovery context, until the user confirms them via the settings UI. Playback events of `SHALLOW`/`SHALLOW_ASSUMPTION` artists are still recorded but excluded from statistics.
 
 ## Quality Goals
 
@@ -120,7 +120,7 @@ Implements all repository interfaces defined in `domain-api`. Manages the MongoD
 | Collection                        | Description                                                                                                                     |
 |-----------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
 | `app_album`                       | Deduplicated album metadata: title, cover image, main artist reference, lastSync.                             |
-| `app_artist`                      | Deduplicated artist metadata: name, imageLink, lastSync, playbackProcessingStatus (UNDECIDED/ACTIVE/INACTIVE). |
+| `app_artist`                      | Deduplicated artist metadata: name, imageLink, lastSync, syncStatus (SYNC/SHALLOW/SYNC_ASSUMPTION/SHALLOW_ASSUMPTION). |
 | `app_playback`                    | Processed playback events combining recently played and partial played data.                                                    |
 | `app_sync_pool`                   | Pending sync entries: Spotify IDs of artists, tracks, and albums awaiting bulk sync from the Spotify API.               |
 | `app_track`                       | Deduplicated track metadata: title, main artist reference, additional artist references, album reference, lastSync.   |
@@ -221,7 +221,7 @@ For each convertible session, a `RecentlyPartialPlayedItem` is created with the 
 
 Raw playback data from `spotify_recently_played` and `spotify_recently_partial_played` is processed into the normalised `app_*` collections by `PlaybackDataAdapter`. There are two modes:
 
-**Append (triggered automatically):** After new raw data arrives, `AppendPlaybackData` is enqueued on the `domain` partition. The adapter first loads all artists with `INACTIVE` playback processing status, then filters raw playback items to skip tracks whose primary artist is inactive. For remaining items it fetches all source items newer than the most recent `app_playback` entry for the user, deduplicates against existing `app_playback` timestamps, then:
+**Append (triggered automatically):** After new raw data arrives, `AppendPlaybackData` is enqueued on the `domain` partition. All playback events are stored unconditionally regardless of artist sync status — filtering by status happens only at aggregation time (see [Artist Sync Status](#artist-sync-status)). The adapter fetches all source items newer than the most recent `app_playback` entry for the user, deduplicates against existing `app_playback` timestamps, then:
 1. Upserts artist metadata into `app_artist` (artistId, artistName) — enriched imageLink is preserved on re-encounter.
 2. Upserts track metadata into `app_track` (trackId, trackTitle, artistId, additionalArtistIds) — albumId is preserved if already enriched.
 3. Appends new entries to `app_playback` (playedAt, trackId, secondsPlayed). The document `_id` is `playedAt.toEpochMilli()` for natural deduplication.
@@ -240,17 +240,24 @@ Raw playback data from `spotify_recently_played` and `spotify_recently_partial_p
 
 **Rebuild (user-triggered from Settings):** Deletes all `app_playback` entries for the user and re-runs the Append logic from scratch over all source data.
 
-## Artist Playback Processing
+## Artist Sync Status
 
-The Settings page allows users to control which artists are included in playback processing via three statuses stored on `app_artist.playbackProcessingStatus`:
+The catalog settings pages (`/catalog/artists/settings` for undecided artists, the Catalog UI for confirmed ones) let users control how much of an artist's catalog is synced via `app_artist.syncStatus` (`ArtistSyncStatus`):
 
-| Status      | Description                                                                                               |
-|-------------|-----------------------------------------------------------------------------------------------------------|
-| `UNDECIDED` | Default for newly discovered artists. Treated identically to `ACTIVE` during processing.                 |
-| `ACTIVE`    | Artist tracks are included in playback processing.                                                       |
-| `INACTIVE`  | Artist tracks are excluded. All existing `app_playback` entries for the artist's tracks are deleted on transition to this status. |
+| Status               | Description                                                                                                                                          |
+|-----------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `SYNC`                | Final status. Full catalog sync (albums, tracks); the artist's playback events are included in aggregation/statistics.                              |
+| `SHALLOW`             | Final status. Only the artist document itself is synced — no albums or tracks. Existing albums/tracks whose main artist is this artist are deleted on transition to this status. Playback events are still stored but excluded from aggregation. |
+| `SYNC_ASSUMPTION`     | Automatic guess for a newly discovered artist found via an actively synced playlist. Behaves like `SYNC` for catalog sync purposes until confirmed.  |
+| `SHALLOW_ASSUMPTION`  | Automatic guess for a newly discovered artist seen only via playback/recently-played history. Behaves like `SHALLOW` until confirmed.                |
 
-When an artist is set from `INACTIVE` back to `ACTIVE` or `UNDECIDED`, a `RebuildPlaybackData` event is enqueued so that previously excluded playback records are recreated.
+Assumption statuses are assigned automatically by `CatalogService.syncArtistDetails()` on first discovery of an artist and can only transition into one of the two final statuses via the settings UI (`CatalogPort.setArtistSync`/`setArtistShallow`) — never back into an assumption status, and there is no direct transition between the two assumption statuses.
+
+For albums/tracks with multiple artists, only the main artist (first artist in the Spotify artist list) determines sync scope and deletion on transition to `SHALLOW`; secondary/featured artists are unaffected.
+
+Playback events (`app_playback`) are never deleted based on artist status — the append flow always stores them unconditionally (see above). `PlaybackAggregationService.aggregateDay()` instead filters out items whose track's main artist is `SHALLOW`/`SHALLOW_ASSUMPTION` at aggregation time. Switching an artist's status triggers `rebuildAllAggregations()` so the change is reflected in statistics without needing to re-ingest playback data.
+
+Daily catalog resyncs (`CatalogService.resyncCatalog()`) only re-enqueue album sync for artists in `SYNC`/`SYNC_ASSUMPTION`; `SHALLOW`/`SHALLOW_ASSUMPTION` artists are never automatically resynced.
 
 ## Playlist Sync Flow
 

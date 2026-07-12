@@ -4,6 +4,7 @@ import arrow.core.Either
 import arrow.core.right
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
+import de.chrgroth.spotify.control.domain.model.catalog.ArtistSyncStatus
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.ActivityEntry
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.ActivityTimeWindow
@@ -216,11 +217,14 @@ class PlaybackAggregationService(
 
     val artistIds = tracks.values.mapNotNull { it.artistId }.toSet()
     val artists = appArtistRepository.findByArtistIds(artistIds).associateBy { it.id }
-    val blockedArtistIds = artists.values.filter { it.blockedFromAggregation }.map { it.id }.toSet()
+    val shallowArtistIds = artists.values
+      .filter { it.syncStatus == ArtistSyncStatus.SHALLOW || it.syncStatus == ArtistSyncStatus.SHALLOW_ASSUMPTION }
+      .map { it.id }
+      .toSet()
 
     val filteredItems = items.filter { item ->
       val artistId = tracks[TrackId(item.trackId)]?.artistId
-      artistId == null || artistId !in blockedArtistIds
+      artistId == null || artistId !in shallowArtistIds
     }
 
     if (filteredItems.isEmpty()) {

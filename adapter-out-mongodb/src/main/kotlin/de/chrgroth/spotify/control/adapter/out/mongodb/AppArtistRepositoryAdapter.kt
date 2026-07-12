@@ -8,6 +8,7 @@ import com.mongodb.client.model.UpdateOptions
 import com.mongodb.client.model.Updates
 import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
+import de.chrgroth.spotify.control.domain.model.catalog.ArtistSyncStatus
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 import java.util.regex.Pattern
@@ -34,7 +35,7 @@ class AppArtistRepositoryAdapter(
             Updates.set(IMAGE_LINK_FIELD, item.imageLink),
             Updates.set(TYPE_FIELD, item.type),
             Updates.set(LAST_SYNC_FIELD, now),
-            Updates.setOnInsert(BLOCKED_FROM_AGGREGATION_FIELD, false),
+            Updates.setOnInsert(SYNC_STATUS_FIELD, item.syncStatus.name),
           ),
           upsertOptions,
         )
@@ -51,6 +52,21 @@ class AppArtistRepositoryAdapter(
   override fun countAll(): Long =
     mongoQueryMetrics.timed("app_artist.countAll") {
       appArtistDocumentRepository.count()
+    }
+
+  override fun countByStatuses(statuses: Set<ArtistSyncStatus>): Long =
+    mongoQueryMetrics.timed("app_artist.countByStatuses") {
+      appArtistDocumentRepository.mongoCollection()
+        .countDocuments(Filters.`in`(SYNC_STATUS_FIELD, statuses.map { it.name }))
+    }
+
+  override fun findByStatuses(statuses: Set<ArtistSyncStatus>, limit: Int): List<AppArtist> =
+    mongoQueryMetrics.timed("app_artist.findByStatuses") {
+      appArtistDocumentRepository.mongoCollection()
+        .find(Filters.`in`(SYNC_STATUS_FIELD, statuses.map { it.name }))
+        .limit(limit)
+        .toList()
+        .map { it.toDomain() }
     }
 
   override fun findByArtistIds(artistIds: Set<ArtistId>): List<AppArtist> {
@@ -99,12 +115,12 @@ class AppArtistRepositoryAdapter(
         .map { it.toDomain() }
     }
 
-  override fun setBlockedFromAggregation(artistId: ArtistId, blocked: Boolean) {
-    mongoQueryMetrics.timed("app_artist.setBlockedFromAggregation") {
+  override fun setSyncStatus(artistId: ArtistId, status: ArtistSyncStatus) {
+    mongoQueryMetrics.timed("app_artist.setSyncStatus") {
       appArtistDocumentRepository.mongoCollection()
         .updateOne(
           Filters.eq(ID_FIELD, artistId.value),
-          Updates.set(BLOCKED_FROM_AGGREGATION_FIELD, blocked),
+          Updates.set(SYNC_STATUS_FIELD, status.name),
         )
     }
   }
@@ -121,7 +137,7 @@ class AppArtistRepositoryAdapter(
     imageLink = imageLink,
     type = type,
     lastSync = lastSync?.toKotlinInstant() ?: kotlin.time.Instant.DISTANT_PAST,
-    blockedFromAggregation = blockedFromAggregation,
+    syncStatus = ArtistSyncStatus.valueOf(syncStatus),
   )
 
   companion object {
@@ -130,6 +146,6 @@ class AppArtistRepositoryAdapter(
     internal const val IMAGE_LINK_FIELD = "imageLink"
     internal const val TYPE_FIELD = "type"
     internal const val LAST_SYNC_FIELD = "lastSync"
-    internal const val BLOCKED_FROM_AGGREGATION_FIELD = "blockedFromAggregation"
+    internal const val SYNC_STATUS_FIELD = "syncStatus"
   }
 }
