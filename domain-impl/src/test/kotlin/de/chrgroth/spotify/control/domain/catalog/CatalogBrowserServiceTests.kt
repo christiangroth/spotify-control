@@ -24,6 +24,7 @@ import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPo
 import de.chrgroth.spotify.control.domain.user.CurrentUserResolver
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlin.time.Instant
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -84,7 +85,7 @@ class CatalogBrowserServiceTests {
   }
 
   @Test
-  fun `getUndecidedArtists returns only SYNC_ASSUMPTION and SHALLOW_ASSUMPTION artists sorted by name with counts`() {
+  fun `getUndecidedArtists returns only SYNC_ASSUMPTION and SHALLOW_ASSUMPTION artists sorted by name without loading album or track counts`() {
     val syncAssumptionArtist = AppArtist(
       id = ArtistId("artist-2"), artistName = "Bravo", lastSync = triggeredAt, syncStatus = ArtistSyncStatus.SYNC_ASSUMPTION,
     )
@@ -97,8 +98,6 @@ class CatalogBrowserServiceTests {
         CatalogBrowserService.UNDECIDED_ARTISTS_LIMIT,
       )
     } returns listOf(syncAssumptionArtist, shallowAssumptionArtist)
-    every { appAlbumRepository.findByArtistIds(setOf(ArtistId("artist-2"), ArtistId("artist-1"))) } returns emptyList()
-    every { appTrackRepository.findByArtistIds(setOf(ArtistId("artist-2"), ArtistId("artist-1"))) } returns emptyList()
 
     val result = service.getUndecidedArtists()
 
@@ -106,6 +105,8 @@ class CatalogBrowserServiceTests {
     assertThat(result.first { it.artistId == "artist-1" }.isShallow).isTrue()
     assertThat(result.first { it.artistId == "artist-2" }.isShallow).isFalse()
     assertThat(result).allSatisfy { assertThat(it.isAssumption).isTrue() }
+    verify(exactly = 0) { appAlbumRepository.findByArtistIds(any()) }
+    verify(exactly = 0) { appTrackRepository.findByArtistIds(any()) }
   }
 
   @Test
