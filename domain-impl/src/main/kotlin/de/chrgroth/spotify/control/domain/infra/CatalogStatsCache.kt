@@ -11,7 +11,8 @@ import mu.KLogging
 
 // shared by DomainMetrics and CatalogBrowserService so that neither the Prometheus gauges nor
 // every /dashboard and /catalog page load query the catalog collections directly; a single
-// refresh serves every reader, following the same pattern as OutboxPartitionStatsCache.
+// refresh serves every reader, following the same pattern as OutboxPartitionStatsCache. Delayed
+// against the other every="15s" caches so they don't all fire against MongoDB in the same tick.
 @ApplicationScoped
 @Suppress("Unused")
 class CatalogStatsCache(
@@ -25,7 +26,7 @@ class CatalogStatsCache(
 
   fun current(): CatalogStats = cachedStats
 
-  @Scheduled(every = "15s")
+  @Scheduled(every = "15s", delayed = "8s")
   fun refresh() {
     try {
       cachedStats = CatalogStats(
