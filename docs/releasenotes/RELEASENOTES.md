@@ -1,3 +1,14 @@
+# 0.110.2 (2026.07.13)
+
+## Bugfixes / Chore
+* Fixed the Artist Settings page taking many seconds to load by no longer computing album and track counts per artist; it now shows a plain artist list.
+* Fixed the Artist Settings page taking many seconds to load by no longer computing album and track counts per artist; it now shows a plain artist list.
+* Reduced background load on the database by spacing out the recurring statistics jobs instead of running them all at once, and by caching playlist statistics instead of querying them on every metrics scrape.
+
+
+
+---
+
 # 0.110.1 (2026.07.13)
 
 ## Bugfixes / Chore
