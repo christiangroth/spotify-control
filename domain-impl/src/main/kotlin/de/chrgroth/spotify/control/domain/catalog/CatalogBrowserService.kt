@@ -47,7 +47,18 @@ class CatalogBrowserService(
   }
 
   override fun getUndecidedArtists(): List<ArtistBrowseItem> =
-    toBrowseItems(appArtistRepository.findByStatuses(ASSUMPTION_STATUSES, UNDECIDED_ARTISTS_LIMIT))
+    appArtistRepository.findByStatuses(ASSUMPTION_STATUSES, UNDECIDED_ARTISTS_LIMIT)
+      .sortedBy { it.artistName.lowercase() }
+      .map { artist ->
+        ArtistBrowseItem(
+          artistId = artist.id.value,
+          artistName = artist.artistName,
+          imageLink = artist.imageLink,
+          albumCount = 0,
+          trackCount = 0,
+          syncStatus = artist.syncStatus,
+        )
+      }
 
   private fun toBrowseItems(artists: List<AppArtist>): List<ArtistBrowseItem> {
     val artistIds = artists.map { it.id }.toSet()

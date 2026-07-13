@@ -29,8 +29,6 @@
                 <tr class="app-section-label" style="font-size:.8rem;">
                     <th style="width:50px;"></th>
                     <th>Artist</th>
-                    <th class="text-end">Albums</th>
-                    <th class="text-end">Tracks</th>
                     <th>Guessed Status</th>
                     <th>Actions</th>
                 </tr>
@@ -50,8 +48,6 @@
                         {/if}
                     </td>
                     <td style="color:#fff;font-size:.9rem;">{artist.artistName}</td>
-                    <td class="text-end" style="color:#888;font-size:.85rem;">{artist.albumCount.formatted}</td>
-                    <td class="text-end" style="color:#888;font-size:.85rem;">{artist.trackCount.formatted}</td>
                     <td>
                         {#if artist.isShallow}
                         <span class="badge" style="background-color:#5a1a1a;color:#e07070;font-size:.72rem;font-weight:400;">shallow</span>
