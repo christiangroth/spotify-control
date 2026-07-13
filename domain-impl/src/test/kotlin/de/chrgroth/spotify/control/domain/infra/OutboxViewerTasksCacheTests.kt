@@ -66,4 +66,24 @@ class OutboxViewerTasksCacheTests {
 
     DomainOutboxPartition.all.forEach { partition -> verify(exactly = 1) { outbox.getTasksByPartition(partition.key) } }
   }
+
+  @Test
+  fun `current triggers a refresh on first access without an explicit refresh call`() {
+    stubAllPartitionsEmpty()
+    val task = OutboxTask(
+      eventType = "TYPE_A",
+      deduplicationKey = "dedup-key",
+      priority = "MEDIUM",
+      status = "PENDING",
+      attempts = 0,
+      nextRetryAt = null,
+      createdAt = Instant.fromEpochSeconds(0),
+      lastError = null,
+    )
+    every { outbox.getTasksByPartition(DomainOutboxPartition.Domain.key) } returns listOf(task)
+
+    val domainPartition = cache.current().first { it.key == DomainOutboxPartition.Domain.key }
+
+    assertThat(domainPartition.tasks).containsExactly(task)
+  }
 }
