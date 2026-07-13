@@ -7,7 +7,8 @@ import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
 
 // shared by OutboxMetrics and HealthService so that neither gauge reads nor health-page/SSE-triggered
-// requests ever query the outbox library directly; a single refresh serves every reader.
+// requests ever query the outbox library directly; a single refresh serves every reader. Not delayed, so it
+// anchors the stagger of the other every="15s" caches (see their delayed() values) against MongoDB.
 @ApplicationScoped
 @Suppress("Unused")
 class OutboxPartitionStatsCache(

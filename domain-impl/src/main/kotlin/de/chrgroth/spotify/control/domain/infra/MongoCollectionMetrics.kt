@@ -14,7 +14,8 @@ import mu.KLogging
 // collection names are read once at startup since the set of collections is fixed by the application's document model.
 // stats are refreshed on a background schedule rather than during gauge evaluation, so a slow/blocking collStats
 // call can never delay the Prometheus scrape response itself (a scrape timeout drops the whole /q/metrics scrape,
-// not just the affected gauges).
+// not just the affected gauges). Delayed against the other every="15s" caches so they don't all fire against
+// MongoDB in the same tick.
 @ApplicationScoped
 @Suppress("Unused", "UnusedParameter")
 class MongoCollectionMetrics(
@@ -35,7 +36,7 @@ class MongoCollectionMetrics(
     }
   }
 
-  @Scheduled(every = "15s")
+  @Scheduled(every = "15s", delayed = "12s")
   fun refresh() {
     try {
       cachedStats = mongoStats.getCollectionStats()
