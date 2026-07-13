@@ -1,3 +1,12 @@
+# 0.110.1 (2026.07.13)
+
+## Bugfixes / Chore
+* Fixed the outbox viewer background refresh continuously querying the database every 15 seconds, even when nobody was viewing the outbox viewer page, causing repeated slow-query warnings.
+
+
+
+---
+
 # 0.110.0 (2026.07.12)
 
 ## New Features
