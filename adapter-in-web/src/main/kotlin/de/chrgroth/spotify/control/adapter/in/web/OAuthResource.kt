@@ -29,6 +29,7 @@ class OAuthResource(
   private val redirectUri: String,
   @param:ConfigProperty(name = "spotify.accounts.base-url")
   private val accountsBaseUrl: String,
+  private val httpResponseMetrics: HttpResponseMetrics,
 ) {
 
   private val stateStore = ConcurrentHashMap<String, Long>()
@@ -46,7 +47,7 @@ class OAuthResource(
   @GET
   @PermitAll
   @Path("/oauth/authorize")
-  fun authorize(): Response {
+  fun authorize(): Response = httpResponseMetrics.timed("rest.user.oauth-authorize") {
     val state = UUID.randomUUID().toString()
     stateStore[state] = System.currentTimeMillis()
     cleanExpiredStates()
@@ -57,7 +58,7 @@ class OAuthResource(
       "&redirect_uri=${URLEncoder.encode(redirectUri, "UTF-8")}" +
       "&scope=${URLEncoder.encode(scopes, "UTF-8")}" +
       "&state=${URLEncoder.encode(state, "UTF-8")}"
-    return Response.temporaryRedirect(URI.create(authUrl)).build()
+    Response.temporaryRedirect(URI.create(authUrl)).build()
   }
 
   @GET
@@ -67,22 +68,22 @@ class OAuthResource(
     @QueryParam("code") code: String?,
     @QueryParam("state") state: String?,
     @QueryParam("error") error: String?,
-  ): Response {
+  ): Response = httpResponseMetrics.timed("rest.user.oauth-callback") { details ->
     val validationError = validateCallbackParams(code, state, error)
     if (validationError != null) {
       logger.warn { "[$state] OAuth callback validation failed: ${validationError.code}" }
-      return Response.temporaryRedirect(URI.create("/?error=${validationError.code}")).build()
+      return@timed Response.temporaryRedirect(URI.create("/?error=${validationError.code}")).build()
     }
     stateStore.remove(state!!)
 
-    return loginService.handleCallback(code!!).fold(
+    details.detail("user.oauth-callback.login") { loginService.handleCallback(code!!) }.fold(
       ifLeft = { domainError ->
         logger.warn { "[$state] OAuth login failed: ${domainError.code}" }
         Response.temporaryRedirect(URI.create("/?error=${domainError.code}")).build()
       },
       ifRight = { userId ->
         logger.info { "[$state] OAuth login successful for user: ${userId.value}" }
-        tokenEncryption.encrypt(userId.value).fold(
+        details.detail("user.oauth-callback.token-encrypt") { tokenEncryption.encrypt(userId.value) }.fold(
           ifLeft = { encryptError ->
             logger.error { "[$state] Failed to encrypt session cookie: ${encryptError.code}" }
             Response.temporaryRedirect(URI.create("/?error=${encryptError.code}")).build()
@@ -115,7 +116,7 @@ class OAuthResource(
   @GET
   @PermitAll
   @Path("/logout")
-  fun logout(): Response =
+  fun logout(): Response = httpResponseMetrics.timed("rest.user.logout") {
     Response.temporaryRedirect(URI.create("/"))
       .cookie(
         NewCookie.Builder(SpotifyCookieAuthMechanism.COOKIE_NAME)
@@ -125,6 +126,7 @@ class OAuthResource(
           .build()
       )
       .build()
+  }
 
   private fun cleanExpiredStates() {
     val expiry = System.currentTimeMillis() - STATE_TTL_MS

@@ -22,15 +22,16 @@ class PlaybackResource(
   private val securityIdentity: SecurityIdentity,
   private val userProfile: UserProfilePort,
   private val dashboard: DashboardPort,
+  private val httpResponseMetrics: HttpResponseMetrics,
 ) {
 
   @GET
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun playback(): TemplateInstance {
-    val displayName = userProfile.getDisplayName() ?: securityIdentity.principal.name
-    val stats = dashboard.getPlaybackStats()
-    return playbackTemplate
+  fun playback(): TemplateInstance = httpResponseMetrics.timed("page.playback.view") { details ->
+    val displayName = details.detail("playback.view.display-name") { userProfile.getDisplayName() ?: securityIdentity.principal.name }
+    val stats = details.detail("playback.view.stats") { dashboard.getPlaybackStats() }
+    playbackTemplate
       .data("displayName", displayName)
       .data("stats", stats)
   }

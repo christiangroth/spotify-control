@@ -16,6 +16,7 @@ import mu.KLogging
 @Suppress("Unused")
 class RuntimeConfigResource(
   private val runtimeConfig: RuntimeConfigPort,
+  private val httpResponseMetrics: HttpResponseMetrics,
 ) {
 
   @POST
@@ -23,15 +24,15 @@ class RuntimeConfigResource(
   @Path("/throttle-interval")
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
-  fun updateThrottleInterval(request: ThrottleIntervalRequest): Response {
+  fun updateThrottleInterval(request: ThrottleIntervalRequest): Response = httpResponseMetrics.timed("rest.config.throttle-interval-update") {
     if (request.intervalSeconds < 0) {
-      return Response.status(Response.Status.BAD_REQUEST)
+      return@timed Response.status(Response.Status.BAD_REQUEST)
         .entity(mapOf("error" to "Throttle interval must be non-negative"))
         .build()
     }
     runtimeConfig.setThrottleIntervalSeconds(request.intervalSeconds)
     logger.info { "Runtime throttle interval updated to ${request.intervalSeconds}s" }
-    return Response.ok(mapOf("status" to "ok", "intervalSeconds" to request.intervalSeconds)).build()
+    Response.ok(mapOf("status" to "ok", "intervalSeconds" to request.intervalSeconds)).build()
   }
 
   data class ThrottleIntervalRequest(val intervalSeconds: Long = 0)

@@ -23,15 +23,16 @@ class DashboardResource(
   private val securityIdentity: SecurityIdentity,
   private val userProfile: UserProfilePort,
   private val dashboard: DashboardPort,
+  private val httpResponseMetrics: HttpResponseMetrics,
 ) {
 
   @GET
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun dashboard(): TemplateInstance {
-    val displayName = userProfile.getDisplayName() ?: securityIdentity.principal.name
-    val stats = dashboard.getStats()
-    return dashboardTemplate
+  fun dashboard(): TemplateInstance = httpResponseMetrics.timed("page.dashboard.view") { details ->
+    val displayName = details.detail("dashboard.view.display-name") { userProfile.getDisplayName() ?: securityIdentity.principal.name }
+    val stats = details.detail("dashboard.view.stats") { dashboard.getStats() }
+    dashboardTemplate
       .data("displayName", displayName)
       .data("stats", stats)
   }
@@ -40,27 +41,27 @@ class DashboardResource(
   @Path("/snippets/playback-histogram")
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun snippetPlaybackHistogram(): TemplateInstance {
+  fun snippetPlaybackHistogram(): TemplateInstance = httpResponseMetrics.timed("fragment.dashboard.playback-histogram") {
     val stats = dashboard.getPlaybackStats()
-    return dashboardTemplate.getFragment("snippet_playback_histogram").data("stats", stats)
+    dashboardTemplate.getFragment("snippet_playback_histogram").data("stats", stats)
   }
 
   @GET
   @Path("/snippets/recently-played")
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun snippetRecentlyPlayed(): TemplateInstance {
+  fun snippetRecentlyPlayed(): TemplateInstance = httpResponseMetrics.timed("fragment.dashboard.recently-played") {
     val stats = dashboard.getRecentlyPlayed()
-    return dashboardTemplate.getFragment("snippet_recently_played").data("stats", stats)
+    dashboardTemplate.getFragment("snippet_recently_played").data("stats", stats)
   }
 
   @GET
   @Path("/snippets/listening-stats")
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun snippetListeningStats(): TemplateInstance {
+  fun snippetListeningStats(): TemplateInstance = httpResponseMetrics.timed("fragment.dashboard.listening-stats") {
     val stats = dashboard.getListeningStats()
-    return dashboardTemplate.getFragment("snippet_listening_stats").data("stats", stats)
+    dashboardTemplate.getFragment("snippet_listening_stats").data("stats", stats)
   }
 
 }

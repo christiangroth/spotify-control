@@ -25,18 +25,23 @@ class ConfigResource(
   private val configTemplate: Template,
   private val configurationInfo: ConfigurationInfoPort,
   private val runtimeConfig: RuntimeConfigPort,
+  private val httpResponseMetrics: HttpResponseMetrics,
 ) {
 
   @GET
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun config(): TemplateInstance = runBlocking {
-    val dispatcher = Dispatchers.IO + tcclContext()
-    val statsAsync = async(dispatcher) { configurationInfo.getConfigurationStats() }
-    val runtimeConfigAsync = async(dispatcher) { runtimeConfig.getRuntimeConfig() }
-    configTemplate
-      .data("stats", statsAsync.await())
-      .data("runtimeConfig", runtimeConfigAsync.await())
+  fun config(): TemplateInstance = httpResponseMetrics.timed("page.config.view") { details ->
+    runBlocking {
+      val dispatcher = Dispatchers.IO + tcclContext()
+      val statsAsync = async(dispatcher) { configurationInfo.getConfigurationStats() }
+      val runtimeConfigAsync = async(dispatcher) { runtimeConfig.getRuntimeConfig() }
+      val stats = details.detailSuspend("config.view.stats") { statsAsync.await() }
+      val runtimeConfigResult = details.detailSuspend("config.view.runtime-config") { runtimeConfigAsync.await() }
+      configTemplate
+        .data("stats", stats)
+        .data("runtimeConfig", runtimeConfigResult)
+    }
   }
 }
 

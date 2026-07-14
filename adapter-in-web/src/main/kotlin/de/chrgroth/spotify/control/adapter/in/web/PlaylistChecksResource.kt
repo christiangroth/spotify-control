@@ -26,12 +26,13 @@ class PlaylistChecksResource(
   @param:Location("playlist-checks.html")
   private val playlistChecksTemplate: Template,
   private val playlistCheckPort: PlaylistCheckPort,
+  private val httpResponseMetrics: HttpResponseMetrics,
 ) {
 
   @GET
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun playlistChecks(): TemplateInstance {
+  fun playlistChecks(): TemplateInstance = httpResponseMetrics.timed("page.playlist.checks") {
     val dashboard = playlistCheckPort.getCheckDashboard()
     val groups = dashboard.checks
       .map { check ->
@@ -47,7 +48,7 @@ class PlaylistChecksResource(
         PlaylistCheckGroup(name, rows.sortedBy { it.playlistName })
       }
       .sortedBy { it.checkName }
-    return playlistChecksTemplate
+    playlistChecksTemplate
       .data("displayName", dashboard.displayName)
       .data("groups", groups)
   }
@@ -59,8 +60,8 @@ class PlaylistChecksResource(
   fun runFix(
     @PathParam("playlistId") playlistId: String,
     @PathParam("checkType") checkType: String,
-  ): Response {
-    return playlistCheckPort.runFix(playlistId, checkType).fold(
+  ): Response = httpResponseMetrics.timed("rest.playlist.check-fix") {
+    playlistCheckPort.runFix(playlistId, checkType).fold(
       ifLeft = { error -> Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(mapOf("error" to error.code)).build() },
       ifRight = { Response.ok(mapOf("status" to "ok")).build() },
     )

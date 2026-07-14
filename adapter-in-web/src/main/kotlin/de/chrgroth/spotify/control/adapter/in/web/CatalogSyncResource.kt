@@ -19,12 +19,13 @@ class CatalogSyncResource(
   @param:Location("catalog-sync.html")
   private val template: Template,
   private val catalogBrowser: CatalogBrowserPort,
+  private val httpResponseMetrics: HttpResponseMetrics,
 ) {
 
   @GET
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun page(): Response = renderPage(0, 0)
+  fun page(): Response = httpResponseMetrics.timed("page.catalog.sync-timeline") { renderPage(0, 0) }
 
   @GET
   @Path("/snippet")
@@ -33,7 +34,7 @@ class CatalogSyncResource(
   fun snippet(
     @QueryParam("artistOffset") artistOffset: Int?,
     @QueryParam("albumOffset") albumOffset: Int?,
-  ): Response = renderRows(artistOffset ?: 0, albumOffset ?: 0)
+  ): Response = httpResponseMetrics.timed("fragment.catalog.sync-timeline-rows") { renderRows(artistOffset ?: 0, albumOffset ?: 0) }
 
   private fun renderPage(artistOffset: Int, albumOffset: Int): Response {
     val page = catalogBrowser.getSyncTimeline(artistOffset, albumOffset, PAGE_SIZE)

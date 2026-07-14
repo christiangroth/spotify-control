@@ -32,16 +32,17 @@ class CatalogResource(
   private val catalogBrowser: CatalogBrowserPort,
   private val catalog: CatalogPort,
   private val dashboard: DashboardPort,
+  private val httpResponseMetrics: HttpResponseMetrics,
 ) {
 
   @GET
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun catalog(@QueryParam("filter") filter: String?): TemplateInstance {
+  fun catalog(@QueryParam("filter") filter: String?): TemplateInstance = httpResponseMetrics.timed("page.catalog.view") { details ->
     val filterActive = !filter.isNullOrBlank()
-    val artists = if (filterActive) catalogBrowser.getArtists(filter) else emptyList<ArtistBrowseItem>()
-    val catalogStats = dashboard.getCatalogStats().catalogStats
-    return catalogTemplate
+    val artists = details.detail("catalog.view.artists") { if (filterActive) catalogBrowser.getArtists(filter) else emptyList<ArtistBrowseItem>() }
+    val catalogStats = details.detail("catalog.view.stats") { dashboard.getCatalogStats().catalogStats }
+    catalogTemplate
       .data("artists", artists)
       .data("filter", filter ?: "")
       .data("filterActive", filterActive)
@@ -54,10 +55,10 @@ class CatalogResource(
   @Path("/artists")
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun artistList(@QueryParam("filter") filter: String?): TemplateInstance {
+  fun artistList(@QueryParam("filter") filter: String?): TemplateInstance = httpResponseMetrics.timed("fragment.catalog.artist-list") {
     val filterActive = !filter.isNullOrBlank()
     val artists = if (filterActive) catalogBrowser.getArtists(filter) else emptyList<ArtistBrowseItem>()
-    return catalogTemplate.getFragment("snippet_artist_list")
+    catalogTemplate.getFragment("snippet_artist_list")
       .data("artists", artists)
       .data("filter", filter ?: "")
       .data("filterActive", filterActive)
@@ -67,10 +68,10 @@ class CatalogResource(
   @Path("/artists/settings")
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun artistSettings(): TemplateInstance {
-    val artists = catalogBrowser.getUndecidedArtists()
-    val totalUndecidedCount = catalogBrowser.getCatalogStats().undecidedArtistCount
-    return artistSettingsTemplate
+  fun artistSettings(): TemplateInstance = httpResponseMetrics.timed("fragment.catalog.artist-settings") { details ->
+    val artists = details.detail("catalog.artist-settings.undecided-artists") { catalogBrowser.getUndecidedArtists() }
+    val totalUndecidedCount = details.detail("catalog.artist-settings.stats") { catalogBrowser.getCatalogStats().undecidedArtistCount }
+    artistSettingsTemplate
       .data("artists", artists)
       .data("truncated", totalUndecidedCount > artists.size)
   }
@@ -79,9 +80,9 @@ class CatalogResource(
   @Path("/artists/{artistId}/albums")
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun artistAlbums(@PathParam("artistId") artistId: String): TemplateInstance {
+  fun artistAlbums(@PathParam("artistId") artistId: String): TemplateInstance = httpResponseMetrics.timed("fragment.catalog.artist-albums") {
     val albums = catalogBrowser.getArtistAlbums(artistId)
-    return catalogTemplate.getFragment("snippet_album_list")
+    catalogTemplate.getFragment("snippet_album_list")
       .data("albums", albums)
       .data("artistId", artistId)
   }
@@ -90,9 +91,9 @@ class CatalogResource(
   @Path("/albums/{albumId}/tracks")
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun albumTracks(@PathParam("albumId") albumId: String): TemplateInstance {
+  fun albumTracks(@PathParam("albumId") albumId: String): TemplateInstance = httpResponseMetrics.timed("fragment.catalog.album-tracks") {
     val tracks = catalogBrowser.getAlbumTracks(albumId)
-    return catalogTemplate.getFragment("snippet_track_list")
+    catalogTemplate.getFragment("snippet_track_list")
       .data("tracks", tracks)
   }
 
@@ -100,8 +101,8 @@ class CatalogResource(
   @Authenticated
   @Path("/wipe")
   @Produces(MediaType.APPLICATION_JSON)
-  fun wipeCatalog(): Response {
-    return catalog.wipeCatalog().fold(
+  fun wipeCatalog(): Response = httpResponseMetrics.timed("rest.catalog.wipe") {
+    catalog.wipeCatalog().fold(
       ifLeft = { error ->
         logger.error { "Catalog wipe failed: ${error.code}" }
         Response.status(Response.Status.INTERNAL_SERVER_ERROR)
@@ -116,18 +117,18 @@ class CatalogResource(
   @Path("/artists/{artistId}/sync-trace")
   @Authenticated
   @Produces(MediaType.TEXT_PLAIN)
-  fun artistSyncTrace(@PathParam("artistId") artistId: String): Response {
-    val trace = catalogBrowser.getArtistSyncTrace(artistId) ?: return Response.ok(NO_TRACE_AVAILABLE).build()
-    return Response.ok("${trace.description} (${trace.triggeredAt})").build()
+  fun artistSyncTrace(@PathParam("artistId") artistId: String): Response = httpResponseMetrics.timed("rest.catalog.artist-sync-trace") {
+    val trace = catalogBrowser.getArtistSyncTrace(artistId) ?: return@timed Response.ok(NO_TRACE_AVAILABLE).build()
+    Response.ok("${trace.description} (${trace.triggeredAt})").build()
   }
 
   @GET
   @Path("/albums/{albumId}/sync-trace")
   @Authenticated
   @Produces(MediaType.TEXT_PLAIN)
-  fun albumSyncTrace(@PathParam("albumId") albumId: String): Response {
-    val trace = catalogBrowser.getAlbumSyncTrace(albumId) ?: return Response.ok(NO_TRACE_AVAILABLE).build()
-    return Response.ok("${trace.description} (${trace.triggeredAt})").build()
+  fun albumSyncTrace(@PathParam("albumId") albumId: String): Response = httpResponseMetrics.timed("rest.catalog.album-sync-trace") {
+    val trace = catalogBrowser.getAlbumSyncTrace(albumId) ?: return@timed Response.ok(NO_TRACE_AVAILABLE).build()
+    Response.ok("${trace.description} (${trace.triggeredAt})").build()
   }
 
   companion object : KLogging() {
