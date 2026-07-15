@@ -1,6 +1,7 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
 import de.chrgroth.spotify.control.domain.model.infra.MongoQueryStats
+import de.chrgroth.spotify.control.domain.port.out.infra.MongoQueryStatsPort
 import io.micrometer.core.instrument.Counter
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Timer
@@ -17,7 +18,7 @@ class MongoQueryMetrics(
   private val meterRegistry: MeterRegistry,
   @param:ConfigProperty(name = "app.mongodb.slow-query-threshold-ms")
   private val slowQueryThresholdMs: Long,
-) {
+) : MongoQueryStatsPort {
 
   private val timers = ConcurrentHashMap<String, Timer>()
   private val slowQueryCounters = ConcurrentHashMap<String, Counter>()
@@ -32,7 +33,7 @@ class MongoQueryMetrics(
     return result
   }
 
-  fun getQueryStats(): List<MongoQueryStats> {
+  override fun current(): List<MongoQueryStats> {
     val cutoff = Instant.now().minusSeconds(WINDOW_SECONDS)
     val allOperations = executionTimestamps.keys.toSet()
     return allOperations

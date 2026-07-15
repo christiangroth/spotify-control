@@ -4,25 +4,26 @@ import de.chrgroth.spotify.control.domain.model.playlist.PlaylistStats
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.port.out.playlist.AppPlaylistCheckRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistStatsPort
 import io.quarkus.scheduler.Scheduled
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
 
-// shared by DomainMetrics and OverviewMetrics so that neither Prometheus gauge queries the playlist collections
-// directly (and playlistRepository.findAll() is read once per refresh instead of once per gauge), following the
-// same pattern as CatalogStatsCache. Staggered against the other every="15s" caches via delayed() so they don't
-// all fire against MongoDB in the same tick.
+// implements PlaylistStatsPort so adapter-in-http-metrics (which only depends on domain-api) can register
+// gauges from these counts without querying the playlist collections directly, following the same pattern
+// as CatalogStatsCache/CatalogBrowserPort. Staggered against the other every="15s" caches via delayed() so
+// they don't all fire against MongoDB in the same tick.
 @ApplicationScoped
 @Suppress("Unused")
 class PlaylistStatsCache(
   private val playlistRepository: PlaylistRepositoryPort,
   private val playlistCheckRepository: AppPlaylistCheckRepositoryPort,
-) {
+) : PlaylistStatsPort {
 
   @Volatile
   private var cachedStats = PlaylistStats()
 
-  fun current(): PlaylistStats = cachedStats
+  override fun current(): PlaylistStats = cachedStats
 
   @Scheduled(every = "15s", delayed = "4s")
   fun refresh() {

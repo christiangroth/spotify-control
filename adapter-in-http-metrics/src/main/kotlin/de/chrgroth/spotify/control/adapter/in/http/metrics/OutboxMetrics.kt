@@ -1,7 +1,8 @@
-package de.chrgroth.spotify.control.domain.infra
+package de.chrgroth.spotify.control.adapter.`in`.http.metrics
 
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
+import de.chrgroth.spotify.control.domain.port.out.infra.OutboxStatsPort
 import io.micrometer.core.instrument.Gauge
 import io.micrometer.core.instrument.MeterRegistry
 import io.quarkus.runtime.StartupEvent
@@ -11,19 +12,19 @@ import jakarta.enterprise.event.Observes
 // registers eagerly on StartupEvent so these gauges are always visible, even before any outbox activity occurs.
 // backed by the actual persisted document counts rather than an enqueued/processed counter diff, which drifts
 // from reality across app restarts (counters reset, the persisted backlog does not).
-// reads from OutboxPartitionStatsCache rather than querying the outbox library directly, so a slow/blocking
-// outbox query can never delay the Prometheus scrape response itself (a scrape timeout drops the whole
-// /q/metrics scrape, not just the affected gauges), and the same cached snapshot is shared with HealthService.
+// counts are read from OutboxStatsPort rather than queried here, so a slow/blocking outbox query can never
+// delay the Prometheus scrape response itself. The read is shared via ScrapeSnapshot so all gauges below
+// report values from the same snapshot instead of each independently re-fetching.
 @ApplicationScoped
 @Suppress("Unused", "UnusedParameter")
 class OutboxMetrics(
-  private val statsCache: OutboxPartitionStatsCache,
+  private val outboxStatsPort: OutboxStatsPort,
   private val meterRegistry: MeterRegistry,
 ) {
 
-  fun onStartup(@Observes event: StartupEvent) {
-    statsCache.refresh()
+  private val snapshot = ScrapeSnapshot { outboxStatsPort.current() }
 
+  fun onStartup(@Observes event: StartupEvent) {
     DomainOutboxPartition.all.forEach { partition ->
       Gauge.builder("outbox.partition.pending", this) { pendingCountForPartition(partition.key).toDouble() }
         .tag("partition", partition.key)
@@ -40,8 +41,8 @@ class OutboxMetrics(
   }
 
   private fun pendingCountForPartition(partitionKey: String): Long =
-    statsCache.current().firstOrNull { it.name == partitionKey }?.documentCount ?: 0L
+    snapshot.current().firstOrNull { it.name == partitionKey }?.documentCount ?: 0L
 
   private fun pendingCountForEventType(eventType: String): Long =
-    statsCache.current().sumOf { partition -> partition.eventTypeCounts.firstOrNull { it.eventType == eventType }?.count ?: 0L }
+    snapshot.current().sumOf { partition -> partition.eventTypeCounts.firstOrNull { it.eventType == eventType }?.count ?: 0L }
 }

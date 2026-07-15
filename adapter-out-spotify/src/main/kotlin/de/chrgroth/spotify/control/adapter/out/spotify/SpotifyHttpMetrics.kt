@@ -63,7 +63,7 @@ class SpotifyHttpMetrics(
     requestStatsObservers.forEach { it.onRequestRecorded() }
   }
 
-  override fun getRequestStats(): List<OutgoingRequestStats> {
+  override fun current(): List<OutgoingRequestStats> {
     val cutoff = Instant.now().minusSeconds(WINDOW_SECONDS)
     return requestTimestamps.entries
       .map { (endpoint, deque) ->
