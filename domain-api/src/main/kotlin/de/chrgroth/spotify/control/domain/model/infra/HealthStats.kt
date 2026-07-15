@@ -1,13 +1,13 @@
 package de.chrgroth.spotify.control.domain.model.infra
 
 data class HealthStats(
-  val outgoingRequestStats: List<OutgoingRequestStats>,
-  val outboxPartitions: List<OutboxPartitionStats>,
-  val mongoCollectionStats: List<MongoCollectionStats>,
-  val mongoQueryStats: List<MongoQueryStats>,
-  val cronjobStats: List<CronjobStats>,
-  val predicateStats: List<PredicateStats>,
-  val configurationStats: ConfigurationStats,
+  val outgoingRequestStats: List<OutgoingRequestStats> = emptyList(),
+  val outboxPartitions: List<OutboxPartitionStats> = emptyList(),
+  val mongoCollectionStats: List<MongoCollectionStats> = emptyList(),
+  val mongoQueryStats: List<MongoQueryStats> = emptyList(),
+  val cronjobStats: List<CronjobStats> = emptyList(),
+  val predicateStats: List<PredicateStats> = emptyList(),
+  val configurationStats: ConfigurationStats = ConfigurationStats(emptyList(), emptyList()),
 ) {
   val mongoCollectionDocumentTotal: Long get() = mongoCollectionStats.sumOf { it.documentCount }
   val mongoCollectionSizeTotalKb: Long get() = mongoCollectionStats.sumOf { it.sizeKb }
