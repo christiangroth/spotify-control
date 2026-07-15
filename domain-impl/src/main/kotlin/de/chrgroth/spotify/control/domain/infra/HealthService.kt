@@ -58,11 +58,11 @@ class HealthService(
 
   override fun getOutboxPartitions(): List<OutboxPartitionStats> = outboxStatsCache.current()
 
-  override fun getOutgoingRequestStats(): List<OutgoingRequestStats> = outgoingRequestStats.getRequestStats()
+  override fun getOutgoingRequestStats(): List<OutgoingRequestStats> = outgoingRequestStats.current()
 
-  override fun getMongoCollectionStats(): List<MongoCollectionStats> = mongoStats.getCollectionStats()
+  override fun getMongoCollectionStats(): List<MongoCollectionStats> = mongoCollectionStats.current()
 
-  override fun getMongoQueryStats(): List<MongoQueryStats> = mongoStats.getQueryStats()
+  override fun getMongoQueryStats(): List<MongoQueryStats> = mongoQueryStats.current()
 
   override fun getCronjobStats(): List<CronjobStats> = cronjobInfo.getCronjobStats()
 
