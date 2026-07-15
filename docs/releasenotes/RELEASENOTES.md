@@ -1,3 +1,12 @@
+# 0.111.1 (2026.07.15)
+
+## Bugfixes / Chore
+* Reorganized the internal HTTP adapter structure, separating web pages from response-time metrics collection to prepare for future metrics caching.
+
+
+
+---
+
 # 0.111.0 (2026.07.15)
 
 ## New Features
