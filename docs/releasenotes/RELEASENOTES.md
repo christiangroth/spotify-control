@@ -1,3 +1,13 @@
+# 0.111.0 (2026.07.15)
+
+## New Features
+* Added slow HTTP response logging: every REST, fragment, and page endpoint now logs a warning if it takes 150ms or longer to respond, naming the operation and, for endpoints doing multiple internal steps, each step's individual duration.
+* Added HTTP response duration and slow-response-rate metrics to the Grafana monitoring board.
+
+
+
+---
+
 # 0.110.2 (2026.07.13)
 
 ## Bugfixes / Chore
