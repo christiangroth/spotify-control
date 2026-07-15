@@ -40,10 +40,11 @@ dependencyResolutionManagement {
 
 rootProject.name = "spotify-control"
 
+include("adapter-in-http-frontend")
+include("adapter-in-http-metrics")
 include("adapter-in-outbox")
 include("adapter-in-scheduler")
 include("adapter-in-starter")
-include("adapter-in-web")
 include("adapter-out-config")
 include("adapter-out-mongodb")
 include("adapter-out-outbox")

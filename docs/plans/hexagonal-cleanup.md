@@ -14,7 +14,11 @@ Subdomain-Trennung und konsistentem Naming über alle Module hinweg.
 
 ---
 
-## adapter-in-web
+## adapter-in-http-frontend
+
+---
+
+## adapter-in-http-metrics
 
 ---
 
