@@ -26,6 +26,7 @@ import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.SpotifyPlaylistPort
 import de.chrgroth.spotify.control.domain.catalog.SyncController
 import de.chrgroth.spotify.control.domain.catalog.CatalogSyncRequest
+import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogPort
 import de.chrgroth.spotify.control.domain.user.CurrentUserResolver
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.mockk.every
@@ -51,6 +52,7 @@ class PlaylistServiceTests {
   private val dashboardRefresh: DashboardRefreshPort = mockk()
   private val playlistCheckRepository: AppPlaylistCheckRepositoryPort = mockk()
   private val syncController: SyncController = mockk(relaxed = true)
+  private val catalogPort: CatalogPort = mockk(relaxed = true)
   private val meterRegistry = SimpleMeterRegistry()
 
   private val adapter = PlaylistService(
@@ -59,6 +61,7 @@ class PlaylistServiceTests {
     outboxPort, dashboardRefresh,
     playlistCheckRepository,
     syncController,
+    catalogPort,
     meterRegistry,
   )
 
@@ -458,6 +461,21 @@ class PlaylistServiceTests {
         listOf(CatalogSyncRequest("track-1", listOf("artist-1"), SyncCause.Playlist("p1", "track-1"))),
       )
     }
+  }
+
+  @Test
+  fun `syncPlaylistData delegates found artists to catalogPort for assumption promotion`() {
+    val page = buildTracksPage()
+    every { currentUserResolver.userId() } returns userId
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
+    every { spotifyPlaylist.getPlaylistTracksPage(accessToken, "p1", null) } returns page.right()
+    every { playlistRepository.save(any()) } just runs
+    every { outboxPort.enqueue(any()) } just runs
+    every { playlistRepository.updateLastSyncTime("p1", any()) } just runs
+
+    adapter.syncPlaylistData("p1")
+
+    verify { catalogPort.promoteAssumptionArtistsFoundOnPlaylist(setOf("artist-1")) }
   }
 
   @Test
