@@ -25,7 +25,7 @@ class PlaylistStatsCacheTests {
 
   @Test
   fun `current is zeroed out before the first refresh`() {
-    assertThat(cache.current()).isEqualTo(PlaylistStats())
+    assertThat(cache.getPlaylistStats()).isEqualTo(PlaylistStats())
   }
 
   @Test
@@ -61,7 +61,7 @@ class PlaylistStatsCacheTests {
 
     cache.refresh()
 
-    assertThat(cache.current()).isEqualTo(PlaylistStats(trackedCount = 2, outOfSyncCount = 1, pendingAlbumUpgradeCount = 1))
+    assertThat(cache.getPlaylistStats()).isEqualTo(PlaylistStats(trackedCount = 2, outOfSyncCount = 1, pendingAlbumUpgradeCount = 1))
   }
 
   @Test
@@ -73,7 +73,7 @@ class PlaylistStatsCacheTests {
     every { playlistRepository.findAll() } throws IllegalStateException("mongo unreachable")
     cache.refresh()
 
-    assertThat(cache.current()).isEqualTo(PlaylistStats())
+    assertThat(cache.getPlaylistStats()).isEqualTo(PlaylistStats())
   }
 
   @Test
@@ -82,7 +82,7 @@ class PlaylistStatsCacheTests {
     every { playlistCheckRepository.findAll() } returns emptyList()
     cache.refresh()
 
-    repeat(5) { cache.current() }
+    repeat(5) { cache.getPlaylistStats() }
 
     verify(exactly = 1) { playlistRepository.findAll() }
   }
