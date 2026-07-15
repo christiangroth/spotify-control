@@ -52,58 +52,68 @@ class SpotifyDebugResource(
   private val spotifyPlayback: SpotifyPlaybackPort,
   private val spotifyPlaylist: SpotifyPlaylistPort,
   private val spotifyCatalog: SpotifyCatalogPort,
+  private val httpResponseMetrics: HttpResponseMetrics,
 ) {
 
   @GET
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun page(): TemplateInstance = spotifyDebugTemplate.instance()
+  fun page(): TemplateInstance = httpResponseMetrics.timed("page.debug.spotify") { spotifyDebugTemplate.instance() }
 
   @GET
   @Path("/api/artists")
   @Authenticated
   @Produces(MediaType.APPLICATION_JSON)
-  fun searchArtists(@QueryParam("filter") filter: String?): List<PickerOption> {
-    if (filter.isNullOrBlank()) return emptyList()
-    return catalogBrowser.getArtists(filter).map { PickerOption(it.artistId, it.artistName) }
+  fun searchArtists(@QueryParam("filter") filter: String?): List<PickerOption> = httpResponseMetrics.timed("rest.debug.search-artists") {
+    if (filter.isNullOrBlank()) {
+      emptyList()
+    } else {
+      catalogBrowser.getArtists(filter).map { PickerOption(it.artistId, it.artistName) }
+    }
   }
 
   @GET
   @Path("/api/albums")
   @Authenticated
   @Produces(MediaType.APPLICATION_JSON)
-  fun searchAlbums(@QueryParam("filter") filter: String?): List<PickerOption> {
-    if (filter.isNullOrBlank()) return emptyList()
-    return catalogBrowser.getAlbums(filter).map { PickerOption(it.albumId, it.toPickerLabel()) }
+  fun searchAlbums(@QueryParam("filter") filter: String?): List<PickerOption> = httpResponseMetrics.timed("rest.debug.search-albums") {
+    if (filter.isNullOrBlank()) {
+      emptyList()
+    } else {
+      catalogBrowser.getAlbums(filter).map { PickerOption(it.albumId, it.toPickerLabel()) }
+    }
   }
 
   @GET
   @Path("/api/playlists")
   @Authenticated
   @Produces(MediaType.APPLICATION_JSON)
-  fun searchPlaylists(@QueryParam("filter") filter: String?): List<PickerOption> {
-    if (filter.isNullOrBlank()) return emptyList()
-    val filterLower = filter.lowercase()
-    return playlist.getPlaylists()
-      .filter { it.name.lowercase().contains(filterLower) }
-      .map { PickerOption(it.spotifyPlaylistId, it.name) }
+  fun searchPlaylists(@QueryParam("filter") filter: String?): List<PickerOption> = httpResponseMetrics.timed("rest.debug.search-playlists") {
+    if (filter.isNullOrBlank()) {
+      emptyList()
+    } else {
+      val filterLower = filter.lowercase()
+      playlist.getPlaylists()
+        .filter { it.name.lowercase().contains(filterLower) }
+        .map { PickerOption(it.spotifyPlaylistId, it.name) }
+    }
   }
 
   @POST
   @Path("/execute/{operation}")
   @Authenticated
   @Produces(MediaType.APPLICATION_JSON)
-  fun execute(@PathParam("operation") operation: String, @Context uriInfo: UriInfo): Response {
+  fun execute(@PathParam("operation") operation: String, @Context uriInfo: UriInfo): Response = httpResponseMetrics.timed("rest.debug.execute") { details ->
     val params = uriInfo.queryParameters.entries
       .associate { (key, values) -> key to values.firstOrNull()?.takeIf { it.isNotBlank() } }
 
     val accessToken = try {
       spotifyAccessToken.getValidAccessToken()
     } catch (e: Exception) {
-      return errorResponse(operation, "Failed to obtain a valid Spotify access token: ${e.message}")
+      return@timed errorResponse(operation, "Failed to obtain a valid Spotify access token: ${e.message}")
     }
 
-    return try {
+    try {
       when (operation) {
         "current-user" -> spotifyAuth.getUserProfile(accessToken).toResponse(operation) { it.toJson() }
 
@@ -117,32 +127,33 @@ class SpotifyDebugResource(
         "user-playlists" -> spotifyPlaylist.getPlaylists(accessToken).toResponse(operation) { items -> items.map { it.toJson() } }
 
         "playlist-tracks" -> {
-          val playlistId = params["playlistId"] ?: return errorResponse(operation, "playlistId is required")
+          val playlistId = params["playlistId"] ?: return@timed errorResponse(operation, "playlistId is required")
           val pageUrl = params["pageUrl"]
           spotifyPlaylist.getPlaylistTracksPage(accessToken, playlistId, pageUrl).toResponse(operation) { it.toJson() }
         }
 
         "artist" -> {
-          val artistId = params["artistId"] ?: return errorResponse(operation, "artistId is required")
+          val artistId = params["artistId"] ?: return@timed errorResponse(operation, "artistId is required")
           spotifyCatalog.getArtist(accessToken, artistId).toResponse(operation) { it?.toJson() }
         }
 
         "artist-albums" -> {
-          val artistId = params["artistId"] ?: return errorResponse(operation, "artistId is required")
+          val artistId = params["artistId"] ?: return@timed errorResponse(operation, "artistId is required")
           val nextUrl = params["nextUrl"]
           spotifyCatalog.getArtistAlbumsPage(accessToken, artistId, nextUrl).toResponse(operation) { it.toJson() }
         }
 
         "album" -> {
-          val albumId = params["albumId"] ?: return errorResponse(operation, "albumId is required")
+          val albumId = params["albumId"] ?: return@timed errorResponse(operation, "albumId is required")
           spotifyCatalog.getAlbum(accessToken, albumId).toResponse(operation) { it.toJson() }
         }
 
         "album-tracks" -> {
-          val albumId = params["albumId"] ?: return errorResponse(operation, "albumId is required")
-          spotifyCatalog.getAlbum(accessToken, albumId).fold(
+          val albumId = params["albumId"] ?: return@timed errorResponse(operation, "albumId is required")
+          val albumResult = details.detail("debug.execute.album") { spotifyCatalog.getAlbum(accessToken, albumId) }
+          albumResult.fold(
             ifLeft = { errorResponse(operation, it.code) },
-            ifRight = { syncResult -> fetchAlbumTracks(operation, accessToken, syncResult.album) },
+            ifRight = { syncResult -> details.detail("debug.execute.album-tracks") { fetchAlbumTracks(operation, accessToken, syncResult.album) } },
           )
         }
 

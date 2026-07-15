@@ -20,26 +20,30 @@ class OutboxViewerResource(
   @param:Location("outbox-viewer.html")
   private val template: Template,
   private val outboxViewer: OutboxViewerPort,
+  private val httpResponseMetrics: HttpResponseMetrics,
 ) {
 
   @GET
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun viewer(): TemplateInstance = template.data("partitions", outboxViewer.getPartitions())
+  fun viewer(): TemplateInstance = httpResponseMetrics.timed("page.outbox.view") {
+    template.data("partitions", outboxViewer.getPartitions())
+  }
 
   @GET
   @Path("/snippets/tasks")
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun snippetTasks(): TemplateInstance =
+  fun snippetTasks(): TemplateInstance = httpResponseMetrics.timed("fragment.outbox.tasks") {
     template.getFragment("snippet_tasks").data("partitions", outboxViewer.getPartitions())
+  }
 
   @POST
   @Path("/wipe")
   @Authenticated
   @Produces(MediaType.APPLICATION_JSON)
-  fun wipe(): Response {
+  fun wipe(): Response = httpResponseMetrics.timed("rest.outbox.wipe") {
     outboxViewer.wipeAll()
-    return Response.ok(mapOf("status" to "ok")).build()
+    Response.ok(mapOf("status" to "ok")).build()
   }
 }

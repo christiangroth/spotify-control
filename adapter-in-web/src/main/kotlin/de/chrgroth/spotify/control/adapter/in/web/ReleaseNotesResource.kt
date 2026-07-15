@@ -26,16 +26,17 @@ data class ReleaseNotesGroupView(
 class ReleaseNotesResource(
   @param:Location("release-notes.html")
   private val releaseNotesTemplate: Template,
+  private val httpResponseMetrics: HttpResponseMetrics,
 ) {
 
   @GET
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun releaseNotes(): TemplateInstance {
+  fun releaseNotes(): TemplateInstance = httpResponseMetrics.timed("page.docs.release-notes") {
     val content = DocsUtils.readMarkdown("docs/releasenotes/RELEASENOTES.md")
       ?: throw NotFoundException("Release notes not found")
     val groups = ReleaseNotesParser.groupByMinorVersion(ReleaseNotesParser.parse(content))
-    return releaseNotesTemplate.instance()
+    releaseNotesTemplate.instance()
       .data("groups", groups.mapIndexed { index, group -> toView(group, expanded = index < 3) })
   }
 

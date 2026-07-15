@@ -36,15 +36,16 @@ class StatsResource(
   private val appTrackRepository: AppTrackRepositoryPort,
   private val appAlbumRepository: AppAlbumRepositoryPort,
   private val appArtistRepository: AppArtistRepositoryPort,
+  private val httpResponseMetrics: HttpResponseMetrics,
 ) {
 
   @GET
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun stats(): TemplateInstance {
+  fun stats(): TemplateInstance = httpResponseMetrics.timed("page.stats.view") { details ->
     val periodStartsByType = AggregationPeriodType.entries.associateWith { threePeriodStarts(it) }
     val requestedPeriods = periodStartsByType.flatMap { (type, periodStarts) -> periodStarts.map { type to it } }
-    val aggregationsByTypeAndPeriod = aggregationRepository.findByPeriods(requestedPeriods)
+    val aggregationsByTypeAndPeriod = details.detail("stats.view.aggregations") { aggregationRepository.findByPeriods(requestedPeriods) }
     val tabs = AggregationPeriodType.entries.mapIndexed { index, type ->
       val periodStarts = periodStartsByType.getValue(type)
       AggregationTab(
@@ -60,9 +61,9 @@ class StatsResource(
         },
       )
     }
-    val tracksById = loadTracksById(tabs)
-    val albumsById = loadAlbumsById(tabs, tracksById)
-    val artistsById = loadArtistsById(tabs)
+    val tracksById = details.detail("stats.view.tracks") { loadTracksById(tabs) }
+    val albumsById = details.detail("stats.view.albums") { loadAlbumsById(tabs, tracksById) }
+    val artistsById = details.detail("stats.view.artists") { loadArtistsById(tabs) }
     val renderedTabs = tabs.map { tab ->
       tab.copy(aggregations = tab.aggregations.map { aggregation ->
         aggregation.copy(
@@ -73,7 +74,7 @@ class StatsResource(
         )
       })
     }
-    return statsTemplate.instance().data("tabs", renderedTabs)
+    statsTemplate.instance().data("tabs", renderedTabs)
   }
 
   private fun loadTracksById(tabs: List<AggregationTab>) = appTrackRepository.findByTrackIds(

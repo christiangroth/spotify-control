@@ -23,16 +23,18 @@ class LoginResource(
   @param:Location("login.html")
   private val loginTemplate: Template,
   private val securityIdentity: SecurityIdentity,
+  private val httpResponseMetrics: HttpResponseMetrics,
 ) {
 
   @GET
   @PermitAll
   @Produces(MediaType.TEXT_HTML)
-  fun index(@QueryParam("error") error: String?): Response {
+  fun index(@QueryParam("error") error: String?): Response = httpResponseMetrics.timed("page.user.login") {
     if (!securityIdentity.isAnonymous) {
-      return Response.temporaryRedirect(URI.create("/dashboard")).build()
+      Response.temporaryRedirect(URI.create("/dashboard")).build()
+    } else {
+      Response.ok(loginTemplate.data("errorMessage", error?.let { errorMessage(it) })).build()
     }
-    return Response.ok(loginTemplate.data("errorMessage", error?.let { errorMessage(it) })).build()
   }
 
   private fun errorMessage(code: String): String = when (code) {

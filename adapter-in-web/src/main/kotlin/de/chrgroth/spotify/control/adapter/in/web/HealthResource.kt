@@ -18,66 +18,75 @@ class HealthResource(
   @param:Location("health.html")
   private val healthTemplate: Template,
   private val health: HealthPort,
+  private val httpResponseMetrics: HttpResponseMetrics,
 ) {
 
   @GET
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun health(): TemplateInstance = healthTemplate.data("stats", health.getStats())
+  fun health(): TemplateInstance = httpResponseMetrics.timed("page.health.view") { healthTemplate.data("stats", health.getStats()) }
 
   @GET
   @Path("/snippets/predicates")
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun snippetPredicates(): TemplateInstance =
+  fun snippetPredicates(): TemplateInstance = httpResponseMetrics.timed("fragment.health.predicates") {
     healthTemplate.getFragment("snippet_predicates").data("stats", health.getStats())
+  }
 
   @GET
   @Path("/snippets/cronjobs")
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun snippetCronjobs(): TemplateInstance =
+  fun snippetCronjobs(): TemplateInstance = httpResponseMetrics.timed("fragment.health.cronjobs") {
     healthTemplate.getFragment("snippet_cronjobs").data("stats", health.getStats())
+  }
 
   @GET
   @Path("/snippets/outgoing-http-calls")
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun snippetOutgoingHttpCalls(): TemplateInstance =
+  fun snippetOutgoingHttpCalls(): TemplateInstance = httpResponseMetrics.timed("fragment.health.outgoing-http-calls") {
     healthTemplate.getFragment("snippet_outgoing_http_calls").data("stats", health.getStats())
+  }
 
   @GET
   @Path("/snippets/outbox-partitions")
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun snippetOutboxPartitions(): TemplateInstance =
+  fun snippetOutboxPartitions(): TemplateInstance = httpResponseMetrics.timed("fragment.health.outbox-partitions") {
     healthTemplate.getFragment("snippet_outbox_partitions").data("stats", health.getStats())
+  }
 
   @GET
   @Path("/snippets/mongodb-collections")
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun snippetMongoDbCollections(): TemplateInstance =
+  fun snippetMongoDbCollections(): TemplateInstance = httpResponseMetrics.timed("fragment.health.mongodb-collections") {
     healthTemplate.getFragment("snippet_mongodb_collections").data("stats", health.getStats())
+  }
 
   @GET
   @Path("/snippets/mongodb-queries")
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun snippetMongoDbQueries(): TemplateInstance =
+  fun snippetMongoDbQueries(): TemplateInstance = httpResponseMetrics.timed("fragment.health.mongodb-queries") {
     healthTemplate.getFragment("snippet_mongodb_queries").data("stats", health.getStats())
+  }
 
   @GET
   @Path("/snippets/navbar-outbox-status")
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun snippetNavbarOutboxStatus(): TemplateInstance =
+  fun snippetNavbarOutboxStatus(): TemplateInstance = httpResponseMetrics.timed("fragment.health.navbar-outbox-status") {
     healthTemplate.getFragment("snippet_navbar_outbox_status").data("stats", health.getStats())
+  }
 
   @GET
   @Path("/snippets/navbar-playback-status")
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun snippetNavbarPlaybackStatus(): TemplateInstance =
+  fun snippetNavbarPlaybackStatus(): TemplateInstance = httpResponseMetrics.timed("fragment.health.navbar-playback-status") {
     healthTemplate.getFragment("snippet_navbar_playback_status").data("stats", health.getStats())
+  }
 }

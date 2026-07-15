@@ -23,6 +23,7 @@ class MongoViewerResource(
   @param:Location("mongodb-viewer.html")
   private val viewerTemplate: Template,
   private val mongoViewer: MongoViewerPort,
+  private val httpResponseMetrics: HttpResponseMetrics,
 ) {
 
   @GET
@@ -35,7 +36,7 @@ class MongoViewerResource(
     @QueryParam("page") page: Int?,
     @QueryParam("pageSize") pageSize: Int?,
     @Context uriInfo: UriInfo,
-  ): TemplateInstance {
+  ): TemplateInstance = httpResponseMetrics.timed("page.mongo.view") {
     val effectivePage = page?.takeIf { it > 0 } ?: 1
     val effectivePageSize = pageSize?.takeIf { it in PAGE_SIZES } ?: DEFAULT_PAGE_SIZE
     val effectiveSortDesc = sortDir?.equals("desc", ignoreCase = true) ?: false
@@ -73,7 +74,7 @@ class MongoViewerResource(
       pageSize = effectivePageSize,
     )
 
-    return viewerTemplate
+    viewerTemplate
       .data("result", result)
       .data("pageSizes", PAGE_SIZES)
   }

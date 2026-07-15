@@ -31,14 +31,15 @@ class PlaybackSettingsResource(
   private val userProfile: UserProfilePort,
   private val playback: PlaybackPort,
   private val catalog: CatalogPort,
+  private val httpResponseMetrics: HttpResponseMetrics,
 ) {
 
   @GET
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun playback(): TemplateInstance {
+  fun playback(): TemplateInstance = httpResponseMetrics.timed("page.playback.settings") {
     val displayName = userProfile.getDisplayName() ?: securityIdentity.principal.name
-    return playbackTemplate
+    playbackTemplate
       .data("displayName", displayName)
   }
 
@@ -46,17 +47,17 @@ class PlaybackSettingsResource(
   @Authenticated
   @Path("/rebuild")
   @Produces(MediaType.APPLICATION_JSON)
-  fun rebuildPlaybackData(): Response {
+  fun rebuildPlaybackData(): Response = httpResponseMetrics.timed("rest.playback.rebuild") {
     playback.enqueueRebuildPlaybackData()
-    return Response.ok(mapOf("status" to "ok")).build()
+    Response.ok(mapOf("status" to "ok")).build()
   }
 
   @POST
   @Authenticated
   @Path("/resync-catalog")
   @Produces(MediaType.APPLICATION_JSON)
-  fun resyncCatalog(): Response {
-    return catalog.resyncCatalog().fold(
+  fun resyncCatalog(): Response = httpResponseMetrics.timed("rest.catalog.resync") {
+    catalog.resyncCatalog().fold(
       ifLeft = { error ->
         logger.error { "Catalog re-sync failed: ${error.code}" }
         Response.status(Response.Status.INTERNAL_SERVER_ERROR)
@@ -71,41 +72,46 @@ class PlaybackSettingsResource(
   @Authenticated
   @Path("/artists/{artistId}/resync")
   @Produces(MediaType.APPLICATION_JSON)
-  fun resyncArtist(@PathParam("artistId") artistId: String): Response {
-    return catalog.resyncArtist(artistId).fold(
-      ifLeft = { error ->
-        when (error) {
-          ArtistSettingsError.ARTIST_NOT_FOUND -> {
-            logger.warn { "Artist $artistId not found for re-sync: ${error.code}" }
-            Response.status(Response.Status.NOT_FOUND)
-              .entity(mapOf("error" to "Artist not found: $artistId"))
-              .build()
+  fun resyncArtist(@PathParam("artistId") artistId: String): Response =
+    httpResponseMetrics.timed("rest.catalog.artist-resync") {
+      catalog.resyncArtist(artistId).fold(
+        ifLeft = { error ->
+          when (error) {
+            ArtistSettingsError.ARTIST_NOT_FOUND -> {
+              logger.warn { "Artist $artistId not found for re-sync: ${error.code}" }
+              Response.status(Response.Status.NOT_FOUND)
+                .entity(mapOf("error" to "Artist not found: $artistId"))
+                .build()
+            }
+            else -> {
+              logger.error { "Artist re-sync failed for $artistId: ${error.code}" }
+              Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                .entity(mapOf("error" to "Re-sync failed: ${error.code}"))
+                .build()
+            }
           }
-          else -> {
-            logger.error { "Artist re-sync failed for $artistId: ${error.code}" }
-            Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-              .entity(mapOf("error" to "Re-sync failed: ${error.code}"))
-              .build()
-          }
-        }
-      },
-      ifRight = { Response.ok(mapOf("status" to "ok")).build() },
-    )
-  }
+        },
+        ifRight = { Response.ok(mapOf("status" to "ok")).build() },
+      )
+    }
 
   @POST
   @Authenticated
   @Path("/artists/{artistId}/set-sync")
   @Produces(MediaType.APPLICATION_JSON)
   fun setArtistSync(@PathParam("artistId") artistId: String): Response =
-    handleArtistAction(artistId, "set-sync") { catalog.setArtistSync(artistId) }
+    httpResponseMetrics.timed("rest.catalog.artist-set-sync") {
+      handleArtistAction(artistId, "set-sync") { catalog.setArtistSync(artistId) }
+    }
 
   @POST
   @Authenticated
   @Path("/artists/{artistId}/set-shallow")
   @Produces(MediaType.APPLICATION_JSON)
   fun setArtistShallow(@PathParam("artistId") artistId: String): Response =
-    handleArtistAction(artistId, "set-shallow") { catalog.setArtistShallow(artistId) }
+    httpResponseMetrics.timed("rest.catalog.artist-set-shallow") {
+      handleArtistAction(artistId, "set-shallow") { catalog.setArtistShallow(artistId) }
+    }
 
   private fun handleArtistAction(artistId: String, action: String, block: () -> Either<DomainError, Unit>): Response =
     block().fold(

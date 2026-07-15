@@ -33,17 +33,18 @@ class PlaylistsResource(
   private val playlistRepository: PlaylistRepositoryPort,
   private val playlistCheckRepository: AppPlaylistCheckRepositoryPort,
   private val playlistCheckPort: PlaylistCheckPort,
+  private val httpResponseMetrics: HttpResponseMetrics,
 ) {
 
   @GET
   @Path("/settings")
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun settings(): TemplateInstance {
+  fun settings(): TemplateInstance = httpResponseMetrics.timed("page.playlist.settings-tab") { details ->
     val displayName = userProfile.getDisplayName() ?: securityIdentity.principal.name
-    val sortedPlaylists = playlist.getPlaylists().sortedBy { it.name }
+    val sortedPlaylists = details.detail("playlist.settings-tab.playlists") { playlist.getPlaylists().sortedBy { it.name } }
     val padWidth = sortedPlaylists.size.toString().length
-    val trackCounts = playlist.getTrackCounts()
+    val trackCounts = details.detail("playlist.settings-tab.track-counts") { playlist.getTrackCounts() }
     val rows = sortedPlaylists.mapIndexed { index, playlistInfo ->
       PlaylistSettingsResource.PlaylistRow(
         lineNumber = (index + 1).toString().padStart(padWidth, '0'),
@@ -51,7 +52,7 @@ class PlaylistsResource(
         numberOfTracks = trackCounts[playlistInfo.spotifyPlaylistId],
       )
     }
-    return playlistTemplate
+    playlistTemplate
       .data("displayName", displayName)
       .data("rows", rows)
   }
@@ -60,17 +61,20 @@ class PlaylistsResource(
   @Path("/checks")
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun checks(): TemplateInstance {
+  fun checks(): TemplateInstance = httpResponseMetrics.timed("page.playlist.checks-tab") { details ->
     val (displayName, playlistNameById, checks) = runBlocking {
       val displayNameAsync = async(Dispatchers.IO) { userProfile.getDisplayName() }
       val playlistNamesAsync = async(Dispatchers.IO) {
         playlistRepository.findAll().associateBy({ it.spotifyPlaylistId }, { it.name })
       }
       val checksAsync = async(Dispatchers.IO) { playlistCheckRepository.findAll() }
-      Triple(displayNameAsync.await(), playlistNamesAsync.await(), checksAsync.await())
+      val displayName = details.detailSuspend("playlist.checks-tab.display-name") { displayNameAsync.await() }
+      val playlistNameById = details.detailSuspend("playlist.checks-tab.playlist-names") { playlistNamesAsync.await() }
+      val checks = details.detailSuspend("playlist.checks-tab.checks") { checksAsync.await() }
+      Triple(displayName, playlistNameById, checks)
     }
-    val displayNames = playlistCheckPort.getDisplayNames()
-    val fixableCheckIds = playlistCheckPort.getFixableCheckIds()
+    val displayNames = details.detail("playlist.checks-tab.display-names-map") { playlistCheckPort.getDisplayNames() }
+    val fixableCheckIds = details.detail("playlist.checks-tab.fixable-check-ids") { playlistCheckPort.getFixableCheckIds() }
     val groups = checks
       .map { check ->
         PlaylistChecksResource.PlaylistCheckRow(
@@ -85,7 +89,7 @@ class PlaylistsResource(
         PlaylistChecksResource.PlaylistCheckGroup(name, rows.sortedBy { it.playlistName })
       }
       .sortedBy { it.checkName }
-    return playlistChecksTemplate
+    playlistChecksTemplate
       .data("displayName", displayName ?: securityIdentity.principal.name)
       .data("groups", groups)
   }

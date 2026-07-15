@@ -33,16 +33,17 @@ class PlaylistSettingsResource(
   private val securityIdentity: SecurityIdentity,
   private val userProfile: UserProfilePort,
   private val playlist: PlaylistPort,
+  private val httpResponseMetrics: HttpResponseMetrics,
 ) {
 
   @GET
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun playlist(): TemplateInstance {
+  fun playlist(): TemplateInstance = httpResponseMetrics.timed("page.playlist.settings") { details ->
     val displayName = userProfile.getDisplayName() ?: securityIdentity.principal.name
-    val sortedPlaylists = playlist.getPlaylists().sortedBy { it.name }
+    val sortedPlaylists = details.detail("playlist.settings.playlists") { playlist.getPlaylists().sortedBy { it.name } }
     val padWidth = sortedPlaylists.size.toString().length
-    val trackCounts = playlist.getTrackCounts()
+    val trackCounts = details.detail("playlist.settings.track-counts") { playlist.getTrackCounts() }
     val rows = sortedPlaylists.mapIndexed { index, playlistInfo ->
       PlaylistRow(
         lineNumber = (index + 1).toString().padStart(padWidth, '0'),
@@ -50,7 +51,7 @@ class PlaylistSettingsResource(
         numberOfTracks = trackCounts[playlistInfo.spotifyPlaylistId],
       )
     }
-    return playlistTemplate
+    playlistTemplate
       .data("displayName", displayName)
       .data("rows", rows)
   }
@@ -69,12 +70,12 @@ class PlaylistSettingsResource(
   fun updateSyncStatus(
     @PathParam("playlistId") playlistId: String,
     request: SyncStatusRequest,
-  ): Response {
+  ): Response = httpResponseMetrics.timed("rest.playlist.sync-status-update") {
     val syncStatus = PlaylistSyncStatus.entries.find { it.name == request.syncStatus }
-      ?: return Response.status(Response.Status.BAD_REQUEST)
+      ?: return@timed Response.status(Response.Status.BAD_REQUEST)
         .entity(mapOf("error" to "Invalid sync status: ${request.syncStatus}"))
         .build()
-    return when (playlist.updateSyncStatus(playlistId, syncStatus).isRight()) {
+    when (playlist.updateSyncStatus(playlistId, syncStatus).isRight()) {
       true -> {
         val updated = playlist.getPlaylists().find { it.spotifyPlaylistId == playlistId }
         Response.ok(mapOf("syncStatus" to syncStatus.name, "type" to updated?.type?.name)).build()
@@ -98,12 +99,12 @@ class PlaylistSettingsResource(
   fun updatePlaylistType(
     @PathParam("playlistId") playlistId: String,
     request: PlaylistTypeRequest,
-  ): Response {
+  ): Response = httpResponseMetrics.timed("rest.playlist.type-update") {
     val type = PlaylistType.entries.find { it.name == request.type }
-      ?: return Response.status(Response.Status.BAD_REQUEST)
+      ?: return@timed Response.status(Response.Status.BAD_REQUEST)
         .entity(mapOf("error" to "Invalid playlist type: ${request.type}"))
         .build()
-    return playlist.updatePlaylistType(playlistId, type).fold(
+    playlist.updatePlaylistType(playlistId, type).fold(
       ifLeft = { error ->
         when (error) {
           PlaylistSyncError.PLAYLIST_TYPE_CONFLICT -> {
@@ -136,8 +137,8 @@ class PlaylistSettingsResource(
   @Authenticated
   @Path("/sync")
   @Produces(MediaType.APPLICATION_JSON)
-  fun syncNow(): Response {
-    return playlist.syncPlaylists().fold(
+  fun syncNow(): Response = httpResponseMetrics.timed("rest.playlist.sync-now") {
+    playlist.syncPlaylists().fold(
       ifLeft = { error ->
         logger.error { "Playlist sync failed: ${error.code}" }
         Response.status(Response.Status.INTERNAL_SERVER_ERROR)
@@ -152,8 +153,8 @@ class PlaylistSettingsResource(
   @Authenticated
   @Path("/{playlistId}/sync")
   @Produces(MediaType.APPLICATION_JSON)
-  fun syncPlaylist(@PathParam("playlistId") playlistId: String): Response {
-    return playlist.enqueueSyncPlaylistData(playlistId).fold(
+  fun syncPlaylist(@PathParam("playlistId") playlistId: String): Response = httpResponseMetrics.timed("rest.playlist.sync-one") {
+    playlist.enqueueSyncPlaylistData(playlistId).fold(
       ifLeft = { error ->
         when (error) {
           PlaylistSyncError.PLAYLIST_SYNC_INACTIVE -> {

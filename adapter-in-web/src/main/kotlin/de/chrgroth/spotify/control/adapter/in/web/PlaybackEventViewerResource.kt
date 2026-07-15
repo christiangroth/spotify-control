@@ -26,22 +26,24 @@ class PlaybackEventViewerResource(
   @param:Location("playback-event-viewer.html")
   private val template: Template,
   private val playbackEventViewer: PlaybackEventViewerPort,
+  private val httpResponseMetrics: HttpResponseMetrics,
 ) {
 
   @GET
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun viewer(@QueryParam("date") dateParam: String?): TemplateInstance {
-    val today = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
-    val requestedDate = dateParam?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: today
-    val date = if (requestedDate > today) today else requestedDate
+  fun viewer(@QueryParam("date") dateParam: String?): TemplateInstance =
+    httpResponseMetrics.timed("page.playback.event-viewer") {
+      val today = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
+      val requestedDate = dateParam?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: today
+      val date = if (requestedDate > today) today else requestedDate
 
-    val result = playbackEventViewer.getEvents(date)
+      val result = playbackEventViewer.getEvents(date)
 
-    return template
-      .data("result", result)
-      .data("prevDate", date.minus(DatePeriod(days = 1)))
-      .data("nextDate", date.plus(DatePeriod(days = 1)))
-      .data("today", today)
-  }
+      template
+        .data("result", result)
+        .data("prevDate", date.minus(DatePeriod(days = 1)))
+        .data("nextDate", date.plus(DatePeriod(days = 1)))
+        .data("today", today)
+    }
 }

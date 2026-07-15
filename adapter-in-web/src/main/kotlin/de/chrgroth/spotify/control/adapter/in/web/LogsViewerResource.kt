@@ -18,15 +18,16 @@ class LogsViewerResource(
   @param:Location("logs-viewer.html")
   private val template: Template,
   private val logsCollector: LogsCollector,
+  private val httpResponseMetrics: HttpResponseMetrics,
 ) {
 
   @GET
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun viewer(@QueryParam("view") view: String?): TemplateInstance {
+  fun viewer(@QueryParam("view") view: String?): TemplateInstance = httpResponseMetrics.timed("page.logs.view") {
     val logs = logsCollector.getRecentLogs()
     val viewMode = if (view?.equals("grouped", ignoreCase = true) == true) "grouped" else "chronological"
-    return template
+    template
       .data("logs", logs)
       .data("groups", groupLogsByClassAndType(logs))
       .data("viewMode", viewMode)
