@@ -1,3 +1,15 @@
+# 0.111.3 (2026.07.15)
+
+## Bugfixes / Chore
+* Moved playlist, catalog, outbox, MongoDB collection, and application info metrics into the dedicated metrics module, keeping the metrics caching separate from domain logic.
+* MongoDB collection size stats are now cached and shared, so the health page/live updates no longer trigger a separate MongoDB query for each read.
+* Kept the outbox archive cleanup job active and reduced its retention to 1 day, keeping the archive collection small until the underlying library issue is fixed.
+* Activating a playlist for sync now automatically confirms any artist that was previously waiting for manual review and is present on that playlist.
+
+
+
+---
+
 # 0.111.2 (2026.07.15)
 
 ## Bugfixes / Chore
