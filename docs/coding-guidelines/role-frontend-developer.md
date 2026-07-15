@@ -19,7 +19,7 @@ You are a frontend developer with high standards for UX and visual design. You w
 
 See [role-architect.md](role-architect.md).
 
-View-specific calculations and DTO/model classes may live in `adapter-in-web` to avoid bloating the domain with display concerns. The domain model stays focused on business objects; presentation-only transformations (e.g. formatting durations, building display strings, flattening nested structures for a table) belong in the resource class or a dedicated view model class inside `adapter-in-web`.
+View-specific calculations and DTO/model classes may live in `adapter-in-http-frontend` to avoid bloating the domain with display concerns. The domain model stays focused on business objects; presentation-only transformations (e.g. formatting durations, building display strings, flattening nested structures for a table) belong in the resource class or a dedicated view model class inside `adapter-in-http-frontend`.
 
 ## Coding Principles
 
@@ -29,7 +29,7 @@ View-specific calculations and DTO/model classes may live in `adapter-in-web` to
 - Fragments are independently renderable – they work as both SSE push targets and initial page loads
 - WebJar dependencies (Bootstrap, Font Awesome) are managed via the Gradle version catalog (`libs.versions.toml`)
 - The visible application name rendered in HTML is **SpCtl**
-- No business logic in templates – domain decisions belong in the backend, presentation transformations belong in the resource class or `adapter-in-web`
+- No business logic in templates – domain decisions belong in the backend, presentation transformations belong in the resource class or `adapter-in-http-frontend`
 
 ## Live Updates via SSE
 
