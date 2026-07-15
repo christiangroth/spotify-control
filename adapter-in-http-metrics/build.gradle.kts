@@ -4,6 +4,8 @@ plugins {
 }
 
 dependencies {
+  implementation(project(":domain-api"))
+
   api(enforcedPlatform(libs.quarkusBom))
   api("io.quarkus:quarkus-micrometer")
 }

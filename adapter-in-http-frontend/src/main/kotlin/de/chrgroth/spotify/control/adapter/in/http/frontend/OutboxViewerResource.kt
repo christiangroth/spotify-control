@@ -1,7 +1,7 @@
 package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
-import de.chrgroth.spotify.control.adapter.`in`.http.metrics.HttpResponseMetrics
 import de.chrgroth.spotify.control.domain.port.`in`.infra.OutboxViewerPort
+import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
 import io.quarkus.qute.Location
 import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
@@ -21,7 +21,7 @@ class OutboxViewerResource(
   @param:Location("outbox-viewer.html")
   private val template: Template,
   private val outboxViewer: OutboxViewerPort,
-  private val httpResponseMetrics: HttpResponseMetrics,
+  private val httpResponseMetrics: ResponseTimingPort,
 ) {
 
   @GET

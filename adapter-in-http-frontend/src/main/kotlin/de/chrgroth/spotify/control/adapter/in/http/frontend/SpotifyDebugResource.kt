@@ -1,7 +1,6 @@
 package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
 import arrow.core.Either
-import de.chrgroth.spotify.control.adapter.`in`.http.metrics.HttpResponseMetrics
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumBrowseItem
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumSyncResult
@@ -19,6 +18,7 @@ import de.chrgroth.spotify.control.domain.model.user.SpotifyProfile
 import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogBrowserPort
 import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.SpotifyCatalogPort
+import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
 import de.chrgroth.spotify.control.domain.port.out.playback.SpotifyPlaybackPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.SpotifyPlaylistPort
 import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAccessTokenPort
@@ -53,7 +53,7 @@ class SpotifyDebugResource(
   private val spotifyPlayback: SpotifyPlaybackPort,
   private val spotifyPlaylist: SpotifyPlaylistPort,
   private val spotifyCatalog: SpotifyCatalogPort,
-  private val httpResponseMetrics: HttpResponseMetrics,
+  private val httpResponseMetrics: ResponseTimingPort,
 ) {
 
   @GET

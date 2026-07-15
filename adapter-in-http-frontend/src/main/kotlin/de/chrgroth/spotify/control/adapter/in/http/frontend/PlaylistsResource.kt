@@ -1,9 +1,9 @@
 package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
-import de.chrgroth.spotify.control.adapter.`in`.http.metrics.HttpResponseMetrics
 import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistCheckPort
 import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistPort
 import de.chrgroth.spotify.control.domain.port.`in`.user.UserProfilePort
+import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.AppPlaylistCheckRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
 import io.quarkus.qute.Location
@@ -34,7 +34,7 @@ class PlaylistsResource(
   private val playlistRepository: PlaylistRepositoryPort,
   private val playlistCheckRepository: AppPlaylistCheckRepositoryPort,
   private val playlistCheckPort: PlaylistCheckPort,
-  private val httpResponseMetrics: HttpResponseMetrics,
+  private val httpResponseMetrics: ResponseTimingPort,
 ) {
 
   @GET

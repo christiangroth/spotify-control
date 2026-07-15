@@ -110,11 +110,11 @@ Contains concrete `Starter` implementations acting as inbound adapters: they rec
 
 ### `adapter-in-http-frontend`
 
-Handles all inbound HTTP interactions: the web UI (Qute templates), OAuth callback, SSE streams for live updates, and settings action endpoints. Depends on `adapter-in-http-metrics` to record response timings.
+Handles all inbound HTTP interactions: the web UI (Qute templates), OAuth callback, SSE streams for live updates, and settings action endpoints. Records response timings via the `ResponseTimingPort` (`domain-api`), without depending on `adapter-in-http-metrics` directly.
 
 ### `adapter-in-http-metrics`
 
-Records HTTP response timings and slow-response detection via Micrometer (`HttpResponseMetrics`), independent of the frontend so it can evolve separately (e.g. metrics caching).
+Records HTTP response timings and slow-response detection via Micrometer (`HttpResponseMetrics`), which implements the `ResponseTimingPort` from `domain-api`. Independent of the frontend so it can evolve separately (e.g. metrics caching), and wired together only in `application-quarkus` via CDI.
 
 ### `adapter-out-mongodb`
 

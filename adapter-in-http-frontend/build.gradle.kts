@@ -5,7 +5,6 @@ plugins {
 
 dependencies {
   implementation(project(":domain-api"))
-  implementation(project(":adapter-in-http-metrics"))
 
   api(enforcedPlatform(libs.quarkusBom))
   api("io.quarkus:quarkus-rest-jackson")

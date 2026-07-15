@@ -1,5 +1,7 @@
 package de.chrgroth.spotify.control.adapter.`in`.http.metrics
 
+import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingDetails
+import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
 import io.micrometer.core.instrument.Counter
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Timer
@@ -14,12 +16,12 @@ class HttpResponseMetrics(
   private val meterRegistry: MeterRegistry,
   @param:ConfigProperty(name = "app.web.slow-response-threshold-ms")
   private val slowResponseThresholdMs: Long,
-) {
+) : ResponseTimingPort {
 
   private val timers = ConcurrentHashMap<String, Timer>()
   private val slowResponseCounters = ConcurrentHashMap<String, Counter>()
 
-  fun <T> timed(operation: String, block: (Details) -> T): T {
+  override fun <T> timed(operation: String, block: (ResponseTimingDetails) -> T): T {
     val details = Details()
     val startMs = System.currentTimeMillis()
     val result = block(details)
@@ -48,10 +50,10 @@ class HttpResponseMetrics(
     return result
   }
 
-  class Details {
+  class Details : ResponseTimingDetails {
     val entries = mutableListOf<Pair<String, Long>>()
 
-    fun <T> detail(name: String, block: () -> T): T {
+    override fun <T> detail(name: String, block: () -> T): T {
       val startMs = System.currentTimeMillis()
       val result = block()
       val durationMs = System.currentTimeMillis() - startMs
@@ -59,7 +61,7 @@ class HttpResponseMetrics(
       return result
     }
 
-    suspend fun <T> detailSuspend(name: String, block: suspend () -> T): T {
+    override suspend fun <T> detailSuspend(name: String, block: suspend () -> T): T {
       val startMs = System.currentTimeMillis()
       val result = block()
       val durationMs = System.currentTimeMillis() - startMs

@@ -1,7 +1,7 @@
 package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
-import de.chrgroth.spotify.control.adapter.`in`.http.metrics.HttpResponseMetrics
 import de.chrgroth.spotify.control.domain.port.`in`.infra.HealthPort
+import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
 import io.quarkus.qute.Location
 import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
@@ -19,7 +19,7 @@ class HealthResource(
   @param:Location("health.html")
   private val healthTemplate: Template,
   private val health: HealthPort,
-  private val httpResponseMetrics: HttpResponseMetrics,
+  private val httpResponseMetrics: ResponseTimingPort,
 ) {
 
   @GET

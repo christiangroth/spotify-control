@@ -1,6 +1,6 @@
 package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
-import de.chrgroth.spotify.control.adapter.`in`.http.metrics.HttpResponseMetrics
+import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
 import io.quarkus.qute.Location
 import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
@@ -27,7 +27,7 @@ data class ReleaseNotesGroupView(
 class ReleaseNotesResource(
   @param:Location("release-notes.html")
   private val releaseNotesTemplate: Template,
-  private val httpResponseMetrics: HttpResponseMetrics,
+  private val httpResponseMetrics: ResponseTimingPort,
 ) {
 
   @GET

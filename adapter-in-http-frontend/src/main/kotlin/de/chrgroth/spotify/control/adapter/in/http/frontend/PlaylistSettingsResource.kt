@@ -1,6 +1,5 @@
 package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
-import de.chrgroth.spotify.control.adapter.`in`.http.metrics.HttpResponseMetrics
 import de.chrgroth.spotify.control.domain.error.PlaylistSyncError
 import mu.KLogging
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistInfo
@@ -8,6 +7,7 @@ import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistType
 import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistPort
 import de.chrgroth.spotify.control.domain.port.`in`.user.UserProfilePort
+import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
 import io.quarkus.qute.Location
 import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
@@ -34,7 +34,7 @@ class PlaylistSettingsResource(
   private val securityIdentity: SecurityIdentity,
   private val userProfile: UserProfilePort,
   private val playlist: PlaylistPort,
-  private val httpResponseMetrics: HttpResponseMetrics,
+  private val httpResponseMetrics: ResponseTimingPort,
 ) {
 
   @GET

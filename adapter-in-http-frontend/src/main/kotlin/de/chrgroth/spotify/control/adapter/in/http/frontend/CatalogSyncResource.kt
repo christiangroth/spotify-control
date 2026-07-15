@@ -1,7 +1,7 @@
 package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
-import de.chrgroth.spotify.control.adapter.`in`.http.metrics.HttpResponseMetrics
 import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogBrowserPort
+import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
 import io.quarkus.qute.Location
 import io.quarkus.qute.Template
 import io.quarkus.security.Authenticated
@@ -20,7 +20,7 @@ class CatalogSyncResource(
   @param:Location("catalog-sync.html")
   private val template: Template,
   private val catalogBrowser: CatalogBrowserPort,
-  private val httpResponseMetrics: HttpResponseMetrics,
+  private val httpResponseMetrics: ResponseTimingPort,
 ) {
 
   @GET

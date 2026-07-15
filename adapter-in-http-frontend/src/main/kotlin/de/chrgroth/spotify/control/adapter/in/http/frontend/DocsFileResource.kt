@@ -1,6 +1,6 @@
 package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
-import de.chrgroth.spotify.control.adapter.`in`.http.metrics.HttpResponseMetrics
+import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
 import io.quarkus.qute.Location
 import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
@@ -21,7 +21,7 @@ import java.nio.charset.StandardCharsets
 class DocsFileResource(
   @param:Location("docs.html")
   private val docsTemplate: Template,
-  private val httpResponseMetrics: HttpResponseMetrics,
+  private val httpResponseMetrics: ResponseTimingPort,
 ) {
 
   private val allowedSubdirs = setOf("arc42", "adr", "coding-guidelines")

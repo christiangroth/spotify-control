@@ -1,9 +1,9 @@
 package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
-import de.chrgroth.spotify.control.adapter.`in`.http.metrics.HttpResponseMetrics
 import de.chrgroth.spotify.control.domain.model.viewer.MongoViewerFilter
 import de.chrgroth.spotify.control.domain.model.viewer.MongoViewerFilterOperator
 import de.chrgroth.spotify.control.domain.port.`in`.infra.MongoViewerPort
+import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
 import io.quarkus.qute.Location
 import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
@@ -24,7 +24,7 @@ class MongoViewerResource(
   @param:Location("mongodb-viewer.html")
   private val viewerTemplate: Template,
   private val mongoViewer: MongoViewerPort,
-  private val httpResponseMetrics: HttpResponseMetrics,
+  private val httpResponseMetrics: ResponseTimingPort,
 ) {
 
   @GET

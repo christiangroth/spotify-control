@@ -1,7 +1,7 @@
 package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
-import de.chrgroth.spotify.control.adapter.`in`.http.metrics.HttpResponseMetrics
 import de.chrgroth.spotify.control.domain.port.`in`.user.RuntimeConfigPort
+import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
 import io.quarkus.security.Authenticated
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.ws.rs.Consumes
@@ -17,7 +17,7 @@ import mu.KLogging
 @Suppress("Unused")
 class RuntimeConfigResource(
   private val runtimeConfig: RuntimeConfigPort,
-  private val httpResponseMetrics: HttpResponseMetrics,
+  private val httpResponseMetrics: ResponseTimingPort,
 ) {
 
   @POST

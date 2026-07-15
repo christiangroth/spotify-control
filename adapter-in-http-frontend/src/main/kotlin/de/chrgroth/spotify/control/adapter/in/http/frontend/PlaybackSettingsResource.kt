@@ -1,12 +1,12 @@
 package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
 import arrow.core.Either
-import de.chrgroth.spotify.control.adapter.`in`.http.metrics.HttpResponseMetrics
 import de.chrgroth.spotify.control.domain.error.ArtistSettingsError
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogPort
 import de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackPort
 import de.chrgroth.spotify.control.domain.port.`in`.user.UserProfilePort
+import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
 import io.quarkus.qute.Location
 import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
@@ -32,7 +32,7 @@ class PlaybackSettingsResource(
   private val userProfile: UserProfilePort,
   private val playback: PlaybackPort,
   private val catalog: CatalogPort,
-  private val httpResponseMetrics: HttpResponseMetrics,
+  private val httpResponseMetrics: ResponseTimingPort,
 ) {
 
   @GET

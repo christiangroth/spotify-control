@@ -1,9 +1,9 @@
 package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
-import de.chrgroth.spotify.control.adapter.`in`.http.metrics.HttpResponseMetrics
 import de.chrgroth.spotify.control.domain.error.AuthError
 import de.chrgroth.spotify.control.domain.error.OAuthError
 import de.chrgroth.spotify.control.domain.error.TokenError
+import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
 import io.quarkus.qute.Location
 import io.quarkus.qute.Template
 import io.quarkus.security.identity.SecurityIdentity
@@ -24,7 +24,7 @@ class LoginResource(
   @param:Location("login.html")
   private val loginTemplate: Template,
   private val securityIdentity: SecurityIdentity,
-  private val httpResponseMetrics: HttpResponseMetrics,
+  private val httpResponseMetrics: ResponseTimingPort,
 ) {
 
   @GET

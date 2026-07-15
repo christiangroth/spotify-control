@@ -1,6 +1,5 @@
 package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
-import de.chrgroth.spotify.control.adapter.`in`.http.metrics.HttpResponseMetrics
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
@@ -11,6 +10,7 @@ import de.chrgroth.spotify.control.domain.model.playback.aggregation.PlaybackAgg
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppAlbumRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
 import de.chrgroth.spotify.control.domain.port.out.playback.PlaybackAggregationRepositoryPort
 import io.quarkus.qute.Location
 import io.quarkus.qute.Template
@@ -37,7 +37,7 @@ class StatsResource(
   private val appTrackRepository: AppTrackRepositoryPort,
   private val appAlbumRepository: AppAlbumRepositoryPort,
   private val appArtistRepository: AppArtistRepositoryPort,
-  private val httpResponseMetrics: HttpResponseMetrics,
+  private val httpResponseMetrics: ResponseTimingPort,
 ) {
 
   @GET

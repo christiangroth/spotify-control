@@ -1,8 +1,8 @@
 package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
-import de.chrgroth.spotify.control.adapter.`in`.http.metrics.HttpResponseMetrics
 import de.chrgroth.spotify.control.domain.error.OAuthError
 import de.chrgroth.spotify.control.domain.port.`in`.user.LoginServicePort
+import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
 import de.chrgroth.spotify.control.domain.port.out.user.TokenEncryptionPort
 import jakarta.annotation.security.PermitAll
 import jakarta.enterprise.context.ApplicationScoped
@@ -30,7 +30,7 @@ class OAuthResource(
   private val redirectUri: String,
   @param:ConfigProperty(name = "spotify.accounts.base-url")
   private val accountsBaseUrl: String,
-  private val httpResponseMetrics: HttpResponseMetrics,
+  private val httpResponseMetrics: ResponseTimingPort,
 ) {
 
   private val stateStore = ConcurrentHashMap<String, Long>()

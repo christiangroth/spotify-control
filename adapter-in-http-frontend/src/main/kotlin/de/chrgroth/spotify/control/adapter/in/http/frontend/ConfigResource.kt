@@ -1,8 +1,8 @@
 package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
-import de.chrgroth.spotify.control.adapter.`in`.http.metrics.HttpResponseMetrics
 import de.chrgroth.spotify.control.domain.port.`in`.user.RuntimeConfigPort
 import de.chrgroth.spotify.control.domain.port.out.infra.ConfigurationInfoPort
+import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
 import io.quarkus.qute.Location
 import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
@@ -26,7 +26,7 @@ class ConfigResource(
   private val configTemplate: Template,
   private val configurationInfo: ConfigurationInfoPort,
   private val runtimeConfig: RuntimeConfigPort,
-  private val httpResponseMetrics: HttpResponseMetrics,
+  private val httpResponseMetrics: ResponseTimingPort,
 ) {
 
   @GET

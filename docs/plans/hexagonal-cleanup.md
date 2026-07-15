@@ -16,9 +16,20 @@ Subdomain-Trennung und konsistentem Naming über alle Module hinweg.
 
 ## adapter-in-http-frontend
 
+### Gut strukturiert – keine strukturellen Verletzungen
+
+Programmiert gegen `ResponseTimingPort` (`domain-api`) statt gegen die konkrete `HttpResponseMetrics`-Klasse
+aus `adapter-in-http-metrics`. Dadurch entfällt die Cross-Adapter-Gradle-Abhängigkeit, granulare
+Detail-Timings über `ResponseTimingDetails.detail(...)` bleiben erhalten. Keine offenen Findings.
+
 ---
 
 ## adapter-in-http-metrics
+
+### Gut strukturiert – keine strukturellen Verletzungen
+
+`HttpResponseMetrics` implementiert `ResponseTimingPort`/`ResponseTimingDetails` aus `domain-api`. Keine
+offenen Findings.
 
 ---
 
