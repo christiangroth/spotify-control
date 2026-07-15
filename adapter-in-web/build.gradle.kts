@@ -7,6 +7,7 @@ dependencies {
   implementation(project(":domain-api"))
 
   api(enforcedPlatform(libs.quarkusBom))
+  api("io.quarkus:quarkus-micrometer")
   api("io.quarkus:quarkus-rest-jackson")
   api("io.quarkus:quarkus-rest-qute")
   api("io.quarkus:quarkus-security")
