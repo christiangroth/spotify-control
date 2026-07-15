@@ -23,7 +23,7 @@ class PlaylistStatsCache(
   @Volatile
   private var cachedStats = PlaylistStats()
 
-  override fun getPlaylistStats(): PlaylistStats = cachedStats
+  override fun current(): PlaylistStats = cachedStats
 
   @Scheduled(every = "15s", delayed = "4s")
   fun refresh() {

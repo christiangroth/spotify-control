@@ -81,7 +81,7 @@ The system is composed of the following Gradle modules:
 | Module                  | Role                                                                              |
 |-------------------------|-----------------------------------------------------------------------------------|
 | `adapter-in-http-frontend` | REST endpoints, OAuth callback, SSE endpoints, action endpoints                |
-| `adapter-in-http-metrics`  | HTTP response timing/slow-response and playlist gauge metrics via Micrometer   |
+| `adapter-in-http-metrics`  | HTTP response timing/slow-response and playlist/catalog gauge metrics via Micrometer |
 | `adapter-in-outbox`     | Outbox event dispatcher – routes outbox events to the correct domain port handler |
 | `adapter-in-scheduler`  | Scheduled jobs for polling Spotify and syncing data                               |
 | `adapter-in-starter`    | One-time startup bean implementations for data migrations and bugfixes            |
@@ -114,7 +114,7 @@ Handles all inbound HTTP interactions: the web UI (Qute templates), OAuth callba
 
 ### `adapter-in-http-metrics`
 
-Records HTTP response timings and slow-response detection via Micrometer (`HttpResponseMetrics`), which implements the `ResponseTimingPort` from `domain-api`. Independent of the frontend so it can evolve separately (e.g. metrics caching), and wired together only in `application-quarkus` via CDI. Also registers the playlist overview gauges (`PlaylistMetrics`), reading counts through the `PlaylistStatsPort` from `domain-api` – the underlying `PlaylistStatsCache` stays in `domain-impl`, since the "out of sync"/"pending album upgrade" classification is a domain rule, not a metrics concern.
+Records HTTP response timings and slow-response detection via Micrometer (`HttpResponseMetrics`), which implements the `ResponseTimingPort` from `domain-api`. Independent of the frontend so it can evolve separately (e.g. metrics caching), and wired together only in `application-quarkus` via CDI. Also registers the playlist overview gauges (`PlaylistMetrics`) and catalog gauges (`CatalogMetrics`), reading counts through the `PlaylistStatsPort`/`CatalogStatsPort` from `domain-api` – the underlying `PlaylistStatsCache`/`CatalogStatsCache` stay in `domain-impl`, since the "out of sync"/"pending album upgrade" classification and catalog counting are domain rules, not a metrics concern.
 
 ### `adapter-out-mongodb`
 
