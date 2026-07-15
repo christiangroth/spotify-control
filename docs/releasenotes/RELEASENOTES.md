@@ -1,3 +1,12 @@
+# 0.111.2 (2026.07.15)
+
+## Bugfixes / Chore
+* Fixed slow responses for health page fragments and navbar status icons.
+
+
+
+---
+
 # 0.111.1 (2026.07.15)
 
 ## Bugfixes / Chore
