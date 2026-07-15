@@ -1,6 +1,12 @@
 package de.chrgroth.spotify.control.domain.infra
 
+import de.chrgroth.spotify.control.domain.model.infra.ConfigurationStats
+import de.chrgroth.spotify.control.domain.model.infra.CronjobStats
 import de.chrgroth.spotify.control.domain.model.infra.HealthStats
+import de.chrgroth.spotify.control.domain.model.infra.MongoCollectionStats
+import de.chrgroth.spotify.control.domain.model.infra.MongoQueryStats
+import de.chrgroth.spotify.control.domain.model.infra.OutboxPartitionStats
+import de.chrgroth.spotify.control.domain.model.infra.OutgoingRequestStats
 import de.chrgroth.spotify.control.domain.model.infra.PredicateStats
 import de.chrgroth.spotify.control.domain.port.`in`.infra.HealthPort
 import de.chrgroth.spotify.control.domain.port.out.infra.ConfigurationInfoPort
@@ -47,6 +53,22 @@ class HealthService(
       configurationStats = configurationStatsAsync.await(),
     )
   }
+
+  override fun getOutboxPartitions(): List<OutboxPartitionStats> = outboxStatsCache.current()
+
+  override fun getOutgoingRequestStats(): List<OutgoingRequestStats> = outgoingRequestStats.getRequestStats()
+
+  override fun getMongoCollectionStats(): List<MongoCollectionStats> = mongoStats.getCollectionStats()
+
+  override fun getMongoQueryStats(): List<MongoQueryStats> = mongoStats.getQueryStats()
+
+  override fun getCronjobStats(): List<CronjobStats> = cronjobInfo.getCronjobStats()
+
+  override fun getPredicateStats(): List<PredicateStats> = listOf(
+    PredicateStats(name = "playbackActive", active = playbackActivity.isPlaybackActive(), lastCheck = playbackActivity.lastActivityTimestamp()),
+  )
+
+  override fun getConfigurationStats(): ConfigurationStats = configurationInfo.getConfigurationStats()
 }
 
 /**
