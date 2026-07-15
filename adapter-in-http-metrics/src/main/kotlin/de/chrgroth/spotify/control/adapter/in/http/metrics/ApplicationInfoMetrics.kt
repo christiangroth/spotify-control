@@ -1,4 +1,4 @@
-package de.chrgroth.spotify.control.domain.infra
+package de.chrgroth.spotify.control.adapter.`in`.http.metrics
 
 import io.micrometer.core.instrument.Gauge
 import io.micrometer.core.instrument.MeterRegistry

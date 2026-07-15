@@ -81,7 +81,7 @@ class SpotifyRecentlyPlayedAdapterTests {
   fun `getRecentlyPlayed increments in-memory request counter`() {
     spotifyPlayback.getRecentlyPlayed(AccessToken("mock-access-token"))
 
-    val stats = outgoingRequestStats.getRequestStats()
+    val stats = outgoingRequestStats.current()
     assertThat(stats).isNotEmpty
     assertThat(stats.any { it.requestCountLast24h > 0 }).isTrue
   }

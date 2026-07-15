@@ -81,7 +81,7 @@ The system is composed of the following Gradle modules:
 | Module                  | Role                                                                              |
 |-------------------------|-----------------------------------------------------------------------------------|
 | `adapter-in-http-frontend` | REST endpoints, OAuth callback, SSE endpoints, action endpoints                |
-| `adapter-in-http-metrics`  | HTTP response timing/slow-response and playlist/catalog gauge metrics via Micrometer |
+| `adapter-in-http-metrics`  | HTTP response timing/slow-response and application/playlist/catalog/outbox/MongoDB gauge metrics via Micrometer |
 | `adapter-in-outbox`     | Outbox event dispatcher – routes outbox events to the correct domain port handler |
 | `adapter-in-scheduler`  | Scheduled jobs for polling Spotify and syncing data                               |
 | `adapter-in-starter`    | One-time startup bean implementations for data migrations and bugfixes            |
@@ -114,7 +114,7 @@ Handles all inbound HTTP interactions: the web UI (Qute templates), OAuth callba
 
 ### `adapter-in-http-metrics`
 
-Records HTTP response timings and slow-response detection via Micrometer (`HttpResponseMetrics`), which implements the `ResponseTimingPort` from `domain-api`. Independent of the frontend so it can evolve separately (e.g. metrics caching), and wired together only in `application-quarkus` via CDI. Also registers the playlist overview gauges (`PlaylistMetrics`) and catalog gauges (`CatalogMetrics`), reading counts through the `PlaylistStatsPort`/`CatalogStatsPort` from `domain-api` – the underlying `PlaylistStatsCache`/`CatalogStatsCache` stay in `domain-impl`, since the "out of sync"/"pending album upgrade" classification and catalog counting are domain rules, not a metrics concern.
+Records HTTP response timings and slow-response detection via Micrometer (`HttpResponseMetrics`), which implements the `ResponseTimingPort` from `domain-api`. Independent of the frontend so it can evolve separately (e.g. metrics caching), and wired together only in `application-quarkus` via CDI. Also registers the playlist overview gauges (`PlaylistMetrics`), catalog gauges (`CatalogMetrics`), outbox backlog gauges (`OutboxMetrics`), MongoDB collection size gauges (`MongoCollectionMetrics`), and the static application info gauge (`ApplicationInfoMetrics`) – the domain-facing ones read counts through the `PlaylistStatsPort`/`CatalogStatsPort`/`OutboxStatsPort`/`MongoCollectionStatsPort` from `domain-api`, while the underlying `PlaylistStatsCache`/`CatalogStatsCache`/`OutboxPartitionStatsCache` stay in `domain-impl` (or `adapter-out-mongodb` for MongoDB stats), since the "out of sync"/"pending album upgrade" classification, catalog counting, and outbox partitioning are domain rules, not a metrics concern. `PlaylistMetrics`, `CatalogMetrics`, and `OutboxMetrics` share a single port read per scrape via `ScrapeSnapshot`, a small TTL-memoized helper local to this module.
 
 ### `adapter-out-mongodb`
 

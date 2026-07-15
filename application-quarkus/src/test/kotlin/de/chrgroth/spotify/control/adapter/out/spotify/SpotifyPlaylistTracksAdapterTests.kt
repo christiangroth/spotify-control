@@ -121,7 +121,7 @@ class SpotifyPlaylistTracksAdapterTests {
   fun `getPlaylistTracks increments in-memory request counter`() {
     spotifyPlaylist.getPlaylistTracks(AccessToken("mock-access-token"), "mock-playlist-1")
 
-    val stats = outgoingRequestStats.getRequestStats()
+    val stats = outgoingRequestStats.current()
     assertThat(stats).isNotEmpty
     assertThat(stats.any { it.requestCountLast24h > 0 }).isTrue
   }

@@ -8,6 +8,7 @@ import java.time.Duration
 // domain-side cache refresh interval, so gauges stay effectively live.
 internal class ScrapeSnapshot<T>(
   private val ttl: Duration = Duration.ofSeconds(1),
+  private val nanoTime: () -> Long = System::nanoTime,
   private val fetch: () -> T,
 ) {
 
@@ -18,7 +19,7 @@ internal class ScrapeSnapshot<T>(
   private var cachedAtNanos = 0L
 
   fun current(): T {
-    val now = System.nanoTime()
+    val now = nanoTime()
     cached?.takeIf { now - cachedAtNanos < ttl.toNanos() }?.let { return it }
     return fetch().also {
       cached = it

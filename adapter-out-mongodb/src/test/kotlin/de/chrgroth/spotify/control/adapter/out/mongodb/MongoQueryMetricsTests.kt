@@ -19,10 +19,10 @@ class MongoQueryMetricsTests {
   }
 
   @Test
-  fun `timed records execution count in getQueryStats`() {
+  fun `timed records execution count in current`() {
     metrics.timed("test.success.stats") { 42L }
 
-    val stats = metrics.getQueryStats()
+    val stats = metrics.current()
     val stat = stats.find { it.name == "test.success.stats" }
     assertThat(stat).isNotNull()
     assertThat(stat!!.executionCountLast24h).isEqualTo(1L)

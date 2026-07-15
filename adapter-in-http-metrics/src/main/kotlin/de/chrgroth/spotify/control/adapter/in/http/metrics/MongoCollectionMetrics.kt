@@ -1,7 +1,7 @@
-package de.chrgroth.spotify.control.domain.infra
+package de.chrgroth.spotify.control.adapter.`in`.http.metrics
 
 import de.chrgroth.spotify.control.domain.model.infra.MongoCollectionStats
-import de.chrgroth.spotify.control.domain.port.out.infra.MongoStatsPort
+import de.chrgroth.spotify.control.domain.port.out.infra.MongoCollectionStatsPort
 import io.micrometer.core.instrument.Gauge
 import io.micrometer.core.instrument.MeterRegistry
 import io.quarkus.runtime.StartupEvent
@@ -19,7 +19,7 @@ import mu.KLogging
 @ApplicationScoped
 @Suppress("Unused", "UnusedParameter")
 class MongoCollectionMetrics(
-  private val mongoStats: MongoStatsPort,
+  private val mongoCollectionStats: MongoCollectionStatsPort,
   private val meterRegistry: MeterRegistry,
 ) {
 
@@ -39,7 +39,7 @@ class MongoCollectionMetrics(
   @Scheduled(every = "15s", delayed = "12s")
   fun refresh() {
     try {
-      cachedStats = mongoStats.getCollectionStats()
+      cachedStats = mongoCollectionStats.current()
     } catch (e: Exception) {
       logger.warn(e) { "Failed to refresh MongoDB collection stats for metrics, keeping previous values" }
     }
