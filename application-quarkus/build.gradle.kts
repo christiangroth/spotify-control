@@ -5,10 +5,11 @@ plugins {
 }
 
 dependencies {
+  implementation(project(":adapter-in-http-frontend"))
+  implementation(project(":adapter-in-http-metrics"))
   implementation(project(":adapter-in-outbox"))
   implementation(project(":adapter-in-scheduler"))
   implementation(project(":adapter-in-starter"))
-  implementation(project(":adapter-in-web"))
   implementation(project(":adapter-out-config"))
   implementation(project(":adapter-out-mongodb"))
   implementation(project(":adapter-out-outbox"))

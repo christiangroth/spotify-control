@@ -80,10 +80,11 @@ The system is composed of the following Gradle modules:
 
 | Module                  | Role                                                                              |
 |-------------------------|-----------------------------------------------------------------------------------|
+| `adapter-in-http-frontend` | REST endpoints, OAuth callback, SSE endpoints, action endpoints                |
+| `adapter-in-http-metrics`  | HTTP response timing/slow-response metrics via Micrometer                      |
 | `adapter-in-outbox`     | Outbox event dispatcher – routes outbox events to the correct domain port handler |
 | `adapter-in-scheduler`  | Scheduled jobs for polling Spotify and syncing data                               |
 | `adapter-in-starter`    | One-time startup bean implementations for data migrations and bugfixes            |
-| `adapter-in-web`        | REST endpoints, OAuth callback, SSE endpoints, action endpoints                   |
 | `adapter-out-mongodb`   | Repository implementations for MongoDB                                            |
 | `adapter-out-outbox`    | Outbox adapter for writing new tasks into the outbox                              |
 | `adapter-out-scheduler` | Scheduler info provider for the health page                                       |
@@ -107,9 +108,13 @@ Contains Quarkus `@Scheduled` jobs that trigger domain actions at configured int
 
 Contains concrete `Starter` implementations acting as inbound adapters: they receive a startup trigger from `de.chrgroth.quarkus.starters` and call into the domain via port interfaces. Each starter executes exactly once in production mode. Used for one-time data migrations, schema changes, and bugfixes.
 
-### `adapter-in-web`
+### `adapter-in-http-frontend`
 
-Handles all inbound HTTP interactions: the web UI (Qute templates), OAuth callback, SSE streams for live updates, and settings action endpoints.
+Handles all inbound HTTP interactions: the web UI (Qute templates), OAuth callback, SSE streams for live updates, and settings action endpoints. Depends on `adapter-in-http-metrics` to record response timings.
+
+### `adapter-in-http-metrics`
+
+Records HTTP response timings and slow-response detection via Micrometer (`HttpResponseMetrics`), independent of the frontend so it can evolve separately (e.g. metrics caching).
 
 ### `adapter-out-mongodb`
 
@@ -450,7 +455,7 @@ No separate frontend project. The UI is rendered server-side using Quarkus Qute 
 
 ## Documentation and Release Notes Serving
 
-Architecture documentation (`docs/arc42`), ADRs (`docs/adr`), and release notes (`docs/releasenotes`) are served to the logged-in user directly from the application. A Gradle copy task bundles the Markdown files into the `adapter-in-web` classpath at build time. A `DocsResource` endpoint reads and passes the raw Markdown to Qute templates; the `marked` WebJar renders it in the browser.
+Architecture documentation (`docs/arc42`), ADRs (`docs/adr`), and release notes (`docs/releasenotes`) are served to the logged-in user directly from the application. A Gradle copy task bundles the Markdown files into the `adapter-in-http-frontend` classpath at build time. A `DocsResource` endpoint reads and passes the raw Markdown to Qute templates; the `marked` WebJar renders it in the browser.
 
 ## Configuration
 
