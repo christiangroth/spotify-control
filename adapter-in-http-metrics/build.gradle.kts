@@ -8,7 +8,6 @@ dependencies {
 
   api(enforcedPlatform(libs.quarkusBom))
   api("io.quarkus:quarkus-micrometer")
-  implementation("io.quarkus:quarkus-scheduler")
 }
 
 allOpen {
