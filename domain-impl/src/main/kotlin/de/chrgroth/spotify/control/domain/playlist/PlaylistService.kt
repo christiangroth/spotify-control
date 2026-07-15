@@ -21,6 +21,7 @@ import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPo
 import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.catalog.SyncController
 import de.chrgroth.spotify.control.domain.catalog.CatalogSyncRequest
+import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.SpotifyPlaylistPort
 import de.chrgroth.spotify.control.domain.user.CurrentUserResolver
 import io.micrometer.core.instrument.Gauge
@@ -43,6 +44,7 @@ class PlaylistService(
   private val dashboardRefresh: DashboardRefreshPort,
   private val playlistCheckRepository: AppPlaylistCheckRepositoryPort,
   private val syncController: SyncController,
+  private val catalogPort: CatalogPort,
   private val meterRegistry: MeterRegistry,
 ) : PlaylistPort {
 
@@ -126,6 +128,7 @@ class PlaylistService(
         CatalogSyncRequest(it.trackId.value, listOfNotNull(it.artistIds.firstOrNull()?.value), SyncCause.Playlist(playlistId, it.trackId.value))
       }
       syncController.syncForTracks(catalogRequests)
+      catalogPort.promoteAssumptionArtistsFoundOnPlaylist(catalogRequests.flatMap { it.artistIds }.toSet())
 
       if (page.nextUrl != null) {
         outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(playlistId, page.nextUrl, page.snapshotId))

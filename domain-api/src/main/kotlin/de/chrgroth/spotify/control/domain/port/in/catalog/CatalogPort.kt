@@ -19,4 +19,5 @@ interface CatalogPort {
   fun handle(event: DomainOutboxEvent.ResyncCatalog): Either<DomainError, Unit>
   fun enqueueArtistAlbumsSync(partition: Int, totalPartitions: Int)
   fun enqueuePlaybackArtistsForSync()
+  fun promoteAssumptionArtistsFoundOnPlaylist(artistIds: Set<String>)
 }

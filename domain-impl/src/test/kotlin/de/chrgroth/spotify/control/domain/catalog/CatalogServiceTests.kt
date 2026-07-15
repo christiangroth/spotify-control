@@ -170,6 +170,45 @@ class CatalogServiceTests {
     verify { playbackAggregation.rebuildAllAggregations() }
   }
 
+  // --- promoteAssumptionArtistsFoundOnPlaylist tests ---
+
+  @Test
+  fun `promoteAssumptionArtistsFoundOnPlaylist does nothing for empty artist set`() {
+    adapter.promoteAssumptionArtistsFoundOnPlaylist(emptySet())
+
+    verify(exactly = 0) { appArtistRepository.findByArtistIds(any()) }
+    verify(exactly = 0) { appArtistRepository.setSyncStatus(any(), any()) }
+  }
+
+  @Test
+  fun `promoteAssumptionArtistsFoundOnPlaylist promotes assumption-status artists to SYNC and rebuilds aggregations once`() {
+    val syncAssumptionArtist = artist1.copy(syncStatus = ArtistSyncStatus.SYNC_ASSUMPTION)
+    val shallowAssumptionArtist = artist2.copy(syncStatus = ArtistSyncStatus.SHALLOW_ASSUMPTION)
+    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"), ArtistId("artist-2"))) } returns
+      listOf(syncAssumptionArtist, shallowAssumptionArtist)
+    every { appArtistRepository.setSyncStatus(any(), any()) } just runs
+    every { outboxPort.enqueue(any()) } just runs
+
+    adapter.promoteAssumptionArtistsFoundOnPlaylist(setOf("artist-1", "artist-2"))
+
+    verify { appArtistRepository.setSyncStatus(ArtistId("artist-1"), ArtistSyncStatus.SYNC) }
+    verify { appArtistRepository.setSyncStatus(ArtistId("artist-2"), ArtistSyncStatus.SYNC) }
+    verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums("artist-1")) }
+    verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums("artist-2")) }
+    verify(exactly = 1) { playbackAggregation.rebuildAllAggregations() }
+  }
+
+  @Test
+  fun `promoteAssumptionArtistsFoundOnPlaylist leaves already-final-status artists untouched`() {
+    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns listOf(artist1)
+
+    adapter.promoteAssumptionArtistsFoundOnPlaylist(setOf("artist-1"))
+
+    verify(exactly = 0) { appArtistRepository.setSyncStatus(any(), any()) }
+    verify(exactly = 0) { outboxPort.enqueue(any()) }
+    verify(exactly = 0) { playbackAggregation.rebuildAllAggregations() }
+  }
+
   // --- resyncArtist tests ---
 
   @Test
