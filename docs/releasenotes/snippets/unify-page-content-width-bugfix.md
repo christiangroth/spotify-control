@@ -1,0 +1,1 @@
+* Fixed inconsistent page widths: all pages now share the same responsive content container, so lines and tables no longer stretch edge-to-edge on wide monitors while still using the full width on small and medium screens.
