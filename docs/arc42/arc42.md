@@ -4,14 +4,14 @@
 
 ## Requirements Overview
 
-spotify-control is a private Spotify playlist manager built for exactly one user (see
-[ADR-0008](../adr/0008-single-user-architecture.md)). There is no registration, no allow-list, and
-no user-management UI — any Spotify account that completes the OAuth login flow becomes the
-application's user, and a different account cannot log in once one is registered.
+spotify-control is a private Spotify playlist manager built for exactly one user. There is no
+registration, no allow-list, and no user-management UI — any Spotify account that completes the
+OAuth login flow becomes the application's user, and a different account cannot log in once one is
+registered.
 
 **Implemented features:**
 
-1. **Playback Tracking** – Spotify `currently-playing` and `recently-played` are polled every 20 seconds and stored. Partial plays (tracks not played to completion) are detected via observation sessions and stored separately (see [ADR-0010](../adr/0010-partial-play-detection-via-currently-playing-polling.md)).
+1. **Playback Tracking** – Spotify `currently-playing` and `recently-played` are polled every 20 seconds and stored. Partial plays (tracks not played to completion) are detected via observation sessions and stored separately.
 
 2. **Playlist Mirror** – Local copy of selected Spotify playlists. Sync is driven by snapshot IDs – a full track sync is only performed when Spotify reports a change.
 
@@ -19,32 +19,27 @@ application's user, and a different account cannot log in once one is registered
 
 4. **Listening Statistics** – Playback data is aggregated (daily, weekly, monthly, quarterly, yearly) into a dashboard showing total play counts, daily play trends, top artists, top tracks, and recently played items.
 
-5. **Shallow Artists** – Artists can be confirmed as `SYNC` (full catalog sync) or `SHALLOW` (artist metadata only, no albums/tracks). Newly discovered artists start in an `_ASSUMPTION` variant of one of these, guessed from discovery context, until the user confirms them via the settings UI. Playback events of `SHALLOW`/`SHALLOW_ASSUMPTION` artists are still recorded but excluded from statistics. See [ADR-0009](../adr/0009-shallow-artist-catalog-sync-model.md).
+5. **Shallow Artists** – Artists can be confirmed as `SYNC` (full catalog sync) or `SHALLOW` (artist metadata only, no albums/tracks). Newly discovered artists start in an `_ASSUMPTION` variant of one of these, guessed from discovery context, until the user confirms them via the settings UI. Playback events of `SHALLOW`/`SHALLOW_ASSUMPTION` artists are still recorded but excluded from statistics.
 
-6. **Playlist Checks** – A set of pluggable rule checks runs against every actively-synced playlist after each sync: duplicate tracks, multiple tracks by the same artist on "singularity" playlists, year-playlist tracks missing from the master "all" playlist, and tracks referencing an outdated release when a newer/better version exists in the artist's catalog. Results are shown on a dashboard; some violations can be fixed directly from the UI. See [ADR-0011](../adr/0011-playlist-checks-framework.md).
+6. **Playlist Checks** – A set of pluggable rule checks runs against every actively-synced playlist after each sync: duplicate tracks, multiple tracks by the same artist on "singularity" playlists, year-playlist tracks missing from the master "all" playlist, and tracks referencing an outdated release when a newer/better version exists in the artist's catalog. Results are shown on a dashboard; some violations can be fixed directly from the UI.
 
 ## Quality Goals
 
-| Priority | Goal | Motivation |
-|----------|------|------------|
-| 1 | **Maintainability** | The application is built and maintained by a single developer, with AI coding agents doing a significant share of the implementation work (see [ADR-0004](../adr/0004-using-ai-coding-agents.md)). Clear module boundaries, port contracts, and up-to-date documentation are what keep changes safe without a second reviewer. |
-| 2 | **Operational Stability** | The application runs unattended against a third-party API with strict, partly undocumented rate limits. It must recover from rate limiting, token expiry, and transient failures without manual intervention. |
-| 3 | **Domain Purity / Testability** | Business logic (sync rules, aggregation, playlist checks) must be verifiable without a running Quarkus instance or live Spotify/MongoDB access, so correctness can be checked quickly and cheaply during AI-assisted development. |
-
-## Stakeholders
-
-| Role/Name         | Contact     | Expectations                                                              |
-|-------------------|-------------|---------------------------------------------------------------------------|
-| Developer / User  | (private)   | The single user; operates and uses the application for personal use      |
+| Priority | Goal | Description |
+|----------|------|--------------|
+| 1 | **Resilience against Spotify rate limits** | Spotify's rate limits are strict and partly undocumented, and are most likely to be hit during larger catalog or playlist syncs. The application must throttle proactively and recover automatically from `429` responses without data loss or manual intervention. |
+| 2 | **Efficient Spotify API usage** | Every sync path favours the minimum number of Spotify API calls needed for the data that actually changed, rather than broad or repeated fetching. |
+| 3 | **Good performance** | The UI and background sync stay responsive as the local catalog and playback history grow. |
+| 4 | **Simple, uncluttered UI** | The web UI favours a small number of clear, task-focused pages over configurability or visual complexity. |
 
 # Architecture Constraints
 
-- **Single user** – The application is built for exactly one user (see [ADR-0008](../adr/0008-single-user-architecture.md)). No registration, no user-management UI, no allow-list.
+- **Single user** – The application is built for exactly one user. No registration, no user-management UI, no allow-list.
 - **Login exclusively via Spotify OAuth** – No other authentication mechanism.
 - **External MongoDB** – Data is stored in MongoDB Atlas (two projects: prod + dev). No self-hosted database.
 - **VPS with Docker Swarm** – Deployment target is an existing VPS running Docker Swarm with Traefik for routing and TLS.
 - **No separate frontend project** – Server-side rendering via Quarkus Qute; no React, Vue, npm, Node.js, or build steps.
-- **All Spotify API calls via Outbox** – No direct Spotify calls outside `adapter-out-spotify`.
+- **Spotify API calls via Outbox** – The rule is that every Spotify call other than the OAuth login token exchange goes through the persistent outbox, not directly from `domain-impl`/`adapter-in-*`. This is not yet fully consistent in practice – see Risks and Technical Debts.
 
 # Context and Scope
 
@@ -74,9 +69,9 @@ spotify-control interacts with the following external systems:
 # Solution Strategy
 
 - **Hexagonal Architecture** – The application is structured using hexagonal (ports and adapters) architecture to cleanly separate domain logic from infrastructure concerns.
-- **Outbox Pattern** – All Spotify API operations are routed through a persistent outbox to ensure reliability and rate limit handling. No direct Spotify calls are made outside `adapter-out-spotify`.
+- **Outbox Pattern** – Spotify API operations are routed through a persistent outbox to ensure reliability and rate limit handling, decoupling producers from consumers.
 - **Server-Side Rendering** – The frontend uses Quarkus Qute templates with vanilla JS (fetch API) for dynamic interactions, eliminating the need for a separate frontend project or JavaScript framework.
-- **Single-User System** – The application is built for exactly one user, logging in via Spotify OAuth. No allow-list, no self-service registration, no user-management UI. See [ADR-0008](../adr/0008-single-user-architecture.md).
+- **Single-User System** – The application is built for exactly one user, logging in via Spotify OAuth. No allow-list, no self-service registration, no user-management UI.
 
 # Building Block View
 
@@ -199,81 +194,36 @@ Provided via [christiangroth/quarkus-one-time-starters](https://github.com/chris
 - `domain-impl` – execution orchestration and startup observer
 - `adapter-out-persistence-mongodb` – MongoDB persistence for starter execution state
 
-## Level 2
-
-Not applicable. The module descriptions in the Whitebox Overall System above already give each
-module's responsibilities at the level of detail useful for this system's size; a separate
-whitebox decomposition per module would repeat the same information in diagram form without
-adding anything.
+A third self-authored GitHub Packages artifact, `de.chrgroth.gradle.release-notes`, exists but is a
+build-time-only Gradle plugin (not a runtime library) — see Deployment View → Release Process.
 
 # Runtime View
 
-## Playback Polling Flow
+## Playback Flow
 
 `PlaybackDetectionJob` runs every 20 seconds and enqueues a single `FetchPlaybackData` event on the
-`to-spotify-playback` partition (no throttle). Its handler fetches both currently-playing and
-recently-played data in one pass — there is no separate 10-minute "recently played" schedule.
+`to-spotify-playback` partition. Its handler fetches both currently-playing and recently-played data
+in one pass — there is no separate 10-minute schedule.
 
-![Playback polling sequence](https://kroki.io/plantuml/svg/lVRNb9swDL37VxA92VizLDsGyNBsaYcNGNYhvfQUMBJtC5EllaLTeb9-kOMUcdNi3c22Ht8H8eSrKMjSNjaLO-MCMjbQeOdVzb4hEG7p5CTWqP2jcRWUaOPpiaYSWys33sna_CGYzU7H6KElp2jJ7B_vaqN2jmKEWZYFZDHKBHQCF79a5F0bs7WqSbeW-AIwQkxvY-CtxW6Larcm3htFPSzgGPOzla3_neU_vKv86nPRg_zh4wi4Dl5M2cHy9ttB7_CeaRTcYiS4GCj60yY9Z9liAdd74g4-foBIyjsdIT_aWpGQEuPdd78tYLHI-ggw-QQBYQ7kHlpq6YZE1U8jKJgXWcCEOriEOZxBIBc_GQxOwnBwCc6D1OxFLBW9txdQ0IdOrpKjQeJoqUanLeVnekdHAxnM4ev1HUz3s2lD08RMPFUtMzmxBynjqmGm3xTMoQ2RWI4Umyf4ZoBDHinG5EsY1c64qnjGoLzbJwrPoUZHeqp8EywJaRhG44nJDZMaBFJitL0Q6ewNWY6jk2Fk7ANDIKfB0SMYoeYV0ZcmjwmYGjQuhSZrKrO19F8JxqSa0g5At8EahUIwoCPENhBH0qRh28HzUM9bNvQRln28cd1MCei6PrLu-5DapX1K8ZZCnVMWL-8UQ9g8NTUv2TevbRbe_WtNEI1TBBajDPRnF2vdOfXFO2FvLfH72Dl14_ku9S_mRYImxJLFRFmRoLERAnHag-1Am6j8npg0YA8ZXUuFgtZXZ5rLqmKqUGh051fL-0vQ2BU9P5YlqdRrjR3khz0X2RU5nf7QfwE)
+![Playback flow sequence](https://kroki.io/plantuml/svg/lVRNb9swDL37VxA92VizLDsGyNBsaYcNGNYhvfQUMBJtC5EllaLTeb9-kOMUcdNi3c22Ht8H8eSrKMjSNjaLO-MCMjbQeOdVzb4hEG7p5CTWqP2jcRWUaOPpiaYSWys33sna_CGYzU7H6KElp2jJ7B_vaqN2jmKEWZYFZDHKBHQCF79a5F0bs7WqSbeW-AIwQkxvY-CtxW6Larcm3htFPSzgGPOzla3_neU_vKv86nPRg_zh4wi4Dl5M2cHy9ttB7_CeaRTcYiS4GCj60yY9Z9liAdd74g4-foBIyjsdIT_aWpGQEuPdd78tYLHI-ggw-QQBYQ7kHlpq6YZE1U8jKJgXWcCEOriEOZxBIBc_GQxOwnBwCc6D1OxFLBW9txdQ0IdOrpKjQeJoqUanLeVnekdHAxnM4ev1HUz3s2lD08RMPFUtMzmxBynjqmGm3xTMoQ2RWI4Umyf4ZoBDHinG5EsY1c64qnjGoLzbJwrPoUZHeqp8EywJaRhG44nJDZMaBFJitL0Q6ewNWY6jk2Fk7ANDIKfB0SMYoeYV0ZcmjwmYGjQuhSZrKrO19F8JxqSa0g5At8EahUIwoCPENhBH0qRh28HzUM9bNvQRln28cd1MCei6PrLu-5DapX1K8ZZCnVMWL-8UQ9g8NTUv2TevbRbe_WtNEI1TBBajDPRnF2vdOfXFO2FvLfH72Dl14_ku9S_mRYImxJLFRFmRoLERAnHag-1Am6j8npg0YA8ZXUuFgtZXZ5rLqmKqUGh051fL-0vQ2BU9P5YlqdRrjR3khz0X2RU5nf7QfwE)
 
-```
-PlaybackDetectionJob (every 20s)
-    → enqueue FetchPlaybackData (to-spotify-playback partition)
-    → handle(FetchPlaybackData):
-        fetchCurrentlyPlaying():
-            Spotify GET /v1/me/player/currently-playing
-            → session tracking + orphaned-session conversion into spotify_recently_partial_played
-        fetchRecentlyPlayed():
-            Spotify GET /v1/me/player/recently-played
-            → new items → spotify_recently_played
-            → remaining eligible sessions converted → spotify_recently_partial_played
-            → duplicates superseded by recently-played are deleted
-    → if any new data: enqueue AppendPlaybackData (domain partition)
-```
+Session tracking distinguishes a still-active listening session (protected from conversion) from
+sessions eligible for conversion into a partial play once observed progress exceeds the configured
+minimum (default 25s); converted sessions move to `spotify_recently_partial_played`. A partial play
+later superseded by a matching `recently-played` entry is deleted again, together with any
+already-appended `app_playback` entry, and the affected day is re-aggregated.
 
-## Currently Playing → Partial Play Conversion
-
-See [ADR-0010](../adr/0010-partial-play-detection-via-currently-playing-polling.md) for why this
-exists. On every `PlaybackDetectionJob` run:
-
-- `fetchCurrentlyPlaying()` tracks the current session in `spotify_currently_playing`. If the
-  currently-playing track differs from a still-tracked session (or restarted from the beginning),
-  the previous session's observations are considered "orphaned" and eligible for conversion.
-- `fetchRecentlyPlayed()` additionally converts any remaining tracked session that is not the most
-  recently observed one (which may still be active) and whose observed progress exceeds the
-  configured minimum (default: 25 seconds).
-- For each convertible session, a `RecentlyPartialPlayedItem` is created with an estimated play
-  duration and written to `spotify_recently_partial_played`. Converted and completed track
-  observations are then deleted from `spotify_currently_playing`.
-- If a partial play is later superseded by a matching `recently_played` entry (same track, close
-  start time), the partial-play record and any already-appended `app_playback` entry are deleted
-  and the affected day is re-aggregated.
-
-## Playback Data Processing Flow
-
-Raw playback data from `spotify_recently_played` and `spotify_recently_partial_played` is processed
-into the normalised `app_playback` collection by `PlaybackService`. There are two modes:
-
-**Append (triggered automatically):** After new raw data arrives, `AppendPlaybackData` is enqueued
-on the `domain` partition. All playback events are stored unconditionally regardless of artist sync
-status — filtering by status happens only at aggregation time (see [Artist Sync Status](#artist-sync-status)).
-The handler fetches all source items newer than the most recent `app_playback` entry, deduplicates
-against existing `app_playback` timestamps, then:
-1. Appends new entries to `app_playback` (playedAt, trackId, secondsPlayed).
-2. Enqueues `AggregatePlaybackData(DAY, day)` for each affected day.
-3. Calls `SyncController.syncForTracks()` with a `CatalogSyncRequest` per newly-seen track – for any
-   artist not yet present in `app_artist`, this enqueues `SyncArtistDetails(artistId, fromPlaylist = false)`
-   on the `to-spotify-catalog` partition (see [Catalog Sync Flow](#catalog-sync-flow)).
-
-**Rebuild (user-triggered from Settings):** Deletes all `app_playback` entries and re-runs the
-append logic from scratch over all source data.
+`AppendPlaybackData` (enqueued whenever new raw data arrives) appends new entries to `app_playback`,
+enqueues `AggregatePlaybackData(DAY, day)` per affected day, and triggers on-demand catalog discovery
+(`SyncController.syncForTracks()`, see [Catalog Sync Flow](#catalog-sync-flow)) for any newly-seen
+artist. A user-triggered **Rebuild** (Settings) deletes all `app_playback` entries and re-runs this
+from scratch over all source data.
 
 ## Artist Sync Status
 
 The catalog settings pages (`/catalog/artists/settings` for undecided artists, the Catalog UI for
 confirmed ones) let users control how much of an artist's catalog is synced via `app_artist.syncStatus`
-(`ArtistSyncStatus`) — see [ADR-0009](../adr/0009-shallow-artist-catalog-sync-model.md) for the
-rationale:
+(`ArtistSyncStatus`):
 
 | Status               | Description                                                                                                                                          |
 |-----------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -282,115 +232,58 @@ rationale:
 | `SYNC_ASSUMPTION`     | Automatic guess for a newly discovered artist found via an actively synced playlist. Behaves like `SYNC` for catalog sync purposes until confirmed.  |
 | `SHALLOW_ASSUMPTION`  | Automatic guess for a newly discovered artist seen only via playback/recently-played history. Behaves like `SHALLOW` until confirmed.                |
 
-Assumption statuses are assigned automatically on first discovery of an artist and can only
-transition into one of the two final statuses via the settings UI (`CatalogPort.setArtistSync`/
-`setArtistShallow`) — never back into an assumption status, and there is no direct transition
-between the two assumption statuses. An artist found on an actively-synced playlist while still in
-an assumption status is automatically promoted to `SYNC` (`promoteAssumptionArtistsFoundOnPlaylist`).
-
-For albums/tracks with multiple artists, only the main artist (first artist in the Spotify artist
-list) determines sync scope and deletion on transition to `SHALLOW`; secondary/featured artists are
-unaffected.
-
-Playback events (`app_playback`) are never deleted based on artist status — the append flow always
-stores them unconditionally (see above). `PlaybackAggregationService.aggregateDay()` instead filters
-out items whose track's main artist is `SHALLOW`/`SHALLOW_ASSUMPTION` at aggregation time. Switching
-an artist's status triggers `rebuildAllAggregations()` so the change is reflected in statistics
-without needing to re-ingest playback data.
-
-The daily rotating catalog resync (see [Catalog Sync Flow](#catalog-sync-flow)) only re-enqueues
-album sync for artists in `SYNC`/`SYNC_ASSUMPTION`; `SHALLOW`/`SHALLOW_ASSUMPTION` artists are never
-automatically resynced.
+- Assumption statuses are assigned automatically on discovery and can only transition into one of the
+  two final statuses via the settings UI — never back into an assumption status. An artist found on
+  an actively-synced playlist while still in an assumption status is auto-promoted to `SYNC`.
+- Only the main artist (first artist in the Spotify artist list) determines sync scope and deletion
+  on transition to `SHALLOW`; secondary/featured artists are unaffected.
+- Playback events are never deleted based on artist status; `PlaybackAggregationService.aggregateDay()`
+  filters `SHALLOW`/`SHALLOW_ASSUMPTION` artists out at aggregation time instead, and a status change
+  triggers `rebuildAllAggregations()`.
+- The daily rotating catalog resync (see [Catalog Sync Flow](#catalog-sync-flow)) only re-enqueues
+  album sync for `SYNC`/`SYNC_ASSUMPTION` artists.
 
 ## Playlist Sync Flow
 
 ![Playlist sync sequence](https://kroki.io/plantuml/svg/jVRhb9MwEP2eX3Hap0Tq6Cq-FRWtdBsUaWOQDgkJabrF18aq4_PsS0tA_HfkNKnabSC-xb537957tnMeBL3UlUnCWluHHiuo2HJReq4IxNd0UAklKt5qu4IlmnBYUbTE2sgVW8n1T4LR6LCNHmuyBU295-2i1MXaUggwShKHXnShHVqBk881-nUdkrwoSdWG_AlggBBXx8Bbg43RQXLyG11QC3N4jPlUywP_SNJrtiu-eJe1IN5tHgFzx6KXDUxv57t5u3WiUPABA8FJR9FWq_idJJMJfODamwZQYPz6DNK9psYWH_khg8kkaaXD6VtwCGMg-1hTTXdOoVBIs8RhrO00wRhiZ88yt0uGVPi0U3PqusIARmcBpPQsYihrlbwAg9aiaLZRRzeiF1KiVYbSp_N6QR0XjOH95QKGm9GwomFPHDpQmwOMwZMzWFDfdN_j7isSjBFCarGiAQSLLpQsczUAaVzcaWyRC0od_hnFBQqmPe1cZeDIw3S2mH-9hL3drZYSihLtitR-VPIfxiP7343vXQ9_afV7KB6LdYDU4UpbFFJvvltP7QsKsPRcgcMVwQjY7kVApUOFUpTZk-QCbmiIzpFVz9KD3aSXYpmxFc_GkH8VA7xiv2ixaRahETH1Eo2RoDahTcvS1jSgdCh4Q54UYAs5umAFChpePVXpPFcsBPfTPL-7vl3MP9103QGWXFsFJXkCYci_3cwgne1oupf57GC_1LZPflZSlH14sqniCrUdxPwMtrd4RcDWNFlyTlbF39Qf)
 
-```
-PlaylistSyncJob (hourly at :30)
-    → enqueue SyncPlaylistInfo (to-spotify-playlist partition, 10s throttle)
-    → Spotify GET /v1/me/playlists → replace spotify_playlist_metadata, compare snapshot IDs
-    → for each ACTIVE playlist with a changed snapshot: enqueue SyncPlaylistData
-
-SyncPlaylistData (to-spotify-playlist partition)
-    → Spotify GET /v1/playlists/{id}/tracks (paginated; restarts from page 1 on snapshot mismatch)
-    → save/append spotify_playlist tracks
-    → SyncController.syncForTracks() → SyncArtistDetails per newly discovered artist
-    → promote any _ASSUMPTION-status artist found here to SYNC
-    → on last page: enqueue RunPlaylistChecks(playlistId) (domain partition)
-```
+Hourly (at :30), the app compares Spotify's playlist snapshot IDs against the locally stored ones and
+only re-syncs playlists that actually changed. Newly discovered artists feed into the same on-demand
+catalog discovery as playback (`SyncController.syncForTracks()`), and the last synced page enqueues a
+[playlist checks](#playlist-checks-flow) run.
 
 ## Catalog Sync Flow
 
-See [ADR-0009](../adr/0009-shallow-artist-catalog-sync-model.md). All catalog sync calls are
-single-entity (`GET /v1/artists/{id}`, `GET /v1/artists/{id}/albums`, `GET /v1/albums/{id}`) —
-there is no bulk multi-ID sync. Two independent paths feed into the same `to-spotify-catalog`
-partition:
+All catalog sync calls are single-entity (`GET /v1/artists/{id}`, `GET /v1/artists/{id}/albums`,
+`GET /v1/albums/{id}`) — there is no bulk multi-ID sync. Two independent paths feed into the same
+`to-spotify-catalog` partition: on-demand discovery from playback/playlist sync, and a daily job that
+rotates through 1/14th of all syncable artists so a full resync is spread across two weeks instead of
+happening all at once.
 
 ![Catalog sync sequence](https://kroki.io/plantuml/svg/lVRtT9swEP6eX3FCmpSIVmkmPlUqooO9MMHaqaAJCQldnEtj1bGDfQGyafvtU5yUtdAx9s3ne3vuucc-coyW61IFbiV1hRZLKI02orCmJGBb04bHFZiZe6mXkKNym56McqwVfzCaF_I7QZJsptFtTVrQ1Fpzf1FIsdLkHCRBUKFlKWSFmmHva412VbtgIQrKakV2D9CBa63twEWjxbHRbI1SZCEOjpFRmeWC7J0U5NMEbufMak7NQxCeG700J-8iH2S6y-3ilWGZNzCdn3b9OzvIkDFFR7DXl_Desj0HwWQCMz3MqESdQSadMHdkGwhza0qoFDYpihUY689KOgbXaBHBZBIIhOFhjwTG0M42tSwdnxCjVC5Eb51mA2irzfsCEeTGQudz11obhoYYpAasqpvuHkI2wx7_UHQcDSAZOeDCGmZFURD0nYeHIBDGUKDOFIXPYEQ90L4cjOHj-wuI75K4xxD_kNnPPsizAmOoK0eWtxAtrr4c30wXi8vz-cXp7AvIfGuswbUm5QgWn6ZnZ7NvG5HR35maqrQu_xAVtUUdI9cOpIO2Y_ykrd_YCUrVADKM3o5HowFYw8ituL0eWBoNYddgra9Gi88m9WvzsnxkjfRtTTVtwmmDwwybWX5FaOENJAcDYMOo5uvybpIcRE8oc6RI8E7Q6223S-ZCug2cTklB1zr8lcTJARdgci8wTBU9ZlVkIcPmf3hsUzpAlPV1PHPPZbXJmSvQUgZpA6nhAirkwgGm5o48c_8SXIfidXqL0QdDWOFSamTKdo_XRj2-p9ZYT-cNePp62stX0zQATQ98aZXXXWksQYVLci8-rQ1AL0zqG_lBYX_XbcwWxWrX-LteoB913599XnBEOmu__t8)
 
-```
-On-demand (from playback or playlist sync):
-    SyncController.syncForTracks() → enqueue SyncArtistDetails(artistId, fromPlaylist)
-        for any artist not yet in app_artist (to-spotify-catalog, 10s throttle)
-
-    handle(SyncArtistDetails):
-        Spotify GET /v1/artists/{id}
-        → upsert app_artist (SYNC_ASSUMPTION if fromPlaylist, else SHALLOW_ASSUMPTION)
-        → enqueue SyncArtistAlbums(artistId) if status is SYNC/SYNC_ASSUMPTION
-
-Daily at 02:00, rotating partition (ArtistCatalogSyncJob):
-    partition = dayOfYear % 14
-    → CatalogService.enqueueArtistAlbumsSync(partition, totalPartitions=14)
-    → selects SYNC/SYNC_ASSUMPTION artists in this partition slice (~1/14th per day)
-    → enqueue SyncArtistAlbums(artistId) per selected artist
-
-handle(SyncArtistAlbums) (to-spotify-catalog, shared by both paths above):
-    Spotify GET /v1/artists/{id}/albums (paginated)
-    → enqueue SyncAlbumDetails(albumId) per album not yet in app_album
-    → enqueue SyncArtistAlbums(artistId, nextUrl) if more pages
-
-handle(SyncAlbumDetails):
-    Spotify GET /v1/albums/{id} + GET /v1/albums/{id}/tracks (paginated)
-    → upsert app_album + app_track
-```
-
-The daily job spreads full-catalog resync load across two weeks instead of resyncing every artist
-at once, and only ever re-enqueues album sync — it never triggers `SyncArtistDetails`, which is
-exclusively an on-demand discovery event.
-
 ## Playlist Checks Flow
 
-See [ADR-0011](../adr/0011-playlist-checks-framework.md). `RunPlaylistChecks` is purely
-outbox/event-driven — it is never triggered directly by a scheduler job, only enqueued at the end
-of `SyncPlaylistData` for a changed playlist (see [Playlist Sync Flow](#playlist-sync-flow)) or
-after a user-triggered fix. Its handler (`PlaylistCheckService`) looks up all CDI-discovered
-`PlaylistCheckRunner` beans, filters them by `isApplicable(playlistInfo)` (some checks are scoped to
-a specific playlist type, e.g. the "single artist track" check only runs for `SINGULARITY`
-playlists), and executes the applicable runners concurrently. Each result is upserted into
-`app_playlist_check` (deterministic id `"$playlistId:$checkId"`); a Slack notification fires only
-when a check's pass/fail state flips or its violation list changes, to avoid repeat-notification
-noise. A fixable check's "Fix" action calls the runner's `fix()` against the live Spotify API and,
-on success, re-enqueues `SyncPlaylistData` to pull the corrected state back down and re-run checks.
+![Playlist checks sequence](https://kroki.io/plantuml/svg/bVPLbtswELzrKxY-SUjUwlcDDuLWMOBD0aBOz8GaXFkLU0uWpGKrp_5D_7BfUlCP2G56o7Qzo5lZ6jFE9LFtTBaOLA49NtBYsar2tiGIvqWrSahR2xPLASo04XqiqcLWxI2VuOOfBPP5NY1-tCSKVt7b03PN6igUAsyzzKGPrNihRJg9GewMh7gj_8qKZoABnLnFfG3j3p6z_IuVg11_KnqQHV7-V-xzTeo4KmZ38K0VIR96mkqjW9bO2chVB6unbQ8Jw3OmMeIeA8Fs_HA_bdL5HwGD6jhQ0ynLlktYVZE8IKga5UAa3GgNKhYONQUInajUah6IYHIOu04UbIw9FbBcZs5A-TBGhUUKchMx5JPsVheQa9sgS5GN-PJhSAsLqFG0ofwdv8gGRPkw5IIF-FYAnTOscG8uxnr8WCQoK6r1niSa7r1C6wL5mEReJnsvA8iRHyxt9YXWdwYLkGELVkwHXIHDED5WyAash1e2BiNbCVOhfcnfA_kyej4cyJOG2YbPM8j3XeLSdEUgWo3dPaSan0nVwgoNrGkfQ9_xxch4D_oOhPyHis95AX9-_QbNnlQEhcbcJ6OjdKk5OIyqpqs8b9tKq5zqW2PE22V5KtMNgDvwVPbkInsk0em3_As)
+
+`RunPlaylistChecks` is purely outbox/event-driven — never triggered directly by a scheduler job. All
+CDI-discovered `PlaylistCheckRunner` beans applicable to a playlist's type (some checks are scoped to
+`SINGULARITY` or `YEAR` playlists only) run concurrently; a Slack notification fires only when a
+check's pass/fail state or its violation list changes. The "Fix" action calls Spotify directly rather
+than through the outbox — see Risks and Technical Debts.
 
 ## Playback Aggregation Flow
 
 Statistics are served from precomputed aggregations rather than scanning raw `app_playback` data on
-every read. `PlaybackAggregationJob` enqueues one `AggregatePlaybackData(type, periodStart)` event
-per period type on independent schedules (daily 01:00, weekly Monday 01:30, monthly 1st 02:00,
-quarterly 02:30, yearly Jan 1 03:00 UTC), plus `AppendPlaybackData` enqueues `DAY` aggregations
-directly for any day whose raw data changed. Aggregation is a two-tier rollup:
+every read, in a two-tier rollup: `DAY` is computed from raw playback data, and `WEEK`/`MONTH`/
+`QUARTER`/`YEAR` are each computed directly from the `DAY` tier (not chained through each other).
+Only the top 25 rank entries are kept per rolled-up period to keep documents small.
 
-- **`DAY`** is computed directly from raw `app_playback` items, resolving track/artist metadata and
-  filtering out `SHALLOW`/`SHALLOW_ASSUMPTION` artists (see [Artist Sync Status](#artist-sync-status)).
-- **`WEEK`/`MONTH`/`QUARTER`/`YEAR`** are each computed by merging the `DAY` documents in their
-  range — never by re-scanning raw playback data, and not chained through intermediate tiers (e.g.
-  `YEAR` merges `DAY`s directly, not `QUARTER`s). Only the top 25 rank entries are persisted for
-  these rolled-up periods to keep documents small.
+![Playback aggregation rollup](https://kroki.io/plantuml/svg/fZJNa9tAEIbv-hWDT_LBIDn04kOJU7uUlvQjSQmhKmGsnayFVrPq7KhGLfnvZVJXuBByneedd-eBPU-KokMXstQ23KNgB13kWO8ldgQqA52QtEcXDw17eMCQTomjBxyCvo2s180vgrI8gXXs-sjEeq1jIBCqFdkHei4CvzOAC6xbL3Fg9yaGKHC7b5RsHsWR_J1dBKzb7DHLHCruMBHMsO_v-4DjDuu24lzwAPSTWNN8BphA8JBl0-P_x-_ReyGP2kSePd3wbbO-qzh32IQRinJVFPPv1uJwNHq73X6oOL-MbPDsCA9ErdHLTx9v3lWcl0mhWE67XWTdG__ydX11s72qOC-W0_KPAUVJjN9t1wbfI0MJxdlUMBKKOZvaYvHajoEV_LudNjjm84pzDCmCSuM9CTlwjVmHseLdCOu-J3afj94bVJxnVmN1dj6soCPxBBr7xfIVCHKbpsSTwcuRo8bLIRN5PnFO7Ow__gE)
 
-All five tiers share one `app_playback_aggregation` collection, keyed by `"${type}:${periodStart}"`.
-`rebuildAllAggregations()` deletes and fully re-enqueues all tiers when historical data changes (e.g.
-an artist's sync status flips).
+`AppendPlaybackData` also directly enqueues `DAY` aggregation for any day whose raw data just changed,
+independent of the daily job. `rebuildAllAggregations()` deletes and fully re-enqueues all five tiers
+when historical data changes (e.g. an artist's sync status flips).
 
 # Deployment View
 
@@ -463,7 +356,7 @@ Layer 5 applies to adapter modules where the logic is pure (e.g. `adapter-in-sta
 
 - Spotify OAuth 2.0 Authorization Code Flow.
 - A `User` document is upserted in the `app_user` MongoDB collection on every successful login. Both access and refresh tokens are stored encrypted (AES-256-GCM) using `APP_TOKEN_ENCRYPTION_KEY`.
-- The application is built for a single user (see [ADR-0008](../adr/0008-single-user-architecture.md)); login does not check an allow-list — any Spotify account that completes the OAuth flow is upserted as the application's user. A different Spotify account cannot log in once one user is already registered.
+- The application is built for a single user; login does not check an allow-list — any Spotify account that completes the OAuth flow is upserted as the application's user. A different Spotify account cannot log in once one user is already registered.
 - Scheduled jobs, catalog sync, and every repository port act directly on the one stored user instead of fanning out over or filtering by a user list. MongoDB collections do not carry a `spotifyUserId` field or key, since only one user can ever exist.
 - Session-based authentication for all endpoints. The session stores only the Spotify user ID – never tokens.
 - `return_to` parameter stored in the session for redirect after login.
@@ -482,7 +375,9 @@ All domain failures are represented as typed `DomainError` values wrapped in Arr
 
 ## Outbox Pattern
 
-All Spotify API operations and domain-level async tasks are routed through a persistent outbox. This ensures reliability and decouples producers from consumers.
+Spotify API operations and domain-level async tasks are routed through a persistent outbox where
+possible (see Architecture Constraints for known gaps). This ensures reliability and decouples
+producers from consumers.
 
 **Partitions and event types:**
 
@@ -504,7 +399,7 @@ Successfully processed events are moved to `outbox_archive` (audit log). Interna
 
 ## Server-Sent Events (SSE) and Live Updates
 
-Backend services notify SSE streams via CDI events. The SSE endpoint delivers the initial state on connect, then pushes named update events to connected clients via a single shared reactive stream — there is only ever one possible subscriber (see [ADR-0008](../adr/0008-single-user-architecture.md)), so `DashboardSseAdapter` holds one emitter list rather than a per-user map.
+Backend services notify SSE streams via CDI events. The SSE endpoint delivers the initial state on connect, then pushes named update events to connected clients via a single shared reactive stream — there is only ever one possible subscriber, so `DashboardSseAdapter` holds one emitter list rather than a per-user map.
 
 ## Scheduler Jobs
 
@@ -574,7 +469,7 @@ SLACK_WEBHOOK_URL
 |-----|--------------------------|----------|-------------|
 | Q1  | Domain Purity            | High     | The domain (`domain-api`, `domain-impl`) has zero compile-time dependencies on infrastructure frameworks (Quarkus, MongoDB, Spotify SDK), with the exception of CDI and MicroProfile Config which are permitted in `domain-impl` service classes. Domain model classes are plain Kotlin data classes. |
 | Q2  | Boundary Correctness     | High     | All communication between domain and adapters goes through port interfaces. No adapter type leaks into domain objects. No business logic lives in adapter classes. |
-| Q3  | Outbox Reliability       | High     | All Spotify API calls are dispatched through the persistent outbox. Rate-limit handling and at-least-once delivery are guaranteed by the outbox implementation. |
+| Q3  | Outbox Reliability       | High     | Spotify API calls dispatched through the persistent outbox get rate-limit handling and at-least-once delivery guaranteed by the outbox implementation. |
 | Q4  | Functional Test Confidence | Medium | The test suite covers the inbound port boundary (domain logic), outbound adapter round-trips (MongoDB), and inbound HTTP contracts. Line coverage is a by-product, not a goal. |
 | Q5  | Maintainability          | Medium   | Any developer familiar with hexagonal architecture can understand and safely change the system. Module naming, port contracts, and architecture decision records provide the context. |
 | Q6  | Operational Stability    | Medium   | The application handles Spotify rate limits, token expiry, and partial data gracefully without requiring manual intervention. |
@@ -605,6 +500,8 @@ SLACK_WEBHOOK_URL
 
 | Item | Description |
 |------|-------------|
+| Outbox bypass in playlist-check "Fix" and "Sync Now" | The playlist-check `fix()` actions and the Settings "Sync Now" button call Spotify directly instead of through the outbox, inconsistent with every other Spotify-facing flow. `PlaylistService.syncPlaylists()` already has a second, correct outbox-dispatched call path (`SyncPlaylistInfo`) doing the same work, so "Sync Now" is a clear duplicate-path inconsistency rather than a deliberate exception. |
+| Outbox bypass in Spotify Debug page | `/spotify-debug` calls Spotify ports directly for ad-hoc developer inspection. Likely fine to keep as a diagnostics tool, but it is a bypass of the outbox-only rule if that rule is ever enforced by tooling. |
 | Enrichment completeness | `app_artist`, `app_track`, and `app_album` entries that existed before enrichment was introduced may lack imageLink or albumTitle until re-enriched. |
 | Partial-play detection accuracy | Partial play detection relies on polling frequency; very short plays near the end of a track may be missed or misclassified. |
 | Test coverage for domain adapters | Domain adapter integration (e.g. `PlaybackService`, `PlaylistService`) is not yet covered by `@QuarkusTest` boundary tests. |
@@ -613,9 +510,13 @@ SLACK_WEBHOOK_URL
 
 | Term        | Definition                                                                                                            |
 |-------------|-----------------------------------------------------------------------------------------------------------------------|
+| Assumption Status | A `SYNC_ASSUMPTION`/`SHALLOW_ASSUMPTION` artist sync status, automatically guessed on first discovery, pending user confirmation into a final `SYNC`/`SHALLOW` status. |
 | CDI Event   | Contexts and Dependency Injection event – used for in-process communication between Quarkus beans                    |
 | Enrichment  | The process of fetching and storing additional metadata (album details, images) from Spotify for artists, tracks, and albums |
+| Main Artist | The first artist listed on a Spotify track/album; the only artist that determines catalog sync scope and deletion for multi-artist tracks/albums. |
 | Outbox      | A persistent task queue used to reliably dispatch Spotify API calls and domain events asynchronously                  |
+| Outbox Partition | A named queue lane within the outbox (e.g. `to-spotify-catalog`) with its own throttle and pause/resume state. |
+| Playlist Type | Classification of a locally-mirrored playlist (`ALL`/`YEAR`/`SINGULARITY`/`UNKNOWN`) that determines which playlist checks apply to it. |
 | Rotating Partition | The `dayOfYear % 14` slice used by `ArtistCatalogSyncJob` to spread the daily catalog resync across ~14 days; unrelated to outbox partitions. |
 | Snapshot ID | A Spotify-provided identifier that changes whenever a playlist is modified; used to detect changes efficiently        |
 | SSE         | Server-Sent Events – a mechanism for the server to push real-time updates to the browser                              |
