@@ -1,3 +1,12 @@
+# 0.112.1 (2026.07.18)
+
+## Bugfixes / Chore
+* Clicking a bar in the Playback Events per Day chart on the dashboard now leads to the Stats page for that exact day, since that is the data the chart visualizes, instead of the Playback stats page.
+
+
+
+---
+
 # 0.112.0 (2026.07.18)
 
 ## New Features
