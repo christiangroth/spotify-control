@@ -1,3 +1,14 @@
+# 0.111.7 (2026.07.18)
+
+## Bugfixes / Chore
+* Newly discovered artists already present on a playlist that is actively synced are now marked as fully synced right away, instead of first requiring manual confirmation.
+* Clicking the Playback Events per Day chart now correctly keeps the Playback tile highlighted in navigation.
+* The Playback page stats tiles now link to the Playback Events view for the current date.
+
+
+
+---
+
 # 0.111.6 (2026.07.18)
 
 ## Bugfixes / Chore
