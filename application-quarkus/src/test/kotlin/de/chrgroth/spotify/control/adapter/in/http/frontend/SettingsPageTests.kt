@@ -169,4 +169,24 @@ class SettingsPageTests {
       .body(not(containsString("""data-testid="stats-activity-section-day"""")))
   }
 
+  @Test
+  fun `stats page does not show a selected date label for day tab without date`() {
+    given()
+      .`when`()
+      .get("/stats")
+      .then()
+      .statusCode(200)
+      .body(not(containsString("Selected (")))
+  }
+
+  @Test
+  fun `stats page shows only the requested date for day tab when date is given`() {
+    given()
+      .`when`()
+      .get("/stats?date=2026-06-01")
+      .then()
+      .statusCode(200)
+      .body(containsString("Selected (2026-06-01)"))
+  }
+
 }
