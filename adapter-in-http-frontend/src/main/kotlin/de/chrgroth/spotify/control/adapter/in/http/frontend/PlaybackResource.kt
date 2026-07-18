@@ -12,7 +12,12 @@ import jakarta.enterprise.context.ApplicationScoped
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.Produces
+import jakarta.ws.rs.QueryParam
 import jakarta.ws.rs.core.MediaType
+import kotlin.time.Clock
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 @Path("/playback")
 @ApplicationScoped
@@ -29,11 +34,15 @@ class PlaybackResource(
   @GET
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun playback(): TemplateInstance = httpResponseMetrics.timed("page.playback.view") { details ->
+  fun playback(@QueryParam("date") dateParam: String?): TemplateInstance = httpResponseMetrics.timed("page.playback.view") { details ->
     val displayName = details.detail("playback.view.display-name") { userProfile.getDisplayName() ?: securityIdentity.principal.name }
     val stats = details.detail("playback.view.stats") { dashboard.getPlaybackStats() }
+    val today = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
+    val requestedDate = dateParam?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+    val eventsDate = requestedDate?.let { if (it > today) today else it }
     playbackTemplate
       .data("displayName", displayName)
       .data("stats", stats)
+      .data("eventsDate", eventsDate)
   }
 }
