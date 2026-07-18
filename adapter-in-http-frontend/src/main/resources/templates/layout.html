@@ -523,7 +523,8 @@
                 }
             });
             document.querySelectorAll('[data-testid="nav-tiles"] a[href]').forEach(function(link) {
-                if (link.getAttribute('href') === path) {
+                const href = link.getAttribute('href');
+                if (path === href || path.startsWith(href + '/')) {
                     const tile = link.querySelector('.nav-tile');
                     if (tile) tile.classList.add('active');
                 }
