@@ -143,4 +143,22 @@ class PlaylistDataRepositoryTests {
     assertThat(result[playlistId1]).containsExactlyInAnyOrder(ArtistId("a1"), ArtistId("a2"))
     assertThat(result[playlistId2]).containsExactlyInAnyOrder(ArtistId("artist-1"))
   }
+
+  @Test
+  fun `findDistinctArtistIds includes playlists with no artists instead of omitting them`() {
+    val playlistIdNoTracks = "playlist-${UUID.randomUUID()}"
+    val playlistIdEmptyArtistIds = "playlist-${UUID.randomUUID()}"
+    playlistRepository.save(Playlist(spotifyPlaylistId = playlistIdNoTracks, tracks = emptyList()))
+    playlistRepository.save(
+      Playlist(
+        spotifyPlaylistId = playlistIdEmptyArtistIds,
+        tracks = listOf(PlaylistTrack(trackId = TrackId("t1"), artistIds = emptyList(), albumId = AlbumId("al1"))),
+      ),
+    )
+
+    val result = playlistRepository.findDistinctArtistIds()
+
+    assertThat(result).containsEntry(playlistIdNoTracks, emptySet())
+    assertThat(result).containsEntry(playlistIdEmptyArtistIds, emptySet())
+  }
 }
