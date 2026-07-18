@@ -1,0 +1,1 @@
+* Reviewed and refreshed the architecture documentation: arc42 now reflects the actual current implementation (outbox partitions, scheduler jobs, catalog sync, playback aggregation, playlist checks) instead of an outdated design, and three new ADRs capture previously undocumented decisions (shallow artists, partial-play detection, playlist checks framework).
