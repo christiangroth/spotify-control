@@ -96,7 +96,50 @@ The system is composed of the following Gradle modules:
 | `domain-api`            | Ports (interfaces) – defines the contracts between domain and adapters            |
 | `domain-impl`           | Domain services and business logic                                                |
 
-![Module overview](https://kroki.io/plantuml/svg/bVTBitwwDL37K0TuobTnUnanS2EPpYU59FDmoNhOxoxtBVtmui3z78V2JuMlOUV6enm2npQ8RcbAyVkRL8bPGNCBJDeT156P_GY1BC0Z_WR1Q3HkSZ4DOQ0cUluJZ1R0NX6CEW1sK0qPmCx_I89H81fDx097Z8I_AXBAeZkCJa--kqUAv86GdcYpKB0qdrAoL-ImBEqmAN0h0DXq0AFGGGospKWkoDvOxGZ8g-efr6Uca46zEQoZB4wauu_kJ3o5wDNbjIXm1LAq5MPqu-VYsZoC3aLWS_IcyHalg6b-6ofcScUBfqPCmXXoje_PzHM_BvKsvTpl-ase9llOczAyFtISb4iUeKA_hWJ8TTacKM9aJatDoZVsy8k7cWfUWADc3rf1Qg6NX7tSJe1xNvABlsS42RaRmm81fuQ77nlDibOfo5nK-zXcUlyemRqqKTneUhpPKPGeKZm14wol3uHl6Z_WPUA173DqPpzaTSu8W97WZTWh77-UYV_1UOLFomW0LVRu8w6oI2mh-7hbTNRngRYDG6Ta1QAPdxpwdaLF7p232KNPUZThczlEDeJRqljz8d2VHrLiSXuV_0b_AQ)
+```mermaid
+flowchart TB
+    Browser["Browser"]
+    SpotifyAPI["Spotify API"]
+    MongoDBAtlas[("MongoDB Atlas")]
+    Slack["Slack"]
+
+    subgraph Inbound["Inbound Adapters"]
+        Web["adapter-in-http-frontend"]
+        Metrics["adapter-in-http-metrics"]
+        InOutbox["adapter-in-outbox"]
+        Sched["adapter-in-scheduler"]
+        Starter["adapter-in-starter"]
+    end
+
+    Domain["domain-api / domain-impl"]
+
+    subgraph Outbound["Outbound Adapters"]
+        Config["adapter-out-config"]
+        Mongo["adapter-out-mongodb"]
+        OutOutbox["adapter-out-outbox"]
+        SchedOut["adapter-out-scheduler"]
+        SlackAdp["adapter-out-slack"]
+        SpotifyAdp["adapter-out-spotify"]
+    end
+
+    Browser --> Web
+    Web --> Domain
+    Metrics --> Domain
+    Sched --> Domain
+    Starter --> Domain
+    InOutbox --> Domain
+
+    Domain --> Config
+    Domain --> Mongo
+    Domain --> OutOutbox
+    Domain --> SchedOut
+    Domain --> SlackAdp
+    Domain --> SpotifyAdp
+
+    Mongo <--> MongoDBAtlas
+    SpotifyAdp <--> SpotifyAPI
+    SlackAdp --> Slack
+```
 
 ### `adapter-in-outbox`
 
@@ -205,7 +248,35 @@ build-time-only Gradle plugin (not a runtime library) — see Deployment View �
 `to-spotify-playback` partition. Its handler fetches both currently-playing and recently-played data
 in one pass — there is no separate 10-minute schedule.
 
-![Playback flow sequence](https://kroki.io/plantuml/svg/lVRNb9swDL37VxA92VizLDsGyNBsaYcNGNYhvfQUMBJtC5EllaLTeb9-kOMUcdNi3c22Ht8H8eSrKMjSNjaLO-MCMjbQeOdVzb4hEG7p5CTWqP2jcRWUaOPpiaYSWys33sna_CGYzU7H6KElp2jJ7B_vaqN2jmKEWZYFZDHKBHQCF79a5F0bs7WqSbeW-AIwQkxvY-CtxW6Larcm3htFPSzgGPOzla3_neU_vKv86nPRg_zh4wi4Dl5M2cHy9ttB7_CeaRTcYiS4GCj60yY9Z9liAdd74g4-foBIyjsdIT_aWpGQEuPdd78tYLHI-ggw-QQBYQ7kHlpq6YZE1U8jKJgXWcCEOriEOZxBIBc_GQxOwnBwCc6D1OxFLBW9txdQ0IdOrpKjQeJoqUanLeVnekdHAxnM4ev1HUz3s2lD08RMPFUtMzmxBynjqmGm3xTMoQ2RWI4Umyf4ZoBDHinG5EsY1c64qnjGoLzbJwrPoUZHeqp8EywJaRhG44nJDZMaBFJitL0Q6ewNWY6jk2Fk7ANDIKfB0SMYoeYV0ZcmjwmYGjQuhSZrKrO19F8JxqSa0g5At8EahUIwoCPENhBH0qRh28HzUM9bNvQRln28cd1MCei6PrLu-5DapX1K8ZZCnVMWL-8UQ9g8NTUv2TevbRbe_WtNEI1TBBajDPRnF2vdOfXFO2FvLfH72Dl14_ku9S_mRYImxJLFRFmRoLERAnHag-1Am6j8npg0YA8ZXUuFgtZXZ5rLqmKqUGh051fL-0vQ2BU9P5YlqdRrjR3khz0X2RU5nf7QfwE)
+```mermaid
+sequenceDiagram
+    participant Sched as Quarkus Scheduler
+    participant PA as PlaybackService
+    participant Outbox as Outbox (MongoDB)
+    participant Spotify as Spotify API
+    participant Mongo as MongoDB
+
+    Note over Sched,PA: Every 20 seconds (PlaybackDetectionJob)
+    Sched->>PA: enqueueFetchPlaybackData()
+    PA->>Outbox: FetchPlaybackData (to-spotify-playback, no throttle)
+
+    Note over Outbox,Mongo: to-spotify-playback partition
+    Outbox->>PA: handle(FetchPlaybackData)
+    PA->>Spotify: GET /v1/me/player/currently-playing
+    PA->>Mongo: upsert spotify_currently_playing (session tracking)
+    PA->>Mongo: convert orphaned/completed sessions to spotify_recently_partial_played
+    PA->>Spotify: GET /v1/me/player/recently-played
+    PA->>Mongo: append new items to spotify_recently_played
+    PA->>Mongo: convert remaining eligible sessions to spotify_recently_partial_played
+    PA->>Mongo: delete duplicate partials superseded by recently-played
+    PA->>Outbox: enqueue AppendPlaybackData (if any new data)
+
+    Note over Outbox,Mongo: domain partition
+    Outbox->>PA: handle(AppendPlaybackData)
+    PA->>Mongo: append app_playback (since last append)
+    PA->>Outbox: SyncArtistDetails per newly discovered artist (to-spotify-catalog)
+    PA->>Outbox: AggregatePlaybackData(DAY, day) per affected day
+```
 
 Session tracking distinguishes a still-active listening session (protected from conversion) from
 sessions eligible for conversion into a partial play once observed progress exceeds the configured
@@ -245,7 +316,31 @@ confirmed ones) let users control how much of an artist's catalog is synced via 
 
 ## Playlist Sync Flow
 
-![Playlist sync sequence](https://kroki.io/plantuml/svg/jVRhb9MwEP2eX3Hap0Tq6Cq-FRWtdBsUaWOQDgkJabrF18aq4_PsS0tA_HfkNKnabSC-xb537957tnMeBL3UlUnCWluHHiuo2HJReq4IxNd0UAklKt5qu4IlmnBYUbTE2sgVW8n1T4LR6LCNHmuyBU295-2i1MXaUggwShKHXnShHVqBk881-nUdkrwoSdWG_AlggBBXx8Bbg43RQXLyG11QC3N4jPlUywP_SNJrtiu-eJe1IN5tHgFzx6KXDUxv57t5u3WiUPABA8FJR9FWq_idJJMJfODamwZQYPz6DNK9psYWH_khg8kkaaXD6VtwCGMg-1hTTXdOoVBIs8RhrO00wRhiZ88yt0uGVPi0U3PqusIARmcBpPQsYihrlbwAg9aiaLZRRzeiF1KiVYbSp_N6QR0XjOH95QKGm9GwomFPHDpQmwOMwZMzWFDfdN_j7isSjBFCarGiAQSLLpQsczUAaVzcaWyRC0od_hnFBQqmPe1cZeDIw3S2mH-9hL3drZYSihLtitR-VPIfxiP7343vXQ9_afV7KB6LdYDU4UpbFFJvvltP7QsKsPRcgcMVwQjY7kVApUOFUpTZk-QCbmiIzpFVz9KD3aSXYpmxFc_GkH8VA7xiv2ixaRahETH1Eo2RoDahTcvS1jSgdCh4Q54UYAs5umAFChpePVXpPFcsBPfTPL-7vl3MP9103QGWXFsFJXkCYci_3cwgne1oupf57GC_1LZPflZSlH14sqniCrUdxPwMtrd4RcDWNFlyTlbF39Qf)
+```mermaid
+sequenceDiagram
+    participant Sched as Quarkus Scheduler
+    participant PA as PlaylistService
+    participant Outbox as Outbox (MongoDB)
+    participant Spotify as Spotify API
+    participant Mongo as MongoDB
+
+    Note over Sched,PA: Hourly at :30 (PlaylistSyncJob)
+    Sched->>PA: enqueueUpdates()
+    PA->>Outbox: SyncPlaylistInfo (to-spotify-playlist, 10s throttle)
+
+    Note over Outbox,Mongo: to-spotify-playlist partition
+    Outbox->>PA: handle(SyncPlaylistInfo)
+    PA->>Spotify: GET /v1/me/playlists
+    PA->>Mongo: replace spotify_playlist_metadata (name, snapshotId, type, syncStatus)
+    PA->>Outbox: SyncPlaylistData(playlistId) per ACTIVE playlist with changed snapshot
+
+    Outbox->>PA: handle(SyncPlaylistData)
+    PA->>Spotify: GET /v1/playlists/{id}/tracks (paginated, restarts on snapshot mismatch)
+    PA->>Mongo: save/append spotify_playlist tracks
+    PA->>Outbox: SyncArtistDetails per newly discovered artist (to-spotify-catalog)
+    PA->>Mongo: promote _ASSUMPTION artists found here to SYNC
+    PA->>Outbox: RunPlaylistChecks(playlistId) (domain, on last page only)
+```
 
 Hourly (at :30), the app compares Spotify's playlist snapshot IDs against the locally stored ones and
 only re-syncs playlists that actually changed. Newly discovered artists feed into the same on-demand
@@ -260,11 +355,59 @@ All catalog sync calls are single-entity (`GET /v1/artists/{id}`, `GET /v1/artis
 rotates through 1/14th of all syncable artists so a full resync is spread across two weeks instead of
 happening all at once.
 
-![Catalog sync sequence](https://kroki.io/plantuml/svg/lVRtT9swEP6eX3FCmpSIVmkmPlUqooO9MMHaqaAJCQldnEtj1bGDfQGyafvtU5yUtdAx9s3ne3vuucc-coyW61IFbiV1hRZLKI02orCmJGBb04bHFZiZe6mXkKNym56McqwVfzCaF_I7QZJsptFtTVrQ1Fpzf1FIsdLkHCRBUKFlKWSFmmHva412VbtgIQrKakV2D9CBa63twEWjxbHRbI1SZCEOjpFRmeWC7J0U5NMEbufMak7NQxCeG700J-8iH2S6y-3ilWGZNzCdn3b9OzvIkDFFR7DXl_Desj0HwWQCMz3MqESdQSadMHdkGwhza0qoFDYpihUY689KOgbXaBHBZBIIhOFhjwTG0M42tSwdnxCjVC5Eb51mA2irzfsCEeTGQudz11obhoYYpAasqpvuHkI2wx7_UHQcDSAZOeDCGmZFURD0nYeHIBDGUKDOFIXPYEQ90L4cjOHj-wuI75K4xxD_kNnPPsizAmOoK0eWtxAtrr4c30wXi8vz-cXp7AvIfGuswbUm5QgWn6ZnZ7NvG5HR35maqrQu_xAVtUUdI9cOpIO2Y_ykrd_YCUrVADKM3o5HowFYw8ituL0eWBoNYddgra9Gi88m9WvzsnxkjfRtTTVtwmmDwwybWX5FaOENJAcDYMOo5uvybpIcRE8oc6RI8E7Q6223S-ZCug2cTklB1zr8lcTJARdgci8wTBU9ZlVkIcPmf3hsUzpAlPV1PHPPZbXJmSvQUgZpA6nhAirkwgGm5o48c_8SXIfidXqL0QdDWOFSamTKdo_XRj2-p9ZYT-cNePp62stX0zQATQ98aZXXXWksQYVLci8-rQ1AL0zqG_lBYX_XbcwWxWrX-LteoB913599XnBEOmu__t8)
+```mermaid
+sequenceDiagram
+    participant Sched as Quarkus Scheduler
+    participant CA as SyncController / CatalogService
+    participant Outbox as Outbox (MongoDB)
+    participant Spotify as Spotify API
+    participant Mongo as MongoDB
+
+    Note over CA,Outbox: On-demand discovery (from playback or playlist sync)
+    CA->>Outbox: SyncArtistDetails(artistId, fromPlaylist) for new artists (to-spotify-catalog, 10s throttle)
+    Outbox->>CA: handle(SyncArtistDetails)
+    CA->>Spotify: GET /v1/artists/{id}
+    CA->>Mongo: upsert app_artist (SYNC_ASSUMPTION if fromPlaylist, else SHALLOW_ASSUMPTION)
+    CA->>Outbox: SyncArtistAlbums(artistId) if status is SYNC/SYNC_ASSUMPTION
+
+    Note over Sched,CA: Daily at 02:00, rotating partition (ArtistCatalogSyncJob)
+    Sched->>CA: enqueueArtistAlbumsSync(dayOfYear mod 14, totalPartitions=14)
+    CA->>Mongo: select SYNC/SYNC_ASSUMPTION artists in this partition slice (~1/14th per day)
+    CA->>Outbox: SyncArtistAlbums(artistId) per selected artist
+
+    Note over Outbox,Mongo: to-spotify-catalog partition (shared by both paths above)
+    Outbox->>CA: handle(SyncArtistAlbums)
+    CA->>Spotify: GET /v1/artists/{id}/albums (paginated)
+    CA->>Outbox: SyncAlbumDetails(albumId) per album not yet in app_album
+    CA->>Outbox: SyncArtistAlbums(artistId, nextUrl) if more pages
+
+    Outbox->>CA: handle(SyncAlbumDetails)
+    CA->>Spotify: GET /v1/albums/{id} + GET /v1/albums/{id}/tracks (paginated)
+    CA->>Mongo: upsert app_album + app_track
+```
 
 ## Playlist Checks Flow
 
-![Playlist checks sequence](https://kroki.io/plantuml/svg/bVPLbtswELzrKxY-SUjUwlcDDuLWMOBD0aBOz8GaXFkLU0uWpGKrp_5D_7BfUlCP2G56o7Qzo5lZ6jFE9LFtTBaOLA49NtBYsar2tiGIvqWrSahR2xPLASo04XqiqcLWxI2VuOOfBPP5NY1-tCSKVt7b03PN6igUAsyzzKGPrNihRJg9GewMh7gj_8qKZoABnLnFfG3j3p6z_IuVg11_KnqQHV7-V-xzTeo4KmZ38K0VIR96mkqjW9bO2chVB6unbQ8Jw3OmMeIeA8Fs_HA_bdL5HwGD6jhQ0ynLlktYVZE8IKga5UAa3GgNKhYONQUInajUah6IYHIOu04UbIw9FbBcZs5A-TBGhUUKchMx5JPsVheQa9sgS5GN-PJhSAsLqFG0ofwdv8gGRPkw5IIF-FYAnTOscG8uxnr8WCQoK6r1niSa7r1C6wL5mEReJnsvA8iRHyxt9YXWdwYLkGELVkwHXIHDED5WyAash1e2BiNbCVOhfcnfA_kyej4cyJOG2YbPM8j3XeLSdEUgWo3dPaSan0nVwgoNrGkfQ9_xxch4D_oOhPyHis95AX9-_QbNnlQEhcbcJ6OjdKk5OIyqpqs8b9tKq5zqW2PE22V5KtMNgDvwVPbkInsk0em3_As)
+```mermaid
+sequenceDiagram
+    participant PL as PlaylistService
+    participant Outbox as Outbox (MongoDB)
+    participant Check as PlaylistCheckService + Runners
+    participant Spotify as Spotify API
+    participant Mongo as MongoDB
+    participant Slack as Slack
+
+    Note over PL,Outbox: After a changed playlist finishes syncing (see Playlist Sync Flow)
+    PL->>Outbox: RunPlaylistChecks(playlistId) (domain)
+    Outbox->>Check: handle(RunPlaylistChecks)
+    Check->>Mongo: run applicable PlaylistCheckRunners concurrently
+    Check->>Mongo: upsert app_playlist_check per checkId
+    Check->>Slack: notify only if pass/fail or violations changed
+
+    Note over Check,Outbox: User-triggered Fix action (bypasses outbox today, see Technical Debts)
+    Check->>Spotify: runner.fix() - direct call, not outbox-dispatched
+    Check->>Outbox: SyncPlaylistData(playlistId) (re-sync + re-check)
+```
 
 `RunPlaylistChecks` is purely outbox/event-driven — never triggered directly by a scheduler job. All
 CDI-discovered `PlaylistCheckRunner` beans applicable to a playlist's type (some checks are scoped to
@@ -279,7 +422,24 @@ every read, in a two-tier rollup: `DAY` is computed from raw playback data, and 
 `QUARTER`/`YEAR` are each computed directly from the `DAY` tier (not chained through each other).
 Only the top 25 rank entries are kept per rolled-up period to keep documents small.
 
-![Playback aggregation rollup](https://kroki.io/plantuml/svg/fZJNa9tAEIbv-hWDT_LBIDn04kOJU7uUlvQjSQmhKmGsnayFVrPq7KhGLfnvZVJXuBByneedd-eBPU-KokMXstQ23KNgB13kWO8ldgQqA52QtEcXDw17eMCQTomjBxyCvo2s180vgrI8gXXs-sjEeq1jIBCqFdkHei4CvzOAC6xbL3Fg9yaGKHC7b5RsHsWR_J1dBKzb7DHLHCruMBHMsO_v-4DjDuu24lzwAPSTWNN8BphA8JBl0-P_x-_ReyGP2kSePd3wbbO-qzh32IQRinJVFPPv1uJwNHq73X6oOL-MbPDsCA9ErdHLTx9v3lWcl0mhWE67XWTdG__ydX11s72qOC-W0_KPAUVJjN9t1wbfI0MJxdlUMBKKOZvaYvHajoEV_LudNjjm84pzDCmCSuM9CTlwjVmHseLdCOu-J3afj94bVJxnVmN1dj6soCPxBBr7xfIVCHKbpsSTwcuRo8bLIRN5PnFO7Ow__gE)
+```mermaid
+flowchart LR
+    Raw[("app_playback<br/>(raw events)")]
+
+    subgraph Agg["app_playback_aggregation"]
+        Day["DAY<br/>(daily 01:00)"]
+        Week["WEEK<br/>(Mon 01:30)"]
+        Month["MONTH<br/>(1st 02:00)"]
+        Quarter["QUARTER<br/>(02:30)"]
+        Year["YEAR<br/>(Jan 1 03:00)"]
+    end
+
+    Raw -->|"aggregateDay(), also triggered<br/>directly by AppendPlaybackData"| Day
+    Day -->|merge top-25 ranks| Week
+    Day -->|merge top-25 ranks| Month
+    Day -->|merge top-25 ranks| Quarter
+    Day -->|merge top-25 ranks| Year
+```
 
 `AppendPlaybackData` also directly enqueues `DAY` aggregation for any day whose raw data just changed,
 independent of the daily job. `rebuildAllAggregations()` deletes and fully re-enqueues all five tiers
@@ -428,10 +588,11 @@ No separate frontend project. The UI is rendered server-side using Quarkus Qute 
 - Icons: hand-authored inline SVG `<symbol>` sprite defined in `layout.html`, referenced via `<use href="#icon-...">` — no icon-font dependency
 - Live Updates: Server-Sent Events via native `EventSource` API
 - Markdown rendering: marked via WebJar (docs and release notes pages)
+- Diagram rendering: Mermaid via WebJar (Docs page only; GitHub renders the same ` ```mermaid ` blocks natively)
 
 ## Documentation and Release Notes Serving
 
-Architecture documentation (`docs/arc42`), ADRs (`docs/adr`), and release notes (`docs/releasenotes`) are served to the logged-in user directly from the application. A Gradle copy task bundles the Markdown files into the `adapter-in-http-frontend` classpath at build time. A `DocsResource` endpoint reads and passes the raw Markdown to Qute templates; the `marked` WebJar renders it in the browser.
+Architecture documentation (`docs/arc42`), ADRs (`docs/adr`), and release notes (`docs/releasenotes`) are served to the logged-in user directly from the application. A Gradle copy task bundles the Markdown files into the `adapter-in-http-frontend` classpath at build time. A `DocsResource` endpoint reads and passes the raw Markdown to Qute templates; the `marked` WebJar renders it in the browser. Diagrams are authored as ` ```mermaid ` fenced code blocks — rendered natively by GitHub, and rendered in-app on the Docs page by the `mermaid` WebJar, which `docs.html` runs against `marked`'s unrecognised-language code-block output after parsing.
 
 ## Configuration
 
@@ -460,6 +621,7 @@ SLACK_WEBHOOK_URL
 | [0009](../adr/0009-shallow-artist-catalog-sync-model.md) | Shallow Artist Catalog Sync Model |
 | [0010](../adr/0010-partial-play-detection-via-currently-playing-polling.md) | Partial Play Detection via Currently-Playing Polling |
 | [0011](../adr/0011-playlist-checks-framework.md) | Playlist Checks Framework |
+| [0012](../adr/0012-diagram-rendering-mermaid.md) | Diagram Rendering: Mermaid |
 
 # Quality Requirements
 

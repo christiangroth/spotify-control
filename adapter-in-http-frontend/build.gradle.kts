@@ -14,6 +14,7 @@ dependencies {
 
   implementation(libs.bootstrap)
   implementation(libs.marked)
+  implementation(libs.mermaid)
 }
 
 tasks {

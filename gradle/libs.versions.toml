@@ -10,6 +10,7 @@ kotlinxCoroutines = "1.10.2"
 kotlinxDatetime = "0.7.1"
 kotlinxSerialization = "1.7.3"
 marked = "17.0.3"
+mermaid = "11.6.0"
 mockk = "1.14.9"
 openApiGenerator = "7.9.0"
 quarkus = "3.32.1"
@@ -30,6 +31,7 @@ kotlinxCoroutinesCore = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-cor
 kotlinxDatetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime-jvm", version.ref = "kotlinxDatetime" }
 kotlinxSerializationJson = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 marked = { module = "org.webjars.npm:marked", version.ref = "marked" }
+mermaid = { module = "org.webjars.npm:mermaid", version.ref = "mermaid" }
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 quarkusAgroal = { module = "io.quarkus:quarkus-agroal" }
 quarkusBom = { module = "io.quarkus.platform:quarkus-bom", version.ref = "quarkus" }
