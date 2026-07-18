@@ -1,14 +1,22 @@
 package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
+import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
+import de.chrgroth.spotify.control.domain.model.catalog.TrackId
+import de.chrgroth.spotify.control.domain.model.playlist.Playlist
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSyncStatus
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistTrack
+import de.chrgroth.spotify.control.domain.model.user.User
+import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
 import io.quarkus.test.junit.QuarkusTest
 import io.quarkus.test.security.TestSecurity
 import io.restassured.RestAssured.given
 import jakarta.inject.Inject
 import org.hamcrest.CoreMatchers.containsString
 import org.hamcrest.CoreMatchers.not
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.hours
@@ -20,6 +28,24 @@ class SettingsPageTests {
 
   @Inject
   lateinit var playlistRepository: PlaylistRepositoryPort
+
+  @Inject
+  lateinit var userRepository: UserRepositoryPort
+
+  @BeforeEach
+  fun ensureCurrentUser() {
+    val now = Clock.System.now()
+    userRepository.upsert(
+      User(
+        spotifyUserId = UserId("test-user-a"),
+        displayName = "Test User",
+        encryptedAccessToken = "encrypted-access",
+        encryptedRefreshToken = "encrypted-refresh",
+        tokenExpiresAt = now + 1.hours,
+        lastLoginAt = now,
+      ),
+    )
+  }
 
   @Test
   fun `playlist settings page is available and displays playlists heading`() {
@@ -53,6 +79,42 @@ class SettingsPageTests {
       .then()
       .statusCode(200)
       .body(containsString("Artists"))
+  }
+
+  @Test
+  fun `playlist settings page displays computed artist stats for a synced playlist`() {
+    val now = Clock.System.now()
+    val playlistId = "playlist-${UUID.randomUUID()}"
+    playlistRepository.replaceAll(
+      listOf(
+        PlaylistInfo(
+          spotifyPlaylistId = playlistId,
+          snapshotId = "snap-1",
+          lastSnapshotIdSyncTime = now - 1.hours,
+          name = "Playlist For Artists Cell Value Test",
+          syncStatus = PlaylistSyncStatus.ACTIVE,
+        ),
+      ),
+    )
+    playlistRepository.save(
+      Playlist(
+        spotifyPlaylistId = playlistId,
+        tracks = listOf(
+          PlaylistTrack(
+            trackId = TrackId("t1"),
+            artistIds = listOf(ArtistId("artists-cell-a1"), ArtistId("artists-cell-a2")),
+            albumId = null,
+          ),
+        ),
+      ),
+    )
+
+    given()
+      .`when`()
+      .get("/settings/playlist")
+      .then()
+      .statusCode(200)
+      .body(containsString("2 (2)"))
   }
 
   @Test
