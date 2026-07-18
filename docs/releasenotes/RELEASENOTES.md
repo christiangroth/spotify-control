@@ -1,3 +1,16 @@
+# 0.112.0 (2026.07.18)
+
+## New Features
+* Added an "Artists" column to the playlist settings page, showing the number of distinct artists per playlist and how many of them are not yet in the catalog.
+
+## Bugfixes / Chore
+* Clicking the Playback Events per Day chart on the dashboard now leads to the Playback stats page instead of jumping straight to the raw events, matching the drill-down from Playback stats to Playback Events.
+* The Playback page stats tiles now link to the Playback Events view for the date selected on the dashboard, when available.
+
+
+
+---
+
 # 0.111.7 (2026.07.18)
 
 ## Bugfixes / Chore
