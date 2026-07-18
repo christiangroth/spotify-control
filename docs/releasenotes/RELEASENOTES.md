@@ -1,3 +1,12 @@
+# 0.113.0 (2026.07.18)
+
+## New Features
+* Added a link on the Stats page's Day view to jump straight to the Playback Events for that same date.
+
+
+
+---
+
 # 0.112.2 (2026.07.18)
 
 ## Bugfixes / Chore
