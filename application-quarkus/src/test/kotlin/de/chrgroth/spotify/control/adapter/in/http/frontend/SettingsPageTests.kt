@@ -98,6 +98,26 @@ class SettingsPageTests {
   }
 
   @Test
+  fun `playback page stats tiles link to playback events page without date by default`() {
+    given()
+      .`when`()
+      .get("/playback")
+      .then()
+      .statusCode(200)
+      .body(containsString("""href="/playback/events" """))
+  }
+
+  @Test
+  fun `playback page stats tiles link to playback events page for requested date`() {
+    given()
+      .`when`()
+      .get("/playback?date=2026-06-01")
+      .then()
+      .statusCode(200)
+      .body(containsString("""href="/playback/events?date=2026-06-01" """))
+  }
+
+  @Test
   fun `playback page displays recreate playback data button`() {
     given()
       .`when`()

@@ -7,7 +7,7 @@
 
         <div class="row g-3 mb-4">
             <div class="col-6 col-sm-auto">
-                <a href="/playback/events" class="text-decoration-none">
+                <a href="/playback/events{#if eventsDate}?date={eventsDate}{/if}" class="text-decoration-none">
                 <div class="card app-card">
                     <div class="card-body">
                         <p class="card-subtitle mb-1 app-section-label">Playback Events (Last 30 Days)</p>
@@ -17,7 +17,7 @@
                 </a>
             </div>
             <div class="col-6 col-sm-auto">
-                <a href="/playback/events" class="text-decoration-none">
+                <a href="/playback/events{#if eventsDate}?date={eventsDate}{/if}" class="text-decoration-none">
                 <div class="card app-card">
                     <div class="card-body">
                         <p class="card-subtitle mb-1 app-section-label">Total Playback Events</p>

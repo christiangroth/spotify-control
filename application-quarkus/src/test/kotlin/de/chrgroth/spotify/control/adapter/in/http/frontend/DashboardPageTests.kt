@@ -101,7 +101,7 @@ class DashboardPageTests {
       .statusCode(200)
       .body(containsString("""id="stats-section""""))
       .body(containsString("""data-testid="histogram""""))
-      .body(containsString("/playback/events?date="))
+      .body(containsString("/playback?date="))
   }
 
   @Test
