@@ -45,11 +45,14 @@ class PlaylistSettingsResource(
     val sortedPlaylists = details.detail("playlist.settings.playlists") { playlist.getPlaylists().sortedBy { it.name } }
     val padWidth = sortedPlaylists.size.toString().length
     val trackCounts = details.detail("playlist.settings.track-counts") { playlist.getTrackCounts() }
+    val artistStats = details.detail("playlist.settings.artist-stats") { playlist.getArtistStats() }
     val rows = sortedPlaylists.mapIndexed { index, playlistInfo ->
       PlaylistRow(
         lineNumber = (index + 1).toString().padStart(padWidth, '0'),
         playlist = playlistInfo,
         numberOfTracks = trackCounts[playlistInfo.spotifyPlaylistId],
+        numberOfArtists = artistStats[playlistInfo.spotifyPlaylistId]?.total,
+        numberOfMissingArtists = artistStats[playlistInfo.spotifyPlaylistId]?.missingFromCatalog,
       )
     }
     playlistTemplate
@@ -57,7 +60,13 @@ class PlaylistSettingsResource(
       .data("rows", rows)
   }
 
-  data class PlaylistRow(val lineNumber: String, val playlist: PlaylistInfo, val numberOfTracks: Int? = null) {
+  data class PlaylistRow(
+    val lineNumber: String,
+    val playlist: PlaylistInfo,
+    val numberOfTracks: Int? = null,
+    val numberOfArtists: Int? = null,
+    val numberOfMissingArtists: Int? = null,
+  ) {
     val active: Boolean get() = playlist.syncStatus == PlaylistSyncStatus.ACTIVE
     val lastSyncTime: Instant get() = playlist.lastSyncTime ?: playlist.lastSnapshotIdSyncTime
     val typeLabel: String? get() = playlist.type?.name?.lowercase()

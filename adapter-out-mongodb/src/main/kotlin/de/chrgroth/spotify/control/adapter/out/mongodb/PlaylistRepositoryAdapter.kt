@@ -1,5 +1,6 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
+import com.mongodb.client.model.Accumulators
 import com.mongodb.client.model.Aggregates
 import com.mongodb.client.model.Filters
 import com.mongodb.client.model.Projections
@@ -64,6 +65,19 @@ class PlaylistRepositoryAdapter(
       playlistDocumentRepository.mongoCollection()
         .aggregate(pipeline, Document::class.java)
         .associate { it.getString("spotifyPlaylistId") to it.getInteger("trackCount") }
+    }
+  }
+
+  override fun findDistinctArtistIds(): Map<String, Set<ArtistId>> {
+    val pipeline = listOf(
+      Aggregates.unwind("\$tracks"),
+      Aggregates.unwind("\$tracks.artistIds"),
+      Aggregates.group("\$spotifyPlaylistId", Accumulators.addToSet("artistIds", "\$tracks.artistIds")),
+    )
+    return mongoQueryMetrics.timed("spotify_playlist.findDistinctArtistIds") {
+      playlistDocumentRepository.mongoCollection()
+        .aggregate(pipeline, Document::class.java)
+        .associate { it.getString("_id") to it.getList("artistIds", String::class.java).map { artistId -> ArtistId(artistId) }.toSet() }
     }
   }
 

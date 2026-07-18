@@ -122,4 +122,25 @@ class PlaylistDataRepositoryTests {
     assertThat(result).containsEntry(playlistId1, 2)
     assertThat(result).containsEntry(playlistId2, 1)
   }
+
+  @Test
+  fun `findDistinctArtistIds returns distinct artist ids per playlist`() {
+    val playlistId1 = "playlist-${UUID.randomUUID()}"
+    val playlistId2 = "playlist-${UUID.randomUUID()}"
+    playlistRepository.save(
+      Playlist(
+        spotifyPlaylistId = playlistId1,
+        tracks = listOf(
+          PlaylistTrack(trackId = TrackId("t1"), artistIds = listOf(ArtistId("a1"), ArtistId("a2")), albumId = AlbumId("al1")),
+          PlaylistTrack(trackId = TrackId("t2"), artistIds = listOf(ArtistId("a2")), albumId = AlbumId("al2")),
+        ),
+      ),
+    )
+    playlistRepository.save(buildPlaylist(playlistId2))
+
+    val result = playlistRepository.findDistinctArtistIds()
+
+    assertThat(result[playlistId1]).containsExactlyInAnyOrder(ArtistId("a1"), ArtistId("a2"))
+    assertThat(result[playlistId2]).containsExactlyInAnyOrder(ArtistId("artist-1"))
+  }
 }
