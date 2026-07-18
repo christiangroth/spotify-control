@@ -67,7 +67,7 @@ class PlaybackEnrichmentServiceTests {
   private val accessToken = AccessToken("access-token")
 
   @Test
-  fun `syncArtistDetails stores artist as SYNC_ASSUMPTION and enqueues album sync when discovered from playlist`() {
+  fun `syncArtistDetails stores artist as SYNC and enqueues album sync when discovered from a synced playlist`() {
     val artistId = "artist-1"
     val spotifyArtist = AppArtist(
       id = ArtistId(artistId),
@@ -85,7 +85,7 @@ class PlaybackEnrichmentServiceTests {
 
     adapter.syncArtistDetails(artistId, fromPlaylist = true)
 
-    verify { appArtistRepository.upsertAll(listOf(spotifyArtist.copy(syncStatus = ArtistSyncStatus.SYNC_ASSUMPTION))) }
+    verify { appArtistRepository.upsertAll(listOf(spotifyArtist.copy(syncStatus = ArtistSyncStatus.SYNC))) }
     verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums(artistId)) }
   }
 

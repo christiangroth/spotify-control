@@ -48,13 +48,16 @@ system guessed this, the user hasn't confirmed it yet" — a distinction needed 
 settings UI (surfacing undecided artists) and the sync behaviour (assumption states get a
 speculative, optimistic full sync so nothing is missed if the user later confirms `SYNC`).
 
-* `SYNC` / `SHALLOW` are final states, only reachable by explicit user action (Catalog UI).
-* `SYNC_ASSUMPTION` / `SHALLOW_ASSUMPTION` are assigned automatically on first discovery of an
-  artist: `SYNC_ASSUMPTION` when discovered via an actively-synced playlist, `SHALLOW_ASSUMPTION`
-  when discovered only via playback/recently-played history. Assumption states behave like their
-  final counterpart for sync purposes until confirmed, and can only transition into one of the two
-  final states — never back into an assumption state, and never directly between the two
-  assumption states.
+* `SYNC` / `SHALLOW` are final states, only reachable by explicit user action (Catalog UI), except
+  that a newly discovered artist already present on an actively-synced playlist is assigned `SYNC`
+  directly on discovery — playlist membership is itself a strong enough signal that no "assumption"
+  step is needed.
+* `SHALLOW_ASSUMPTION` is assigned automatically on first discovery of an artist that is not found
+  on any actively-synced playlist (i.e. seen only via playback/recently-played history). It behaves
+  like `SHALLOW` for sync purposes until confirmed, and can only transition into one of the two
+  final states — never back into an assumption state, and never directly into `SYNC_ASSUMPTION`.
+* `SYNC_ASSUMPTION` is no longer assigned on new-artist discovery; it remains part of the state
+  machine for the one-time migration of pre-existing `app_artist` documents that predate this model.
 * Catalog sync branches on status: `SYNC`/`SYNC_ASSUMPTION` enqueue `SyncArtistAlbums`; `SHALLOW`/
   `SHALLOW_ASSUMPTION` never do.
 * Playback events are always stored unconditionally regardless of status — filtering by status

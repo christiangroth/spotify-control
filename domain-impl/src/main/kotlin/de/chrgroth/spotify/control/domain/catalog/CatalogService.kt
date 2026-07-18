@@ -105,12 +105,13 @@ class CatalogService(
       return Unit.right()
     }
     val accessToken = spotifyAccessToken.getValidAccessToken()
-    val discoveryStatus = if (fromPlaylist) ArtistSyncStatus.SYNC_ASSUMPTION else ArtistSyncStatus.SHALLOW_ASSUMPTION
+    val discoveryStatus = if (fromPlaylist) ArtistSyncStatus.SYNC else ArtistSyncStatus.SHALLOW_ASSUMPTION
     return spotifyCatalog.getArtist(accessToken, artistId)
       .flatMap { detail ->
         if (detail != null) {
           appArtistRepository.upsertAll(listOf(detail.copy(syncStatus = discoveryStatus)))
-          if (discoveryStatus == ArtistSyncStatus.SYNC_ASSUMPTION) {
+          if (discoveryStatus == ArtistSyncStatus.SYNC) {
+            logger.info { "Newly discovered artist '${detail.artistName}' ($artistId) found on synced playlist, set to ${ArtistSyncStatus.SYNC}" }
             outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums(artistId))
           }
           dashboardRefresh.notifyCatalogData()
