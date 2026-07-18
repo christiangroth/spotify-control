@@ -1,6 +1,5 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
-import com.mongodb.client.model.Accumulators
 import com.mongodb.client.model.Aggregates
 import com.mongodb.client.model.Filters
 import com.mongodb.client.model.Projections
@@ -69,15 +68,32 @@ class PlaylistRepositoryAdapter(
   }
 
   override fun findDistinctArtistIds(): Map<String, Set<ArtistId>> {
+    // Uses $reduce/$setUnion instead of $unwind so playlists with zero tracks or tracks without artistIds
+    // are still included (with an empty set), matching findTrackCounts() semantics. $unwind would otherwise
+    // silently drop any document whose target path is missing, null or an empty array.
     val pipeline = listOf(
-      Aggregates.unwind("\$tracks"),
-      Aggregates.unwind("\$tracks.artistIds"),
-      Aggregates.group("\$spotifyPlaylistId", Accumulators.addToSet("artistIds", "\$tracks.artistIds")),
+      Aggregates.project(
+        Projections.fields(
+          Projections.include("spotifyPlaylistId"),
+          Projections.computed(
+            "artistIds",
+            Document(
+              "\$reduce",
+              Document("input", "\$tracks")
+                .append("initialValue", emptyList<String>())
+                .append(
+                  "in",
+                  Document("\$setUnion", listOf("\$\$value", Document("\$ifNull", listOf("\$\$this.artistIds", emptyList<String>())))),
+                ),
+            ),
+          ),
+        ),
+      ),
     )
     return mongoQueryMetrics.timed("spotify_playlist.findDistinctArtistIds") {
       playlistDocumentRepository.mongoCollection()
         .aggregate(pipeline, Document::class.java)
-        .associate { it.getString("_id") to it.getList("artistIds", String::class.java).map { artistId -> ArtistId(artistId) }.toSet() }
+        .associate { it.getString("spotifyPlaylistId") to it.getList("artistIds", String::class.java).map { artistId -> ArtistId(artistId) }.toSet() }
     }
   }
 
