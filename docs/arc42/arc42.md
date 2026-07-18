@@ -19,7 +19,7 @@ registered.
 
 4. **Listening Statistics** – Playback data is aggregated (daily, weekly, monthly, quarterly, yearly) into a dashboard showing total play counts, daily play trends, top artists, top tracks, and recently played items.
 
-5. **Shallow Artists** – Artists can be confirmed as `SYNC` (full catalog sync) or `SHALLOW` (artist metadata only, no albums/tracks). Newly discovered artists start in an `_ASSUMPTION` variant of one of these, guessed from discovery context, until the user confirms them via the settings UI. Playback events of `SHALLOW`/`SHALLOW_ASSUMPTION` artists are still recorded but excluded from statistics.
+5. **Shallow Artists** – Artists can be confirmed as `SYNC` (full catalog sync) or `SHALLOW` (artist metadata only, no albums/tracks). A newly discovered artist found on an actively-synced playlist is set to `SYNC` directly; otherwise it starts as `SHALLOW_ASSUMPTION`, a guessed status pending user confirmation via the settings UI. Playback events of `SHALLOW`/`SHALLOW_ASSUMPTION` artists are still recorded but excluded from statistics.
 
 6. **Playlist Checks** – A set of pluggable rule checks runs against every actively-synced playlist after each sync: duplicate tracks, multiple tracks by the same artist on "singularity" playlists, year-playlist tracks missing from the master "all" playlist, and tracks referencing an outdated release when a newer/better version exists in the artist's catalog. Results are shown on a dashboard; some violations can be fixed directly from the UI.
 
@@ -300,12 +300,15 @@ confirmed ones) let users control how much of an artist's catalog is synced via 
 |-----------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `SYNC`                | Final status. Full catalog sync (albums, tracks); the artist's playback events are included in aggregation/statistics.                              |
 | `SHALLOW`             | Final status. Only the artist document itself is synced — no albums or tracks. Existing albums/tracks whose main artist is this artist are deleted on transition to this status. Playback events are still stored but excluded from aggregation. |
-| `SYNC_ASSUMPTION`     | Automatic guess for a newly discovered artist found via an actively synced playlist. Behaves like `SYNC` for catalog sync purposes until confirmed.  |
-| `SHALLOW_ASSUMPTION`  | Automatic guess for a newly discovered artist seen only via playback/recently-played history. Behaves like `SHALLOW` until confirmed.                |
+| `SYNC_ASSUMPTION`     | No longer assigned on new-artist discovery (see below); still assigned by the one-time `app_artist` migration for pre-existing artists. Behaves like `SYNC` for catalog sync purposes until confirmed. |
+| `SHALLOW_ASSUMPTION`  | Automatic guess for a newly discovered artist not found on any actively synced playlist (i.e. seen only via playback/recently-played history). Behaves like `SHALLOW` until confirmed.                  |
 
-- Assumption statuses are assigned automatically on discovery and can only transition into one of the
-  two final statuses via the settings UI — never back into an assumption status. An artist found on
-  an actively-synced playlist while still in an assumption status is auto-promoted to `SYNC`.
+- A newly discovered artist already present on an actively-synced playlist is assigned `SYNC`
+  directly, not an assumption status — the playlist membership is itself confirmation enough.
+  All other newly discovered artists start as `SHALLOW_ASSUMPTION`.
+- Assumption statuses can only transition into one of the two final statuses via the settings UI —
+  never back into an assumption status. An artist found on an actively-synced playlist while still
+  in an assumption status is auto-promoted to `SYNC`.
 - Only the main artist (first artist in the Spotify artist list) determines sync scope and deletion
   on transition to `SHALLOW`; secondary/featured artists are unaffected.
 - Playback events are never deleted based on artist status; `PlaybackAggregationService.aggregateDay()`
@@ -367,7 +370,7 @@ sequenceDiagram
     CA->>Outbox: SyncArtistDetails(artistId, fromPlaylist) for new artists (to-spotify-catalog, 10s throttle)
     Outbox->>CA: handle(SyncArtistDetails)
     CA->>Spotify: GET /v1/artists/{id}
-    CA->>Mongo: upsert app_artist (SYNC_ASSUMPTION if fromPlaylist, else SHALLOW_ASSUMPTION)
+    CA->>Mongo: upsert app_artist (SYNC if fromPlaylist, else SHALLOW_ASSUMPTION)
     CA->>Outbox: SyncArtistAlbums(artistId) if status is SYNC/SYNC_ASSUMPTION
 
     Note over Sched,CA: Daily at 02:00, rotating partition (ArtistCatalogSyncJob)
