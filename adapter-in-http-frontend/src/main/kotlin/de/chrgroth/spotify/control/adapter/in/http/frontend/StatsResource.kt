@@ -20,6 +20,7 @@ import jakarta.enterprise.context.ApplicationScoped
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.Produces
+import jakarta.ws.rs.QueryParam
 import jakarta.ws.rs.core.MediaType
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
@@ -43,8 +44,12 @@ class StatsResource(
   @GET
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun stats(): TemplateInstance = httpResponseMetrics.timed("page.stats.view") { details ->
-    val periodStartsByType = AggregationPeriodType.entries.associateWith { threePeriodStarts(it) }
+  fun stats(@QueryParam("date") dateParam: String?): TemplateInstance = httpResponseMetrics.timed("page.stats.view") { details ->
+    val today = currentPeriodStart(AggregationPeriodType.DAY)
+    val requestedDate = dateParam?.let { runCatching { LocalDate.parse(it) }.getOrNull() }?.let { if (it > today) today else it }
+    val periodStartsByType = AggregationPeriodType.entries.associateWith { type ->
+      if (type == AggregationPeriodType.DAY && requestedDate != null) listOf(requestedDate) else threePeriodStarts(type)
+    }
     val requestedPeriods = periodStartsByType.flatMap { (type, periodStarts) -> periodStarts.map { type to it } }
     val aggregationsByTypeAndPeriod = details.detail("stats.view.aggregations") { aggregationRepository.findByPeriods(requestedPeriods) }
     val tabs = AggregationPeriodType.entries.mapIndexed { index, type ->
@@ -55,7 +60,7 @@ class StatsResource(
         first = index == 0,
         aggregations = periodStarts.mapIndexed { periodIndex, periodStart ->
           AggregationView(
-            periodLabel = periodLabel(periodIndex, periodStart),
+            periodLabel = periodLabel(periodIndex, periodStart, singleSelected = periodStarts.size == 1),
             periodStart = periodStart.toString(),
             data = aggregationsByTypeAndPeriod[type to periodStart],
           )
@@ -233,11 +238,16 @@ class StatsResource(
     AggregationPeriodType.YEAR -> "Year"
   }
 
-  private fun periodLabel(index: Int, periodStart: LocalDate): String = when (index) {
-    0 -> "Current"
-    1 -> "Previous"
-    else -> "Two periods ago"
-  } + " ($periodStart)"
+  private fun periodLabel(index: Int, periodStart: LocalDate, singleSelected: Boolean): String {
+    if (singleSelected) {
+      return "Selected ($periodStart)"
+    }
+    return when (index) {
+      0 -> "Current"
+      1 -> "Previous"
+      else -> "Two periods ago"
+    } + " ($periodStart)"
+  }
 
   data class AggregationTab(val id: String, val label: String, val first: Boolean, val aggregations: List<AggregationView>)
 
