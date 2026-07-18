@@ -1,3 +1,12 @@
+# 0.112.2 (2026.07.18)
+
+## Bugfixes / Chore
+* Fixed the Artists column on the playlist settings page showing "–" for playlists whose artist count could not be computed.
+
+
+
+---
+
 # 0.112.1 (2026.07.18)
 
 ## Bugfixes / Chore
