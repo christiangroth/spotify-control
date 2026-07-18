@@ -31,7 +31,12 @@
                 <div class="col-12">
                     <div class="card app-card">
                         <div class="card-body py-3 px-3">
-                            <p class="mb-2 fw-semibold" style="font-size:.85rem;color:#fff;">{aggregation.periodLabel}</p>
+                            <p class="mb-2 fw-semibold" style="font-size:.85rem;color:#fff;">
+                                {aggregation.periodLabel}
+                                {#if tab.id == 'day'}
+                                <a href="/playback/events?date={aggregation.periodStart}" class="text-decoration-none ms-2" style="font-size:.75rem;color:var(--spotify-green);" data-testid="stats-day-events-link">View Playback Events</a>
+                                {/if}
+                            </p>
                             {#if aggregation.data}
                             <p class="mb-3" style="color:#fff;font-size:.85rem;">
                                 <span style="color:var(--spotify-green);font-weight:600;">{aggregation.data.totalPlaybackSeconds.formattedListeningDurationFromSeconds}</span>

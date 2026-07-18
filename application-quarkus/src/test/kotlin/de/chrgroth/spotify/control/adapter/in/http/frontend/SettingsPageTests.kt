@@ -222,4 +222,15 @@ class SettingsPageTests {
       .body(containsString("Selected (2026-06-01)"))
   }
 
+  @Test
+  fun `stats page links day tab periods to playback events for the same date`() {
+    given()
+      .`when`()
+      .get("/stats?date=2026-06-01")
+      .then()
+      .statusCode(200)
+      .body(containsString("""data-testid="stats-day-events-link""""))
+      .body(containsString("/playback/events?date=2026-06-01"))
+  }
+
 }
