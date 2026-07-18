@@ -8,6 +8,7 @@ import de.chrgroth.spotify.control.domain.model.user.AccessToken
 import de.chrgroth.spotify.control.domain.model.playlist.Playlist
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
+import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.model.catalog.SyncCause
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistTrack
@@ -91,6 +92,37 @@ class PlaylistServiceTests {
     snapshotId = snapshotId,
     ownerId = ownerId,
   )
+
+  // --- getArtistStats tests ---
+
+  @Test
+  fun `getArtistStats returns empty map when no user exists`() {
+    every { currentUserResolver.userId() } returns null
+
+    val result = adapter.getArtistStats()
+
+    assertThat(result).isEmpty()
+    verify(exactly = 0) { playlistRepository.findDistinctArtistIds() }
+  }
+
+  @Test
+  fun `getArtistStats computes total and missing counts per playlist`() {
+    every { currentUserResolver.userId() } returns userId
+    every { playlistRepository.findDistinctArtistIds() } returns mapOf(
+      "p1" to setOf(ArtistId("artist-1"), ArtistId("artist-2")),
+      "p2" to setOf(ArtistId("artist-2"), ArtistId("artist-3")),
+    )
+    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"), ArtistId("artist-2"), ArtistId("artist-3"))) } returns listOf(
+      AppArtist(id = ArtistId("artist-1"), artistName = "Artist 1", lastSync = now),
+    )
+
+    val result = adapter.getArtistStats()
+
+    assertThat(result["p1"]!!.total).isEqualTo(2)
+    assertThat(result["p1"]!!.missingFromCatalog).isEqualTo(1)
+    assertThat(result["p2"]!!.total).isEqualTo(2)
+    assertThat(result["p2"]!!.missingFromCatalog).isEqualTo(2)
+  }
 
   // --- enqueueUpdates tests ---
 

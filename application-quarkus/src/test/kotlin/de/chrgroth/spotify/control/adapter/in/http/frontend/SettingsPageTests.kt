@@ -1,15 +1,25 @@
 package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistInfo
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSyncStatus
+import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
 import io.quarkus.test.junit.QuarkusTest
 import io.quarkus.test.security.TestSecurity
 import io.restassured.RestAssured.given
+import jakarta.inject.Inject
 import org.hamcrest.CoreMatchers.containsString
 import org.hamcrest.CoreMatchers.not
 import org.junit.jupiter.api.Test
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.hours
+import java.util.UUID
 
 @QuarkusTest
 @TestSecurity(user = "test-user-a")
 class SettingsPageTests {
+
+  @Inject
+  lateinit var playlistRepository: PlaylistRepositoryPort
 
   @Test
   fun `playlist settings page is available and displays playlists heading`() {
@@ -20,6 +30,29 @@ class SettingsPageTests {
       .statusCode(200)
       .contentType(containsString("text/html"))
       .body(containsString("Playlists"))
+  }
+
+  @Test
+  fun `playlist settings page displays artists column header`() {
+    val now = Clock.System.now()
+    playlistRepository.replaceAll(
+      listOf(
+        PlaylistInfo(
+          spotifyPlaylistId = "playlist-${UUID.randomUUID()}",
+          snapshotId = "snap-1",
+          lastSnapshotIdSyncTime = now - 1.hours,
+          name = "Playlist For Artists Column Test",
+          syncStatus = PlaylistSyncStatus.ACTIVE,
+        ),
+      ),
+    )
+
+    given()
+      .`when`()
+      .get("/settings/playlist")
+      .then()
+      .statusCode(200)
+      .body(containsString("Artists"))
   }
 
   @Test

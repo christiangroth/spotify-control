@@ -20,6 +20,7 @@
                     <th style="width:2.5rem">Sync</th>
                     <th>Name</th>
                     <th style="width:5rem">Tracks</th>
+                    <th style="width:6rem">Artists</th>
                     <th style="width:14rem">Last Sync</th>
                     <th style="width:2.5rem"></th>
                 </tr>
@@ -46,6 +47,7 @@
                         {/if}
                     </td>
                     <td class="text-secondary small tabular-nums">{#if row.numberOfTracks}{row.numberOfTracks}{#else}–{/if}</td>
+                    <td class="text-secondary small tabular-nums">{#if row.numberOfArtists}{row.numberOfArtists} ({row.numberOfMissingArtists}){#else}–{/if}</td>
                     <td class="text-secondary small">{row.lastSyncTime.formattedShort}</td>
                     <td>
                         {#if row.active}
