@@ -9,5 +9,23 @@
         document.getElementById('docs-rendered').innerHTML =
             marked.parse(document.getElementById('docs-raw').value);
     </script>
+    <script type="module">
+        // GitHub renders ```mermaid fenced blocks natively; marked.js (used above) does not, so it
+        // leaves them as <pre><code class="language-mermaid">...</code></pre>. Find those blocks and
+        // hand them to mermaid.js instead.
+        import mermaid from '/webjars/mermaid/dist/mermaid.esm.min.mjs';
+
+        var blocks = document.querySelectorAll('#docs-rendered pre code.language-mermaid');
+        if (blocks.length > 0) {
+            blocks.forEach(function (code) {
+                var container = document.createElement('div');
+                container.className = 'mermaid';
+                container.textContent = code.textContent;
+                code.parentElement.replaceWith(container);
+            });
+            mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+            mermaid.run({ querySelector: '#docs-rendered .mermaid' });
+        }
+    </script>
     {/content}
 {/include}
