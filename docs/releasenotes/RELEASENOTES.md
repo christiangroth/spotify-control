@@ -1,3 +1,14 @@
+# 0.111.5 (2026.07.18)
+
+## Bugfixes / Chore
+* Reviewed and refreshed the architecture documentation: arc42 now reflects the actual current implementation (outbox partitions, scheduler jobs, catalog sync, playback aggregation, playlist checks) instead of an outdated design, and four new ADRs capture previously undocumented decisions (shallow artists, partial-play detection, playlist checks framework, Mermaid diagram rendering).
+* Documentation diagrams now render as actual Mermaid diagrams, both on GitHub and in the app's own Docs page, instead of static pre-rendered images.
+* Restricted the Claude Code CI workflow so it only runs for actions performed by the repository owner.
+
+
+
+---
+
 # 0.111.4 (2026.07.17)
 
 ## Bugfixes / Chore
