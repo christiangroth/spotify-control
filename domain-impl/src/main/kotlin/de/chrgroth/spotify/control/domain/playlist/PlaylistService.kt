@@ -6,6 +6,7 @@ import arrow.core.right
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.PlaylistSyncError
 import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
+import de.chrgroth.spotify.control.domain.model.playlist.ArtistStats
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.playlist.Playlist
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSyncStatus
@@ -14,6 +15,7 @@ import de.chrgroth.spotify.control.domain.model.catalog.SyncCause
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistPort
+import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.AppPlaylistCheckRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.infra.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
@@ -45,6 +47,7 @@ class PlaylistService(
   private val playlistCheckRepository: AppPlaylistCheckRepositoryPort,
   private val syncController: SyncController,
   private val catalogPort: CatalogPort,
+  private val appArtistRepository: AppArtistRepositoryPort,
   private val meterRegistry: MeterRegistry,
 ) : PlaylistPort {
 
@@ -65,6 +68,19 @@ class PlaylistService(
   override fun getTrackCounts(): Map<String, Int> {
     currentUserResolver.userId() ?: return emptyMap()
     return playlistRepository.findTrackCounts()
+  }
+
+  override fun getArtistStats(): Map<String, ArtistStats> {
+    currentUserResolver.userId() ?: return emptyMap()
+    val artistIdsByPlaylist = playlistRepository.findDistinctArtistIds()
+    val allArtistIds = artistIdsByPlaylist.values.flatten().toSet()
+    val existingArtistIds = appArtistRepository.findByArtistIds(allArtistIds).map { it.id }.toSet()
+    return artistIdsByPlaylist.mapValues { (_, artistIds) ->
+      ArtistStats(
+        total = artistIds.size,
+        missingFromCatalog = artistIds.count { it !in existingArtistIds },
+      )
+    }
   }
 
   override fun enqueueUpdates() {

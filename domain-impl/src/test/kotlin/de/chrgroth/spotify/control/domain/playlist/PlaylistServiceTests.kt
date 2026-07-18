@@ -18,6 +18,7 @@ import de.chrgroth.spotify.control.domain.model.playlist.PlaylistType
 import de.chrgroth.spotify.control.domain.model.playlist.SpotifyPlaylistItem
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
+import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.AppPlaylistCheckRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.infra.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
@@ -53,6 +54,7 @@ class PlaylistServiceTests {
   private val playlistCheckRepository: AppPlaylistCheckRepositoryPort = mockk()
   private val syncController: SyncController = mockk(relaxed = true)
   private val catalogPort: CatalogPort = mockk(relaxed = true)
+  private val appArtistRepository: AppArtistRepositoryPort = mockk()
   private val meterRegistry = SimpleMeterRegistry()
 
   private val adapter = PlaylistService(
@@ -62,6 +64,7 @@ class PlaylistServiceTests {
     playlistCheckRepository,
     syncController,
     catalogPort,
+    appArtistRepository,
     meterRegistry,
   )
 
