@@ -1,3 +1,12 @@
+# 0.113.1 (2026.07.19)
+
+## Bugfixes / Chore
+* Fixed the Playlists settings page showing "–" in the Artists column for playlists with zero distinct artists instead of the actual count.
+
+
+
+---
+
 # 0.113.0 (2026.07.18)
 
 ## New Features
