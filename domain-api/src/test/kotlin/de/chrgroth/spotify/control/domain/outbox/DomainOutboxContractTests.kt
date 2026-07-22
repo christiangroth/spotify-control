@@ -25,6 +25,8 @@ class DomainOutboxContractTests {
     DomainOutboxEvent.SyncArtistAlbums("artist-1"),
     DomainOutboxEvent.SyncArtistAlbums("artist-1", "https://api.spotify.com/v1/artists/artist-1/albums?offset=50&limit=50"),
     DomainOutboxEvent.SyncAlbumDetails("album-1"),
+    DomainOutboxEvent.ConfirmArtistSync("artist-1"),
+    DomainOutboxEvent.ConfirmArtistShallow("artist-1"),
     DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.DAY, LocalDate(2024, 1, 15)),
     DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.WEEK, LocalDate(2024, 1, 8)),
     DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.MONTH, LocalDate(2024, 1, 1)),

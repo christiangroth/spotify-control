@@ -192,6 +192,40 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
   }
 
   /**
+   * Confirms an artist's guessed sync status as SYNC, re-enqueues its album sync and
+   * rebuilds playback aggregations.
+   * payload = artistId
+   */
+  data class ConfirmArtistSync(val artistId: String) : DomainOutboxEvent {
+    override val key = KEY
+    override val deduplicationKey = "$KEY:$artistId"
+    override val partition = DomainOutboxPartition.Domain
+    override val serializePayload = artistId
+
+    companion object {
+      const val KEY = "ConfirmArtistSync"
+      fun fromPayload(payload: String): ConfirmArtistSync = ConfirmArtistSync(payload)
+    }
+  }
+
+  /**
+   * Confirms an artist's guessed sync status as SHALLOW, removes its cached albums and
+   * tracks, and rebuilds playback aggregations.
+   * payload = artistId
+   */
+  data class ConfirmArtistShallow(val artistId: String) : DomainOutboxEvent {
+    override val key = KEY
+    override val deduplicationKey = "$KEY:$artistId"
+    override val partition = DomainOutboxPartition.Domain
+    override val serializePayload = artistId
+
+    companion object {
+      const val KEY = "ConfirmArtistShallow"
+      fun fromPayload(payload: String): ConfirmArtistShallow = ConfirmArtistShallow(payload)
+    }
+  }
+
+  /**
    * Re-enqueues sync events for all known artists, tracks, and albums in the catalog
    * so that they are refreshed from Spotify.
    * Deduplication ensures only one instance is queued at a time.
@@ -266,6 +300,8 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
       SyncArtistDetails.KEY,
       SyncArtistAlbums.KEY,
       SyncAlbumDetails.KEY,
+      ConfirmArtistSync.KEY,
+      ConfirmArtistShallow.KEY,
       ResyncCatalog.KEY,
       RunPlaylistChecks.KEY,
       AggregatePlaybackData.KEY,
@@ -282,6 +318,8 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
       SyncArtistDetails.KEY, SyncArtistDetails.LEGACY_KEY -> SyncArtistDetails.fromPayload(payload)
       SyncArtistAlbums.KEY -> SyncArtistAlbums.fromPayload(payload)
       SyncAlbumDetails.KEY -> SyncAlbumDetails.fromPayload(payload)
+      ConfirmArtistSync.KEY -> ConfirmArtistSync.fromPayload(payload)
+      ConfirmArtistShallow.KEY -> ConfirmArtistShallow.fromPayload(payload)
       ResyncCatalog.KEY -> ResyncCatalog()
       RunPlaylistChecks.KEY -> RunPlaylistChecks.fromPayload(payload)
       AggregatePlaybackData.KEY -> AggregatePlaybackData.fromPayload(payload)

@@ -59,23 +59,16 @@ class CatalogService(
   override fun findAllArtists(): List<AppArtist> = appArtistRepository.findAll()
 
   override fun setArtistSync(artistId: String): Either<DomainError, Unit> {
-    val existing = appArtistRepository.findByArtistIds(setOf(ArtistId(artistId))).firstOrNull()
+    appArtistRepository.findByArtistIds(setOf(ArtistId(artistId))).firstOrNull()
       ?: return ArtistSettingsError.ARTIST_NOT_FOUND.left()
-    logger.info { "Updated sync status for artist '${existing.artistName}' ($artistId) to ${ArtistSyncStatus.SYNC}" }
-    appArtistRepository.setSyncStatus(ArtistId(artistId), ArtistSyncStatus.SYNC)
-    outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums(artistId))
-    playbackAggregation.rebuildAllAggregations()
+    outboxPort.enqueue(DomainOutboxEvent.ConfirmArtistSync(artistId))
     return Unit.right()
   }
 
   override fun setArtistShallow(artistId: String): Either<DomainError, Unit> {
-    val existing = appArtistRepository.findByArtistIds(setOf(ArtistId(artistId))).firstOrNull()
+    appArtistRepository.findByArtistIds(setOf(ArtistId(artistId))).firstOrNull()
       ?: return ArtistSettingsError.ARTIST_NOT_FOUND.left()
-    logger.info { "Updated sync status for artist '${existing.artistName}' ($artistId) to ${ArtistSyncStatus.SHALLOW}" }
-    appArtistRepository.setSyncStatus(ArtistId(artistId), ArtistSyncStatus.SHALLOW)
-    appTrackRepository.deleteByArtistId(ArtistId(artistId))
-    appAlbumRepository.deleteByArtistId(ArtistId(artistId))
-    playbackAggregation.rebuildAllAggregations()
+    outboxPort.enqueue(DomainOutboxEvent.ConfirmArtistShallow(artistId))
     return Unit.right()
   }
 
@@ -207,6 +200,27 @@ class CatalogService(
 
   override fun handle(event: DomainOutboxEvent.SyncAlbumDetails): Either<DomainError, Unit> =
     syncAlbumDetails(event.albumId).map { Unit }
+
+  override fun handle(event: DomainOutboxEvent.ConfirmArtistSync): Either<DomainError, Unit> {
+    val existing = appArtistRepository.findByArtistIds(setOf(ArtistId(event.artistId))).firstOrNull()
+      ?: return ArtistSettingsError.ARTIST_NOT_FOUND.left()
+    logger.info { "Updated sync status for artist '${existing.artistName}' (${event.artistId}) to ${ArtistSyncStatus.SYNC}" }
+    appArtistRepository.setSyncStatus(existing.id, ArtistSyncStatus.SYNC)
+    outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums(event.artistId))
+    playbackAggregation.rebuildAllAggregations()
+    return Unit.right()
+  }
+
+  override fun handle(event: DomainOutboxEvent.ConfirmArtistShallow): Either<DomainError, Unit> {
+    val existing = appArtistRepository.findByArtistIds(setOf(ArtistId(event.artistId))).firstOrNull()
+      ?: return ArtistSettingsError.ARTIST_NOT_FOUND.left()
+    logger.info { "Updated sync status for artist '${existing.artistName}' (${event.artistId}) to ${ArtistSyncStatus.SHALLOW}" }
+    appArtistRepository.setSyncStatus(existing.id, ArtistSyncStatus.SHALLOW)
+    appTrackRepository.deleteByArtistId(existing.id)
+    appAlbumRepository.deleteByArtistId(existing.id)
+    playbackAggregation.rebuildAllAggregations()
+    return Unit.right()
+  }
 
   override fun handle(event: DomainOutboxEvent.ResyncCatalog): Either<DomainError, Unit> =
     resyncCatalog()
