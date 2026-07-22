@@ -176,27 +176,6 @@ class SettingsPageTests {
   }
 
   @Test
-  fun `playback settings page is available and displays playback settings heading`() {
-    given()
-      .`when`()
-      .get("/settings/playback")
-      .then()
-      .statusCode(200)
-      .contentType(containsString("text/html"))
-      .body(containsString("Playback Settings"))
-  }
-
-  @Test
-  fun `playback settings page displays recreate playback data button`() {
-    given()
-      .`when`()
-      .get("/settings/playback")
-      .then()
-      .statusCode(200)
-      .body(containsString("Recreate Playback Data"))
-  }
-
-  @Test
   fun `playlists settings page is available at new url and displays playlists heading`() {
     given()
       .`when`()
@@ -268,6 +247,16 @@ class SettingsPageTests {
       .then()
       .statusCode(200)
       .body(containsString("Recreate Playback Data"))
+  }
+
+  @Test
+  fun `playback page displays sync missing artists button`() {
+    given()
+      .`when`()
+      .get("/playback")
+      .then()
+      .statusCode(200)
+      .body(containsString("Sync Missing Artists"))
   }
 
   @Test

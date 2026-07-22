@@ -8,13 +8,8 @@ import de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackAggregation
 import de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackPort
 import de.chrgroth.spotify.control.domain.port.`in`.user.UserProfilePort
 import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
-import io.quarkus.qute.Location
-import io.quarkus.qute.Template
-import io.quarkus.qute.TemplateInstance
 import io.quarkus.security.Authenticated
-import io.quarkus.security.identity.SecurityIdentity
 import jakarta.enterprise.context.ApplicationScoped
-import jakarta.ws.rs.GET
 import jakarta.ws.rs.POST
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.PathParam
@@ -27,24 +22,12 @@ import mu.KLogging
 @ApplicationScoped
 @Suppress("Unused")
 class PlaybackSettingsResource(
-  @param:Location("settings/playback.html")
-  private val playbackTemplate: Template,
-  private val securityIdentity: SecurityIdentity,
   private val userProfile: UserProfilePort,
   private val playback: PlaybackPort,
   private val playbackAggregation: PlaybackAggregationPort,
   private val catalog: CatalogPort,
   private val httpResponseMetrics: ResponseTimingPort,
 ) {
-
-  @GET
-  @Authenticated
-  @Produces(MediaType.TEXT_HTML)
-  fun playback(): TemplateInstance = httpResponseMetrics.timed("page.playback.settings") {
-    val displayName = userProfile.getDisplayName() ?: securityIdentity.principal.name
-    playbackTemplate
-      .data("displayName", displayName)
-  }
 
   @POST
   @Authenticated
