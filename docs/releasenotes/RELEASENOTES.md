@@ -1,3 +1,12 @@
+# 0.114.2 (2026.07.22)
+
+## Bugfixes / Chore
+* Fixed the "Set Sync" and "Set Shallow" buttons on the Artist Settings page, which stopped reacting to clicks.
+
+
+
+---
+
 # 0.114.1 (2026.07.22)
 
 ## Bugfixes / Chore
