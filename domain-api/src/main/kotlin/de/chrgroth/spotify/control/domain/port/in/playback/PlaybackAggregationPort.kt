@@ -12,5 +12,7 @@ interface PlaybackAggregationPort {
   fun enqueueAggregateQuarter(quarterStart: LocalDate)
   fun enqueueAggregateYear(yearStart: LocalDate)
   fun rebuildAllAggregations()
+  fun enqueueRebuildAllAggregations()
   fun handle(event: DomainOutboxEvent.AggregatePlaybackData): Either<DomainError, Unit>
+  fun handle(event: DomainOutboxEvent.RebuildAllAggregations): Either<DomainError, Unit>
 }

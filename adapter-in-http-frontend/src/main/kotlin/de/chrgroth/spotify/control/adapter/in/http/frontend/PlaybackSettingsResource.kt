@@ -4,7 +4,9 @@ import arrow.core.Either
 import de.chrgroth.spotify.control.domain.error.ArtistSettingsError
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogPort
+import de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackAggregationPort
 import de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackPort
+import de.chrgroth.spotify.control.domain.port.`in`.user.UserProfilePort
 import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
 import io.quarkus.security.Authenticated
 import jakarta.enterprise.context.ApplicationScoped
@@ -20,7 +22,9 @@ import mu.KLogging
 @ApplicationScoped
 @Suppress("Unused")
 class PlaybackSettingsResource(
+  private val userProfile: UserProfilePort,
   private val playback: PlaybackPort,
+  private val playbackAggregation: PlaybackAggregationPort,
   private val catalog: CatalogPort,
   private val httpResponseMetrics: ResponseTimingPort,
 ) {
@@ -49,6 +53,33 @@ class PlaybackSettingsResource(
   @Produces(MediaType.APPLICATION_JSON)
   fun syncMissingArtists(): Response = httpResponseMetrics.timed("rest.catalog.sync-missing-artists") {
     catalog.enqueuePlaybackArtistsForSync()
+    Response.ok(mapOf("status" to "ok")).build()
+  }
+
+  @POST
+  @Authenticated
+  @Path("/aggregations/rebuild")
+  @Produces(MediaType.APPLICATION_JSON)
+  fun rebuildAggregations(): Response = httpResponseMetrics.timed("rest.playback.aggregations-rebuild") {
+    playbackAggregation.enqueueRebuildAllAggregations()
+    Response.ok(mapOf("status" to "ok")).build()
+  }
+
+  @POST
+  @Authenticated
+  @Path("/profile/refresh")
+  @Produces(MediaType.APPLICATION_JSON)
+  fun refreshProfile(): Response = httpResponseMetrics.timed("rest.user-profile.refresh") {
+    userProfile.enqueueUpdates()
+    Response.ok(mapOf("status" to "ok")).build()
+  }
+
+  @POST
+  @Authenticated
+  @Path("/poll")
+  @Produces(MediaType.APPLICATION_JSON)
+  fun pollNow(): Response = httpResponseMetrics.timed("rest.playback.poll") {
+    playback.enqueueFetchPlaybackData()
     Response.ok(mapOf("status" to "ok")).build()
   }
 

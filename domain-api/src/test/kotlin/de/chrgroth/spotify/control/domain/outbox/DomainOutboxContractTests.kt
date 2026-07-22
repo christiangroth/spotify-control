@@ -37,6 +37,7 @@ class DomainOutboxContractTests {
     DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.MONTH, LocalDate(2024, 1, 1)),
     DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.QUARTER, LocalDate(2024, 1, 1)),
     DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.YEAR, LocalDate(2024, 1, 1)),
+    DomainOutboxEvent.RebuildAllAggregations(),
   )
 
   @Test
