@@ -1,3 +1,13 @@
+# 0.114.3 (2026.07.22)
+
+## Bugfixes / Chore
+* Routed the "Set Sync" and "Set Shallow" artist actions through the outbox so they are processed reliably instead of blocking the request.
+* Renamed the "Guessed Status" column on the Artist Settings page to "Assumption".
+
+
+
+---
+
 # 0.114.2 (2026.07.22)
 
 ## Bugfixes / Chore
