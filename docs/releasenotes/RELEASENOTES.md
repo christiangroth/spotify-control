@@ -1,3 +1,12 @@
+# 0.115.0 (2026.07.22)
+
+## New Features
+* Added a "Sync Missing Artists" action on the Playback Settings page to sync only artists referenced in playback history that are not yet in the catalog.
+
+
+
+---
+
 # 0.114.6 (2026.07.22)
 
 ## Bugfixes / Chore
