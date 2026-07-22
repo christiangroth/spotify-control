@@ -518,7 +518,7 @@ producers from consumers.
 | `to-spotify-playlist` | 10s (shared, runtime-adjustable) | yes | `SyncPlaylistInfo`, `SyncPlaylistData`                       |
 | `to-spotify-user`     | none     | yes               | `UpdateUserProfile`                                                          |
 | `to-spotify-playback` | none     | yes               | `FetchPlaybackData`                                                          |
-| `domain`              | none     | n/a (no Spotify calls) | `RebuildPlaybackData`, `AppendPlaybackData`, `ResyncCatalog`, `RunPlaylistChecks`, `AggregatePlaybackData` |
+| `domain`              | none     | n/a (no Spotify calls) | `RebuildPlaybackData`, `AppendPlaybackData`, `ResyncCatalog`, `RunPlaylistChecks`, `AggregatePlaybackData`, `ConfirmArtistSync`, `ConfirmArtistShallow` |
 
 `to-spotify-catalog` and `to-spotify-playlist` share one runtime-adjustable throttle interval
 (`spotify.throttle.default-interval-ms`, default 10s) — there is no per-partition distinct value.

@@ -16,6 +16,8 @@ interface CatalogPort {
   fun handle(event: DomainOutboxEvent.SyncArtistDetails): Either<DomainError, Unit>
   fun handle(event: DomainOutboxEvent.SyncArtistAlbums): Either<DomainError, Unit>
   fun handle(event: DomainOutboxEvent.SyncAlbumDetails): Either<DomainError, Unit>
+  fun handle(event: DomainOutboxEvent.ConfirmArtistSync): Either<DomainError, Unit>
+  fun handle(event: DomainOutboxEvent.ConfirmArtistShallow): Either<DomainError, Unit>
   fun handle(event: DomainOutboxEvent.ResyncCatalog): Either<DomainError, Unit>
   fun enqueueArtistAlbumsSync(partition: Int, totalPartitions: Int)
   fun enqueuePlaybackArtistsForSync()

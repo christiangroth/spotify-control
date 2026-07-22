@@ -131,17 +131,15 @@ class CatalogServiceTests {
   }
 
   @Test
-  fun `setArtistSync updates status, enqueues album sync and rebuilds aggregations`() {
+  fun `setArtistSync enqueues ConfirmArtistSync via outbox domain partition`() {
     every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns listOf(artist1)
-    every { appArtistRepository.setSyncStatus(ArtistId("artist-1"), ArtistSyncStatus.SYNC) } just runs
     every { outboxPort.enqueue(any()) } just runs
 
     val result = adapter.setArtistSync("artist-1")
 
     assertThat(result.isRight()).isTrue()
-    verify { appArtistRepository.setSyncStatus(ArtistId("artist-1"), ArtistSyncStatus.SYNC) }
-    verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums("artist-1")) }
-    verify { playbackAggregation.rebuildAllAggregations() }
+    verify { outboxPort.enqueue(DomainOutboxEvent.ConfirmArtistSync("artist-1")) }
+    verify(exactly = 0) { appArtistRepository.setSyncStatus(any(), any()) }
   }
 
   @Test
@@ -155,13 +153,61 @@ class CatalogServiceTests {
   }
 
   @Test
-  fun `setArtistShallow updates status, deletes albums and tracks and rebuilds aggregations`() {
+  fun `setArtistShallow enqueues ConfirmArtistShallow via outbox domain partition`() {
+    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns listOf(artist1)
+    every { outboxPort.enqueue(any()) } just runs
+
+    val result = adapter.setArtistShallow("artist-1")
+
+    assertThat(result.isRight()).isTrue()
+    verify { outboxPort.enqueue(DomainOutboxEvent.ConfirmArtistShallow("artist-1")) }
+    verify(exactly = 0) { appArtistRepository.setSyncStatus(any(), any()) }
+  }
+
+  // --- handle(ConfirmArtistSync) / handle(ConfirmArtistShallow) tests ---
+
+  @Test
+  fun `handle ConfirmArtistSync returns error when artist not found`() {
+    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns emptyList()
+
+    val result = adapter.handle(DomainOutboxEvent.ConfirmArtistSync("artist-1"))
+
+    assertThat(result.isLeft()).isTrue()
+    verify(exactly = 0) { appArtistRepository.setSyncStatus(any(), any()) }
+  }
+
+  @Test
+  fun `handle ConfirmArtistSync updates status, enqueues album sync and rebuilds aggregations`() {
+    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns listOf(artist1)
+    every { appArtistRepository.setSyncStatus(ArtistId("artist-1"), ArtistSyncStatus.SYNC) } just runs
+    every { outboxPort.enqueue(any()) } just runs
+
+    val result = adapter.handle(DomainOutboxEvent.ConfirmArtistSync("artist-1"))
+
+    assertThat(result.isRight()).isTrue()
+    verify { appArtistRepository.setSyncStatus(ArtistId("artist-1"), ArtistSyncStatus.SYNC) }
+    verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums("artist-1")) }
+    verify { playbackAggregation.rebuildAllAggregations() }
+  }
+
+  @Test
+  fun `handle ConfirmArtistShallow returns error when artist not found`() {
+    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns emptyList()
+
+    val result = adapter.handle(DomainOutboxEvent.ConfirmArtistShallow("artist-1"))
+
+    assertThat(result.isLeft()).isTrue()
+    verify(exactly = 0) { appArtistRepository.setSyncStatus(any(), any()) }
+  }
+
+  @Test
+  fun `handle ConfirmArtistShallow updates status, deletes albums and tracks and rebuilds aggregations`() {
     every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns listOf(artist1)
     every { appArtistRepository.setSyncStatus(ArtistId("artist-1"), ArtistSyncStatus.SHALLOW) } just runs
     every { appTrackRepository.deleteByArtistId(ArtistId("artist-1")) } just runs
     every { appAlbumRepository.deleteByArtistId(ArtistId("artist-1")) } just runs
 
-    val result = adapter.setArtistShallow("artist-1")
+    val result = adapter.handle(DomainOutboxEvent.ConfirmArtistShallow("artist-1"))
 
     assertThat(result.isRight()).isTrue()
     verify { appArtistRepository.setSyncStatus(ArtistId("artist-1"), ArtistSyncStatus.SHALLOW) }
