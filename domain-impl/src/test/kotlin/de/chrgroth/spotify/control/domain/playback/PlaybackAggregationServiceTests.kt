@@ -184,6 +184,26 @@ class PlaybackAggregationServiceTests {
     )
   }
 
+  @Test
+  fun `enqueueRebuildAllAggregations enqueues RebuildAllAggregations event`() {
+    every { currentUserResolver.userId() } returns userId
+
+    service.enqueueRebuildAllAggregations()
+
+    verify { outboxPort.enqueue(DomainOutboxEvent.RebuildAllAggregations()) }
+  }
+
+  @Test
+  fun `handle RebuildAllAggregations delegates to rebuildAllAggregations`() {
+    every { currentUserResolver.userId() } returns userId
+    every { appPlaybackRepository.findOldestPlayedAt() } returns null
+
+    val result = service.handle(DomainOutboxEvent.RebuildAllAggregations())
+
+    assertThat(result.isRight()).isTrue()
+    verify { appPlaybackRepository.findOldestPlayedAt() }
+  }
+
   private fun dayAggregation(
     periodStart: LocalDate,
     albumEntries: List<AggregationRankEntry> = emptyList(),

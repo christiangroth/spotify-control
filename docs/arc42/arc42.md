@@ -361,8 +361,8 @@ sequenceDiagram
 `RunPlaylistChecks` is purely outbox/event-driven — never triggered directly by a scheduler job. All
 CDI-discovered `PlaylistCheckRunner` beans applicable to a playlist's type (some checks are scoped to
 `SINGULARITY` or `YEAR` playlists only) run concurrently; a Slack notification fires only when a
-check's pass/fail state or its violation list changes. The "Fix" action calls Spotify directly rather
-than through the outbox — see Risks and Technical Debts.
+check's pass/fail state or its violation list changes. The "Fix" action is enqueued as
+`FixPlaylistCheck` (partition `to-spotify-playlist`) and applied asynchronously by the dispatcher.
 
 ```mermaid
 sequenceDiagram
@@ -380,8 +380,10 @@ sequenceDiagram
     Check->>Mongo: upsert app_playlist_check per checkId
     Check->>Slack: notify only if pass/fail or violations changed
 
-    Note over Check,Outbox: User-triggered Fix action (bypasses outbox today, see Technical Debts)
-    Check->>Spotify: runner.fix() - direct call, not outbox-dispatched
+    Note over Check,Outbox: User-triggered Fix action
+    PL->>Outbox: FixPlaylistCheck(playlistId, checkType) (to-spotify-playlist)
+    Outbox->>Check: handle(FixPlaylistCheck)
+    Check->>Spotify: runner.fix()
     Check->>Outbox: SyncPlaylistData(playlistId) (re-sync + re-check)
 ```
 
@@ -518,7 +520,7 @@ producers from consumers.
 | `to-spotify-playlist` | 10s (shared, runtime-adjustable) | yes | `SyncPlaylistInfo`, `SyncPlaylistData`, `FixPlaylistCheck`   |
 | `to-spotify-user`     | none     | yes               | `UpdateUserProfile`                                                          |
 | `to-spotify-playback` | none     | yes               | `FetchPlaybackData`                                                          |
-| `domain`              | none     | n/a (no Spotify calls) | `RebuildPlaybackData`, `AppendPlaybackData`, `ResyncCatalog`, `WipeCatalog`, `RunPlaylistChecks`, `AggregatePlaybackData`, `ConfirmArtistSync`, `ConfirmArtistShallow` |
+| `domain`              | none     | n/a (no Spotify calls) | `RebuildPlaybackData`, `AppendPlaybackData`, `ResyncCatalog`, `WipeCatalog`, `RunPlaylistChecks`, `AggregatePlaybackData`, `RebuildAllAggregations`, `ConfirmArtistSync`, `ConfirmArtistShallow` |
 
 `to-spotify-catalog` and `to-spotify-playlist` share one runtime-adjustable throttle interval
 (`spotify.throttle.default-interval-ms`, default 10s) — there is no per-partition distinct value.

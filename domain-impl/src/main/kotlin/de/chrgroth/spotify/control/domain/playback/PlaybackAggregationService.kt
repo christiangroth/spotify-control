@@ -78,6 +78,11 @@ class PlaybackAggregationService(
 
   // --- Rebuild ---
 
+  override fun enqueueRebuildAllAggregations() {
+    currentUserResolver.userId() ?: return
+    outboxPort.enqueue(DomainOutboxEvent.RebuildAllAggregations())
+  }
+
   override fun rebuildAllAggregations() {
     val oldestInstant = appPlaybackRepository.findOldestPlayedAt()
     if (oldestInstant == null) {
@@ -184,6 +189,12 @@ class PlaybackAggregationService(
       )
     }
     recordAggregationSuccess(event.type)
+    return Unit.right()
+  }
+
+  override fun handle(event: DomainOutboxEvent.RebuildAllAggregations): Either<DomainError, Unit> {
+    currentUserResolver.userId() ?: return Unit.right()
+    rebuildAllAggregations()
     return Unit.right()
   }
 
