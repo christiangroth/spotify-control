@@ -1,3 +1,12 @@
+# 0.114.4 (2026.07.22)
+
+## Bugfixes / Chore
+* Fixed wide tables in the documentation viewer (e.g. arc42 docs) causing horizontal scrolling of the whole page on small screens; tables now scroll within their own container instead.
+
+
+
+---
+
 # 0.114.3 (2026.07.22)
 
 ## Bugfixes / Chore
