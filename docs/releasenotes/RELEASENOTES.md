@@ -1,3 +1,12 @@
+# 0.114.6 (2026.07.22)
+
+## Bugfixes / Chore
+* Catalog wipe, catalog re-sync, playlist "Sync Now" and playlist check "Fix" actions are now enqueued and processed asynchronously in the background instead of blocking the request, consistent with all other Spotify-facing operations.
+
+
+
+---
+
 # 0.114.5 (2026.07.22)
 
 ## Bugfixes / Chore
