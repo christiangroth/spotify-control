@@ -1,3 +1,12 @@
+# 0.113.2 (2026.07.22)
+
+## Bugfixes / Chore
+* Added test coverage verifying the playlist Artists column correctly reflects artists already present in the catalog.
+
+
+
+---
+
 # 0.113.1 (2026.07.19)
 
 ## Bugfixes / Chore
