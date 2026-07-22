@@ -1,3 +1,12 @@
+# 0.114.5 (2026.07.22)
+
+## Bugfixes / Chore
+* Fixed the playlists table on the Playlists settings page overflowing the screen width and causing a horizontal page scrollbar on small screens.
+
+
+
+---
+
 # 0.114.4 (2026.07.22)
 
 ## Bugfixes / Chore
