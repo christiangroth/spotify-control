@@ -11,17 +11,17 @@ registered.
 
 **Implemented features:**
 
-1. **Playback Tracking** – Spotify `currently-playing` and `recently-played` are polled every 20 seconds and stored. Partial plays (tracks not played to completion) are detected via observation sessions and stored separately.
+1. **Playback Tracking** – Spotify `currently-playing` and `recently-played` are polled and stored, with the poll frequency driven by whether playback is currently active. Partial plays (tracks not played to completion) are detected via observation sessions and stored separately.
 
 2. **Playlist Mirror** – Local copy of selected Spotify playlists. Sync is driven by snapshot IDs – a full track sync is only performed when Spotify reports a change.
 
-3. **Catalog Sync** – Artist images, track album references, and album details (title, cover) are fetched from the Spotify API and stored in deduplicated `app_artist`, `app_track`, and `app_album` collections.
+3. **Catalog Sync** – Artist images, track album references, and album details (title, cover) are fetched from the Spotify API and stored locally, deduplicated across artists, tracks and albums.
 
-4. **Listening Statistics** – Playback data is aggregated (daily, weekly, monthly, quarterly, yearly) into a dashboard showing total play counts, daily play trends, top artists, top tracks, and recently played items.
+4. **Listening Statistics** – Playback data is aggregated into a dashboard showing total play counts, daily play trends, top artists, top tracks, and recently played items.
 
-5. **Shallow Artists** – Artists can be confirmed as `SYNC` (full catalog sync) or `SHALLOW` (artist metadata only, no albums/tracks). A newly discovered artist found on an actively-synced playlist is set to `SYNC` directly; otherwise it starts as `SHALLOW_ASSUMPTION`, a guessed status pending user confirmation via the settings UI. Playback events of `SHALLOW`/`SHALLOW_ASSUMPTION` artists are still recorded but excluded from statistics.
+5. **Shallow Artists** – Artists can be confirmed as `SYNC` (full catalog sync) or `SHALLOW` (artist metadata only, no albums/tracks); a newly discovered artist starts with a guessed status pending user confirmation via the settings UI. Playback of `SHALLOW` artists is still recorded but excluded from statistics.
 
-6. **Playlist Checks** – A set of pluggable rule checks runs against every actively-synced playlist after each sync: duplicate tracks, multiple tracks by the same artist on "singularity" playlists, year-playlist tracks missing from the master "all" playlist, and tracks referencing an outdated release when a newer/better version exists in the artist's catalog. Results are shown on a dashboard; some violations can be fixed directly from the UI.
+6. **Playlist Checks** – A set of pluggable rule checks runs against every actively-synced playlist after each sync, with results and available fixes shown on a dashboard.
 
 ## Quality Goals
 
@@ -39,32 +39,58 @@ registered.
 - **External MongoDB** – Data is stored in MongoDB Atlas (two projects: prod + dev). No self-hosted database.
 - **VPS with Docker Swarm** – Deployment target is an existing VPS running Docker Swarm with Traefik for routing and TLS.
 - **No separate frontend project** – Server-side rendering via Quarkus Qute; no React, Vue, npm, Node.js, or build steps.
-- **Spotify API calls via Outbox** – The rule is that every Spotify call other than the OAuth login token exchange goes through the persistent outbox, not directly from `domain-impl`/`adapter-in-*`. This is not yet fully consistent in practice – see Risks and Technical Debts.
+- **Async work via Outbox** – The rule is that all asynchronous work goes through the persistent outbox – not only Spotify calls (other than the OAuth login token exchange), but domain-level operations as well – rather than being triggered directly from `domain-impl`/`adapter-in-*`. This is not yet fully consistent in practice – see Risks and Technical Debts.
+- **Proactive Spotify throttling** – Spotify-facing outbox partitions are throttled at a fixed interval on our side rather than relying solely on reacting to `429` responses – see Cross-cutting Concepts → Outbox Pattern.
 
 # Context and Scope
 
 ## Business Context
 
-spotify-control interacts with the following external systems:
+spotify-control interacts with the following external systems. Direction reflects who initiates
+contact, not just who reads/writes data – Spotify and MongoDB Atlas never call the application back,
+so only the browser is genuinely bidirectional:
 
-| External System     | Direction      | Description                                                              |
-|---------------------|----------------|--------------------------------------------------------------------------|
-| Spotify API         | bidirectional  | Read/write playback, playlists, artists, albums; OAuth 2.0 login        |
-| MongoDB Atlas       | bidirectional  | Persistent storage for all domain data (tracks, playlists, events, etc.) |
-| User (browser)      | bidirectional  | Web UI for dashboard, settings, and documentation                        |
-| Slack               | outbound       | System, catalog and playlist-check notifications via incoming webhook    |
+<dl>
+  <dt>Spotify API</dt>
+  <dd><strong>Outbound.</strong> Read/write playback, playlists, artists, albums via REST; OAuth 2.0 login.</dd>
+
+  <dt>MongoDB Atlas</dt>
+  <dd><strong>Outbound.</strong> Persistent storage for all domain data (tracks, playlists, events, etc.).</dd>
+
+  <dt>User (Browser)</dt>
+  <dd><strong>Bidirectional.</strong> Web UI for dashboard, settings, and documentation; the browser sends requests, and the server also pushes live updates to it via Server-Sent Events.</dd>
+
+  <dt>Slack</dt>
+  <dd><strong>Outbound.</strong> System, catalog and playlist-check notifications via incoming webhook.</dd>
+</dl>
 
 ## Technical Context
 
-| Interface             | Technology                                              |
-|-----------------------|---------------------------------------------------------|
-| Spotify API           | REST via `adapter-out-spotify`; OAuth 2.0 token refresh |
-| MongoDB Atlas         | MongoDB driver via `adapter-out-mongodb`                |
-| Web UI                | Quarkus Qute SSR, Vanilla JS (fetch API), Bootstrap 5, Server-Sent Events |
-| Scheduled jobs        | Quarkus scheduler                                       |
-| Internal event bus    | CDI Events (in-process)                                 |
-| Async task queue      | Persistent Outbox (`de.chrgroth.quarkus.outbox`)        |
-| Slack                 | REST POST via `adapter-out-slack`; incoming webhook     |
+The technical channels that carry the interactions from Business Context, plus the internal
+mechanisms that connect them to the domain:
+
+<dl>
+  <dt>Spotify API</dt>
+  <dd>REST via <code>adapter-out-spotify</code>, OAuth 2.0 Authorization Code Flow with token refresh. All calls are dispatched through the persistent outbox rather than issued directly from the domain.</dd>
+
+  <dt>MongoDB Atlas</dt>
+  <dd>MongoDB driver via <code>adapter-out-mongodb</code>; the only persistence mechanism used, no separate cache tier.</dd>
+
+  <dt>Web UI</dt>
+  <dd>Quarkus Qute SSR, vanilla JS (fetch API) and Bootstrap 5 for the request/response side; Server-Sent Events for server-initiated push.</dd>
+
+  <dt>Scheduled jobs</dt>
+  <dd>Quarkus scheduler; triggers the periodic domain actions (playback polling, playlist/catalog sync, aggregation) described in Runtime View.</dd>
+
+  <dt>Internal event bus</dt>
+  <dd>CDI Events (in-process); used for notifications that don't need outbox durability, e.g. triggering SSE pushes.</dd>
+
+  <dt>Async task queue</dt>
+  <dd>Persistent Outbox (<code>de.chrgroth.quarkus.outbox</code>); the backbone for reliable, throttled, rate-limit-aware dispatch – see Cross-cutting Concepts → Outbox Pattern.</dd>
+
+  <dt>Slack</dt>
+  <dd>REST POST via <code>adapter-out-slack</code> to a configured incoming webhook.</dd>
+</dl>
 
 # Solution Strategy
 
@@ -244,9 +270,10 @@ build-time-only Gradle plugin (not a runtime library) — see Deployment View �
 
 ## Playback Flow
 
-`PlaybackDetectionJob` runs every 20 seconds and enqueues a single `FetchPlaybackData` event on the
-`to-spotify-playback` partition. Its handler fetches both currently-playing and recently-played data
-in one pass — there is no separate 10-minute schedule.
+`PlaybackDetectionJob` enqueues a single `FetchPlaybackData` event on the `to-spotify-playback`
+partition. Its effective schedule is driven by `CurrentlyPlayingSkipPredicate`: every 20 seconds
+while playback is active, falling back to every 5 minutes while inactive. Its handler fetches both
+currently-playing and recently-played data in one pass — there is no separate 10-minute schedule.
 
 ```mermaid
 sequenceDiagram
@@ -256,7 +283,7 @@ sequenceDiagram
     participant Spotify as Spotify API
     participant Mongo as MongoDB
 
-    Note over Sched,PA: Every 20 seconds (PlaybackDetectionJob)
+    Note over Sched,PA: Every 20s active / 5min inactive (PlaybackDetectionJob)
     Sched->>PA: enqueueFetchPlaybackData()
     PA->>Outbox: FetchPlaybackData (to-spotify-playback, no throttle)
 
@@ -568,7 +595,7 @@ Backend services notify SSE streams via CDI events. The SSE endpoint delivers th
 
 | Job                          | Interval                                | Outbox Event(s)                              |
 |------------------------------|-------------------------------------------|-----------------------------------------------|
-| `PlaybackDetectionJob`       | every 20 seconds                          | `FetchPlaybackData` → auto-enqueues `AppendPlaybackData` |
+| `PlaybackDetectionJob`       | every 20s (playback active) / 5min (inactive) | `FetchPlaybackData` → auto-enqueues `AppendPlaybackData` |
 | `PlaylistSyncJob`            | hourly (at :30)                           | `SyncPlaylistInfo`                            |
 | `ArtistCatalogSyncJob`       | daily at 02:00 (rotating 1/14 partition)  | `SyncArtistAlbums`                            |
 | `UserProfileUpdateJob`       | daily at 04:00                            | `UpdateUserProfile`                           |
