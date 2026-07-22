@@ -1,3 +1,16 @@
+# 0.116.0 (2026.07.22)
+
+## New Features
+* Added manual triggers for rebuilding playback aggregations, refreshing your Spotify profile, and polling playback data immediately, instead of waiting for the next scheduled run.
+
+## Bugfixes / Chore
+* The "Sync Missing Artists" action is now also available on the Playback page, which is the page linked from the main navigation. It was previously only reachable on an unlinked settings page.
+* Removed the unlinked, duplicate Playback settings page; the Playback page reachable from the navigation now covers the same actions.
+
+
+
+---
+
 # 0.115.0 (2026.07.22)
 
 ## New Features
