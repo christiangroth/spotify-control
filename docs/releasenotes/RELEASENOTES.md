@@ -1,3 +1,12 @@
+# 0.114.0 (2026.07.22)
+
+## New Features
+* Added a "Requeue" button per partition on the outbox viewer to clear stuck, overdue tasks without restarting the app.
+
+
+
+---
+
 # 0.113.2 (2026.07.22)
 
 ## Bugfixes / Chore
