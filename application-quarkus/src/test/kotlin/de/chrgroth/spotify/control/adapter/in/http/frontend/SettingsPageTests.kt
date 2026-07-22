@@ -271,6 +271,16 @@ class SettingsPageTests {
   }
 
   @Test
+  fun `playback page displays sync missing artists button`() {
+    given()
+      .`when`()
+      .get("/playback")
+      .then()
+      .statusCode(200)
+      .body(containsString("Sync Missing Artists"))
+  }
+
+  @Test
   fun `playback events page is available and displays heading`() {
     given()
       .`when`()
