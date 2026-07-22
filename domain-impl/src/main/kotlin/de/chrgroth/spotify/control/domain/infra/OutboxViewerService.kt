@@ -21,5 +21,12 @@ class OutboxViewerService(
     tasksCache.refresh()
   }
 
+  override fun requeueStuckTasks(partitionKey: String): Int {
+    logger.info { "Requeuing stuck tasks in outbox partition '$partitionKey'" }
+    val clearedCount = outboxAdmin.requeueStuckTasks(partitionKey)
+    tasksCache.refresh()
+    return clearedCount
+  }
+
   companion object : KLogging()
 }

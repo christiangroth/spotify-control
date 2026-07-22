@@ -38,4 +38,18 @@ class OutboxViewerServiceTests {
       tasksCache.refresh()
     }
   }
+
+  @Test
+  fun `requeueStuckTasks delegates to OutboxAdminPort, refreshes the tasks cache and returns the cleared count`() {
+    every { outboxAdmin.requeueStuckTasks("to-spotify-playback") } returns 2
+    every { tasksCache.refresh() } just runs
+
+    val clearedCount = service.requeueStuckTasks("to-spotify-playback")
+
+    assertThat(clearedCount).isEqualTo(2)
+    verifyOrder {
+      outboxAdmin.requeueStuckTasks("to-spotify-playback")
+      tasksCache.refresh()
+    }
+  }
 }

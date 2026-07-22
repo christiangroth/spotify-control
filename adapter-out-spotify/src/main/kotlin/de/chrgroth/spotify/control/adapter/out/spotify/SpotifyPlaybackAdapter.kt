@@ -45,7 +45,7 @@ class SpotifyPlaybackAdapter(
     } catch (e: SpotifyRateLimitException) {
       SpotifyRateLimitError(e.retryAfterSeconds.seconds).left()
     } catch (e: SpotifyApiException) {
-      logger.error { "Spotify currently playing fetch failed: ${e.statusCode}" }
+      logger.error { "Spotify currently playing fetch failed: status=${e.statusCode}, body=${e.body.take(500)}" }
       PlaybackError.CURRENTLY_PLAYING_FETCH_FAILED.left()
     } catch (e: Exception) {
       logger.error(e) { "Unexpected error during currently playing fetch" }
@@ -103,7 +103,7 @@ class SpotifyPlaybackAdapter(
     } catch (e: SpotifyRateLimitException) {
       SpotifyRateLimitError(e.retryAfterSeconds.seconds).left()
     } catch (e: SpotifyApiException) {
-      logger.error { "Spotify recently played fetch failed: ${e.statusCode}" }
+      logger.error { "Spotify recently played fetch failed: status=${e.statusCode}, body=${e.body.take(500)}" }
       PlaybackError.RECENTLY_PLAYED_FETCH_FAILED.left()
     } catch (e: Exception) {
       logger.error(e) { "Unexpected error during recently played fetch" }
