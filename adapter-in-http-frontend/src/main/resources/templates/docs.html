@@ -8,6 +8,16 @@
     <script>
         document.getElementById('docs-rendered').innerHTML =
             marked.parse(document.getElementById('docs-raw').value);
+
+        // marked.js emits plain <table> elements with no wrapper, so wide tables
+        // force the whole page to scroll horizontally on small screens. Wrap each
+        // one in a scrollable container so only the table itself scrolls.
+        document.querySelectorAll('#docs-rendered table').forEach(function (table) {
+            var wrapper = document.createElement('div');
+            wrapper.className = 'table-scroll';
+            table.parentElement.insertBefore(wrapper, table);
+            wrapper.appendChild(table);
+        });
     </script>
     <script type="module">
         // GitHub renders ```mermaid fenced blocks natively; marked.js (used above) does not, so it
