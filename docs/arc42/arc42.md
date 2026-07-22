@@ -619,7 +619,6 @@ Architecture documentation (`docs/arc42`), ADRs (`docs/adr`), and release notes 
 
 | Item | Description |
 |------|-------------|
-| Outbox bypass in Spotify Debug page | `/spotify-debug` calls Spotify ports directly for ad-hoc developer inspection. Likely fine to keep as a diagnostics tool, but it is a bypass of the outbox-only rule if that rule is ever enforced by tooling. |
 | Partial-play detection accuracy | Partial play detection relies on polling frequency; very short plays near the end of a track may be missed or misclassified. |
 | Test coverage for domain adapters | Domain adapter integration (e.g. `PlaybackService`, `PlaylistService`) is not yet covered by `@QuarkusTest` boundary tests. |
 
