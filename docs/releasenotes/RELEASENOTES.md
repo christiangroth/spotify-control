@@ -1,3 +1,13 @@
+# 0.116.1 (2026.07.22)
+
+## Bugfixes / Chore
+* Moved the "Rebuild Aggregations" action from the Playback page to the Stats page.
+* Moved the "Refresh Profile" action from the Playback page to a small reload icon in the Dashboard's welcome heading.
+
+
+
+---
+
 # 0.116.0 (2026.07.22)
 
 ## New Features
