@@ -9,12 +9,19 @@
 
         <h2 class="fs-5 fw-semibold mb-2">Playback Data</h2>
         <p class="text-secondary small mb-3">Rebuild all processed playback data (app_playback and app_track_data) from scratch by reprocessing the raw Spotify data. Use this if your playback stats appear incomplete or outdated.</p>
-        <button id="rebuild-playback-btn" class="btn btn-spotify btn-sm">Recreate Playback Data</button>
+        <button id="rebuild-playback-btn" class="btn btn-spotify btn-sm mb-4">Recreate Playback Data</button>
+
+        <h2 class="fs-5 fw-semibold mb-2">Missing Artists</h2>
+        <p class="text-secondary small mb-3">Sync artists that appear in your playback history but are not yet in the catalog, without re-syncing already known artists or rebuilding playback data.</p>
+        <button id="sync-missing-artists-btn" class="btn btn-spotify btn-sm">Sync Missing Artists</button>
     </div>
 
     <script>
         document.getElementById('rebuild-playback-btn').addEventListener('click', function() {
             postWithButton(this, '/settings/playback/rebuild', 'Playback data rebuild enqueued successfully.', 'Rebuild failed');
+        });
+        document.getElementById('sync-missing-artists-btn').addEventListener('click', function() {
+            postWithButton(this, '/settings/playback/sync-missing-artists', 'Missing artists sync enqueued successfully.', 'Sync failed');
         });
     </script>
     {/content}

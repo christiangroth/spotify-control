@@ -64,6 +64,15 @@ class PlaybackSettingsResource(
 
   @POST
   @Authenticated
+  @Path("/sync-missing-artists")
+  @Produces(MediaType.APPLICATION_JSON)
+  fun syncMissingArtists(): Response = httpResponseMetrics.timed("rest.catalog.sync-missing-artists") {
+    catalog.enqueuePlaybackArtistsForSync()
+    Response.ok(mapOf("status" to "ok")).build()
+  }
+
+  @POST
+  @Authenticated
   @Path("/artists/{artistId}/resync")
   @Produces(MediaType.APPLICATION_JSON)
   fun resyncArtist(@PathParam("artistId") artistId: String): Response =
