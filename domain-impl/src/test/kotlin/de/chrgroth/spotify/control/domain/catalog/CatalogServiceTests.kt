@@ -382,6 +382,27 @@ class CatalogServiceTests {
     assertThat(result.isRight()).isTrue()
   }
 
+  // --- enqueueResyncCatalog tests ---
+
+  @Test
+  fun `enqueueResyncCatalog enqueues ResyncCatalog when a user is available`() {
+    every { currentUserResolver.userId() } returns userId
+    every { outboxPort.enqueue(any()) } just runs
+
+    adapter.enqueueResyncCatalog()
+
+    verify { outboxPort.enqueue(DomainOutboxEvent.ResyncCatalog()) }
+  }
+
+  @Test
+  fun `enqueueResyncCatalog does nothing when no users available`() {
+    every { currentUserResolver.userId() } returns null
+
+    adapter.enqueueResyncCatalog()
+
+    verify(exactly = 0) { outboxPort.enqueue(any()) }
+  }
+
   // --- SyncAlbumDetails tests ---
 
   @Test
@@ -646,6 +667,33 @@ class CatalogServiceTests {
     every { playlistCheckRepository.deleteAll() } just runs
 
     val result = adapter.wipeCatalog()
+
+    assertThat(result.isRight()).isTrue()
+    verify { appArtistRepository.deleteAll() }
+    verify { appAlbumRepository.deleteAll() }
+    verify { appTrackRepository.deleteAll() }
+    verify { playlistRepository.setAllSyncInactive() }
+    verify { playlistCheckRepository.deleteAll() }
+  }
+
+  @Test
+  fun `enqueueWipeCatalog enqueues WipeCatalog`() {
+    every { outboxPort.enqueue(any()) } just runs
+
+    adapter.enqueueWipeCatalog()
+
+    verify { outboxPort.enqueue(DomainOutboxEvent.WipeCatalog()) }
+  }
+
+  @Test
+  fun `handle WipeCatalog deletes all catalog data, deactivates playlists and deletes checks`() {
+    every { appArtistRepository.deleteAll() } just runs
+    every { appAlbumRepository.deleteAll() } just runs
+    every { appTrackRepository.deleteAll() } just runs
+    every { playlistRepository.setAllSyncInactive() } just runs
+    every { playlistCheckRepository.deleteAll() } just runs
+
+    val result = adapter.handle(DomainOutboxEvent.WipeCatalog())
 
     assertThat(result.isRight()).isTrue()
     verify { appArtistRepository.deleteAll() }

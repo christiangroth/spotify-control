@@ -125,6 +125,12 @@ class CatalogService(
     return Unit.right()
   }
 
+  override fun enqueueResyncCatalog() {
+    currentUserResolver.userId() ?: return
+    logger.info { "Enqueueing catalog re-sync" }
+    outboxPort.enqueue(DomainOutboxEvent.ResyncCatalog())
+  }
+
   override fun resyncArtist(artistId: String): Either<DomainError, Unit> {
     appArtistRepository.findByArtistIds(setOf(ArtistId(artistId))).firstOrNull()
       ?: return ArtistSettingsError.ARTIST_NOT_FOUND.left()
@@ -145,6 +151,11 @@ class CatalogService(
     playlistCheckRepository.deleteAll()
     logger.info { "Catalog wipe complete" }
     return Unit.right()
+  }
+
+  override fun enqueueWipeCatalog() {
+    logger.info { "Enqueueing catalog wipe" }
+    outboxPort.enqueue(DomainOutboxEvent.WipeCatalog())
   }
 
   private fun syncAlbumDetails(albumId: String): Either<DomainError, Int> {
@@ -224,6 +235,9 @@ class CatalogService(
 
   override fun handle(event: DomainOutboxEvent.ResyncCatalog): Either<DomainError, Unit> =
     resyncCatalog()
+
+  override fun handle(event: DomainOutboxEvent.WipeCatalog): Either<DomainError, Unit> =
+    wipeCatalog()
 
   override fun enqueueArtistAlbumsSync(partition: Int, totalPartitions: Int) {
     val syncableArtists = appArtistRepository.findAll().filter { it.syncStatus.isSyncable() }

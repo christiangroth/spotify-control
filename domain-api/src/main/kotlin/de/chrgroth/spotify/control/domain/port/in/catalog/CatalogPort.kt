@@ -11,14 +11,17 @@ interface CatalogPort {
   fun setArtistShallow(artistId: String): Either<DomainError, Unit>
   fun syncArtistDetails(artistId: String, fromPlaylist: Boolean): Either<DomainError, Unit>
   fun resyncCatalog(): Either<DomainError, Unit>
+  fun enqueueResyncCatalog()
   fun resyncArtist(artistId: String): Either<DomainError, Unit>
   fun wipeCatalog(): Either<DomainError, Unit>
+  fun enqueueWipeCatalog()
   fun handle(event: DomainOutboxEvent.SyncArtistDetails): Either<DomainError, Unit>
   fun handle(event: DomainOutboxEvent.SyncArtistAlbums): Either<DomainError, Unit>
   fun handle(event: DomainOutboxEvent.SyncAlbumDetails): Either<DomainError, Unit>
   fun handle(event: DomainOutboxEvent.ConfirmArtistSync): Either<DomainError, Unit>
   fun handle(event: DomainOutboxEvent.ConfirmArtistShallow): Either<DomainError, Unit>
   fun handle(event: DomainOutboxEvent.ResyncCatalog): Either<DomainError, Unit>
+  fun handle(event: DomainOutboxEvent.WipeCatalog): Either<DomainError, Unit>
   fun enqueueArtistAlbumsSync(partition: Int, totalPartitions: Int)
   fun enqueuePlaybackArtistsForSync()
   fun promoteAssumptionArtistsFoundOnPlaylist(artistIds: Set<String>)

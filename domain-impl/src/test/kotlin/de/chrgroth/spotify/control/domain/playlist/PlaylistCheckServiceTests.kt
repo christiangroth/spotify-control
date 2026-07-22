@@ -328,32 +328,49 @@ class PlaylistCheckServiceTests {
   }
 
   @Test
-  fun `runFix returns error when no runner with canFix found`() {
+  fun `enqueueFix returns error when no runner with canFix found`() {
     every { currentUserResolver.userId() } returns userId
     every { checkRunners.iterator() } returns mutableListOf<PlaylistCheckRunner>().iterator()
 
-    val result = adapter.runFix(playlistId, "unknown-check")
+    val result = adapter.enqueueFix(playlistId, "unknown-check")
 
     assertThat(result.isLeft()).isTrue()
     assertThat((result as arrow.core.Either.Left).value).isEqualTo(PlaylistFixError.FIX_NOT_FOUND)
+    verify(exactly = 0) { outboxPort.enqueue(any()) }
   }
 
   @Test
-  fun `runFix returns error when playlist not found`() {
+  fun `enqueueFix returns error when playlist not found`() {
     every { currentUserResolver.userId() } returns userId
     every { checkRunners.iterator() } returns mutableListOf(checkRunner).iterator()
     every { checkRunner.checkId } returns checkId
     every { checkRunner.canFix() } returns true
     every { playlistRepository.findByPlaylistId(playlistId) } returns null
 
-    val result = adapter.runFix(playlistId, checkId)
+    val result = adapter.enqueueFix(playlistId, checkId)
 
     assertThat(result.isLeft()).isTrue()
     assertThat((result as arrow.core.Either.Left).value).isEqualTo(PlaylistFixError.PLAYLIST_NOT_FOUND)
+    verify(exactly = 0) { outboxPort.enqueue(any()) }
   }
 
   @Test
-  fun `runFix calls fix on runner and enqueues re-sync on success`() {
+  fun `enqueueFix enqueues FixPlaylistCheck when runner and playlist exist`() {
+    every { currentUserResolver.userId() } returns userId
+    every { checkRunners.iterator() } returns mutableListOf(checkRunner).iterator()
+    every { checkRunner.checkId } returns checkId
+    every { checkRunner.canFix() } returns true
+    every { playlistRepository.findByPlaylistId(playlistId) } returns buildPlaylist(listOf(buildTrack("t1")))
+    every { outboxPort.enqueue(any()) } just runs
+
+    val result = adapter.enqueueFix(playlistId, checkId)
+
+    assertThat(result.isRight()).isTrue()
+    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.FixPlaylistCheck(playlistId, checkId)) }
+  }
+
+  @Test
+  fun `handle FixPlaylistCheck calls fix on runner and enqueues re-sync on success`() {
     val playlist = buildPlaylist(listOf(buildTrack("t1")))
     val playlistInfo = buildPlaylistInfo()
     every { currentUserResolver.userId() } returns userId
@@ -366,9 +383,23 @@ class PlaylistCheckServiceTests {
     every { checkRunner.fix(AccessToken("token"), playlistId, playlist, playlistInfo, listOf(playlistInfo)) } returns Unit.right()
     every { outboxPort.enqueue(any()) } just runs
 
-    val result = adapter.runFix(playlistId, checkId)
+    val result = adapter.handle(DomainOutboxEvent.FixPlaylistCheck(playlistId, checkId))
 
     assertThat(result.isRight()).isTrue()
     verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(playlistId)) }
+  }
+
+  @Test
+  fun `handle FixPlaylistCheck returns error when playlist not found`() {
+    every { currentUserResolver.userId() } returns userId
+    every { checkRunners.iterator() } returns mutableListOf(checkRunner).iterator()
+    every { checkRunner.checkId } returns checkId
+    every { checkRunner.canFix() } returns true
+    every { playlistRepository.findByPlaylistId(playlistId) } returns null
+
+    val result = adapter.handle(DomainOutboxEvent.FixPlaylistCheck(playlistId, checkId))
+
+    assertThat(result.isLeft()).isTrue()
+    assertThat((result as arrow.core.Either.Left).value).isEqualTo(PlaylistFixError.PLAYLIST_NOT_FOUND)
   }
 }

@@ -108,24 +108,39 @@ class PlaylistCheckService(
   override fun getFixableCheckIds(): Set<String> =
     checkRunners.filter { it.canFix() }.map { it.checkId }.toSet()
 
-  override fun runFix(playlistId: String, checkType: String): Either<DomainError, Unit> {
+  override fun enqueueFix(playlistId: String, checkType: String): Either<DomainError, Unit> {
     currentUserResolver.userId() ?: return PlaylistFixError.PLAYLIST_NOT_FOUND.left()
-    val runner = checkRunners.find { it.checkId == checkType && it.canFix() } ?: run {
+    checkRunners.find { it.checkId == checkType && it.canFix() } ?: run {
       logger.warn { "No fix runner found for checkType $checkType" }
       return PlaylistFixError.FIX_NOT_FOUND.left()
     }
-    val playlist = playlistRepository.findByPlaylistId(playlistId) ?: run {
+    playlistRepository.findByPlaylistId(playlistId) ?: run {
       logger.warn { "Playlist $playlistId not found" }
       return PlaylistFixError.PLAYLIST_NOT_FOUND.left()
     }
+    logger.info { "Enqueueing fix '$checkType' for playlist $playlistId" }
+    outboxPort.enqueue(DomainOutboxEvent.FixPlaylistCheck(playlistId, checkType))
+    return Unit.right()
+  }
+
+  override fun handle(event: DomainOutboxEvent.FixPlaylistCheck): Either<DomainError, Unit> {
+    currentUserResolver.userId() ?: return Unit.right()
+    val runner = checkRunners.find { it.checkId == event.checkType && it.canFix() } ?: run {
+      logger.warn { "No fix runner found for checkType ${event.checkType}" }
+      return PlaylistFixError.FIX_NOT_FOUND.left()
+    }
+    val playlist = playlistRepository.findByPlaylistId(event.playlistId) ?: run {
+      logger.warn { "Playlist ${event.playlistId} not found" }
+      return PlaylistFixError.PLAYLIST_NOT_FOUND.left()
+    }
     val allPlaylistInfos = playlistRepository.findAll()
-    val currentPlaylistInfo = allPlaylistInfos.find { it.spotifyPlaylistId == playlistId }
+    val currentPlaylistInfo = allPlaylistInfos.find { it.spotifyPlaylistId == event.playlistId }
     val accessToken = spotifyAccessToken.getValidAccessToken()
-    logger.info { "Running fix '$checkType' for playlist $playlistId" }
-    return runner.fix(accessToken, playlistId, playlist, currentPlaylistInfo, allPlaylistInfos).also { result ->
+    logger.info { "Running fix '${event.checkType}' for playlist ${event.playlistId}" }
+    return runner.fix(accessToken, event.playlistId, playlist, currentPlaylistInfo, allPlaylistInfos).also { result ->
       if (result.isRight()) {
-        logger.info { "Fix '$checkType' for playlist $playlistId completed, enqueueing re-check" }
-        outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(playlistId))
+        logger.info { "Fix '${event.checkType}' for playlist ${event.playlistId} completed, enqueueing re-check" }
+        outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(event.playlistId))
       }
     }
   }

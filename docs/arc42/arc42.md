@@ -515,10 +515,10 @@ producers from consumers.
 | Partition             | Throttle | Rate-limit pause | Event Types                                                                 |
 |------------------------|----------|-------------------|-------------------------------------------------------------------------------|
 | `to-spotify-catalog`  | 10s (shared, runtime-adjustable) | yes | `SyncArtistDetails`, `SyncArtistAlbums`, `SyncAlbumDetails` |
-| `to-spotify-playlist` | 10s (shared, runtime-adjustable) | yes | `SyncPlaylistInfo`, `SyncPlaylistData`                       |
+| `to-spotify-playlist` | 10s (shared, runtime-adjustable) | yes | `SyncPlaylistInfo`, `SyncPlaylistData`, `FixPlaylistCheck`   |
 | `to-spotify-user`     | none     | yes               | `UpdateUserProfile`                                                          |
 | `to-spotify-playback` | none     | yes               | `FetchPlaybackData`                                                          |
-| `domain`              | none     | n/a (no Spotify calls) | `RebuildPlaybackData`, `AppendPlaybackData`, `ResyncCatalog`, `RunPlaylistChecks`, `AggregatePlaybackData`, `ConfirmArtistSync`, `ConfirmArtistShallow` |
+| `domain`              | none     | n/a (no Spotify calls) | `RebuildPlaybackData`, `AppendPlaybackData`, `ResyncCatalog`, `WipeCatalog`, `RunPlaylistChecks`, `AggregatePlaybackData`, `ConfirmArtistSync`, `ConfirmArtistShallow` |
 
 `to-spotify-catalog` and `to-spotify-playlist` share one runtime-adjustable throttle interval
 (`spotify.throttle.default-interval-ms`, default 10s) — there is no per-partition distinct value.
@@ -619,7 +619,6 @@ Architecture documentation (`docs/arc42`), ADRs (`docs/adr`), and release notes 
 
 | Item | Description |
 |------|-------------|
-| Outbox bypass in playlist-check "Fix" and "Sync Now" | The playlist-check `fix()` actions and the Settings "Sync Now" button call Spotify directly instead of through the outbox, inconsistent with every other Spotify-facing flow. `PlaylistService.syncPlaylists()` already has a second, correct outbox-dispatched call path (`SyncPlaylistInfo`) doing the same work, so "Sync Now" is a clear duplicate-path inconsistency rather than a deliberate exception. |
 | Outbox bypass in Spotify Debug page | `/spotify-debug` calls Spotify ports directly for ad-hoc developer inspection. Likely fine to keep as a diagnostics tool, but it is a bypass of the outbox-only rule if that rule is ever enforced by tooling. |
 | Partial-play detection accuracy | Partial play detection relies on polling frequency; very short plays near the end of a track may be missed or misclassified. |
 | Test coverage for domain adapters | Domain adapter integration (e.g. `PlaybackService`, `PlaylistService`) is not yet covered by `@QuarkusTest` boundary tests. |
