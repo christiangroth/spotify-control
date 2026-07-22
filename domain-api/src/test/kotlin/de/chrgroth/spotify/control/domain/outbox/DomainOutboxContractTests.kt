@@ -4,6 +4,7 @@ import de.chrgroth.spotify.control.domain.model.playback.aggregation.Aggregation
 import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogPort
 import de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackAggregationPort
 import de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackPort
+import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistCheckPort
 import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistPort
 import de.chrgroth.spotify.control.domain.port.`in`.user.UserProfilePort
 import kotlinx.datetime.LocalDate
@@ -27,6 +28,10 @@ class DomainOutboxContractTests {
     DomainOutboxEvent.SyncAlbumDetails("album-1"),
     DomainOutboxEvent.ConfirmArtistSync("artist-1"),
     DomainOutboxEvent.ConfirmArtistShallow("artist-1"),
+    DomainOutboxEvent.ResyncCatalog(),
+    DomainOutboxEvent.WipeCatalog(),
+    DomainOutboxEvent.RunPlaylistChecks("playlist-1"),
+    DomainOutboxEvent.FixPlaylistCheck("playlist-1", "duplicate-track-ids"),
     DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.DAY, LocalDate(2024, 1, 15)),
     DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.WEEK, LocalDate(2024, 1, 8)),
     DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.MONTH, LocalDate(2024, 1, 1)),
@@ -61,7 +66,10 @@ class DomainOutboxContractTests {
 
   @Test
   fun `every DomainOutboxEvent type has a handler method in one of the domain ports`() {
-    val allPortMethods = listOf(PlaybackPort::class, PlaybackAggregationPort::class, CatalogPort::class, PlaylistPort::class, UserProfilePort::class)
+    val allPortMethods = listOf(
+      PlaybackPort::class, PlaybackAggregationPort::class, CatalogPort::class,
+      PlaylistPort::class, PlaylistCheckPort::class, UserProfilePort::class,
+    )
       .flatMap { it.java.methods.toList() }
     allEvents.forEach { event ->
       val eventClass = event::class.java

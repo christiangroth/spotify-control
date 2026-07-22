@@ -62,8 +62,8 @@ class PlaylistChecksResource(
     @PathParam("playlistId") playlistId: String,
     @PathParam("checkType") checkType: String,
   ): Response = httpResponseMetrics.timed("rest.playlist.check-fix") {
-    playlistCheckPort.runFix(playlistId, checkType).fold(
-      ifLeft = { error -> Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(mapOf("error" to error.code)).build() },
+    playlistCheckPort.enqueueFix(playlistId, checkType).fold(
+      ifLeft = { error -> Response.status(Response.Status.NOT_FOUND).entity(mapOf("error" to error.code)).build() },
       ifRight = { Response.ok(mapOf("status" to "ok")).build() },
     )
   }

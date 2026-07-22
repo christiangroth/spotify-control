@@ -148,15 +148,8 @@ class PlaylistSettingsResource(
   @Path("/sync")
   @Produces(MediaType.APPLICATION_JSON)
   fun syncNow(): Response = httpResponseMetrics.timed("rest.playlist.sync-now") {
-    playlist.syncPlaylists().fold(
-      ifLeft = { error ->
-        logger.error { "Playlist sync failed: ${error.code}" }
-        Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-          .entity(mapOf("error" to "Sync failed: ${error.code}"))
-          .build()
-      },
-      ifRight = { Response.ok(mapOf("status" to "ok")).build() },
-    )
+    playlist.enqueueUpdates()
+    Response.ok(mapOf("status" to "ok")).build()
   }
 
   @POST

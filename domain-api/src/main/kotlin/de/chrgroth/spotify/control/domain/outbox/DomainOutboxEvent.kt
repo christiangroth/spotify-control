@@ -242,6 +242,21 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
   }
 
   /**
+   * Deletes all catalog data (artists, albums, tracks), deactivates all playlist syncs
+   * and deletes all playlist checks.
+   */
+  data class WipeCatalog(val placeholder: String = "") : DomainOutboxEvent {
+    override val key = KEY
+    override val deduplicationKey = KEY
+    override val partition = DomainOutboxPartition.Domain
+    override val serializePayload = ""
+
+    companion object {
+      const val KEY = "WipeCatalog"
+    }
+  }
+
+  /**
    * Runs all playlist checks for the user's playlist.
    * payload = playlistId
    */
@@ -254,6 +269,26 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
     companion object {
       const val KEY = "RunPlaylistChecks"
       fun fromPayload(payload: String): RunPlaylistChecks = RunPlaylistChecks(payload.substringAfter(':'))
+    }
+  }
+
+  /**
+   * Applies the fix action of a playlist check to a playlist via the Spotify write API,
+   * then re-enqueues [SyncPlaylistData] to refresh the local mirror.
+   * payload = "$playlistId\n$checkType"
+   */
+  data class FixPlaylistCheck(val playlistId: String, val checkType: String) : DomainOutboxEvent {
+    override val key = KEY
+    override val deduplicationKey = "$KEY:$playlistId:$checkType"
+    override val partition = DomainOutboxPartition.ToSpotifyPlaylist
+    override val serializePayload = "$playlistId\n$checkType"
+
+    companion object {
+      const val KEY = "FixPlaylistCheck"
+      fun fromPayload(payload: String): FixPlaylistCheck {
+        val newlineIndex = payload.indexOf('\n')
+        return FixPlaylistCheck(playlistId = payload.substring(0, newlineIndex), checkType = payload.substring(newlineIndex + 1))
+      }
     }
   }
 
@@ -303,7 +338,9 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
       ConfirmArtistSync.KEY,
       ConfirmArtistShallow.KEY,
       ResyncCatalog.KEY,
+      WipeCatalog.KEY,
       RunPlaylistChecks.KEY,
+      FixPlaylistCheck.KEY,
       AggregatePlaybackData.KEY,
     )
 
@@ -321,7 +358,9 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
       ConfirmArtistSync.KEY -> ConfirmArtistSync.fromPayload(payload)
       ConfirmArtistShallow.KEY -> ConfirmArtistShallow.fromPayload(payload)
       ResyncCatalog.KEY -> ResyncCatalog()
+      WipeCatalog.KEY -> WipeCatalog()
       RunPlaylistChecks.KEY -> RunPlaylistChecks.fromPayload(payload)
+      FixPlaylistCheck.KEY -> FixPlaylistCheck.fromPayload(payload)
       AggregatePlaybackData.KEY -> AggregatePlaybackData.fromPayload(payload)
       else -> throw IllegalArgumentException("Unknown outbox event type: $key")
     }

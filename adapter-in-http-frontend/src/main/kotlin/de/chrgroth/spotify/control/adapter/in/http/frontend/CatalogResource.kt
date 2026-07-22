@@ -20,7 +20,6 @@ import jakarta.ws.rs.Produces
 import jakarta.ws.rs.QueryParam
 import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
-import mu.KLogging
 
 @Path("/catalog")
 @ApplicationScoped
@@ -103,15 +102,8 @@ class CatalogResource(
   @Path("/wipe")
   @Produces(MediaType.APPLICATION_JSON)
   fun wipeCatalog(): Response = httpResponseMetrics.timed("rest.catalog.wipe") {
-    catalog.wipeCatalog().fold(
-      ifLeft = { error ->
-        logger.error { "Catalog wipe failed: ${error.code}" }
-        Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-          .entity(mapOf("error" to "Wipe failed: ${error.code}"))
-          .build()
-      },
-      ifRight = { Response.ok(mapOf("status" to "ok")).build() },
-    )
+    catalog.enqueueWipeCatalog()
+    Response.ok(mapOf("status" to "ok")).build()
   }
 
   @GET
@@ -132,7 +124,7 @@ class CatalogResource(
     Response.ok("${trace.description} (${trace.triggeredAt})").build()
   }
 
-  companion object : KLogging() {
+  companion object {
     private const val NO_TRACE_AVAILABLE = "No sync trigger information available."
   }
 }

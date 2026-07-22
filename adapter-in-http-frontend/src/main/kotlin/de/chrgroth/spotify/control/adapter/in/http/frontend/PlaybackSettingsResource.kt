@@ -58,15 +58,8 @@ class PlaybackSettingsResource(
   @Path("/resync-catalog")
   @Produces(MediaType.APPLICATION_JSON)
   fun resyncCatalog(): Response = httpResponseMetrics.timed("rest.catalog.resync") {
-    catalog.resyncCatalog().fold(
-      ifLeft = { error ->
-        logger.error { "Catalog re-sync failed: ${error.code}" }
-        Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-          .entity(mapOf("error" to "Re-sync failed: ${error.code}"))
-          .build()
-      },
-      ifRight = { Response.ok(mapOf("status" to "ok")).build() },
-    )
+    catalog.enqueueResyncCatalog()
+    Response.ok(mapOf("status" to "ok")).build()
   }
 
   @POST

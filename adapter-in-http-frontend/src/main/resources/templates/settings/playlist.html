@@ -74,7 +74,7 @@
     </div>
     <script>
         document.getElementById('sync-now-btn').addEventListener('click', function() {
-            postWithButton(this, '/settings/playlist/sync', 'Sync started successfully.', 'Sync failed');
+            postWithButton(this, '/settings/playlist/sync', 'Sync enqueued successfully.', 'Sync failed');
         });
 
         document.querySelectorAll('.sync-toggle').forEach(function(btn) {
