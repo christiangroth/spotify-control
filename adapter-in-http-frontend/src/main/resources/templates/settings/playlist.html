@@ -13,6 +13,7 @@
         {#if rows.empty}
         <p class="text-secondary">No playlists found. Playlist data is synced automatically every hour.</p>
         {#else}
+        <div class="table-responsive">
         <table class="table table-dark table-hover align-middle">
             <thead>
                 <tr>
@@ -68,6 +69,7 @@
                 {/for}
             </tbody>
         </table>
+        </div>
         {/if}
     </div>
     <script>
