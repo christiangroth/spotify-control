@@ -324,6 +324,21 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
     }
   }
 
+  /**
+   * Deletes all playback aggregation documents and re-enqueues [AggregatePlaybackData]
+   * for every period (day/week/month/quarter/year) covered by the existing playback history.
+   */
+  data class RebuildAllAggregations(val placeholder: String = "") : DomainOutboxEvent {
+    override val key = KEY
+    override val deduplicationKey = KEY
+    override val partition = DomainOutboxPartition.Domain
+    override val serializePayload = ""
+
+    companion object {
+      const val KEY = "RebuildAllAggregations"
+    }
+  }
+
   companion object {
     val allKeys: List<String> = listOf(
       FetchPlaybackData.KEY,
@@ -342,6 +357,7 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
       RunPlaylistChecks.KEY,
       FixPlaylistCheck.KEY,
       AggregatePlaybackData.KEY,
+      RebuildAllAggregations.KEY,
     )
 
     @Suppress("CyclomaticComplexMethod")
@@ -362,6 +378,7 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
       RunPlaylistChecks.KEY -> RunPlaylistChecks.fromPayload(payload)
       FixPlaylistCheck.KEY -> FixPlaylistCheck.fromPayload(payload)
       AggregatePlaybackData.KEY -> AggregatePlaybackData.fromPayload(payload)
+      RebuildAllAggregations.KEY -> RebuildAllAggregations()
       else -> throw IllegalArgumentException("Unknown outbox event type: $key")
     }
   }
