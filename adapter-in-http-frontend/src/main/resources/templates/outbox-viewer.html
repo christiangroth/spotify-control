@@ -43,7 +43,14 @@
         <div id="snippet-outbox-tasks">
             {#fragment id="snippet_tasks"}
             {#for partition in partitions}
-            <h2 class="mb-3 fs-6 fw-semibold text-uppercase" style="color:#888;letter-spacing:.05em;">{partition.key}</h2>
+            <h2 class="mb-3 fs-6 fw-semibold text-uppercase d-flex align-items-center gap-2" style="color:#888;letter-spacing:.05em;">
+                {partition.key}
+                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1 lh-1 requeue-partition-btn" data-partition="{partition.key}"
+                        title="Requeue stuck tasks in this partition (workaround until the underlying quarkus-outbox bug is fixed)"
+                        aria-label="Requeue stuck tasks in {partition.key}" data-testid="requeue-partition-btn-{partition.key}">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" fill="currentColor" viewBox="0 0 16 16"><use href="#icon-nav-page-playback"/></svg>
+                </button>
+            </h2>
             {#if partition.tasks.empty}
             <p class="text-secondary small mb-4">No pending tasks in this partition.</p>
             {#else}
@@ -136,6 +143,32 @@
                 });
             });
         })();
+
+        document.getElementById('snippet-outbox-tasks').addEventListener('click', function(event) {
+            const btn = event.target.closest('.requeue-partition-btn');
+            if (!btn) return;
+            const partition = btn.dataset.partition;
+            btn.disabled = true;
+            fetch('/outbox-viewer/' + encodeURIComponent(partition) + '/requeue', { method: 'POST' })
+                .then(function(response) {
+                    return response.json().then(function(data) { return { ok: response.ok, data: data }; });
+                })
+                .then(function(result) {
+                    if (result.ok) {
+                        const cleared = result.data.cleared;
+                        showBanner(cleared > 0 ? 'Requeued ' + cleared + ' stuck task(s) in ' + partition + '.' : 'No stuck tasks found in ' + partition + '.', 'success');
+                        patchUpdate('snippet-outbox-tasks', '/outbox-viewer/snippets/tasks');
+                    } else {
+                        showBanner('Requeue failed: ' + (result.data.error || 'Unknown error'), 'danger');
+                    }
+                })
+                .catch(function(err) {
+                    showBanner('Request failed: ' + err.message, 'danger');
+                })
+                .finally(function() {
+                    btn.disabled = false;
+                });
+        });
     </script>
     {/content}
 {/include}

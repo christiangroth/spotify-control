@@ -10,6 +10,7 @@ import jakarta.enterprise.context.ApplicationScoped
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.POST
 import jakarta.ws.rs.Path
+import jakarta.ws.rs.PathParam
 import jakarta.ws.rs.Produces
 import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
@@ -46,5 +47,14 @@ class OutboxViewerResource(
   fun wipe(): Response = httpResponseMetrics.timed("rest.outbox.wipe") {
     outboxViewer.wipeAll()
     Response.ok(mapOf("status" to "ok")).build()
+  }
+
+  @POST
+  @Path("/{partition}/requeue")
+  @Authenticated
+  @Produces(MediaType.APPLICATION_JSON)
+  fun requeue(@PathParam("partition") partition: String): Response = httpResponseMetrics.timed("rest.outbox.requeue") {
+    val clearedCount = outboxViewer.requeueStuckTasks(partition)
+    Response.ok(mapOf("status" to "ok", "cleared" to clearedCount)).build()
   }
 }

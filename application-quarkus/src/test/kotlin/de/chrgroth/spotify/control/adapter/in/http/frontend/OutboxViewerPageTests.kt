@@ -100,4 +100,27 @@ class OutboxViewerPageTests {
       .statusCode(200)
       .body("status", equalTo("ok"))
   }
+
+  @Test
+  fun `outbox-viewer page contains requeue button per partition`() {
+    given()
+      .`when`()
+      .get("/outbox-viewer")
+      .then()
+      .statusCode(200)
+      .body(containsString("requeue-partition-btn"))
+      .body(containsString("data-partition=\"to-spotify-playback\""))
+      .body(containsString("/requeue"))
+  }
+
+  @Test
+  fun `outbox-viewer requeue endpoint returns ok status and cleared count`() {
+    given()
+      .`when`()
+      .post("/outbox-viewer/to-spotify-playback/requeue")
+      .then()
+      .statusCode(200)
+      .body("status", equalTo("ok"))
+      .body("cleared", equalTo(0))
+  }
 }
