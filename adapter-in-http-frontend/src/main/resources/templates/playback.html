@@ -38,14 +38,6 @@
         <p class="text-secondary small mb-3">Sync artists that appear in your playback history but are not yet in the catalog, without re-syncing already known artists or rebuilding playback data.</p>
         <button id="sync-missing-artists-btn" class="btn btn-spotify btn-sm mb-4">Sync Missing Artists</button>
 
-        <h2 class="fs-5 fw-semibold mb-2">Playback Aggregations</h2>
-        <p class="text-secondary small mb-3">Delete all computed playback aggregations (day/week/month/quarter/year) and recompute them from scratch. Use this if stats look outdated or incomplete.</p>
-        <button id="rebuild-aggregations-btn" class="btn btn-spotify btn-sm mb-4">Rebuild Aggregations</button>
-
-        <h2 class="fs-5 fw-semibold mb-2">User Profile</h2>
-        <p class="text-secondary small mb-3">Reload your Spotify display name.</p>
-        <button id="refresh-profile-btn" class="btn btn-spotify btn-sm mb-4">Refresh Profile</button>
-
         <h2 class="fs-5 fw-semibold mb-2">Playback Polling</h2>
         <p class="text-secondary small mb-3">Fetch currently playing and recently played data from Spotify right now, instead of waiting for the next scheduled poll.</p>
         <button id="poll-now-btn" class="btn btn-spotify btn-sm">Poll Now</button>
@@ -57,12 +49,6 @@
         });
         document.getElementById('sync-missing-artists-btn').addEventListener('click', function() {
             postWithButton(this, '/settings/playback/sync-missing-artists', 'Missing artists sync enqueued successfully.', 'Sync failed');
-        });
-        document.getElementById('rebuild-aggregations-btn').addEventListener('click', function() {
-            postWithButton(this, '/settings/playback/aggregations/rebuild', 'Aggregation rebuild enqueued successfully.', 'Rebuild failed');
-        });
-        document.getElementById('refresh-profile-btn').addEventListener('click', function() {
-            postWithButton(this, '/settings/playback/profile/refresh', 'Profile refresh enqueued successfully.', 'Refresh failed');
         });
         document.getElementById('poll-now-btn').addEventListener('click', function() {
             postWithButton(this, '/settings/playback/poll', 'Playback poll enqueued successfully.', 'Poll failed');

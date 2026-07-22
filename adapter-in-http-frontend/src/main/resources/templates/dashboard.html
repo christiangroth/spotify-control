@@ -1,9 +1,17 @@
 {#include layout.html}
     {#title}SpCtl – Dashboard{/title}
+    {#scripts}<script src="/settings-utils.js"></script>{/scripts}
     {#content}
     <div class="app-page-container py-4 px-3 px-md-4">
 
-        <h1 class="mb-4 fs-4 fw-semibold" data-testid="welcome-message">Hej {displayName}!</h1>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="fs-4 fw-semibold mb-0" data-testid="welcome-message">Hej {displayName}!</h1>
+            <button type="button" id="refresh-profile-btn" class="btn btn-sm btn-outline-secondary p-1 lh-1" aria-label="Refresh Profile" title="Refresh Profile" data-testid="refresh-profile-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><use href="#icon-reload"/></svg>
+            </button>
+        </div>
+
+        <div id="status-banner" class="alert d-none mb-3" role="alert"></div>
 
         <div id="stats-section">
             <div id="snippet-playback-histogram" class="card mb-4 app-card">
@@ -123,6 +131,9 @@
                 patchUpdate('snippet-recently-played', '/dashboard/snippets/recently-played');
                 patchUpdate('snippet-listening-stats', '/dashboard/snippets/listening-stats');
             }
+        });
+        document.getElementById('refresh-profile-btn').addEventListener('click', function() {
+            postWithButton(this, '/settings/playback/profile/refresh', 'Profile refresh enqueued successfully.', 'Refresh failed');
         });
     </script>
     {/content}

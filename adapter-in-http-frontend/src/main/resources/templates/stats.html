@@ -1,9 +1,16 @@
 {#include layout.html}
     {#title}SpCtl – Stats{/title}
+    {#scripts}<script src="/settings-utils.js"></script>{/scripts}
     {#content}
     <div class="app-page-container py-4 px-3 px-md-4">
 
         <h1 class="mb-3 fs-4 fw-semibold">Stats</h1>
+
+        <div id="status-banner" class="alert d-none mb-3" role="alert"></div>
+
+        <h2 class="fs-5 fw-semibold mb-2">Playback Aggregations</h2>
+        <p class="text-secondary small mb-3">Delete all computed playback aggregations (day/week/month/quarter/year) and recompute them from scratch. Use this if stats look outdated or incomplete.</p>
+        <button id="rebuild-aggregations-btn" class="btn btn-spotify btn-sm mb-4">Rebuild Aggregations</button>
 
         <ul class="nav nav-tabs mb-3" id="statsTabNav" role="tablist" data-testid="stats-tabs" style="border-bottom:1px solid #333;">
             {#for tab in tabs}
@@ -125,5 +132,11 @@
         </div>
 
     </div>
+
+    <script>
+        document.getElementById('rebuild-aggregations-btn').addEventListener('click', function() {
+            postWithButton(this, '/settings/playback/aggregations/rebuild', 'Aggregation rebuild enqueued successfully.', 'Rebuild failed');
+        });
+    </script>
     {/content}
 {/include}
