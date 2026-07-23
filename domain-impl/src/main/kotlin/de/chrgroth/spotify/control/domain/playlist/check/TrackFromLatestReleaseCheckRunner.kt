@@ -107,12 +107,21 @@ class TrackFromLatestReleaseCheckRunner(
     tracksByAlbumId: Map<AlbumId, List<AppTrack>>,
   ): TrackViolation? {
     val artistAlbumIds = albumsByArtistId[currentTrack.artistId]?.map { it.id }?.toSet() ?: return null
-    val candidates = tracksByAlbumId
+    val discoveredCandidates = tracksByAlbumId
       .filterKeys { it in artistAlbumIds }
       .values
       .flatten()
       .filter { t -> t.id == currentTrack.id || t.title.equals(currentTrack.title, ignoreCase = true) }
       .mapNotNull { t -> t.albumId?.let { albumById[it] }?.let { album -> t to album } }
+
+    // Seed the current track's own album directly: it may be missing from discoveredCandidates if the
+    // album's track listing hasn't picked it up yet, which would otherwise let a reissue win by default.
+    val currentAlbum = currentTrack.albumId?.let { albumById[it] }
+    val candidates = if (currentAlbum != null && discoveredCandidates.none { (t, _) -> t.id == currentTrack.id }) {
+      discoveredCandidates + (currentTrack to currentAlbum)
+    } else {
+      discoveredCandidates
+    }
 
     if (candidates.size <= 1) return null
 

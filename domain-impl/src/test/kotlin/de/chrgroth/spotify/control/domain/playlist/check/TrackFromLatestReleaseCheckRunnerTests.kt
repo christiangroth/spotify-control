@@ -188,6 +188,26 @@ class TrackFromLatestReleaseCheckRunnerTests {
   }
 
   @Test
+  fun `run ignores a deluxe edition reissue even when original album track listing has not synced the current track yet`() {
+    val track = buildPlaylistTrack("t1", "album-original")
+    val appTrackOriginal = buildAppTrack("t1", "Cirice", "album-original")
+    val appTrackReissue = buildAppTrack("t2", "Cirice", "album-deluxe")
+    val albumOriginal = buildAppAlbum("album-original", releaseDate = "2014-08-15", title = "Meliora")
+    val albumDeluxe = buildAppAlbum("album-deluxe", releaseDate = "2015-11-06", title = "Meliora (Deluxe Edition)")
+
+    every { appTrackRepository.findByTrackIds(setOf(TrackId("t1"))) } returns listOf(appTrackOriginal)
+    every { appAlbumRepository.findByArtistId(artistId) } returns listOf(albumOriginal, albumDeluxe)
+    // Simulates the original album's track listing not (yet) containing the current track itself.
+    every { appTrackRepository.findByAlbumId(AlbumId("album-original")) } returns emptyList()
+    every { appTrackRepository.findByAlbumId(AlbumId("album-deluxe")) } returns listOf(appTrackReissue)
+
+    val result = runner.run(playlistId, buildPlaylist(track), null, emptyList())
+
+    assertThat(result.succeeded).isTrue()
+    assertThat(result.violations).isEmpty()
+  }
+
+  @Test
   fun `run handles year-only release dates by padding to January 1st`() {
     val track = buildPlaylistTrack("t1", "album-a")
     val appTrackA = buildAppTrack("t1", "Song A", "album-a")
