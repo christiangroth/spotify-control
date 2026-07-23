@@ -1,3 +1,11 @@
+# 0.116.5 (2026.07.23)
+
+## Bugfixes / Chore
+* Fixed the "Track From Latest Release" playlist check falsely flagging tracks when an album gets re-released as a deluxe, live, or anniversary edition.
+
+
+---
+
 # 0.116.4 (2026.07.23)
 
 ## Bugfixes / Chore
