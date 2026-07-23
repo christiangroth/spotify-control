@@ -56,6 +56,15 @@ class PlaylistChecksResource(
 
   @POST
   @Authenticated
+  @Path("/trigger")
+  @Produces(MediaType.APPLICATION_JSON)
+  fun triggerChecks(): Response = httpResponseMetrics.timed("rest.playlist.check-trigger") {
+    playlistCheckPort.enqueueRunAllChecks()
+    Response.ok(mapOf("status" to "ok")).build()
+  }
+
+  @POST
+  @Authenticated
   @Path("/{playlistId}/fix/{checkType}")
   @Produces(MediaType.APPLICATION_JSON)
   fun runFix(

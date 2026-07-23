@@ -402,4 +402,30 @@ class PlaylistCheckServiceTests {
     assertThat(result.isLeft()).isTrue()
     assertThat((result as arrow.core.Either.Left).value).isEqualTo(PlaylistFixError.PLAYLIST_NOT_FOUND)
   }
+
+  @Test
+  fun `enqueueRunAllChecks enqueues RunPlaylistChecks for each active playlist only`() {
+    every { currentUserResolver.userId() } returns userId
+    every { playlistRepository.findAll() } returns listOf(
+      buildPlaylistInfo(),
+      buildPlaylistInfo().copy(spotifyPlaylistId = "playlist-2", syncStatus = PlaylistSyncStatus.PASSIVE),
+      buildPlaylistInfo().copy(spotifyPlaylistId = "playlist-3"),
+    )
+    every { outboxPort.enqueue(any()) } just runs
+
+    adapter.enqueueRunAllChecks()
+
+    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.RunPlaylistChecks(playlistId)) }
+    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.RunPlaylistChecks("playlist-3")) }
+    verify(exactly = 0) { outboxPort.enqueue(DomainOutboxEvent.RunPlaylistChecks("playlist-2")) }
+  }
+
+  @Test
+  fun `enqueueRunAllChecks does nothing when no current user`() {
+    every { currentUserResolver.userId() } returns null
+
+    adapter.enqueueRunAllChecks()
+
+    verify(exactly = 0) { outboxPort.enqueue(any()) }
+  }
 }
