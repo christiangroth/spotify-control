@@ -53,10 +53,10 @@ class SettingsPageTests {
   }
 
   @Test
-  fun `playlist settings page is available and displays playlists heading`() {
+  fun `playlists settings page is available and displays playlists heading`() {
     given()
       .`when`()
-      .get("/settings/playlist")
+      .get("/playlists/settings")
       .then()
       .statusCode(200)
       .contentType(containsString("text/html"))
@@ -80,7 +80,7 @@ class SettingsPageTests {
 
     given()
       .`when`()
-      .get("/settings/playlist")
+      .get("/playlists/settings")
       .then()
       .statusCode(200)
       .body(containsString("Artists"))
@@ -116,7 +116,7 @@ class SettingsPageTests {
 
     given()
       .`when`()
-      .get("/settings/playlist")
+      .get("/playlists/settings")
       .then()
       .statusCode(200)
       .body(containsString("2 (2)"))
@@ -159,7 +159,7 @@ class SettingsPageTests {
 
     given()
       .`when`()
-      .get("/settings/playlist")
+      .get("/playlists/settings")
       .then()
       .statusCode(200)
       .body(containsString("2 (1)"))
@@ -169,21 +169,10 @@ class SettingsPageTests {
   fun `playlist settings page displays sync now button`() {
     given()
       .`when`()
-      .get("/settings/playlist")
-      .then()
-      .statusCode(200)
-      .body(containsString("Sync Now"))
-  }
-
-  @Test
-  fun `playlists settings page is available at new url and displays playlists heading`() {
-    given()
-      .`when`()
       .get("/playlists/settings")
       .then()
       .statusCode(200)
-      .contentType(containsString("text/html"))
-      .body(containsString("Playlists"))
+      .body(containsString("Sync Now"))
   }
 
   @Test
