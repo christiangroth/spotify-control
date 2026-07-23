@@ -528,7 +528,7 @@ Rate-limit pause is not a per-partition configuration switch: any domain operati
 `SpotifyRateLimitError` (any handler that calls Spotify, regardless of partition) pauses that
 event's partition until the `Retry-After` duration has elapsed.
 
-Successfully processed events are moved to `outbox_archive` (audit log). Internal triggers between services use CDI events (not the outbox).
+The outbox archive is disabled (`outbox.archive.enabled=false`); completed and failed events are removed rather than retained in `outbox_archive`. Internal triggers between services use CDI events (not the outbox).
 
 ## Server-Sent Events (SSE) and Live Updates
 
