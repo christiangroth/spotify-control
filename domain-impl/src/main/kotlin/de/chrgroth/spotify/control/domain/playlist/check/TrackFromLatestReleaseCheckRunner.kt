@@ -116,7 +116,8 @@ class TrackFromLatestReleaseCheckRunner(
 
     if (candidates.size <= 1) return null
 
-    val (bestTrack, bestAlbum) = candidates.maxWith(ALBUM_COMPARATOR)
+    val eligibleCandidates = candidates.filterNot { (_, album) -> isReissue(album, candidates.map { it.second }) }
+    val (bestTrack, bestAlbum) = eligibleCandidates.ifEmpty { candidates }.maxWith(ALBUM_COMPARATOR)
     val currentAlbumTitle = currentTrack.albumId?.let { albumById[it]?.title }
       ?: currentTrack.albumName
       ?: "Unknown Album"
@@ -171,5 +172,21 @@ class TrackFromLatestReleaseCheckRunner(
 
     private const val YEAR_ONLY_DATE_LENGTH = 4
     private const val YEAR_MONTH_DATE_LENGTH = 7
+
+    private val REISSUE_MARKERS = listOf("edition", "live", "deluxe", "remaster", "anniversary", "expanded", "bonus")
+
+    /**
+     * Detects reissues (e.g. "Album (Deluxe Edition)", "Album (Live)") among an artist's albums: an album counts as a
+     * reissue of another candidate album if its title contains that other album's title plus a reissue marker word.
+     * This keeps such reissues from outranking the original studio album purely because they were released later.
+     */
+    private fun isReissue(album: AppAlbum, otherAlbums: List<AppAlbum>): Boolean {
+      val title = album.title?.lowercase() ?: return false
+      return otherAlbums.any { other ->
+        other.id != album.id &&
+          other.title?.lowercase()?.let { otherTitle -> otherTitle.isNotBlank() && title.contains(otherTitle) } == true &&
+          REISSUE_MARKERS.any { marker -> title.contains(marker) }
+      }
+    }
   }
 }

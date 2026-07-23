@@ -147,6 +147,47 @@ class TrackFromLatestReleaseCheckRunnerTests {
   }
 
   @Test
+  fun `run ignores a later deluxe edition reissue of the current album`() {
+    val track = buildPlaylistTrack("t1", "album-original")
+    val appTrackOriginal = buildAppTrack("t1", "Song A", "album-original")
+    val appTrackReissue = buildAppTrack("t2", "Song A", "album-deluxe")
+    val albumOriginal = buildAppAlbum("album-original", releaseDate = "2020-01-01", title = "Album")
+    val albumDeluxe = buildAppAlbum("album-deluxe", releaseDate = "2022-01-01", title = "Album (Deluxe Edition)")
+
+    every { appTrackRepository.findByTrackIds(setOf(TrackId("t1"))) } returns listOf(appTrackOriginal)
+    every { appAlbumRepository.findByArtistId(artistId) } returns listOf(albumOriginal, albumDeluxe)
+    every { appTrackRepository.findByAlbumId(AlbumId("album-original")) } returns listOf(appTrackOriginal)
+    every { appTrackRepository.findByAlbumId(AlbumId("album-deluxe")) } returns listOf(appTrackReissue)
+
+    val result = runner.run(playlistId, buildPlaylist(track), null, emptyList())
+
+    assertThat(result.succeeded).isTrue()
+    assertThat(result.violations).isEmpty()
+  }
+
+  @Test
+  fun `run ignores a live reissue but still reports a genuine newer album`() {
+    val track = buildPlaylistTrack("t1", "album-old")
+    val appTrackOld = buildAppTrack("t1", "Song A", "album-old")
+    val appTrackNew = buildAppTrack("t2", "Song A", "album-new")
+    val appTrackReissue = buildAppTrack("t3", "Song A", "album-live")
+    val albumOld = buildAppAlbum("album-old", releaseDate = "2019-01-01", title = "Old Album")
+    val albumNew = buildAppAlbum("album-new", releaseDate = "2021-01-01", title = "Genuine New Album")
+    val albumReissue = buildAppAlbum("album-live", releaseDate = "2023-01-01", title = "Old Album (Live)")
+
+    every { appTrackRepository.findByTrackIds(setOf(TrackId("t1"))) } returns listOf(appTrackOld)
+    every { appAlbumRepository.findByArtistId(artistId) } returns listOf(albumOld, albumNew, albumReissue)
+    every { appTrackRepository.findByAlbumId(AlbumId("album-old")) } returns listOf(appTrackOld)
+    every { appTrackRepository.findByAlbumId(AlbumId("album-new")) } returns listOf(appTrackNew)
+    every { appTrackRepository.findByAlbumId(AlbumId("album-live")) } returns listOf(appTrackReissue)
+
+    val result = runner.run(playlistId, buildPlaylist(track), null, emptyList())
+
+    assertThat(result.succeeded).isFalse()
+    assertThat(result.violations).containsExactly("Artist A – Song A (Old Album → Genuine New Album)")
+  }
+
+  @Test
   fun `run handles year-only release dates by padding to January 1st`() {
     val track = buildPlaylistTrack("t1", "album-a")
     val appTrackA = buildAppTrack("t1", "Song A", "album-a")
