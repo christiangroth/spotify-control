@@ -1,3 +1,12 @@
+# 0.118.0 (2026.07.23)
+
+## New Features
+* Playlist checks can now be fixed selectively: the checks page shows the violation count per playlist and opens a list where individual violations can be excluded before fixing, instead of only fixing everything at once.
+
+
+
+---
+
 # 0.117.1 (2026.07.23)
 
 ## Bugfixes / Chore
