@@ -1,5 +1,6 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
+import com.mongodb.client.model.Filters
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.model.playlist.Playlist
@@ -9,6 +10,7 @@ import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPo
 import io.quarkus.test.junit.QuarkusTest
 import jakarta.inject.Inject
 import org.assertj.core.api.Assertions.assertThat
+import org.bson.Document
 import org.junit.jupiter.api.Test
 import java.util.UUID
 
@@ -17,6 +19,9 @@ class PlaylistDataRepositoryTests {
 
   @Inject
   lateinit var playlistRepository: PlaylistRepositoryPort
+
+  @Inject
+  lateinit var playlistDocumentRepository: PlaylistDocumentRepository
 
   private fun buildPlaylist(playlistId: String) = Playlist(
     spotifyPlaylistId = playlistId,
@@ -142,6 +147,19 @@ class PlaylistDataRepositoryTests {
 
     assertThat(result[playlistId1]).containsExactlyInAnyOrder(ArtistId("a1"), ArtistId("a2"))
     assertThat(result[playlistId2]).containsExactlyInAnyOrder(ArtistId("artist-1"))
+  }
+
+  @Test
+  fun `findDistinctArtistIds and findTrackCounts do not fail for a document with a missing tracks field`() {
+    val playlistId = "playlist-${UUID.randomUUID()}"
+    val rawCollection = playlistDocumentRepository.mongoCollection().withDocumentClass(Document::class.java)
+    rawCollection.insertOne(Document("_id", playlistId).append("spotifyPlaylistId", playlistId))
+    try {
+      assertThat(playlistRepository.findDistinctArtistIds()).containsEntry(playlistId, emptySet())
+      assertThat(playlistRepository.findTrackCounts()).containsEntry(playlistId, 0)
+    } finally {
+      rawCollection.deleteOne(Filters.eq("_id", playlistId))
+    }
   }
 
   @Test

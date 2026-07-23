@@ -52,11 +52,13 @@ class PlaylistRepositoryAdapter(
     }
 
   override fun findTrackCounts(): Map<String, Int> {
+    // $size errors out entirely (aborting the whole aggregation, for every playlist) if $tracks is missing
+    // on any single document, so it is wrapped in $ifNull to default to an empty array first.
     val pipeline = listOf(
       Aggregates.project(
         Projections.fields(
           Projections.include("spotifyPlaylistId"),
-          Projections.computed("trackCount", Document("\$size", "\$tracks")),
+          Projections.computed("trackCount", Document("\$size", Document("\$ifNull", listOf("\$tracks", emptyList<String>())))),
         ),
       ),
     )
@@ -71,6 +73,8 @@ class PlaylistRepositoryAdapter(
     // Uses $reduce/$setUnion instead of $unwind so playlists with zero tracks or tracks without artistIds
     // are still included (with an empty set), matching findTrackCounts() semantics. $unwind would otherwise
     // silently drop any document whose target path is missing, null or an empty array.
+    // Both $tracks itself and each track's artistIds are wrapped in $ifNull: if $tracks were missing,
+    // $reduce would otherwise return null instead of an empty array, causing the getList() below to NPE.
     val pipeline = listOf(
       Aggregates.project(
         Projections.fields(
@@ -79,7 +83,7 @@ class PlaylistRepositoryAdapter(
             "artistIds",
             Document(
               "\$reduce",
-              Document("input", "\$tracks")
+              Document("input", Document("\$ifNull", listOf("\$tracks", emptyList<String>())))
                 .append("initialValue", emptyList<String>())
                 .append(
                   "in",
