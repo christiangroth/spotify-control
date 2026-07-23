@@ -84,7 +84,7 @@ class SlackNotificationAdapter(
 
   override fun notifyViolationsChanged(check: AppPlaylistCheck) {
     if (violationsChangedEnabled) {
-      val violationList = check.violations.joinToString(", ")
+      val violationList = check.violations.joinToString(", ") { it.message }
       send("Playlist check violations changed for playlist ${check.playlistId} (check: ${check.checkId}): $violationList")
     }
   }

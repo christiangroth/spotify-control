@@ -8,6 +8,7 @@ import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.PlaylistFixError
 import de.chrgroth.spotify.control.domain.model.playlist.AppPlaylistCheck
 import de.chrgroth.spotify.control.domain.model.playlist.Playlist
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistCheckViolation
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistId
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistType
@@ -52,7 +53,7 @@ class YearSongsInAllCheckRunner(
       missingTrackIds.map { trackId ->
         val appTrack = requireNotNull(appTrackById[trackId.value]) { "Track ${trackId.value} not found in catalog" }
         val artistName = appTrack.artistName ?: "Unknown Artist"
-        "$artistName – ${appTrack.title}"
+        PlaylistCheckViolation(id = trackId.value, message = "$artistName – ${appTrack.title}")
       }
     }
     return AppPlaylistCheck(
@@ -72,11 +73,12 @@ class YearSongsInAllCheckRunner(
     playlist: Playlist,
     currentPlaylistInfo: PlaylistInfo?,
     allPlaylistInfos: List<PlaylistInfo>,
+    selectedViolationIds: Set<String>,
   ): Either<DomainError, Unit> =
     resolveAllPlaylist(playlistId, allPlaylistInfos).flatMap { (allPlaylistInfo, allPlaylist) ->
       val allTrackIds = allPlaylist.tracks.map { it.trackId.value }.toSet()
       val missingTrackIds = playlist.tracks
-        .filter { it.trackId.value !in allTrackIds }
+        .filter { it.trackId.value !in allTrackIds && it.trackId.value in selectedViolationIds }
         .distinctBy { it.trackId }
         .map { it.trackId.value }
       if (missingTrackIds.isEmpty()) {

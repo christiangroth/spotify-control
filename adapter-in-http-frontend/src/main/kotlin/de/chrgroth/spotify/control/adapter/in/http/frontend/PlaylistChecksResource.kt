@@ -1,5 +1,6 @@
 package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
+import de.chrgroth.spotify.control.domain.error.PlaylistFixError
 import de.chrgroth.spotify.control.domain.model.playlist.AppPlaylistCheck
 import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistCheckPort
 import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
@@ -8,6 +9,7 @@ import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
 import io.quarkus.security.Authenticated
 import jakarta.enterprise.context.ApplicationScoped
+import jakarta.ws.rs.Consumes
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.POST
 import jakarta.ws.rs.Path
@@ -75,16 +77,27 @@ class PlaylistChecksResource(
   @POST
   @Authenticated
   @Path("/{playlistId}/fix/{checkType}")
+  @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
   fun runFix(
     @PathParam("playlistId") playlistId: String,
     @PathParam("checkType") checkType: String,
+    request: FixRequest,
   ): Response = httpResponseMetrics.timed("rest.playlist.check-fix") {
-    playlistCheckPort.enqueueFix(playlistId, checkType).fold(
-      ifLeft = { error -> Response.status(Response.Status.NOT_FOUND).entity(mapOf("error" to error.code)).build() },
+    playlistCheckPort.enqueueFix(playlistId, checkType, request.violationIds).fold(
+      ifLeft = { error ->
+        val status = if (error == PlaylistFixError.NO_VIOLATIONS_SELECTED) {
+          Response.Status.BAD_REQUEST
+        } else {
+          Response.Status.NOT_FOUND
+        }
+        Response.status(status).entity(mapOf("error" to error.code)).build()
+      },
       ifRight = { Response.ok(mapOf("status" to "ok")).build() },
     )
   }
+
+  data class FixRequest(val violationIds: Set<String> = emptySet())
 
   data class PlaylistCheckGroup(val checkName: String, val checkType: String, val rows: List<PlaylistCheckRow>)
 

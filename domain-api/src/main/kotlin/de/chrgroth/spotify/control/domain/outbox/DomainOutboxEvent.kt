@@ -281,21 +281,33 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
   }
 
   /**
-   * Applies the fix action of a playlist check to a playlist via the Spotify write API,
-   * then re-enqueues [SyncPlaylistData] to refresh the local mirror.
-   * payload = "$playlistId\n$checkType"
+   * Applies the fix action of a playlist check to a playlist via the Spotify write API, restricted to
+   * [violationIds], then re-enqueues [SyncPlaylistData] to refresh the local mirror.
+   * The deduplication key includes the sorted [violationIds] so that distinct partial fixes for the
+   * same playlist/check can be queued independently instead of deduplicating against each other.
+   * payload = "$playlistId\n$checkType\n${violationIds sorted and comma-joined}"
    */
-  data class FixPlaylistCheck(val playlistId: String, val checkType: String) : DomainOutboxEvent {
+  data class FixPlaylistCheck(val playlistId: String, val checkType: String, val violationIds: Set<String> = emptySet()) : DomainOutboxEvent {
     override val key = KEY
-    override val deduplicationKey = "$KEY:$playlistId:$checkType"
+    override val deduplicationKey = "$KEY:$playlistId:$checkType:${violationIds.sorted().joinToString(",")}"
     override val partition = DomainOutboxPartition.ToSpotifyPlaylist
-    override val serializePayload = "$playlistId\n$checkType"
+    override val serializePayload = "$playlistId\n$checkType\n${violationIds.sorted().joinToString(",")}"
 
     companion object {
       const val KEY = "FixPlaylistCheck"
       fun fromPayload(payload: String): FixPlaylistCheck {
-        val newlineIndex = payload.indexOf('\n')
-        return FixPlaylistCheck(playlistId = payload.substring(0, newlineIndex), checkType = payload.substring(newlineIndex + 1))
+        val firstNewline = payload.indexOf('\n')
+        val playlistId = payload.substring(0, firstNewline)
+        val afterPlaylistId = payload.substring(firstNewline + 1)
+        val secondNewline = afterPlaylistId.indexOf('\n')
+        if (secondNewline < 0) {
+          // Legacy format: no violationIds
+          return FixPlaylistCheck(playlistId, afterPlaylistId)
+        }
+        val checkType = afterPlaylistId.substring(0, secondNewline)
+        val idsPart = afterPlaylistId.substring(secondNewline + 1)
+        val violationIds = if (idsPart.isEmpty()) emptySet() else idsPart.split(",").toSet()
+        return FixPlaylistCheck(playlistId, checkType, violationIds)
       }
     }
   }

@@ -1,0 +1,1 @@
+* Playlist checks can now be fixed selectively: the checks page shows the violation count per playlist and opens a list where individual violations can be excluded before fixing, instead of only fixing everything at once.

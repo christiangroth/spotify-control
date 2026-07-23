@@ -7,5 +7,5 @@ data class AppPlaylistCheck(
   val playlistId: PlaylistId,
   val lastCheck: Instant,
   val succeeded: Boolean,
-  val violations: List<String>,
+  val violations: List<PlaylistCheckViolation>,
 )

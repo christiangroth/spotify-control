@@ -12,5 +12,10 @@ class AppPlaylistCheckDocument {
   lateinit var playlistId: String
   lateinit var lastCheck: Instant
   var succeeded: Boolean = false
-  lateinit var violations: List<String>
+  lateinit var violations: List<PlaylistCheckViolationDocument>
+}
+
+class PlaylistCheckViolationDocument {
+  lateinit var id: String
+  lateinit var message: String
 }

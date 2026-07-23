@@ -1,6 +1,7 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
 import de.chrgroth.spotify.control.domain.model.playlist.AppPlaylistCheck
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistCheckViolation
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistId
 import de.chrgroth.spotify.control.domain.port.out.playlist.AppPlaylistCheckRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
@@ -57,7 +58,7 @@ class AppPlaylistCheckRepositoryAdapter(
     playlistId = PlaylistId(playlistId),
     lastCheck = lastCheck.toKotlinInstant(),
     succeeded = succeeded,
-    violations = violations,
+    violations = violations.map { PlaylistCheckViolation(id = it.id, message = it.message) },
   )
 
   private fun AppPlaylistCheck.toDocument() = AppPlaylistCheckDocument().apply {
@@ -65,7 +66,12 @@ class AppPlaylistCheckRepositoryAdapter(
     playlistId = this@toDocument.playlistId.value
     lastCheck = this@toDocument.lastCheck.toJavaInstant()
     succeeded = this@toDocument.succeeded
-    violations = this@toDocument.violations
+    violations = this@toDocument.violations.map { violation ->
+      PlaylistCheckViolationDocument().apply {
+        id = violation.id
+        message = violation.message
+      }
+    }
   }
 
 }

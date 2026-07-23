@@ -81,7 +81,7 @@ class YearSongsInAllCheckRunnerTests {
     val result = runner.run(playlistId, playlist, currentPlaylistInfo, playlistInfos)
 
     assertThat(result.succeeded).isTrue()
-    assertThat(result.violations).isEmpty()
+    assertThat(result.violations.map { it.message }).isEmpty()
     assertThat(result.checkId).isEqualTo("$playlistId:year-songs-in-all")
   }
 
@@ -98,7 +98,7 @@ class YearSongsInAllCheckRunnerTests {
     val result = runner.run(playlistId, playlist, currentPlaylistInfo, playlistInfos)
 
     assertThat(result.succeeded).isTrue()
-    assertThat(result.violations).isEmpty()
+    assertThat(result.violations.map { it.message }).isEmpty()
   }
 
   @Test
@@ -115,7 +115,7 @@ class YearSongsInAllCheckRunnerTests {
     val result = runner.run(playlistId, playlist, currentPlaylistInfo, playlistInfos)
 
     assertThat(result.succeeded).isTrue()
-    assertThat(result.violations).isEmpty()
+    assertThat(result.violations.map { it.message }).isEmpty()
   }
 
   @Test
@@ -138,7 +138,7 @@ class YearSongsInAllCheckRunnerTests {
     val result = runner.run(playlistId, playlist, currentPlaylistInfo, playlistInfos)
 
     assertThat(result.succeeded).isFalse()
-    assertThat(result.violations).containsExactlyInAnyOrder("Artist B – Song B", "Artist C – Song C")
+    assertThat(result.violations.map { it.message }).containsExactlyInAnyOrder("Artist B – Song B", "Artist C – Song C")
   }
 
   @Test
@@ -160,7 +160,7 @@ class YearSongsInAllCheckRunnerTests {
     val result = runner.run(playlistId, playlist, currentPlaylistInfo, playlistInfos)
 
     assertThat(result.succeeded).isFalse()
-    assertThat(result.violations).containsExactly("Artist B – Song B")
+    assertThat(result.violations.map { it.message }).containsExactly("Artist B – Song B")
   }
 
   @Test
@@ -179,7 +179,7 @@ class YearSongsInAllCheckRunnerTests {
 
     val result = runner.run(playlistId, playlist, currentPlaylistInfo, playlistInfos)
 
-    assertThat(result.violations).containsExactly("Unknown Artist – Song B")
+    assertThat(result.violations.map { it.message }).containsExactly("Unknown Artist – Song B")
   }
 
   @Test
@@ -193,7 +193,7 @@ class YearSongsInAllCheckRunnerTests {
     val currentPlaylistInfo = buildPlaylistInfo(type = PlaylistType.YEAR)
     val playlistInfos = listOf(currentPlaylistInfo)
 
-    val result = runner.fix(accessToken, playlistId, playlist, currentPlaylistInfo, playlistInfos)
+    val result = runner.fix(accessToken, playlistId, playlist, currentPlaylistInfo, playlistInfos, setOf("t1"))
 
     assertThat(result.isLeft()).isTrue()
     assertThat((result as Either.Left).value).isEqualTo(PlaylistFixError.FIX_NOT_FOUND)
@@ -210,7 +210,7 @@ class YearSongsInAllCheckRunnerTests {
     )
     every { playlistRepository.findByPlaylistId(allPlaylistId) } returns null
 
-    val result = runner.fix(accessToken, playlistId, playlist, currentPlaylistInfo, playlistInfos)
+    val result = runner.fix(accessToken, playlistId, playlist, currentPlaylistInfo, playlistInfos, setOf("t1"))
 
     assertThat(result.isLeft()).isTrue()
     assertThat((result as Either.Left).value).isEqualTo(PlaylistFixError.PLAYLIST_NOT_FOUND)
@@ -228,7 +228,7 @@ class YearSongsInAllCheckRunnerTests {
     )
     every { playlistRepository.findByPlaylistId(allPlaylistId) } returns allPlaylist
 
-    val result = runner.fix(accessToken, playlistId, playlist, currentPlaylistInfo, playlistInfos)
+    val result = runner.fix(accessToken, playlistId, playlist, currentPlaylistInfo, playlistInfos, emptySet())
 
     assertThat(result.isRight()).isTrue()
     verify(exactly = 0) { spotifyPlaylist.addPlaylistTracks(any(), any(), any()) }
@@ -246,12 +246,30 @@ class YearSongsInAllCheckRunnerTests {
     every { playlistRepository.findByPlaylistId(allPlaylistId) } returns allPlaylist
     every { spotifyPlaylist.addPlaylistTracks(accessToken, allPlaylistId, any()) } returns Unit.right()
 
-    val result = runner.fix(accessToken, playlistId, playlist, currentPlaylistInfo, playlistInfos)
+    val result = runner.fix(accessToken, playlistId, playlist, currentPlaylistInfo, playlistInfos, setOf("t2", "t3"))
 
     assertThat(result.isRight()).isTrue()
     verify(exactly = 1) {
       spotifyPlaylist.addPlaylistTracks(accessToken, allPlaylistId, match { it.containsAll(listOf("t2", "t3")) && it.size == 2 })
     }
+  }
+
+  @Test
+  fun `fix only adds selected missing tracks, leaving unselected ones untouched`() {
+    val playlist = buildPlaylist(tracks = listOf(buildTrack("t1"), buildTrack("t2"), buildTrack("t3")))
+    val allPlaylist = buildPlaylist(spotifyPlaylistId = allPlaylistId, tracks = listOf(buildTrack("t1")))
+    val currentPlaylistInfo = buildPlaylistInfo(type = PlaylistType.YEAR)
+    val playlistInfos = listOf(
+      currentPlaylistInfo,
+      buildPlaylistInfo(spotifyPlaylistId = allPlaylistId, type = PlaylistType.ALL),
+    )
+    every { playlistRepository.findByPlaylistId(allPlaylistId) } returns allPlaylist
+    every { spotifyPlaylist.addPlaylistTracks(accessToken, allPlaylistId, listOf("t2")) } returns Unit.right()
+
+    val result = runner.fix(accessToken, playlistId, playlist, currentPlaylistInfo, playlistInfos, setOf("t2"))
+
+    assertThat(result.isRight()).isTrue()
+    verify(exactly = 1) { spotifyPlaylist.addPlaylistTracks(accessToken, allPlaylistId, listOf("t2")) }
   }
 
   @Test
@@ -266,7 +284,7 @@ class YearSongsInAllCheckRunnerTests {
     every { playlistRepository.findByPlaylistId(allPlaylistId) } returns allPlaylist
     every { spotifyPlaylist.addPlaylistTracks(accessToken, allPlaylistId, listOf("t2")) } returns Unit.right()
 
-    val result = runner.fix(accessToken, playlistId, playlist, currentPlaylistInfo, playlistInfos)
+    val result = runner.fix(accessToken, playlistId, playlist, currentPlaylistInfo, playlistInfos, setOf("t2"))
 
     assertThat(result.isRight()).isTrue()
     verify(exactly = 1) { spotifyPlaylist.addPlaylistTracks(accessToken, allPlaylistId, listOf("t2")) }
@@ -284,7 +302,7 @@ class YearSongsInAllCheckRunnerTests {
     every { playlistRepository.findByPlaylistId(allPlaylistId) } returns allPlaylist
     every { spotifyPlaylist.addPlaylistTracks(any(), any(), any()) } returns PlaylistFixError.FIX_FAILED.left()
 
-    val result = runner.fix(accessToken, playlistId, playlist, currentPlaylistInfo, playlistInfos)
+    val result = runner.fix(accessToken, playlistId, playlist, currentPlaylistInfo, playlistInfos, setOf("t2"))
 
     assertThat(result.isLeft()).isTrue()
     assertThat((result as Either.Left).value).isEqualTo(PlaylistFixError.FIX_FAILED)

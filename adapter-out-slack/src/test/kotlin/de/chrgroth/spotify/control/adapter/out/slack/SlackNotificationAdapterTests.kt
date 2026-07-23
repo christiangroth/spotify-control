@@ -102,19 +102,21 @@ class SlackNotificationAdapterTests {
 
   @Test
   fun `violations changed notification does not throw when disabled`() {
-    adapter().notifyViolationsChanged(buildCheck(violations = listOf("Artist – Track")))
+    adapter().notifyViolationsChanged(buildCheck(violations = listOf(de.chrgroth.spotify.control.domain.model.playlist.PlaylistCheckViolation("t1", "Artist – Track"))))
   }
 
   @Test
   fun `violations changed notification does not throw when no webhook url configured`() {
-    adapter(violationsChangedEnabled = true).notifyViolationsChanged(buildCheck(violations = listOf("Artist – Track")))
+    adapter(violationsChangedEnabled = true).notifyViolationsChanged(
+      buildCheck(violations = listOf(de.chrgroth.spotify.control.domain.model.playlist.PlaylistCheckViolation("t1", "Artist – Track"))),
+    )
   }
 
   private fun buildCheck(
     playlistId: String = "playlist-1",
     checkId: String = "playlist-1:duplicate-tracks",
     succeeded: Boolean = true,
-    violations: List<String> = emptyList(),
+    violations: List<de.chrgroth.spotify.control.domain.model.playlist.PlaylistCheckViolation> = emptyList(),
   ) = de.chrgroth.spotify.control.domain.model.playlist.AppPlaylistCheck(
     checkId = checkId,
     playlistId = de.chrgroth.spotify.control.domain.model.playlist.PlaylistId(playlistId),

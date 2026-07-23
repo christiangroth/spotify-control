@@ -2,6 +2,7 @@ package de.chrgroth.spotify.control.domain.playlist.check
 
 import de.chrgroth.spotify.control.domain.model.playlist.AppPlaylistCheck
 import de.chrgroth.spotify.control.domain.model.playlist.Playlist
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistCheckViolation
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistId
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistType
@@ -41,10 +42,10 @@ class SingleArtistTrackCheckRunner(
         tracks.map { track ->
           val appTrack = appTrackById[track.trackId.value]
           val artistName = appTrack?.artistName ?: track.artistIds.first().value
-          "$artistName – ${appTrack?.title ?: track.trackId.value}"
+          PlaylistCheckViolation(id = track.trackId.value, message = "$artistName – ${appTrack?.title ?: track.trackId.value}")
         }
       }
-      .sorted()
+      .sortedBy { it.message }
     return AppPlaylistCheck(
       checkId = "$playlistId:$checkId",
       playlistId = PlaylistId(playlistId),

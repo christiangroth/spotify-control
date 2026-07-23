@@ -66,7 +66,7 @@ class SingleArtistTrackCheckRunnerTests {
     val result = runner.run(playlistId, buildPlaylist(), null, emptyList())
 
     assertThat(result.succeeded).isTrue()
-    assertThat(result.violations).isEmpty()
+    assertThat(result.violations.map { it.message }).isEmpty()
   }
 
   @Test
@@ -81,7 +81,7 @@ class SingleArtistTrackCheckRunnerTests {
     val result = runner.run(playlistId, buildPlaylist(t1, t2), null, emptyList())
 
     assertThat(result.succeeded).isTrue()
-    assertThat(result.violations).isEmpty()
+    assertThat(result.violations.map { it.message }).isEmpty()
     assertThat(result.checkId).isEqualTo("$playlistId:single-artist-track")
   }
 
@@ -97,7 +97,7 @@ class SingleArtistTrackCheckRunnerTests {
     val result = runner.run(playlistId, buildPlaylist(t1, t2), null, emptyList())
 
     assertThat(result.succeeded).isFalse()
-    assertThat(result.violations).containsExactlyInAnyOrder(
+    assertThat(result.violations.map { it.message }).containsExactlyInAnyOrder(
       "Artist One – Song A",
       "Artist One – Song B",
     )
@@ -117,7 +117,7 @@ class SingleArtistTrackCheckRunnerTests {
     val result = runner.run(playlistId, buildPlaylist(t1, t2, t3), null, emptyList())
 
     assertThat(result.succeeded).isFalse()
-    assertThat(result.violations).containsExactlyInAnyOrder("Artist One – Song A", "Artist One – Song B")
+    assertThat(result.violations.map { it.message }).containsExactlyInAnyOrder("Artist One – Song A", "Artist One – Song B")
   }
 
   @Test
@@ -134,7 +134,7 @@ class SingleArtistTrackCheckRunnerTests {
     val result = runner.run(playlistId, buildPlaylist(t1, t2, t3), null, emptyList())
 
     assertThat(result.succeeded).isFalse()
-    assertThat(result.violations).containsExactly(
+    assertThat(result.violations.map { it.message }).containsExactly(
       "Artist One – Alpha Song",
       "Artist One – Middle Song",
       "Artist One – Zebra Song",
@@ -153,7 +153,7 @@ class SingleArtistTrackCheckRunnerTests {
     val result = runner.run(playlistId, buildPlaylist(t1, t2), null, emptyList())
 
     assertThat(result.succeeded).isFalse()
-    assertThat(result.violations).containsExactlyInAnyOrder("artist-1 – Song A", "artist-1 – Song B")
+    assertThat(result.violations.map { it.message }).containsExactlyInAnyOrder("artist-1 – Song A", "artist-1 – Song B")
   }
 
   @Test
@@ -165,7 +165,7 @@ class SingleArtistTrackCheckRunnerTests {
     val result = runner.run(playlistId, buildPlaylist(t1, t2), null, emptyList())
 
     assertThat(result.succeeded).isFalse()
-    assertThat(result.violations).containsExactlyInAnyOrder("artist-1 – t1", "artist-1 – t2")
+    assertThat(result.violations.map { it.message }).containsExactlyInAnyOrder("artist-1 – t1", "artist-1 – t2")
   }
 
   @Test
@@ -177,7 +177,7 @@ class SingleArtistTrackCheckRunnerTests {
     val result = runner.run(playlistId, buildPlaylist(t1, t2), null, emptyList())
 
     assertThat(result.succeeded).isTrue()
-    assertThat(result.violations).isEmpty()
+    assertThat(result.violations.map { it.message }).isEmpty()
   }
 
   @Test

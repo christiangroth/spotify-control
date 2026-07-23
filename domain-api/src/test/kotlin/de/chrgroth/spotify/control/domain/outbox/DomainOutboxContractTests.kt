@@ -33,6 +33,7 @@ class DomainOutboxContractTests {
     DomainOutboxEvent.RunPlaylistChecks("playlist-1"),
     DomainOutboxEvent.RunPlaylistChecks("playlist-1", "duplicate-track-ids"),
     DomainOutboxEvent.FixPlaylistCheck("playlist-1", "duplicate-track-ids"),
+    DomainOutboxEvent.FixPlaylistCheck("playlist-1", "duplicate-track-ids", setOf("t1", "t2")),
     DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.DAY, LocalDate(2024, 1, 15)),
     DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.WEEK, LocalDate(2024, 1, 8)),
     DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.MONTH, LocalDate(2024, 1, 1)),
@@ -64,6 +65,12 @@ class DomainOutboxContractTests {
   fun `SyncArtistDetails parses legacy payload without fromPlaylist as false`() {
     val restored = DomainOutboxEvent.fromKey(DomainOutboxEvent.SyncArtistDetails.KEY, "artist-1")
     assertThat(restored).isEqualTo(DomainOutboxEvent.SyncArtistDetails("artist-1", fromPlaylist = false))
+  }
+
+  @Test
+  fun `FixPlaylistCheck parses legacy payload without violationIds as empty set`() {
+    val restored = DomainOutboxEvent.fromKey(DomainOutboxEvent.FixPlaylistCheck.KEY, "playlist-1\nduplicate-track-ids")
+    assertThat(restored).isEqualTo(DomainOutboxEvent.FixPlaylistCheck("playlist-1", "duplicate-track-ids"))
   }
 
   @Test
