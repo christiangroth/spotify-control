@@ -1,3 +1,13 @@
+# 0.117.0 (2026.07.23)
+
+## New Features
+* Added a button to manually trigger playlist checks for all active playlists on the Playlist Checks page.
+* Added a button next to each check type on the Playlist Checks page to trigger just that check for all active playlists.
+
+
+
+---
+
 # 0.116.5 (2026.07.23)
 
 ## Bugfixes / Chore
