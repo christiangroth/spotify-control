@@ -2,20 +2,13 @@ package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
 import de.chrgroth.spotify.control.domain.error.PlaylistSyncError
 import mu.KLogging
-import de.chrgroth.spotify.control.domain.model.playlist.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistType
 import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistPort
-import de.chrgroth.spotify.control.domain.port.`in`.user.UserProfilePort
 import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
-import io.quarkus.qute.Location
-import io.quarkus.qute.Template
-import io.quarkus.qute.TemplateInstance
 import io.quarkus.security.Authenticated
-import io.quarkus.security.identity.SecurityIdentity
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.ws.rs.Consumes
-import jakarta.ws.rs.GET
 import jakarta.ws.rs.POST
 import jakarta.ws.rs.PUT
 import jakarta.ws.rs.Path
@@ -23,54 +16,14 @@ import jakarta.ws.rs.PathParam
 import jakarta.ws.rs.Produces
 import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
-import kotlin.time.Instant
 
 @Path("/settings/playlist")
 @ApplicationScoped
 @Suppress("Unused")
 class PlaylistSettingsResource(
-  @param:Location("settings/playlist.html")
-  private val playlistTemplate: Template,
-  private val securityIdentity: SecurityIdentity,
-  private val userProfile: UserProfilePort,
   private val playlist: PlaylistPort,
   private val httpResponseMetrics: ResponseTimingPort,
 ) {
-
-  @GET
-  @Authenticated
-  @Produces(MediaType.TEXT_HTML)
-  fun playlist(): TemplateInstance = httpResponseMetrics.timed("page.playlist.settings") { details ->
-    val displayName = userProfile.getDisplayName() ?: securityIdentity.principal.name
-    val sortedPlaylists = details.detail("playlist.settings.playlists") { playlist.getPlaylists().sortedBy { it.name } }
-    val padWidth = sortedPlaylists.size.toString().length
-    val trackCounts = details.detail("playlist.settings.track-counts") { playlist.getTrackCounts() }
-    val artistStats = details.detail("playlist.settings.artist-stats") { playlist.getArtistStats() }
-    val rows = sortedPlaylists.mapIndexed { index, playlistInfo ->
-      PlaylistRow(
-        lineNumber = (index + 1).toString().padStart(padWidth, '0'),
-        playlist = playlistInfo,
-        numberOfTracks = trackCounts[playlistInfo.spotifyPlaylistId],
-        numberOfArtists = artistStats[playlistInfo.spotifyPlaylistId]?.total,
-        numberOfMissingArtists = artistStats[playlistInfo.spotifyPlaylistId]?.missingFromCatalog,
-      )
-    }
-    playlistTemplate
-      .data("displayName", displayName)
-      .data("rows", rows)
-  }
-
-  data class PlaylistRow(
-    val lineNumber: String,
-    val playlist: PlaylistInfo,
-    val numberOfTracks: Int? = null,
-    val numberOfArtists: Int? = null,
-    val numberOfMissingArtists: Int? = null,
-  ) {
-    val active: Boolean get() = playlist.syncStatus == PlaylistSyncStatus.ACTIVE
-    val lastSyncTime: Instant get() = playlist.lastSyncTime ?: playlist.lastSnapshotIdSyncTime
-    val typeLabel: String? get() = playlist.type?.name?.lowercase()
-  }
 
   @PUT
   @Authenticated

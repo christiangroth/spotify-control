@@ -1,5 +1,7 @@
 package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistInfo
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistCheckPort
 import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistPort
 import de.chrgroth.spotify.control.domain.port.`in`.user.UserProfilePort
@@ -19,6 +21,7 @@ import jakarta.ws.rs.core.MediaType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
+import kotlin.time.Instant
 
 @Path("/playlists")
 @ApplicationScoped
@@ -46,16 +49,31 @@ class PlaylistsResource(
     val sortedPlaylists = details.detail("playlist.settings-tab.playlists") { playlist.getPlaylists().sortedBy { it.name } }
     val padWidth = sortedPlaylists.size.toString().length
     val trackCounts = details.detail("playlist.settings-tab.track-counts") { playlist.getTrackCounts() }
+    val artistStats = details.detail("playlist.settings-tab.artist-stats") { playlist.getArtistStats() }
     val rows = sortedPlaylists.mapIndexed { index, playlistInfo ->
-      PlaylistSettingsResource.PlaylistRow(
+      PlaylistRow(
         lineNumber = (index + 1).toString().padStart(padWidth, '0'),
         playlist = playlistInfo,
         numberOfTracks = trackCounts[playlistInfo.spotifyPlaylistId],
+        numberOfArtists = artistStats[playlistInfo.spotifyPlaylistId]?.total,
+        numberOfMissingArtists = artistStats[playlistInfo.spotifyPlaylistId]?.missingFromCatalog,
       )
     }
     playlistTemplate
       .data("displayName", displayName)
       .data("rows", rows)
+  }
+
+  data class PlaylistRow(
+    val lineNumber: String,
+    val playlist: PlaylistInfo,
+    val numberOfTracks: Int? = null,
+    val numberOfArtists: Int? = null,
+    val numberOfMissingArtists: Int? = null,
+  ) {
+    val active: Boolean get() = playlist.syncStatus == PlaylistSyncStatus.ACTIVE
+    val lastSyncTime: Instant get() = playlist.lastSyncTime ?: playlist.lastSnapshotIdSyncTime
+    val typeLabel: String? get() = playlist.type?.name?.lowercase()
   }
 
   @GET
