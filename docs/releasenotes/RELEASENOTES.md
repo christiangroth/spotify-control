@@ -1,3 +1,12 @@
+# 0.117.1 (2026.07.23)
+
+## Bugfixes / Chore
+* Fixed the "Track From Latest Release" playlist check still falsely flagging tracks as outdated after a prior fix, when the correct current album had not yet been fully considered.
+
+
+
+---
+
 # 0.117.0 (2026.07.23)
 
 ## New Features
