@@ -361,8 +361,12 @@ sequenceDiagram
 `RunPlaylistChecks` is purely outbox/event-driven — never triggered directly by a scheduler job. All
 CDI-discovered `PlaylistCheckRunner` beans applicable to a playlist's type (some checks are scoped to
 `SINGULARITY` or `YEAR` playlists only) run concurrently; a Slack notification fires only when a
-check's pass/fail state or its violation list changes. The "Fix" action is enqueued as
-`FixPlaylistCheck` (partition `to-spotify-playlist`) and applied asynchronously by the dispatcher.
+check's pass/fail state or its violation list changes. Each violation carries a stable `id` (derived
+from the underlying track ID, disambiguated by position where needed) so a subset can be selected for
+fixing ([ADR-0013](../adr/0013-selective-playlist-check-violation-fixing.md)). The "Fix" action is
+enqueued as `FixPlaylistCheck` (partition `to-spotify-playlist`) with the selected violation IDs and
+applied asynchronously by the dispatcher; each fixable runner filters its freshly recomputed
+violations down to that selection before acting on the live Spotify playlist.
 
 ```mermaid
 sequenceDiagram
@@ -381,9 +385,9 @@ sequenceDiagram
     Check->>Slack: notify only if pass/fail or violations changed
 
     Note over Check,Outbox: User-triggered Fix action
-    PL->>Outbox: FixPlaylistCheck(playlistId, checkType) (to-spotify-playlist)
+    PL->>Outbox: FixPlaylistCheck(playlistId, checkType, violationIds) (to-spotify-playlist)
     Outbox->>Check: handle(FixPlaylistCheck)
-    Check->>Spotify: runner.fix()
+    Check->>Spotify: runner.fix(selectedViolationIds)
     Check->>Outbox: SyncPlaylistData(playlistId) (re-sync + re-check)
 ```
 
@@ -581,6 +585,7 @@ Architecture documentation (`docs/arc42`), ADRs (`docs/adr`), and release notes 
 - [0010](../adr/0010-partial-play-detection-via-currently-playing-polling.md) – Partial Play Detection via Currently-Playing Polling
 - [0011](../adr/0011-playlist-checks-framework.md) – Playlist Checks Framework
 - [0012](../adr/0012-diagram-rendering-mermaid.md) – Diagram Rendering: Mermaid
+- [0013](../adr/0013-selective-playlist-check-violation-fixing.md) – Selective Playlist Check Violation Fixing
 
 # Quality Requirements
 

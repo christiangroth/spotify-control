@@ -111,8 +111,11 @@ class PlaylistCheckService(
   override fun getFixableCheckIds(): Set<String> =
     checkRunners.filter { it.canFix() }.map { it.checkId }.toSet()
 
-  override fun enqueueFix(playlistId: String, checkType: String): Either<DomainError, Unit> {
+  override fun enqueueFix(playlistId: String, checkType: String, violationIds: Set<String>): Either<DomainError, Unit> {
     currentUserResolver.userId() ?: return PlaylistFixError.PLAYLIST_NOT_FOUND.left()
+    if (violationIds.isEmpty()) {
+      return PlaylistFixError.NO_VIOLATIONS_SELECTED.left()
+    }
     checkRunners.find { it.checkId == checkType && it.canFix() } ?: run {
       logger.warn { "No fix runner found for checkType $checkType" }
       return PlaylistFixError.FIX_NOT_FOUND.left()
@@ -121,8 +124,8 @@ class PlaylistCheckService(
       logger.warn { "Playlist $playlistId not found" }
       return PlaylistFixError.PLAYLIST_NOT_FOUND.left()
     }
-    logger.info { "Enqueueing fix '$checkType' for playlist $playlistId" }
-    outboxPort.enqueue(DomainOutboxEvent.FixPlaylistCheck(playlistId, checkType))
+    logger.info { "Enqueueing fix '$checkType' for playlist $playlistId (${violationIds.size} violation(s) selected)" }
+    outboxPort.enqueue(DomainOutboxEvent.FixPlaylistCheck(playlistId, checkType, violationIds))
     return Unit.right()
   }
 
@@ -158,7 +161,7 @@ class PlaylistCheckService(
     val currentPlaylistInfo = allPlaylistInfos.find { it.spotifyPlaylistId == event.playlistId }
     val accessToken = spotifyAccessToken.getValidAccessToken()
     logger.info { "Running fix '${event.checkType}' for playlist ${event.playlistId}" }
-    return runner.fix(accessToken, event.playlistId, playlist, currentPlaylistInfo, allPlaylistInfos).also { result ->
+    return runner.fix(accessToken, event.playlistId, playlist, currentPlaylistInfo, allPlaylistInfos, event.violationIds).also { result ->
       if (result.isRight()) {
         logger.info { "Fix '${event.checkType}' for playlist ${event.playlistId} completed, enqueueing re-check" }
         outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(event.playlistId))

@@ -58,6 +58,7 @@ enum class PlaylistFixError(override val code: String) : DomainError {
   FIX_NOT_FOUND("FIX-001"),
   PLAYLIST_NOT_FOUND("FIX-002"),
   FIX_FAILED("FIX-003"),
+  NO_VIOLATIONS_SELECTED("FIX-004"),
   ;
 }
 

@@ -21,5 +21,6 @@ interface PlaylistCheckRunner {
     playlist: Playlist,
     currentPlaylistInfo: PlaylistInfo?,
     allPlaylistInfos: List<PlaylistInfo>,
+    selectedViolationIds: Set<String>,
   ): Either<DomainError, Unit> = PlaylistFixError.FIX_NOT_FOUND.left()
 }

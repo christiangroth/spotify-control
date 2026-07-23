@@ -1,6 +1,7 @@
 package de.chrgroth.spotify.control.domain.infra
 
 import de.chrgroth.spotify.control.domain.model.playlist.AppPlaylistCheck
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistCheckViolation
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistId
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistStats
@@ -55,8 +56,20 @@ class PlaylistStatsCacheTests {
     )
     every { playlistRepository.findAll() } returns listOf(outOfSync, inSync, passive)
     every { playlistCheckRepository.findAll() } returns listOf(
-      AppPlaylistCheck(checkId = "in-sync:track-from-latest-release", playlistId = PlaylistId("in-sync"), lastCheck = now, succeeded = false, violations = listOf("v")),
-      AppPlaylistCheck(checkId = "in-sync:other-check", playlistId = PlaylistId("in-sync"), lastCheck = now, succeeded = false, violations = listOf("v")),
+      AppPlaylistCheck(
+        checkId = "in-sync:track-from-latest-release",
+        playlistId = PlaylistId("in-sync"),
+        lastCheck = now,
+        succeeded = false,
+        violations = listOf(PlaylistCheckViolation("v", "v")),
+      ),
+      AppPlaylistCheck(
+        checkId = "in-sync:other-check",
+        playlistId = PlaylistId("in-sync"),
+        lastCheck = now,
+        succeeded = false,
+        violations = listOf(PlaylistCheckViolation("v", "v")),
+      ),
     )
 
     cache.refresh()

@@ -10,6 +10,7 @@ import de.chrgroth.spotify.control.domain.model.catalog.AppTrack
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.model.playlist.AppPlaylistCheck
 import de.chrgroth.spotify.control.domain.model.playlist.Playlist
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistCheckViolation
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistId
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.user.AccessToken
@@ -39,7 +40,7 @@ class TrackFromLatestReleaseCheckRunner(
     currentPlaylistInfo: PlaylistInfo?,
     allPlaylistInfos: List<PlaylistInfo>,
   ): AppPlaylistCheck {
-    val violations = findViolations(playlist).map { it.message }
+    val violations = findViolations(playlist).map { PlaylistCheckViolation(id = it.id, message = it.message) }
     return AppPlaylistCheck(
       checkId = "$playlistId:$checkId",
       playlistId = PlaylistId(playlistId),
@@ -57,8 +58,9 @@ class TrackFromLatestReleaseCheckRunner(
     playlist: Playlist,
     currentPlaylistInfo: PlaylistInfo?,
     allPlaylistInfos: List<PlaylistInfo>,
+    selectedViolationIds: Set<String>,
   ): Either<DomainError, Unit> {
-    val violations = findViolations(playlist)
+    val violations = findViolations(playlist).filter { it.id in selectedViolationIds }
     if (violations.isEmpty()) {
       return Unit.right()
     }
@@ -144,7 +146,10 @@ class TrackFromLatestReleaseCheckRunner(
     val oldTrackId: String,
     val newTrackId: String,
     val message: String,
-  )
+  ) {
+    // Includes the position to disambiguate the same track appearing multiple times in a playlist.
+    val id: String get() = "$oldTrackId@$position"
+  }
 
   companion object : KLogging() {
     /**

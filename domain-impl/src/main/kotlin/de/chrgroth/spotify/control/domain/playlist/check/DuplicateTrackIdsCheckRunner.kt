@@ -6,6 +6,7 @@ import arrow.core.right
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.model.playlist.AppPlaylistCheck
 import de.chrgroth.spotify.control.domain.model.playlist.Playlist
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistCheckViolation
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistId
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.user.AccessToken
@@ -41,7 +42,7 @@ class DuplicateTrackIdsCheckRunner(
     val violations = duplicateTrackIds.map { trackId ->
       val appTrack = requireNotNull(appTrackById[trackId.value]) { "Track ${trackId.value} not found in catalog" }
       val artistName = appTrack.artistName ?: "Unknown Artist"
-      "$artistName – ${appTrack.title}"
+      PlaylistCheckViolation(id = trackId.value, message = "$artistName – ${appTrack.title}")
     }
     return AppPlaylistCheck(
       checkId = "$playlistId:$checkId",
@@ -60,9 +61,10 @@ class DuplicateTrackIdsCheckRunner(
     playlist: Playlist,
     currentPlaylistInfo: PlaylistInfo?,
     allPlaylistInfos: List<PlaylistInfo>,
+    selectedViolationIds: Set<String>,
   ): Either<DomainError, Unit> {
     val countByTrackId = playlist.tracks.groupingBy { it.trackId.value }.eachCount()
-    val duplicateTrackIds = countByTrackId.entries.filter { it.value > 1 }.map { it.key }
+    val duplicateTrackIds = countByTrackId.entries.filter { it.value > 1 && it.key in selectedViolationIds }.map { it.key }
     if (duplicateTrackIds.isEmpty()) {
       return Unit.right()
     }
