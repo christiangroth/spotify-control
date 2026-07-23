@@ -105,7 +105,7 @@ class PlaylistsResource(
       .groupBy { it.check.checkId.substringAfterLast(":") }
       .map { (checkType, rows) ->
         val name = displayNames[checkType] ?: checkType
-        PlaylistChecksResource.PlaylistCheckGroup(name, rows.sortedBy { it.playlistName })
+        PlaylistChecksResource.PlaylistCheckGroup(name, checkType, rows.sortedBy { it.playlistName })
       }
       .sortedBy { it.checkName }
     playlistChecksTemplate

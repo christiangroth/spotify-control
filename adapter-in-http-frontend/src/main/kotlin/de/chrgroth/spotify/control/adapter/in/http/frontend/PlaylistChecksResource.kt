@@ -46,12 +46,30 @@ class PlaylistChecksResource(
       .groupBy { it.check.checkId.substringAfterLast(":") }
       .map { (checkType, rows) ->
         val name = dashboard.displayNames[checkType] ?: checkType
-        PlaylistCheckGroup(name, rows.sortedBy { it.playlistName })
+        PlaylistCheckGroup(name, checkType, rows.sortedBy { it.playlistName })
       }
       .sortedBy { it.checkName }
     playlistChecksTemplate
       .data("displayName", dashboard.displayName)
       .data("groups", groups)
+  }
+
+  @POST
+  @Authenticated
+  @Path("/trigger")
+  @Produces(MediaType.APPLICATION_JSON)
+  fun triggerChecks(): Response = httpResponseMetrics.timed("rest.playlist.check-trigger") {
+    playlistCheckPort.enqueueRunAllChecks()
+    Response.ok(mapOf("status" to "ok")).build()
+  }
+
+  @POST
+  @Authenticated
+  @Path("/{checkType}/trigger")
+  @Produces(MediaType.APPLICATION_JSON)
+  fun triggerCheck(@PathParam("checkType") checkType: String): Response = httpResponseMetrics.timed("rest.playlist.check-trigger-single") {
+    playlistCheckPort.enqueueRunCheck(checkType)
+    Response.ok(mapOf("status" to "ok")).build()
   }
 
   @POST
@@ -68,7 +86,7 @@ class PlaylistChecksResource(
     )
   }
 
-  data class PlaylistCheckGroup(val checkName: String, val rows: List<PlaylistCheckRow>)
+  data class PlaylistCheckGroup(val checkName: String, val checkType: String, val rows: List<PlaylistCheckRow>)
 
   data class PlaylistCheckRow(val check: AppPlaylistCheck, val playlistName: String, val hasfix: Boolean) {
     val checkDateFormatted: String get() = check.lastCheck

@@ -8,6 +8,7 @@ import de.chrgroth.spotify.control.domain.error.PlaylistFixError
 import de.chrgroth.spotify.control.domain.playlist.check.PlaylistCheckRunner
 import de.chrgroth.spotify.control.domain.model.playlist.AppPlaylistCheck
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistCheckDashboard
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistCheckPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.AppPlaylistCheckRepositoryPort
@@ -53,7 +54,9 @@ class PlaylistCheckService(
     val allPlaylistInfos = playlistRepository.findAll()
     val currentPlaylistInfo = allPlaylistInfos.find { it.spotifyPlaylistId == event.playlistId }
 
-    val applicableRunners = checkRunners.filter { it.isApplicable(currentPlaylistInfo) }
+    val applicableRunners = checkRunners
+      .filter { it.isApplicable(currentPlaylistInfo) }
+      .filter { event.checkType == null || it.checkId == event.checkType }
     val results = applicableRunners
       .map { runner ->
         managedExecutor.supplyAsync {
@@ -121,6 +124,24 @@ class PlaylistCheckService(
     logger.info { "Enqueueing fix '$checkType' for playlist $playlistId" }
     outboxPort.enqueue(DomainOutboxEvent.FixPlaylistCheck(playlistId, checkType))
     return Unit.right()
+  }
+
+  override fun enqueueRunAllChecks() {
+    currentUserResolver.userId() ?: return
+    val activePlaylistIds = playlistRepository.findAll()
+      .filter { it.syncStatus == PlaylistSyncStatus.ACTIVE }
+      .map { it.spotifyPlaylistId }
+    logger.info { "Enqueueing playlist checks for ${activePlaylistIds.size} active playlist(s)" }
+    activePlaylistIds.forEach { playlistId -> outboxPort.enqueue(DomainOutboxEvent.RunPlaylistChecks(playlistId)) }
+  }
+
+  override fun enqueueRunCheck(checkType: String) {
+    currentUserResolver.userId() ?: return
+    val activePlaylistIds = playlistRepository.findAll()
+      .filter { it.syncStatus == PlaylistSyncStatus.ACTIVE }
+      .map { it.spotifyPlaylistId }
+    logger.info { "Enqueueing check '$checkType' for ${activePlaylistIds.size} active playlist(s)" }
+    activePlaylistIds.forEach { playlistId -> outboxPort.enqueue(DomainOutboxEvent.RunPlaylistChecks(playlistId, checkType)) }
   }
 
   override fun handle(event: DomainOutboxEvent.FixPlaylistCheck): Either<DomainError, Unit> {

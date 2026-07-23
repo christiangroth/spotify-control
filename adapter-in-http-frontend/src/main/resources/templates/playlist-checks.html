@@ -3,14 +3,26 @@
     {#content}
     <div class="app-page-container py-4 px-3 px-md-4">
 
-        <h1 class="mb-4 fs-4 fw-semibold">Playlist Checks</h1>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="fs-4 fw-semibold mb-0">Playlist Checks</h1>
+            <button type="button" id="trigger-checks-btn" class="btn btn-sm btn-outline-secondary p-1 lh-1" aria-label="Run Playlist Checks" title="Run Playlist Checks" data-testid="trigger-checks-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><use href="#icon-reload"/></svg>
+            </button>
+        </div>
         <div id="status-banner" class="alert d-none mb-3" role="alert"></div>
 
         {#if groups.empty}
         <p class="text-secondary">No playlist check results available yet. Checks run automatically after playlist data is synced.</p>
         {#else}
         {#for group in groups}
-        <h2 class="mb-3 fs-5 fw-semibold" style="color:#ccc;">{group.checkName}</h2>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="fs-5 fw-semibold mb-0" style="color:#ccc;">{group.checkName}</h2>
+            <button type="button" class="btn btn-sm btn-outline-secondary p-1 lh-1"
+                aria-label="Run {group.checkName} check" title="Run {group.checkName} check"
+                onclick="postWithButton(this, '/playlist-checks/{group.checkType}/trigger', 'Check enqueued successfully.', 'Trigger failed')">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><use href="#icon-reload"/></svg>
+            </button>
+        </div>
         <div class="table-responsive mb-5">
             <table class="table table-dark table-hover align-middle">
                 <thead>
@@ -58,5 +70,10 @@
         {/if}
     </div>
     <script src="/settings-utils.js"></script>
+    <script>
+        document.getElementById('trigger-checks-btn').addEventListener('click', function() {
+            postWithButton(this, '/playlist-checks/trigger', 'Playlist checks enqueued successfully.', 'Trigger failed');
+        });
+    </script>
     {/content}
 {/include}

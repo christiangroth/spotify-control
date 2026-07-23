@@ -12,4 +12,6 @@ interface PlaylistCheckPort {
   fun getDisplayNames(): Map<String, String>
   fun getFixableCheckIds(): Set<String>
   fun enqueueFix(playlistId: String, checkType: String): Either<DomainError, Unit>
+  fun enqueueRunAllChecks()
+  fun enqueueRunCheck(checkType: String)
 }
