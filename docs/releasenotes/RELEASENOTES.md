@@ -1,3 +1,12 @@
+# 0.116.3 (2026.07.23)
+
+## Bugfixes / Chore
+* Fixed the "Artists" column on the playlist settings page failing to show a count when playlist data was incomplete.
+
+
+
+---
+
 # 0.116.2 (2026.07.23)
 
 ## Bugfixes / Chore
