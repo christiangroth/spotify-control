@@ -78,3 +78,11 @@ Do not add a database lookup solely to obtain a name for a log message.
 **Snippet content:** Briefly describe what was changed or added on the branch. Each line should follow the pattern `* Description of the change.` Feel free to use multiple short lines, describing the change without technical detail. Only include **user-facing or dependency changes** in release notes. Do not add implementation details, refactoring notes, or internal structural changes (e.g. package renames, build task additions).
 
 **Type selection:** Use `feature` for new user-facing functionality. Use `bugfix` for fixes and chore/internal changes (e.g. refactoring, configuration restructuring, dependency updates).
+
+## Abschluss einer Aufgabe
+Eine Aufgabe gilt erst als fertig, wenn:
+1. Build/Tests grün sind (im Hintergrund + Polling, siehe oben)
+2. Änderungen committet und gepusht sind
+3. Ein PR via `gh pr create` (oder `gh pr edit`, falls schon vorhanden) offen ist
+Kein Task endet mit "PR wird noch erstellt" als offenem Punkt.
+
