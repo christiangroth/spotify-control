@@ -428,4 +428,53 @@ class PlaylistCheckServiceTests {
 
     verify(exactly = 0) { outboxPort.enqueue(any()) }
   }
+
+  @Test
+  fun `enqueueRunCheck enqueues RunPlaylistChecks with checkType for each active playlist only`() {
+    every { currentUserResolver.userId() } returns userId
+    every { playlistRepository.findAll() } returns listOf(
+      buildPlaylistInfo(),
+      buildPlaylistInfo().copy(spotifyPlaylistId = "playlist-2", syncStatus = PlaylistSyncStatus.PASSIVE),
+      buildPlaylistInfo().copy(spotifyPlaylistId = "playlist-3"),
+    )
+    every { outboxPort.enqueue(any()) } just runs
+
+    adapter.enqueueRunCheck(checkId)
+
+    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.RunPlaylistChecks(playlistId, checkId)) }
+    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.RunPlaylistChecks("playlist-3", checkId)) }
+    verify(exactly = 0) { outboxPort.enqueue(DomainOutboxEvent.RunPlaylistChecks("playlist-2", checkId)) }
+  }
+
+  @Test
+  fun `enqueueRunCheck does nothing when no current user`() {
+    every { currentUserResolver.userId() } returns null
+
+    adapter.enqueueRunCheck(checkId)
+
+    verify(exactly = 0) { outboxPort.enqueue(any()) }
+  }
+
+  @Test
+  fun `handle only runs the runner matching checkType when specified`() {
+    val playlist = buildPlaylist(listOf(buildTrack("t1")))
+    val check = buildCheck(succeeded = true)
+    val otherRunner: PlaylistCheckRunner = mockk()
+    setupCheckRunner(check)
+    every { otherRunner.isApplicable(any()) } returns true
+    every { otherRunner.checkId } returns "other-check"
+    every { checkRunners.iterator() } answers { mutableListOf(checkRunner, otherRunner).iterator() }
+    every { currentUserResolver.userId() } returns userId
+    every { playlistRepository.findByPlaylistId(playlistId) } returns playlist
+    every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo())
+    every { playlistCheckRepository.findByCheckId(fullCheckId) } returns null
+    every { playlistCheckRepository.save(any()) } just runs
+    every { dashboardRefresh.notifyUserPlaylistChecks() } just runs
+
+    val result = adapter.handle(DomainOutboxEvent.RunPlaylistChecks(playlistId, checkId))
+
+    assertThat(result.isRight()).isTrue()
+    verify(exactly = 1) { playlistCheckRepository.save(any()) }
+    verify(exactly = 0) { otherRunner.run(any(), any(), any(), any()) }
+  }
 }

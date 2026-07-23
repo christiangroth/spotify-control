@@ -31,6 +31,7 @@ class DomainOutboxContractTests {
     DomainOutboxEvent.ResyncCatalog(),
     DomainOutboxEvent.WipeCatalog(),
     DomainOutboxEvent.RunPlaylistChecks("playlist-1"),
+    DomainOutboxEvent.RunPlaylistChecks("playlist-1", "duplicate-track-ids"),
     DomainOutboxEvent.FixPlaylistCheck("playlist-1", "duplicate-track-ids"),
     DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.DAY, LocalDate(2024, 1, 15)),
     DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.WEEK, LocalDate(2024, 1, 8)),

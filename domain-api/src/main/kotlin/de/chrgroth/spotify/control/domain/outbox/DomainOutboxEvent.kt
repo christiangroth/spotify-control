@@ -257,18 +257,26 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
   }
 
   /**
-   * Runs all playlist checks for the user's playlist.
-   * payload = playlistId
+   * Runs playlist checks for the user's playlist.
+   * [checkType] restricts the run to a single check; `null` runs all applicable checks.
+   * payload = "$playlistId" when [checkType] is null; "$playlistId\n$checkType" otherwise.
    */
-  data class RunPlaylistChecks(val playlistId: String) : DomainOutboxEvent {
+  data class RunPlaylistChecks(val playlistId: String, val checkType: String? = null) : DomainOutboxEvent {
     override val key = KEY
-    override val deduplicationKey = "$KEY:$playlistId"
+    override val deduplicationKey = "$KEY:$playlistId:${checkType ?: ""}"
     override val partition = DomainOutboxPartition.Domain
-    override val serializePayload = playlistId
+    override val serializePayload = if (checkType == null) playlistId else "$playlistId\n$checkType"
 
     companion object {
       const val KEY = "RunPlaylistChecks"
-      fun fromPayload(payload: String): RunPlaylistChecks = RunPlaylistChecks(payload.substringAfter(':'))
+      fun fromPayload(payload: String): RunPlaylistChecks {
+        val newlineIndex = payload.indexOf('\n')
+        return if (newlineIndex < 0) {
+          RunPlaylistChecks(playlistId = payload.substringAfter(':'))
+        } else {
+          RunPlaylistChecks(playlistId = payload.substring(0, newlineIndex), checkType = payload.substring(newlineIndex + 1))
+        }
+      }
     }
   }
 
