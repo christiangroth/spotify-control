@@ -194,6 +194,15 @@ class PlaybackAggregationServiceTests {
   }
 
   @Test
+  fun `enqueueRebuildAllAggregations does nothing when no users available`() {
+    every { currentUserResolver.userId() } returns null
+
+    service.enqueueRebuildAllAggregations()
+
+    verify(exactly = 0) { outboxPort.enqueue(any()) }
+  }
+
+  @Test
   fun `handle RebuildAllAggregations delegates to rebuildAllAggregations`() {
     every { currentUserResolver.userId() } returns userId
     every { appPlaybackRepository.findOldestPlayedAt() } returns null
