@@ -179,6 +179,10 @@ fun `SyncPlaylistData payload round-trip`() {
 
 Use these sparingly. If the logic is complex enough to need its own unit test, question whether it should live in the domain instead.
 
+## Pure Delegation/Wiring Classes
+
+A class whose entire body is "call the one method on my single dependency" (e.g. a `@Scheduled` method that just forwards to a port) adds no value when unit-tested in isolation – mocking the dependency and verifying it was called proves nothing beyond what the compiler already guarantees. If the wiring is worth testing, cover it through a Layer 3 `@QuarkusTest` (e.g. asserting the schedule actually fires) rather than a standalone unit test.
+
 ## Test Data Conventions
 
 - Use Kotlin builder functions (not lengthy object construction in every test)

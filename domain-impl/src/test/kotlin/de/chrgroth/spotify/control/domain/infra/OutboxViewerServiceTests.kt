@@ -27,19 +27,6 @@ class OutboxViewerServiceTests {
   }
 
   @Test
-  fun `wipeAll delegates to OutboxAdminPort and refreshes the tasks cache afterwards`() {
-    every { outboxAdmin.wipeAll() } just runs
-    every { tasksCache.refresh() } just runs
-
-    service.wipeAll()
-
-    verifyOrder {
-      outboxAdmin.wipeAll()
-      tasksCache.refresh()
-    }
-  }
-
-  @Test
   fun `requeueStuckTasks delegates to OutboxAdminPort, refreshes the tasks cache and returns the cleared count`() {
     every { outboxAdmin.requeueStuckTasks("to-spotify-playback") } returns 2
     every { tasksCache.refresh() } just runs

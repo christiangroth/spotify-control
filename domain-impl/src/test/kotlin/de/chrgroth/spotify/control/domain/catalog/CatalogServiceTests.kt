@@ -677,15 +677,6 @@ class CatalogServiceTests {
   }
 
   @Test
-  fun `enqueueWipeCatalog enqueues WipeCatalog`() {
-    every { outboxPort.enqueue(any()) } just runs
-
-    adapter.enqueueWipeCatalog()
-
-    verify { outboxPort.enqueue(DomainOutboxEvent.WipeCatalog()) }
-  }
-
-  @Test
   fun `handle WipeCatalog deletes all catalog data, deactivates playlists and deletes checks`() {
     every { appArtistRepository.deleteAll() } just runs
     every { appAlbumRepository.deleteAll() } just runs
