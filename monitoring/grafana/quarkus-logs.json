@@ -51,7 +51,7 @@
       "targetBlank": true,
       "title": "View In Explore",
       "type": "link",
-      "url": "/explore?orgId=1&left=[\"now-1h\",\"now\",\"Loki\",{\"expr\":\"{job=\\\"$app\\\"}\"},{\"ui\":[true,true,true,\"none\"]}]"
+      "url": "/explore?orgId=1&left=[\"now-1h\",\"now\",\"Loki\",{\"expr\":\"{service_name=\\\"$app\\\"}\"},{\"ui\":[true,true,true,\"none\"]}]"
     },
     {
       "icon": "external link",
@@ -342,7 +342,7 @@
   "timezone": "browser",
   "title": "Quarkus Logs",
   "weekStart": "",
-  "version": 5,
+  "version": 6,
   "uid": "sadlil-loki-apps-dashboard",
   "id": 2240415473623040
 }
