@@ -30,7 +30,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -50,9 +50,10 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          track_progress: true
           claude_args: |
             --allowedTools Edit,MultiEdit,Write,TodoWrite,Glob,Grep,LS,Read,BashOutput,KillShell,Bash(git:*),Bash(./gradlew:*),Bash(gh:*)
-            --append-system-prompt "Lange Kommandos (./gradlew build, ./gradlew test o.ä.) IMMER mit run_in_background:true starten, danach mit BashOutput pollen statt synchron zu warten. Erst nach status:completed und exit_code:0 weitermachen. WICHTIG: Sobald Build/Tests grün sind, IMMER selbstständig bis zum Ende durcharbeiten: committen, pushen, und per 'gh pr create --base main --title ... --body ...' direkt einen PR öffnen. Prüfe vorher mit 'gh pr list --head <branch>', ob für den Branch schon ein offener PR existiert - falls ja, stattdessen 'gh pr edit'/normalen Push verwenden statt einen zweiten PR anzulegen. Beende die Session nie mit einem offenen 'PR wird noch erstellt'-Punkt - das Öffnen des PRs ist Teil der Aufgabe, nicht optional."
+            --append-system-prompt "Bevor du einen PR anlegst, prüfe mit 'gh pr list --head <branch>', ob für den Branch schon ein offener PR existiert - falls ja, 'gh pr edit' statt eines zweiten PRs verwenden. Folge CLAUDE.md für die Build-Strategie (Abschnitt 'Running Gradle in Time-Limited Agent Sessions') und die Abschlusskriterien (Abschnitte 'Abschluss einer Aufgabe' und 'Inkrementelle Commits')."
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GHCR_PAT: ${{ secrets.GHCR_PAT }}
