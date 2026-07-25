@@ -13,6 +13,7 @@ dependencies {
   api("io.quarkus:quarkus-web-dependency-locator")
 
   implementation(libs.bootstrap)
+  implementation(libs.bootstrapIcons)
   implementation(libs.marked)
   implementation(libs.mermaid)
 }
