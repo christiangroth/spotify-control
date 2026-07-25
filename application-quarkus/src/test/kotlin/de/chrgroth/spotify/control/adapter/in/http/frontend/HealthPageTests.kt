@@ -345,7 +345,7 @@ class HealthPageTests {
       .then()
       .statusCode(200)
       .body(containsString("""data-testid="outbox-table""""))
-      .body(containsString("fill=\"#1db954\""))
+      .body(containsString("color:#1db954"))
       .body(containsString("vertical-align:middle"))
   }
 
@@ -357,7 +357,7 @@ class HealthPageTests {
       .then()
       .statusCode(200)
       .body(containsString("""data-testid="cronjobs-table""""))
-      .body(containsString("fill=\"#1db954\""))
+      .body(containsString("color:#1db954"))
       .body(containsString("vertical-align:middle"))
   }
 
@@ -436,8 +436,8 @@ class HealthPageTests {
       .then()
       .statusCode(200)
       .body(containsString("""data-testid="predicates-table""""))
-      .body(containsString("fill=\"#888888\""))
-      .body(not(containsString("fill=\"#dc3545\"")))
+      .body(containsString("color:#888888"))
+      .body(not(containsString("color:#dc3545")))
   }
 
   @Test
