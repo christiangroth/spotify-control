@@ -6,6 +6,7 @@
     <title>{#insert title}SpCtl{/insert}</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <link rel="stylesheet" href="/webjars/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/webjars/bootstrap-icons/font/bootstrap-icons.min.css">
     <style>
         :root {
             --spotify-green: #1db954;
@@ -227,87 +228,6 @@
     </style>
 </head>
 <body>
-    <svg style="display:none" aria-hidden="true">
-        <defs>
-            <symbol id="icon-check-circle" viewBox="0 0 16 16">
-                <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0m-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/>
-            </symbol>
-            <symbol id="icon-x-circle" viewBox="0 0 16 16">
-                <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.646a.5.5 0 0 0-.708-.708L8 7.293z"/>
-            </symbol>
-            <symbol id="icon-outbox" viewBox="0 0 16 16">
-                <path d="M4.5 11.5A.5.5 0 0 1 5 11h6a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5m-2-4A.5.5 0 0 1 3 7h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m-2-4A.5.5 0 0 1 1 3h14a.5.5 0 0 1 0 1H1a.5.5 0 0 1-.5-.5"/>
-            </symbol>
-            <symbol id="icon-music" viewBox="0 0 16 16">
-                <path d="M6 13c0 1.105-1.12 2-2.5 2S1 14.105 1 13s1.12-2 2.5-2 2.5.895 2.5 2m9-2c0 1.105-1.12 2-2.5 2s-2.5-.895-2.5-2 1.12-2 2.5-2 2.5.895 2.5 2"/><path d="M14 11V2h1v9zM6 3v10H5V3z"/><path d="M5 2.905a1 1 0 0 1 .9-.995l8-.8a1 1 0 0 1 1.1.995V3L5 4z"/>
-            </symbol>
-            <symbol id="icon-reload" viewBox="0 0 16 16">
-                <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/>
-            </symbol>
-            <symbol id="icon-user-placeholder" viewBox="0 0 16 16">
-                <path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0"/>
-                <path fill-rule="evenodd" d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1"/>
-            </symbol>
-
-            <symbol id="icon-nav-tools" viewBox="0 0 16 16">
-                <path d="M1 0 0 1l2.2 3.081a1 1 0 0 0 .815.419h.07a1 1 0 0 1 .708.293l2.675 2.675-2.617 2.654A3.003 3.003 0 0 0 0 13a3 3 0 1 0 5.878-.851l2.654-2.617.968.968-.305.914a1 1 0 0 0 .242 1.023l3.27 3.27a.997.997 0 0 0 1.414 0l1.586-1.586a.997.997 0 0 0 0-1.414l-3.27-3.27a1 1 0 0 0-1.023-.242L10.5 9.5l-.96-.96 2.68-2.643A3.005 3.005 0 0 0 16 3q0-.405-.102-.777l-2.14 2.141L12 4l-.364-1.757L13.777.102a3 3 0 0 0-3.675 3.68L7.462 6.46 4.793 3.793a1 1 0 0 1-.293-.707v-.071a1 1 0 0 0-.419-.814zm9.646 10.646a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708l-3-3a.5.5 0 0 1 0-.708M3 11l.471.242.529.026.287.445.445.287.026.529L5 13l-.242.471-.026.529-.445.287-.287.445-.529.026L3 15l-.471-.242L2 14.732l-.287-.445L1.268 14l-.026-.529L1 13l.242-.471.026-.529.445-.287.287-.445.529-.026z"/>
-            </symbol>
-            <symbol id="icon-nav-health" viewBox="0 0 16 16">
-                <path d="M6 2a.5.5 0 0 1 .47.33L10 12.036l1.53-4.208A.5.5 0 0 1 12 7.5h3.5a.5.5 0 0 1 0 1h-3.15l-1.88 5.17a.5.5 0 0 1-.94 0L6 3.964 4.47 8.171A.5.5 0 0 1 4 8.5H.5a.5.5 0 0 1 0-1h3.15l1.88-5.17A.5.5 0 0 1 6 2"/>
-            </symbol>
-            <symbol id="icon-nav-catalog-sync" viewBox="0 0 16 16">
-                <path d="M11.534 7h3.932a.25.25 0 0 1 .192.41l-1.966 2.36a.25.25 0 0 1-.384 0l-1.966-2.36a.25.25 0 0 1 .192-.41m-11 2h3.932a.25.25 0 0 0 .192-.41L2.692 6.23a.25.25 0 0 0-.384 0L.342 8.59A.25.25 0 0 0 .534 9"/><path fill-rule="evenodd" d="M8 3c-1.552 0-2.94.707-3.857 1.818a.5.5 0 1 1-.771-.636A6.002 6.002 0 0 1 13.917 7H12.9A5 5 0 0 0 8 3M3.1 9a5.002 5.002 0 0 0 8.757 2.182.5.5 0 1 1 .771.636A6.002 6.002 0 0 1 2.083 9z"/>
-            </symbol>
-            <symbol id="icon-nav-outbox-viewer" viewBox="0 0 16 16">
-                <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/>
-            </symbol>
-            <symbol id="icon-nav-config" viewBox="0 0 16 16">
-                <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492M5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0"/><path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115z"/>
-            </symbol>
-            <symbol id="icon-nav-local-logs" viewBox="0 0 16 16">
-                <path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0m0 3a1 1 0 0 0-1 1v4.5a1 1 0 1 0 2 0V4a1 1 0 0 0-1-1m0 9.5a1.25 1.25 0 1 0 0-2.5 1.25 1.25 0 0 0 0 2.5"/>
-            </symbol>
-            <symbol id="icon-nav-grafana" viewBox="0 0 16 16">
-                <path d="M11 2a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v13h1.5a.5.5 0 0 1 0 1h-13a.5.5 0 0 1 0-1H2V9a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v6h1V6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1z"/>
-            </symbol>
-            <symbol id="icon-nav-mongodb" viewBox="0 0 16 16">
-                <path d="M4.318 2.687C5.234 2.271 6.536 2 8 2s2.766.27 3.682.687C12.644 3.125 13 3.627 13 4c0 .374-.356.875-1.318 1.313C10.766 5.729 9.464 6 8 6s-2.766-.27-3.682-.687C3.356 4.875 3 4.373 3 4c0-.374.356-.875 1.318-1.313M13 5.698V7c0 .374-.356.875-1.318 1.313C10.766 8.729 9.464 9 8 9s-2.766-.27-3.682-.687C3.356 8.875 3 8.373 3 8V5.698c.271.202.58.378.904.525C5.109 6.702 6.498 7 8 7s2.89-.298 4.096-.777A5 5 0 0 0 13 5.698M14 4c0-1.007-.875-1.755-1.904-2.223C11.022 1.289 9.573 1 8 1s-3.022.289-4.096.777C2.875 2.245 2 2.993 2 4v9c0 1.007.875 1.755 1.904 2.223C4.978 15.71 6.427 16 8 16s3.022-.289 4.096-.777C13.125 14.755 14 14.007 14 13zm-1 4.698V10c0 .374-.356.875-1.318 1.313C10.766 11.729 9.464 12 8 12s-2.766-.27-3.682-.687C3.356 10.875 3 10.373 3 10V8.698c.271.202.58.378.904.525C5.109 9.702 6.498 10 8 10s2.89-.298 4.096-.777A5 5 0 0 0 13 8.698m0 3V13c0 .374-.356.875-1.318 1.313C10.766 14.729 9.464 15 8 15s-2.766-.27-3.682-.687C3.356 13.875 3 13.373 3 13v-1.302c.271.202.58.378.904.525C5.109 12.702 6.498 13 8 13s2.89-.298 4.096-.777c.324-.147.633-.323.904-.525"/>
-            </symbol>
-            <symbol id="icon-nav-docs" viewBox="0 0 16 16">
-                <path d="M1 2.828c.885-.37 2.154-.769 3.388-.893 1.33-.134 2.458.063 3.112.752v9.746c-.935-.53-2.12-.603-3.213-.493-1.18.12-2.37.461-3.287.811zm7.5-.141c.654-.689 1.782-.886 3.112-.752 1.234.124 2.503.523 3.388.893v9.923c-.918-.35-2.107-.692-3.287-.81-1.094-.111-2.278-.039-3.213.492zM8 1.783C7.015.936 5.587.81 4.287.94c-1.514.153-3.042.672-3.994 1.105A.5.5 0 0 0 0 2.5v11a.5.5 0 0 0 .707.455c.882-.4 2.303-.881 3.68-1.02 1.409-.142 2.59.087 3.223.877a.5.5 0 0 0 .78 0c.633-.79 1.814-1.019 3.222-.877 1.378.139 2.8.62 3.681 1.02A.5.5 0 0 0 16 13.5v-11a.5.5 0 0 0-.293-.455c-.952-.433-2.48-.952-3.994-1.105C10.413.809 8.985.936 8 1.783"/>
-            </symbol>
-            <symbol id="icon-nav-github" viewBox="0 0 16 16">
-                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/>
-            </symbol>
-            <symbol id="icon-nav-spotify" viewBox="0 0 168 168">
-                <path d="M84 0C37.6 0 0 37.6 0 84s37.6 84 84 84 84-37.6 84-84S130.4 0 84 0zm38.6 121.2c-1.5 2.5-4.7 3.3-7.2 1.8-19.6-12-44.2-14.7-73.2-8-2.8.6-5.5-1.1-6.2-3.9-.6-2.8 1.1-5.5 3.9-6.2 31.7-7.2 58.9-4.1 80.9 9.3 2.5 1.5 3.3 4.7 1.8 7zm10.3-22.8c-1.9 3.1-5.9 4-9 2.1-22.5-13.8-56.7-17.8-83.3-9.7-3.4 1-7.1-.9-8.1-4.3-1-3.4.9-7.1 4.3-8.1 30.4-9.2 68.2-4.7 94 11.1 3.1 1.9 4 5.9 2.1 9zm.9-23.8C108.2 59 63.9 57.3 41.3 63.4c-4.1 1.1-8.5-1.3-9.6-5.5-1.1-4.1 1.3-8.5 5.5-9.6 26-7 69.4-5.6 96.9 10.5 3.7 2.2 5 6.9 2.8 10.6-2.2 3.8-6.9 5-10.6 2.8z"/>
-            </symbol>
-            <symbol id="icon-nav-debug" viewBox="0 0 16 16">
-                <path d="M4.355.522a.5.5 0 0 1 .623.333l.291.956A4.98 4.98 0 0 1 8 1c1.007 0 1.946.298 2.731.811l.29-.956a.5.5 0 1 1 .957.29l-.41 1.352A4.98 4.98 0 0 1 13 6h.5a.5.5 0 0 0 .5-.5V5a.5.5 0 0 1 1 0v.5A1.5 1.5 0 0 1 13.5 7H13v1h1.5a.5.5 0 0 1 0 1H13v1a4.98 4.98 0 0 1-.588 2.335l.522.522a.5.5 0 0 1-.708.707l-.442-.442A5 5 0 0 1 8 15a5 5 0 0 1-3.784-1.878l-.442.442a.5.5 0 0 1-.708-.707l.522-.522A4.98 4.98 0 0 1 3 9V8H1.5a.5.5 0 0 1 0-1H3V6h-.5A1.5 1.5 0 0 1 1 4.5V4a.5.5 0 0 1 1 0v.5a.5.5 0 0 0 .5.5H3c0-1.364.507-2.61 1.343-3.56l-.41-1.352a.5.5 0 0 1 .422-.566M6 6h4a2 2 0 0 0-4 0M4 8v3a4 4 0 0 0 3.5 3.97V8zm4.5 0v6.97A4 4 0 0 0 12 11V8z"/>
-            </symbol>
-
-            <symbol id="icon-nav-page-dashboard" viewBox="0 0 16 16">
-                <rect x="1" y="1" width="6" height="6" rx="1"/>
-                <rect x="9" y="1" width="6" height="6" rx="1"/>
-                <rect x="1" y="9" width="6" height="6" rx="1"/>
-                <rect x="9" y="9" width="6" height="6" rx="1"/>
-            </symbol>
-            <symbol id="icon-nav-page-stats" viewBox="0 0 16 16">
-                <rect x="1" y="9" width="3" height="6"/>
-                <rect x="6.5" y="5" width="3" height="10"/>
-                <rect x="12" y="2" width="3" height="13"/>
-            </symbol>
-            <symbol id="icon-nav-page-playlists" viewBox="0 0 16 16">
-                <path d="M5 4a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1zm-.5 2.5A.5.5 0 0 1 5 6h6a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5M5 8a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1zm0 2a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1z"/><path d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2zm10-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1"/>
-            </symbol>
-            <symbol id="icon-nav-page-catalog" viewBox="0 0 16 16">
-                <path d="M1 2.828c.885-.37 2.154-.769 3.388-.893 1.33-.134 2.458.063 3.112.752v9.746c-.935-.53-2.12-.603-3.213-.493-1.18.12-2.37.461-3.287.811zm7.5-.141c.654-.689 1.782-.886 3.112-.752 1.234.124 2.503.523 3.388.893v9.923c-.918-.35-2.107-.692-3.287-.81-1.094-.111-2.278-.039-3.213.492zM8 1.783C7.015.936 5.587.81 4.287.94c-1.514.153-3.042.672-3.994 1.105A.5.5 0 0 0 0 2.5v11a.5.5 0 0 0 .707.455c.882-.4 2.303-.881 3.68-1.02 1.409-.142 2.59.087 3.223.877a.5.5 0 0 0 .78 0c.633-.79 1.814-1.019 3.222-.877 1.378.139 2.8.62 3.681 1.02A.5.5 0 0 0 16 13.5v-11a.5.5 0 0 0-.293-.455c-.952-.433-2.48-.952-3.994-1.105C10.413.809 8.985.936 8 1.783"/>
-            </symbol>
-            <symbol id="icon-nav-page-playback" viewBox="0 0 16 16">
-                <path d="M3 2.5a.5.5 0 0 1 .757-.429l9 5.5a.5.5 0 0 1 0 .858l-9 5.5A.5.5 0 0 1 3 13.5z"/>
-            </symbol>
-        </defs>
-    </svg>
     <nav class="app-navbar d-flex align-items-center px-3 py-2">
         <a href="/" class="d-flex align-items-center text-decoration-none me-2">
             <img src="/favicon.svg" alt="SpCtl Logo" width="24" height="24" class="me-2">
@@ -318,37 +238,37 @@
         <div class="d-flex align-items-center ms-1" id="navbar-health-indicators">
             <div class="position-relative me-2" id="navbar-outbox-wrapper" style="cursor:default;">
                 <button type="button" id="navbar-outbox-icon" class="btn p-0 border-0 bg-transparent lh-1" aria-label="Outbox Status" title="Outbox Status" data-testid="navbar-outbox-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" id="navbar-outbox-svg" fill="#888888" viewBox="0 0 16 16" style="vertical-align:middle;"><use href="#icon-outbox"/></svg>
+                    <i class="bi bi-inbox" id="navbar-outbox-svg" style="font-size:18px;color:#888888;vertical-align:middle;"></i>
                 </button>
                 <div id="navbar-outbox-popup" style="display:none;position:absolute;top:calc(100% + 6px);left:0;z-index:9999;min-width:340px;background-color:#1e1e1e;border:1px solid #333;border-radius:.375rem;box-shadow:0 4px 16px rgba(0,0,0,.6);">
                     <div id="navbar-outbox-popup-content" style="color:#e0e0e0;"></div>
                 </div>
             </div>
             <button type="button" id="navbar-playback-icon" class="btn p-0 border-0 bg-transparent lh-1 me-2" aria-label="Playback Status" title="Playback Status" data-testid="navbar-playback-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" id="navbar-playback-svg" fill="#888888" viewBox="0 0 16 16" style="vertical-align:middle;"><use href="#icon-music"/></svg>
+                <i class="bi bi-music-note-beamed" id="navbar-playback-svg" style="font-size:18px;color:#888888;vertical-align:middle;"></i>
             </button>
         </div>
         <span class="me-auto"></span>
         {/insert}
         {#insert navLinks}
         <div class="dropdown me-3">
-            <button type="button" class="nav-link text-white dropdown-toggle bg-transparent border-0 p-0" data-bs-toggle="dropdown" aria-expanded="false" data-testid="technical-menu" title="Technical"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><use href="#icon-nav-tools"/></svg></button>
+            <button type="button" class="nav-link text-white dropdown-toggle bg-transparent border-0 p-0" data-bs-toggle="dropdown" aria-expanded="false" data-testid="technical-menu" title="Technical"><i class="bi bi-tools" style="font-size:18px;"></i></button>
             <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end">
-                <li><a href="/health" class="dropdown-item" data-testid="health-link"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="me-2" viewBox="0 0 16 16"><use href="#icon-nav-health"/></svg>Health</a></li>
-                <li><a href="/catalog-sync" class="dropdown-item" data-testid="catalog-sync-link"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="me-2" viewBox="0 0 16 16"><use href="#icon-nav-catalog-sync"/></svg>Catalog Sync</a></li>
-                <li><a href="/outbox-viewer" class="dropdown-item" data-testid="outbox-viewer-link"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="me-2" viewBox="0 0 16 16"><use href="#icon-nav-outbox-viewer"/></svg>Outbox</a></li>
-                <li><a href="/config" class="dropdown-item" data-testid="config-link"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="me-2" viewBox="0 0 16 16"><use href="#icon-nav-config"/></svg>Config</a></li>
-                <li><a href="/logs-viewer" class="dropdown-item" data-testid="logs-viewer-link"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="me-2" viewBox="0 0 16 16"><use href="#icon-nav-local-logs"/></svg>Logs UI</a></li>
-                <li><a href="https://spotifycontrolprod.grafana.net/d/spotify-control-overview/overview" target="_blank" rel="noopener noreferrer" class="dropdown-item" data-testid="grafana-overview-link"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="me-2" viewBox="0 0 16 16"><use href="#icon-nav-grafana"/></svg>Overview</a></li>
-                <li><a href="https://spotifycontrolprod.grafana.net/d/sadlil-loki-apps-dashboard/quarkus-logs" target="_blank" rel="noopener noreferrer" class="dropdown-item" data-testid="grafana-logs-link"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="me-2" viewBox="0 0 16 16"><use href="#icon-nav-grafana"/></svg>Logs</a></li>
-                <li><a href="https://spotifycontrolprod.grafana.net/d/quarkus-spotify-control/technical-overview" target="_blank" rel="noopener noreferrer" class="dropdown-item" data-testid="grafana-technical-overview-link"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="me-2" viewBox="0 0 16 16"><use href="#icon-nav-grafana"/></svg>Technical</a></li>
-                <li><a href="https://spotifycontrolprod.grafana.net/d/spotify-control-domain-metrics/domain-overview" target="_blank" rel="noopener noreferrer" class="dropdown-item" data-testid="grafana-domain-overview-link"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="me-2" viewBox="0 0 16 16"><use href="#icon-nav-grafana"/></svg>Domain</a></li>
-                <li><a href="/mongodb-viewer" class="dropdown-item" data-testid="mongodb-viewer-link"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="me-2" viewBox="0 0 16 16"><use href="#icon-nav-mongodb"/></svg>Viewer</a></li>
-                <li><a href="https://cloud.mongodb.com/v2/699f08e3a7adcacf36dd2d4a#/explorer" target="_blank" rel="noopener noreferrer" class="dropdown-item" data-testid="mongodb-atlas-link"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="me-2" viewBox="0 0 16 16"><use href="#icon-nav-mongodb"/></svg>Atlas</a></li>
-                <li><a href="/docs/arc42/arc42.md" class="dropdown-item" data-testid="docs-link"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="me-2" viewBox="0 0 16 16"><use href="#icon-nav-docs"/></svg>Docs</a></li>
-                <li><a href="https://github.com/christiangroth/spotify-control" target="_blank" rel="noopener noreferrer" class="dropdown-item" data-testid="github-link"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="me-2" viewBox="0 0 16 16"><use href="#icon-nav-github"/></svg>Code</a></li>
-                <li><a href="/spotify-debug" class="dropdown-item" data-testid="spotify-debug-link"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="me-2" viewBox="0 0 16 16"><use href="#icon-nav-debug"/></svg>Debug</a></li>
-                <li><a href="https://developer.spotify.com/documentation/web-api" target="_blank" rel="noopener noreferrer" class="dropdown-item" data-testid="spotify-api-link"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="me-2" viewBox="0 0 168 168" aria-label="Spotify logo"><use href="#icon-nav-spotify"/></svg>API</a></li>
+                <li><a href="/health" class="dropdown-item" data-testid="health-link"><i class="bi bi-activity me-2"></i>Health</a></li>
+                <li><a href="/catalog-sync" class="dropdown-item" data-testid="catalog-sync-link"><i class="bi bi-arrow-repeat me-2"></i>Catalog Sync</a></li>
+                <li><a href="/outbox-viewer" class="dropdown-item" data-testid="outbox-viewer-link"><i class="bi bi-clock-fill me-2"></i>Outbox</a></li>
+                <li><a href="/config" class="dropdown-item" data-testid="config-link"><i class="bi bi-gear me-2"></i>Config</a></li>
+                <li><a href="/logs-viewer" class="dropdown-item" data-testid="logs-viewer-link"><i class="bi bi-exclamation-circle me-2"></i>Logs UI</a></li>
+                <li><a href="https://spotifycontrolprod.grafana.net/d/spotify-control-overview/overview" target="_blank" rel="noopener noreferrer" class="dropdown-item" data-testid="grafana-overview-link"><i class="bi bi-bar-chart-line-fill me-2"></i>Overview</a></li>
+                <li><a href="https://spotifycontrolprod.grafana.net/d/sadlil-loki-apps-dashboard/quarkus-logs" target="_blank" rel="noopener noreferrer" class="dropdown-item" data-testid="grafana-logs-link"><i class="bi bi-bar-chart-line-fill me-2"></i>Logs</a></li>
+                <li><a href="https://spotifycontrolprod.grafana.net/d/quarkus-spotify-control/technical-overview" target="_blank" rel="noopener noreferrer" class="dropdown-item" data-testid="grafana-technical-overview-link"><i class="bi bi-bar-chart-line-fill me-2"></i>Technical</a></li>
+                <li><a href="https://spotifycontrolprod.grafana.net/d/spotify-control-domain-metrics/domain-overview" target="_blank" rel="noopener noreferrer" class="dropdown-item" data-testid="grafana-domain-overview-link"><i class="bi bi-bar-chart-line-fill me-2"></i>Domain</a></li>
+                <li><a href="/mongodb-viewer" class="dropdown-item" data-testid="mongodb-viewer-link"><i class="bi bi-database me-2"></i>Viewer</a></li>
+                <li><a href="https://cloud.mongodb.com/v2/699f08e3a7adcacf36dd2d4a#/explorer" target="_blank" rel="noopener noreferrer" class="dropdown-item" data-testid="mongodb-atlas-link"><i class="bi bi-database me-2"></i>Atlas</a></li>
+                <li><a href="/docs/arc42/arc42.md" class="dropdown-item" data-testid="docs-link"><i class="bi bi-book me-2"></i>Docs</a></li>
+                <li><a href="https://github.com/christiangroth/spotify-control" target="_blank" rel="noopener noreferrer" class="dropdown-item" data-testid="github-link"><i class="bi bi-github me-2"></i>Code</a></li>
+                <li><a href="/spotify-debug" class="dropdown-item" data-testid="spotify-debug-link"><i class="bi bi-bug me-2"></i>Debug</a></li>
+                <li><a href="https://developer.spotify.com/documentation/web-api" target="_blank" rel="noopener noreferrer" class="dropdown-item" data-testid="spotify-api-link"><i class="bi bi-spotify me-2" aria-label="Spotify logo"></i>API</a></li>
             </ul>
         </div>
         <a href="/logout" class="btn btn-sm btn-outline-secondary" data-testid="logout-link">Logout</a>
@@ -361,7 +281,7 @@
                 <a href="/dashboard" class="text-decoration-none" data-testid="nav-tile-dashboard">
                 <div class="card app-card nav-tile h-100">
                     <div class="card-body py-2 px-1 px-sm-2 px-md-3 d-flex align-items-center justify-content-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" class="nav-tile-icon flex-shrink-0 d-inline-block d-sm-none d-md-inline-block" fill="currentColor" viewBox="0 0 16 16"><use href="#icon-nav-page-dashboard"/></svg>
+                        <i class="bi bi-grid-fill nav-tile-icon flex-shrink-0 d-inline-block d-sm-none d-md-inline-block" style="font-size:18px;"></i>
                         <span class="fw-semibold nav-tile-label d-none d-sm-inline" style="font-size:.9rem;">Dashboard</span>
                     </div>
                 </div>
@@ -371,7 +291,7 @@
                 <a href="/stats" class="text-decoration-none" data-testid="nav-tile-stats">
                 <div class="card app-card nav-tile h-100">
                     <div class="card-body py-2 px-1 px-sm-2 px-md-3 d-flex align-items-center justify-content-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" class="nav-tile-icon flex-shrink-0 d-inline-block d-sm-none d-md-inline-block" fill="currentColor" viewBox="0 0 16 16"><use href="#icon-nav-page-stats"/></svg>
+                        <i class="bi bi-bar-chart-fill nav-tile-icon flex-shrink-0 d-inline-block d-sm-none d-md-inline-block" style="font-size:18px;"></i>
                         <span class="fw-semibold nav-tile-label d-none d-sm-inline" style="font-size:.9rem;">Stats</span>
                     </div>
                 </div>
@@ -381,7 +301,7 @@
                 <a href="/playlists/settings" class="text-decoration-none" data-testid="nav-tile-playlists">
                 <div class="card app-card nav-tile h-100">
                     <div class="card-body py-2 px-1 px-sm-2 px-md-3 d-flex align-items-center justify-content-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" class="nav-tile-icon flex-shrink-0 d-inline-block d-sm-none d-md-inline-block" fill="currentColor" viewBox="0 0 16 16"><use href="#icon-nav-page-playlists"/></svg>
+                        <i class="bi bi-file-text nav-tile-icon flex-shrink-0 d-inline-block d-sm-none d-md-inline-block" style="font-size:18px;"></i>
                         <span class="fw-semibold nav-tile-label d-none d-sm-inline" style="font-size:.9rem;">Playlists</span>
                     </div>
                 </div>
@@ -391,7 +311,7 @@
                 <a href="/playlists/checks" class="text-decoration-none" data-testid="nav-tile-checks">
                 <div class="card app-card nav-tile h-100">
                     <div class="card-body py-2 px-1 px-sm-2 px-md-3 d-flex align-items-center justify-content-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" class="nav-tile-icon flex-shrink-0 d-inline-block d-sm-none d-md-inline-block" fill="currentColor" viewBox="0 0 16 16"><use href="#icon-check-circle"/></svg>
+                        <i class="bi bi-check-circle-fill nav-tile-icon flex-shrink-0 d-inline-block d-sm-none d-md-inline-block" style="font-size:18px;"></i>
                         <span class="fw-semibold nav-tile-label d-none d-sm-inline" style="font-size:.9rem;">Checks</span>
                     </div>
                 </div>
@@ -401,7 +321,7 @@
                 <a href="/catalog" class="text-decoration-none position-relative d-block" data-testid="nav-tile-catalog">
                 <div class="card app-card nav-tile h-100">
                     <div class="card-body py-2 px-1 px-sm-2 px-md-3 d-flex align-items-center justify-content-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" class="nav-tile-icon flex-shrink-0 d-inline-block d-sm-none d-md-inline-block" fill="currentColor" viewBox="0 0 16 16"><use href="#icon-nav-page-catalog"/></svg>
+                        <i class="bi bi-book nav-tile-icon flex-shrink-0 d-inline-block d-sm-none d-md-inline-block" style="font-size:18px;"></i>
                         <span class="fw-semibold nav-tile-label d-none d-sm-inline" style="font-size:.9rem;">Catalog</span>
                     </div>
                 </div>
@@ -414,7 +334,7 @@
                 <a href="/playback" class="text-decoration-none" data-testid="nav-tile-playback">
                 <div class="card app-card nav-tile h-100">
                     <div class="card-body py-2 px-1 px-sm-2 px-md-3 d-flex align-items-center justify-content-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" class="nav-tile-icon flex-shrink-0 d-inline-block d-sm-none d-md-inline-block" fill="currentColor" viewBox="0 0 16 16"><use href="#icon-nav-page-playback"/></svg>
+                        <i class="bi bi-play-fill nav-tile-icon flex-shrink-0 d-inline-block d-sm-none d-md-inline-block" style="font-size:18px;"></i>
                         <span class="fw-semibold nav-tile-label d-none d-sm-inline" style="font-size:.9rem;">Playback</span>
                     </div>
                 </div>
@@ -466,7 +386,7 @@
                 fetch('/health/snippets/navbar-outbox-status')
                     .then(function (r) { return r.text(); })
                     .then(function (text) {
-                        if (outboxSvg) outboxSvg.setAttribute('fill', text.trim() === 'ok' ? '#1db954' : '#dc3545');
+                        if (outboxSvg) outboxSvg.style.color = text.trim() === 'ok' ? '#1db954' : '#dc3545';
                     })
                     .catch(function () {});
             }
@@ -475,7 +395,7 @@
                 fetch('/health/snippets/navbar-playback-status')
                     .then(function (r) { return r.text(); })
                     .then(function (text) {
-                        if (playbackSvg) playbackSvg.setAttribute('fill', text.trim() === 'active' ? '#1db954' : '#888888');
+                        if (playbackSvg) playbackSvg.style.color = text.trim() === 'active' ? '#1db954' : '#888888';
                     })
                     .catch(function () {});
             }

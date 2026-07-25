@@ -4,14 +4,12 @@
     {#else}
     {#if kind == 'artist'}
     <div style="width:36px;height:36px;min-width:36px;border-radius:50%;margin-right:10px;background:#333;display:flex;align-items:center;justify-content:center;">
-        <svg width="18" height="18" fill="#888"><use href="#icon-user-placeholder"/></svg>
+        <i class="bi bi-person-circle" style="font-size:18px;color:#888;"></i>
     </div>
     {#else}
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" style="width:36px;height:36px;min-width:36px;border-radius:3px;margin-right:10px;" aria-label="Album cover placeholder">
-        <rect width="36" height="36" fill="#333"/>
-        <circle cx="18" cy="18" r="9" fill="#555"/>
-        <circle cx="18" cy="18" r="3" fill="#333"/>
-    </svg>
+    <div style="width:36px;height:36px;min-width:36px;border-radius:3px;margin-right:10px;background:#333;display:flex;align-items:center;justify-content:center;" aria-label="Album cover placeholder" role="img">
+        <i class="bi bi-vinyl-fill" style="font-size:20px;color:#555;"></i>
+    </div>
     {/if}
     {/if}
     <div style="overflow:hidden;flex:1;">
