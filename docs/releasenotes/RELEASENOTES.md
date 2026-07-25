@@ -1,3 +1,12 @@
+# 0.118.2 (2026.07.25)
+
+## Bugfixes / Chore
+* Internal test suite cleanup; no user-facing behavior changed.
+
+
+
+---
+
 # 0.118.1 (2026.07.25)
 
 ## Bugfixes / Chore
