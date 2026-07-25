@@ -48,7 +48,7 @@
                 <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1 lh-1 requeue-partition-btn" data-partition="{partition.key}"
                         title="Requeue stuck tasks in this partition (workaround until the underlying quarkus-outbox bug is fixed)"
                         aria-label="Requeue stuck tasks in {partition.key}" data-testid="requeue-partition-btn-{partition.key}">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" fill="currentColor" viewBox="0 0 16 16"><use href="#icon-nav-page-playback"/></svg>
+                    <i class="bi bi-play-fill" style="font-size:10px;"></i>
                 </button>
             </h2>
             {#if partition.tasks.empty}

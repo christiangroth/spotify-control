@@ -7,7 +7,7 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1 class="fs-4 fw-semibold mb-0" data-testid="welcome-message">Hej {displayName}!</h1>
             <button type="button" id="refresh-profile-btn" class="btn btn-sm btn-outline-secondary p-1 lh-1" aria-label="Refresh Profile" title="Refresh Profile" data-testid="refresh-profile-btn">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><use href="#icon-reload"/></svg>
+                <i class="bi bi-arrow-clockwise" style="font-size:16px;"></i>
             </button>
         </div>
 
@@ -51,12 +51,9 @@
                                     {#if track.imageLink}
                                     <img src="{track.imageLink}" alt="{track.trackName}" width="40" height="40" style="min-width:40px;border-radius:4px;margin-right:10px;object-fit:cover;">
                                     {#else}
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" style="width:40px;height:40px;min-width:40px;border-radius:4px;margin-right:10px;" aria-label="Album cover placeholder">
-                                        <rect width="40" height="40" fill="#333"/>
-                                        <circle cx="20" cy="20" r="10" fill="#555"/>
-                                        <circle cx="20" cy="20" r="3" fill="#333"/>
-                                        <line x1="20" y1="10" x2="27" y2="7" stroke="#555" stroke-width="2"/>
-                                    </svg>
+                                    <div style="width:40px;height:40px;min-width:40px;border-radius:4px;margin-right:10px;background:#333;display:flex;align-items:center;justify-content:center;" aria-label="Album cover placeholder" role="img">
+                                        <i class="bi bi-vinyl-fill" style="font-size:22px;color:#555;"></i>
+                                    </div>
                                     {/if}
                                     <div style="overflow:hidden;">
                                         <div class="fw-semibold text-truncate" style="color:#fff;font-size:.85rem;">{track.trackName}</div>

@@ -6,7 +6,7 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1 class="fs-4 fw-semibold mb-0">Playlist Checks</h1>
             <button type="button" id="trigger-checks-btn" class="btn btn-sm btn-outline-secondary p-1 lh-1" aria-label="Run Playlist Checks" title="Run Playlist Checks" data-testid="trigger-checks-btn">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><use href="#icon-reload"/></svg>
+                <i class="bi bi-arrow-clockwise" style="font-size:16px;"></i>
             </button>
         </div>
         <div id="status-banner" class="alert d-none mb-3" role="alert"></div>
@@ -20,7 +20,7 @@
             <button type="button" class="btn btn-sm btn-outline-secondary p-1 lh-1"
                 aria-label="Run {group.checkName} check" title="Run {group.checkName} check"
                 onclick="postWithButton(this, '/playlist-checks/{group.checkType}/trigger', 'Check enqueued successfully.', 'Trigger failed')">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><use href="#icon-reload"/></svg>
+                <i class="bi bi-arrow-clockwise" style="font-size:16px;"></i>
             </button>
         </div>
         <div class="table-responsive mb-5">
@@ -80,7 +80,7 @@
                             <li class="d-flex align-items-center gap-2 mb-2">
                                 <button type="button" class="btn btn-link p-0 border-0 violation-toggle" data-violation-id="{violation.id}" data-selected="true"
                                     aria-label="Toggle fix for {violation.message}">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="#1db954" viewBox="0 0 16 16"><use href="#icon-check-circle"/></svg>
+                                    <i class="bi bi-check-circle-fill" style="font-size:18px;color:#1db954;"></i>
                                 </button>
                                 <span style="color:var(--color-text-primary);font-size:.9rem;">{violation.message}</span>
                             </li>
@@ -120,8 +120,8 @@
         function setViolationToggleState(el, selected) {
             el.setAttribute('data-selected', selected ? 'true' : 'false');
             el.innerHTML = selected
-                ? '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="#1db954" viewBox="0 0 16 16"><use href="#icon-check-circle"/></svg>'
-                : '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="#dc3545" viewBox="0 0 16 16"><use href="#icon-x-circle"/></svg>';
+                ? '<i class="bi bi-check-circle-fill" style="font-size:18px;color:#1db954;"></i>'
+                : '<i class="bi bi-x-circle-fill" style="font-size:18px;color:#dc3545;"></i>';
         }
 
         document.querySelectorAll('.violation-toggle').forEach(function(btn) {

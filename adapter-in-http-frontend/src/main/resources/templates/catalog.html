@@ -113,10 +113,9 @@
                                 <img src="{artist.imageLink}" alt="{artist.artistName}" width="40" height="40"
                                      style="border-radius:50%;object-fit:cover;">
                                 {#else}
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="40" height="40" style="border-radius:50%;" aria-label="Artist image placeholder">
-                                    <rect width="40" height="40" fill="#333"/>
-                                    <use href="#icon-user-placeholder" x="12" y="10" width="16" height="16" fill="#888"/>
-                                </svg>
+                                <div style="width:40px;height:40px;border-radius:50%;background:#333;display:flex;align-items:center;justify-content:center;" aria-label="Artist image placeholder" role="img">
+                                    <i class="bi bi-person-circle" style="font-size:20px;color:#888;"></i>
+                                </div>
                                 {/if}
                             </td>
                             <td style="color:#fff;font-size:.9rem;">
@@ -186,11 +185,9 @@
                             <img src="{album.imageLink}" alt="{album.title}" width="36" height="36"
                                  style="border-radius:3px;object-fit:cover;">
                             {#else}
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" width="36" height="36" aria-label="Album image placeholder">
-                                <rect width="36" height="36" fill="#2a2a2a" rx="3"/>
-                                <circle cx="18" cy="18" r="9" fill="#444"/>
-                                <circle cx="18" cy="18" r="3" fill="#2a2a2a"/>
-                            </svg>
+                            <div style="width:36px;height:36px;border-radius:3px;background:#2a2a2a;display:flex;align-items:center;justify-content:center;" aria-label="Album image placeholder" role="img">
+                                <i class="bi bi-vinyl-fill" style="font-size:20px;color:#444;"></i>
+                            </div>
                             {/if}
                         </td>
                         <td style="color:#fff;">

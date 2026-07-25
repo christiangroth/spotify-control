@@ -41,10 +41,9 @@
                         <img src="{artist.imageLink}" alt="{artist.artistName}" width="40" height="40"
                              style="border-radius:50%;object-fit:cover;">
                         {#else}
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="40" height="40" style="border-radius:50%;" aria-label="Artist image placeholder">
-                            <rect width="40" height="40" fill="#333"/>
-                            <use href="#icon-user-placeholder" x="12" y="10" width="16" height="16" fill="#888"/>
-                        </svg>
+                        <div style="width:40px;height:40px;border-radius:50%;background:#333;display:flex;align-items:center;justify-content:center;" aria-label="Artist image placeholder" role="img">
+                            <i class="bi bi-person-circle" style="font-size:20px;color:#888;"></i>
+                        </div>
                         {/if}
                     </td>
                     <td style="color:#fff;font-size:.9rem;">{artist.artistName}</td>

@@ -137,13 +137,9 @@
                                         <tr>
                                             <td>
                                                 {#if p.active}
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#1db954" viewBox="0 0 16 16" style="vertical-align:middle;margin-right:4px;">
-                                                    <use href="#icon-check-circle"/>
-                                                </svg>
+                                                <i class="bi bi-check-circle-fill" style="font-size:16px;color:#1db954;vertical-align:middle;margin-right:4px;"></i>
                                                 {#else}
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#888888" viewBox="0 0 16 16" style="vertical-align:middle;margin-right:4px;">
-                                                    <use href="#icon-x-circle"/>
-                                                </svg>
+                                                <i class="bi bi-x-circle-fill" style="font-size:16px;color:#888888;vertical-align:middle;margin-right:4px;"></i>
                                                 {/if}
                                                 {p.name}
                                             </td>
