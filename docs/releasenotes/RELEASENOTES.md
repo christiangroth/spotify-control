@@ -1,3 +1,15 @@
+# 0.118.1 (2026.07.25)
+
+## Bugfixes / Chore
+* Switched the frontend from hand-copied inline SVG icons to the Bootstrap Icons WebJar dependency, so icons stay easier to maintain and consistent going forward.
+* Added a Docker `HEALTHCHECK` to the JVM and native container images that polls the application's readiness endpoint, so orchestrators can detect and restart unhealthy containers automatically.
+* Fixed the "View In Explore" link on the Grafana Quarkus Logs dashboard so it uses the correct Loki label and no longer leads to an empty view.
+* Hardened the CI pipeline: concurrent runs on the same branch are guarded, and the Gradle cache is only written from `main`.
+
+
+
+---
+
 # 0.118.0 (2026.07.23)
 
 ## New Features
