@@ -27,4 +27,11 @@ COPY --chown=1001:root build/*-runner /work/application
 EXPOSE 8080
 USER 1001
 
+# No HEALTHCHECK here on purpose: quarkus-micro-image is a distroless-style base image with no
+# shell, package manager, curl or wget, so there is no HTTP client available to probe
+# /q/health/ready. Adding a HEALTHCHECK CMD here would always fail and could deadlock deployments
+# that gate on container health. If a healthcheck is required for this variant, switch to
+# Dockerfile.native (ubi-minimal, which ships curl) or add an orchestrator-level TCP check on
+# port 8080 instead.
+
 ENTRYPOINT ["./application", "-Dquarkus.http.host=0.0.0.0"]
