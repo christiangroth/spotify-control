@@ -289,13 +289,19 @@ class PlaylistCheckServiceTests {
   }
 
   @Test
-  fun `getCheckDashboard returns empty dashboard when no user exists`() {
+  fun `getCheckDashboard falls back to empty display name but still returns checks when no user exists`() {
+    val check = buildCheck(succeeded = true)
+    val playlistInfo = buildPlaylistInfo()
     every { userRepository.get() } returns null
+    every { playlistRepository.findAll() } returns listOf(playlistInfo)
+    every { playlistCheckRepository.findAll() } returns listOf(check)
     every { checkRunners.iterator() } answers { mutableListOf<PlaylistCheckRunner>().iterator() }
 
     val dashboard = adapter.getCheckDashboard()
 
     assertThat(dashboard.displayName).isEqualTo("")
+    assertThat(dashboard.checks).containsExactly(check)
+    assertThat(dashboard.playlistNameById).containsEntry(playlistId, "Playlist $playlistId")
   }
 
   @Test
