@@ -5,7 +5,7 @@ import io.quarkus.qute.i18n.MessageBundle
 
 /**
  * Shared UI strings used across the app shell (navbar, page nav, login, error page) and reusable template fragments
- * (`templates/tags/*.html`). Domain/page-specific strings live in their own bundle (see [DashboardMessages] and siblings).
+ * (`templates/tags`). Domain/page-specific strings live in their own bundle (see [DashboardMessages] and siblings).
  */
 @MessageBundle
 interface AppMessages {
