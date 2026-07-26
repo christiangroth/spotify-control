@@ -1,3 +1,12 @@
+# 0.120.0 (2026.07.26)
+
+## New Features
+* Added a language toggle (EN / pseudo-locale) to the navbar; all UI text now goes through translatable message bundles instead of being hardcoded in templates.
+
+
+
+---
+
 # 0.119.1 (2026.07.26)
 
 ## Bugfixes / Chore
