@@ -1,3 +1,12 @@
+# 0.119.0 (2026.07.26)
+
+## New Features
+* Replaced the flat dark background with a subtle green ambient gradient across the whole app, and added a matching dot-pattern hero on the login page.
+
+
+
+---
+
 # 0.118.2 (2026.07.25)
 
 ## Bugfixes / Chore
