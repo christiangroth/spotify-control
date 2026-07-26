@@ -398,6 +398,13 @@
     {/insert}
     <script src="/webjars/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script src="/webjars/marked/lib/marked.umd.js"></script>
+    <script>
+        var SPCTL_I18N = {
+            now: '{msg:layoutOutboxCountdownNow()}',
+            unknownError: '{msg:commonUnknownError()}',
+            requestFailed: '{msg:commonRequestFailed()}'
+        };
+    </script>
     <script src="/sse-utils.js"></script>
     <script src="/language-utils.js"></script>
     {#insert scripts}{/insert}

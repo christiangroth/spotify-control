@@ -22,6 +22,12 @@ interface AppMessages {
   @Message
   fun commonLogout(): String
 
+  @Message
+  fun commonUnknownError(): String
+
+  @Message
+  fun commonRequestFailed(): String
+
   // layout / navbar
   @Message
   fun layoutLogoAlt(): String
@@ -112,6 +118,39 @@ interface AppMessages {
   @Message
   fun loginButton(): String
 
+  @Message
+  fun loginErrorAlreadyRegistered(): String
+
+  @Message
+  fun loginErrorTokenExchangeFailed(): String
+
+  @Message
+  fun loginErrorProfileFetchFailed(): String
+
+  @Message
+  fun loginErrorTokenRefreshFailed(): String
+
+  @Message
+  fun loginErrorEncryptionFailed(): String
+
+  @Message
+  fun loginErrorSessionInvalidDecryption(): String
+
+  @Message
+  fun loginErrorSessionInvalidFormat(): String
+
+  @Message
+  fun loginErrorSpotifyDenied(): String
+
+  @Message
+  fun loginErrorInvalidRequest(): String
+
+  @Message
+  fun loginErrorStateMismatch(): String
+
+  @Message
+  fun loginErrorUnexpected(): String
+
   // error page
   @Message
   fun errorHeading(): String
@@ -124,6 +163,9 @@ interface AppMessages {
 
   @Message
   fun errorStackTraceHeading(): String
+
+  @Message
+  fun errorNoMessage(): String
 
   // shared rank-entry / playback-event tags
   @Message

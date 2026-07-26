@@ -1,5 +1,6 @@
 package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
+import de.chrgroth.spotify.control.adapter.`in`.http.frontend.i18n.AppMessages
 import de.chrgroth.spotify.control.domain.error.AuthError
 import de.chrgroth.spotify.control.domain.error.OAuthError
 import de.chrgroth.spotify.control.domain.error.TokenError
@@ -25,6 +26,7 @@ class LoginResource(
   private val loginTemplate: Template,
   private val securityIdentity: SecurityIdentity,
   private val httpResponseMetrics: ResponseTimingPort,
+  private val messages: AppMessages,
 ) {
 
   @GET
@@ -39,16 +41,16 @@ class LoginResource(
   }
 
   private fun errorMessage(code: String): String = when (code) {
-      AuthError.ANOTHER_USER_ALREADY_REGISTERED.code -> "This instance is already registered to a different Spotify account."
-      AuthError.TOKEN_EXCHANGE_FAILED.code -> "Could not exchange the authorisation code with Spotify. Please try again."
-      AuthError.PROFILE_FETCH_FAILED.code -> "Could not retrieve your Spotify profile. Please try again."
-      AuthError.TOKEN_REFRESH_FAILED.code -> "Could not refresh your access token. Please log in again."
-      TokenError.ENCRYPTION_FAILED.code -> "An internal error occurred (encryption). Please contact support."
-      TokenError.DECRYPTION_FAILED.code -> "Your session could not be verified. Please log in again."
-      TokenError.INVALID_FORMAT.code -> "Your session is invalid. Please log in again."
-      OAuthError.SPOTIFY_DENIED.code -> "Spotify login was denied. Please try again."
-      OAuthError.INVALID_REQUEST.code -> "The login request was invalid. Please try again."
-      OAuthError.STATE_MISMATCH.code -> "Login state validation failed. Please try again."
-      else -> "An unexpected error occurred. Please try again."
+      AuthError.ANOTHER_USER_ALREADY_REGISTERED.code -> messages.loginErrorAlreadyRegistered()
+      AuthError.TOKEN_EXCHANGE_FAILED.code -> messages.loginErrorTokenExchangeFailed()
+      AuthError.PROFILE_FETCH_FAILED.code -> messages.loginErrorProfileFetchFailed()
+      AuthError.TOKEN_REFRESH_FAILED.code -> messages.loginErrorTokenRefreshFailed()
+      TokenError.ENCRYPTION_FAILED.code -> messages.loginErrorEncryptionFailed()
+      TokenError.DECRYPTION_FAILED.code -> messages.loginErrorSessionInvalidDecryption()
+      TokenError.INVALID_FORMAT.code -> messages.loginErrorSessionInvalidFormat()
+      OAuthError.SPOTIFY_DENIED.code -> messages.loginErrorSpotifyDenied()
+      OAuthError.INVALID_REQUEST.code -> messages.loginErrorInvalidRequest()
+      OAuthError.STATE_MISMATCH.code -> messages.loginErrorStateMismatch()
+      else -> messages.loginErrorUnexpected()
   }
 }

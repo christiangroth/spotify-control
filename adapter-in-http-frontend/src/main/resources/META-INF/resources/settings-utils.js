@@ -11,11 +11,13 @@ function postWithButton(btn, url, successMsg, errorPrefix, onSuccess) {
             showBanner(successMsg, 'success');
             if (onSuccess) onSuccess();
         } else {
-            showBanner(errorPrefix + ': ' + (result.data.error || 'Unknown error'), 'danger');
+            var unknownError = (typeof SPCTL_I18N !== 'undefined' && SPCTL_I18N.unknownError) || 'Unknown error';
+            showBanner(errorPrefix + ': ' + (result.data.error || unknownError), 'danger');
         }
     })
     .catch(function(err) {
-        showBanner('Request failed: ' + err.message, 'danger');
+        var requestFailed = (typeof SPCTL_I18N !== 'undefined' && SPCTL_I18N.requestFailed) || 'Request failed';
+        showBanner(requestFailed + ': ' + err.message, 'danger');
     })
     .finally(function() {
         btn.disabled = false;

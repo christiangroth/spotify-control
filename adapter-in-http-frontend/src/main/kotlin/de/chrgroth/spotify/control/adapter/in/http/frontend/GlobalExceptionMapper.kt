@@ -1,5 +1,6 @@
 package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
+import de.chrgroth.spotify.control.adapter.`in`.http.frontend.i18n.AppMessages
 import io.quarkus.qute.Location
 import io.quarkus.qute.Template
 import jakarta.enterprise.context.ApplicationScoped
@@ -17,6 +18,7 @@ import java.io.StringWriter
 class GlobalExceptionMapper(
   @param:Location("error.html")
   private val errorTemplate: Template,
+  private val messages: AppMessages,
 ) : ExceptionMapper<Throwable> {
 
   override fun toResponse(exception: Throwable): Response {
@@ -28,7 +30,7 @@ class GlobalExceptionMapper(
     val html = errorTemplate
       .data("statusCode", status)
       .data("errorType", exception.javaClass.name)
-      .data("message", exception.message ?: "(no message)")
+      .data("message", exception.message ?: messages.errorNoMessage())
       .data("stackTrace", stackTrace)
       .render()
     return Response
