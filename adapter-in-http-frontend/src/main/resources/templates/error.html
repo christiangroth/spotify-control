@@ -1,26 +1,32 @@
 {#include layout.html}
-    {#leftNavLinks}{/leftNavLinks}
+    {#leftNavLinks}
+    <button type="button" id="language-toggle" class="nav-link text-white me-3 bg-transparent border-0 p-0 fw-bold" data-testid="language-toggle-button" title="{msg:layoutLanguageToggleLabel()}" aria-label="{msg:layoutLanguageToggleLabel()}">
+        <span class="language-toggle-label-en" aria-hidden="true">EN</span>
+        <span class="language-toggle-label-xx" aria-hidden="true">_</span>
+    </button>
+    <span class="me-auto"></span>
+    {/leftNavLinks}
     {#appVersion}<span class="app-version me-auto">{appBuildVersion}</span>{/appVersion}
     {#navLinks}{/navLinks}
     {#pageNav}{/pageNav}
     {#navbarSse}{/navbarSse}
     {#content}
     <div class="app-page-container py-4 px-3 px-md-4">
-        <h1 class="fs-4 fw-semibold mb-4 text-danger">Error {statusCode}</h1>
+        <h1 class="fs-4 fw-semibold mb-4 text-danger">{msg:errorHeading()} {statusCode}</h1>
 
         <div class="app-card card border mb-4">
             <div class="card-body">
-                <p class="app-section-label mb-1">Type</p>
+                <p class="app-section-label mb-1">{msg:errorTypeLabel()}</p>
                 <p class="mb-3 text-break">{errorType}</p>
 
-                <p class="app-section-label mb-1">Message</p>
+                <p class="app-section-label mb-1">{msg:errorMessageLabel()}</p>
                 <p class="mb-0 text-break">{message}</p>
             </div>
         </div>
 
         <div class="app-card card border">
             <div class="card-header">
-                <span class="app-section-label">Stack Trace</span>
+                <span class="app-section-label">{msg:errorStackTraceHeading()}</span>
             </div>
             <div class="card-body p-0">
                 <pre class="m-0 p-3 error-stacktrace">{stackTrace}</pre>

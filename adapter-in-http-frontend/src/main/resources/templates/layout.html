@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{currentLanguage}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{#insert title}SpCtl{/insert}</title>
+    <title>{#insert title}{msg:commonAppName()}{/insert}</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <link rel="stylesheet" href="/webjars/bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="/webjars/bootstrap-icons/font/bootstrap-icons.min.css">
@@ -223,6 +223,23 @@
             color: var(--color-text-primary);
             background: transparent;
         }
+        /* Language toggle button - shows the code of the currently active language */
+        .language-toggle-label-en,
+        .language-toggle-label-xx {
+            font-size: 0.75rem;
+        }
+        .language-toggle-label-en {
+            display: inline;
+        }
+        .language-toggle-label-xx {
+            display: none;
+        }
+        html[lang="xx"] .language-toggle-label-en {
+            display: none;
+        }
+        html[lang="xx"] .language-toggle-label-xx {
+            display: inline;
+        }
         /* Login / landing page */
         .login-shell {
             /* background gradient comes from body (applied site-wide); this just sets sizing */
@@ -262,21 +279,25 @@
 <body>
     <nav class="app-navbar d-flex align-items-center px-3 py-2">
         <a href="/" class="d-flex align-items-center text-decoration-none me-2">
-            <img src="/favicon.svg" alt="SpCtl Logo" width="24" height="24" class="me-2">
-            <span class="app-name">SpCtl</span>
+            <img src="/favicon.svg" alt="{msg:layoutLogoAlt()}" width="24" height="24" class="me-2">
+            <span class="app-name">{msg:commonAppName()}</span>
         </a>
         {#insert appVersion}<a href="/docs/releasenotes/RELEASENOTES.md" class="app-version me-2 text-decoration-none" data-testid="version-link">{appBuildVersion}</a>{/insert}
         {#insert leftNavLinks}
+        <button type="button" id="language-toggle" class="nav-link text-white me-3 bg-transparent border-0 p-0 fw-bold" data-testid="language-toggle-button" title="{msg:layoutLanguageToggleLabel()}" aria-label="{msg:layoutLanguageToggleLabel()}">
+            <span class="language-toggle-label-en" aria-hidden="true">EN</span>
+            <span class="language-toggle-label-xx" aria-hidden="true">_</span>
+        </button>
         <div class="d-flex align-items-center ms-1" id="navbar-health-indicators">
             <div class="position-relative me-2" id="navbar-outbox-wrapper" style="cursor:default;">
-                <button type="button" id="navbar-outbox-icon" class="btn p-0 border-0 bg-transparent lh-1" aria-label="Outbox Status" title="Outbox Status" data-testid="navbar-outbox-icon">
+                <button type="button" id="navbar-outbox-icon" class="btn p-0 border-0 bg-transparent lh-1" aria-label="{msg:layoutOutboxStatusLabel()}" title="{msg:layoutOutboxStatusLabel()}" data-testid="navbar-outbox-icon">
                     <i class="bi bi-inbox" id="navbar-outbox-svg" style="font-size:18px;color:#888888;vertical-align:middle;"></i>
                 </button>
                 <div id="navbar-outbox-popup" style="display:none;position:absolute;top:calc(100% + 6px);left:0;z-index:9999;min-width:340px;background-color:#1e1e1e;border:1px solid #333;border-radius:.375rem;box-shadow:0 4px 16px rgba(0,0,0,.6);">
                     <div id="navbar-outbox-popup-content" style="color:#e0e0e0;"></div>
                 </div>
             </div>
-            <button type="button" id="navbar-playback-icon" class="btn p-0 border-0 bg-transparent lh-1 me-2" aria-label="Playback Status" title="Playback Status" data-testid="navbar-playback-icon">
+            <button type="button" id="navbar-playback-icon" class="btn p-0 border-0 bg-transparent lh-1 me-2" aria-label="{msg:layoutPlaybackStatusLabel()}" title="{msg:layoutPlaybackStatusLabel()}" data-testid="navbar-playback-icon">
                 <i class="bi bi-music-note-beamed" id="navbar-playback-svg" style="font-size:18px;color:#888888;vertical-align:middle;"></i>
             </button>
         </div>
@@ -284,26 +305,26 @@
         {/insert}
         {#insert navLinks}
         <div class="dropdown me-3">
-            <button type="button" class="nav-link text-white dropdown-toggle bg-transparent border-0 p-0" data-bs-toggle="dropdown" aria-expanded="false" data-testid="technical-menu" title="Technical"><i class="bi bi-tools" style="font-size:18px;"></i></button>
+            <button type="button" class="nav-link text-white dropdown-toggle bg-transparent border-0 p-0" data-bs-toggle="dropdown" aria-expanded="false" data-testid="technical-menu" title="{msg:layoutTechnicalMenuLabel()}"><i class="bi bi-tools" style="font-size:18px;"></i></button>
             <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end">
-                <li><a href="/health" class="dropdown-item" data-testid="health-link"><i class="bi bi-activity me-2"></i>Health</a></li>
-                <li><a href="/catalog-sync" class="dropdown-item" data-testid="catalog-sync-link"><i class="bi bi-arrow-repeat me-2"></i>Catalog Sync</a></li>
-                <li><a href="/outbox-viewer" class="dropdown-item" data-testid="outbox-viewer-link"><i class="bi bi-clock-fill me-2"></i>Outbox</a></li>
-                <li><a href="/config" class="dropdown-item" data-testid="config-link"><i class="bi bi-gear me-2"></i>Config</a></li>
-                <li><a href="/logs-viewer" class="dropdown-item" data-testid="logs-viewer-link"><i class="bi bi-exclamation-circle me-2"></i>Logs UI</a></li>
-                <li><a href="https://spotifycontrolprod.grafana.net/d/spotify-control-overview/overview" target="_blank" rel="noopener noreferrer" class="dropdown-item" data-testid="grafana-overview-link"><i class="bi bi-bar-chart-line-fill me-2"></i>Overview</a></li>
-                <li><a href="https://spotifycontrolprod.grafana.net/d/sadlil-loki-apps-dashboard/quarkus-logs" target="_blank" rel="noopener noreferrer" class="dropdown-item" data-testid="grafana-logs-link"><i class="bi bi-bar-chart-line-fill me-2"></i>Logs</a></li>
-                <li><a href="https://spotifycontrolprod.grafana.net/d/quarkus-spotify-control/technical-overview" target="_blank" rel="noopener noreferrer" class="dropdown-item" data-testid="grafana-technical-overview-link"><i class="bi bi-bar-chart-line-fill me-2"></i>Technical</a></li>
-                <li><a href="https://spotifycontrolprod.grafana.net/d/spotify-control-domain-metrics/domain-overview" target="_blank" rel="noopener noreferrer" class="dropdown-item" data-testid="grafana-domain-overview-link"><i class="bi bi-bar-chart-line-fill me-2"></i>Domain</a></li>
-                <li><a href="/mongodb-viewer" class="dropdown-item" data-testid="mongodb-viewer-link"><i class="bi bi-database me-2"></i>Viewer</a></li>
-                <li><a href="https://cloud.mongodb.com/v2/699f08e3a7adcacf36dd2d4a#/explorer" target="_blank" rel="noopener noreferrer" class="dropdown-item" data-testid="mongodb-atlas-link"><i class="bi bi-database me-2"></i>Atlas</a></li>
-                <li><a href="/docs/arc42/arc42.md" class="dropdown-item" data-testid="docs-link"><i class="bi bi-book me-2"></i>Docs</a></li>
-                <li><a href="https://github.com/christiangroth/spotify-control" target="_blank" rel="noopener noreferrer" class="dropdown-item" data-testid="github-link"><i class="bi bi-github me-2"></i>Code</a></li>
-                <li><a href="/spotify-debug" class="dropdown-item" data-testid="spotify-debug-link"><i class="bi bi-bug me-2"></i>Debug</a></li>
-                <li><a href="https://developer.spotify.com/documentation/web-api" target="_blank" rel="noopener noreferrer" class="dropdown-item" data-testid="spotify-api-link"><i class="bi bi-spotify me-2" aria-label="Spotify logo"></i>API</a></li>
+                <li><a href="/health" class="dropdown-item" data-testid="health-link"><i class="bi bi-activity me-2"></i>{msg:layoutNavHealthLabel()}</a></li>
+                <li><a href="/catalog-sync" class="dropdown-item" data-testid="catalog-sync-link"><i class="bi bi-arrow-repeat me-2"></i>{msg:layoutNavCatalogSyncLabel()}</a></li>
+                <li><a href="/outbox-viewer" class="dropdown-item" data-testid="outbox-viewer-link"><i class="bi bi-clock-fill me-2"></i>{msg:layoutNavOutboxLabel()}</a></li>
+                <li><a href="/config" class="dropdown-item" data-testid="config-link"><i class="bi bi-gear me-2"></i>{msg:layoutNavConfigLabel()}</a></li>
+                <li><a href="/logs-viewer" class="dropdown-item" data-testid="logs-viewer-link"><i class="bi bi-exclamation-circle me-2"></i>{msg:layoutNavLogsUiLabel()}</a></li>
+                <li><a href="https://spotifycontrolprod.grafana.net/d/spotify-control-overview/overview" target="_blank" rel="noopener noreferrer" class="dropdown-item" data-testid="grafana-overview-link"><i class="bi bi-bar-chart-line-fill me-2"></i>{msg:layoutNavGrafanaOverviewLabel()}</a></li>
+                <li><a href="https://spotifycontrolprod.grafana.net/d/sadlil-loki-apps-dashboard/quarkus-logs" target="_blank" rel="noopener noreferrer" class="dropdown-item" data-testid="grafana-logs-link"><i class="bi bi-bar-chart-line-fill me-2"></i>{msg:layoutNavGrafanaLogsLabel()}</a></li>
+                <li><a href="https://spotifycontrolprod.grafana.net/d/quarkus-spotify-control/technical-overview" target="_blank" rel="noopener noreferrer" class="dropdown-item" data-testid="grafana-technical-overview-link"><i class="bi bi-bar-chart-line-fill me-2"></i>{msg:layoutNavGrafanaTechnicalLabel()}</a></li>
+                <li><a href="https://spotifycontrolprod.grafana.net/d/spotify-control-domain-metrics/domain-overview" target="_blank" rel="noopener noreferrer" class="dropdown-item" data-testid="grafana-domain-overview-link"><i class="bi bi-bar-chart-line-fill me-2"></i>{msg:layoutNavGrafanaDomainLabel()}</a></li>
+                <li><a href="/mongodb-viewer" class="dropdown-item" data-testid="mongodb-viewer-link"><i class="bi bi-database me-2"></i>{msg:layoutNavMongodbViewerLabel()}</a></li>
+                <li><a href="https://cloud.mongodb.com/v2/699f08e3a7adcacf36dd2d4a#/explorer" target="_blank" rel="noopener noreferrer" class="dropdown-item" data-testid="mongodb-atlas-link"><i class="bi bi-database me-2"></i>{msg:layoutNavMongodbAtlasLabel()}</a></li>
+                <li><a href="/docs/arc42/arc42.md" class="dropdown-item" data-testid="docs-link"><i class="bi bi-book me-2"></i>{msg:layoutNavDocsLabel()}</a></li>
+                <li><a href="https://github.com/christiangroth/spotify-control" target="_blank" rel="noopener noreferrer" class="dropdown-item" data-testid="github-link"><i class="bi bi-github me-2"></i>{msg:layoutNavGithubLabel()}</a></li>
+                <li><a href="/spotify-debug" class="dropdown-item" data-testid="spotify-debug-link"><i class="bi bi-bug me-2"></i>{msg:layoutNavSpotifyDebugLabel()}</a></li>
+                <li><a href="https://developer.spotify.com/documentation/web-api" target="_blank" rel="noopener noreferrer" class="dropdown-item" data-testid="spotify-api-link"><i class="bi bi-spotify me-2" aria-label="{msg:commonSpotifyLogoAriaLabel()}"></i>{msg:layoutNavSpotifyApiLabel()}</a></li>
             </ul>
         </div>
-        <a href="/logout" class="btn btn-sm btn-outline-secondary" data-testid="logout-link">Logout</a>
+        <a href="/logout" class="btn btn-sm btn-outline-secondary" data-testid="logout-link">{msg:commonLogout()}</a>
         {/insert}
     </nav>
     {#insert pageNav}
@@ -314,7 +335,7 @@
                 <div class="card app-card nav-tile h-100">
                     <div class="card-body py-2 px-1 px-sm-2 px-md-3 d-flex align-items-center justify-content-center gap-2">
                         <i class="bi bi-grid-fill nav-tile-icon flex-shrink-0 d-inline-block d-sm-none d-md-inline-block" style="font-size:18px;"></i>
-                        <span class="fw-semibold nav-tile-label d-none d-sm-inline" style="font-size:.9rem;">Dashboard</span>
+                        <span class="fw-semibold nav-tile-label d-none d-sm-inline" style="font-size:.9rem;">{msg:layoutNavTileDashboardLabel()}</span>
                     </div>
                 </div>
                 </a>
@@ -324,7 +345,7 @@
                 <div class="card app-card nav-tile h-100">
                     <div class="card-body py-2 px-1 px-sm-2 px-md-3 d-flex align-items-center justify-content-center gap-2">
                         <i class="bi bi-bar-chart-fill nav-tile-icon flex-shrink-0 d-inline-block d-sm-none d-md-inline-block" style="font-size:18px;"></i>
-                        <span class="fw-semibold nav-tile-label d-none d-sm-inline" style="font-size:.9rem;">Stats</span>
+                        <span class="fw-semibold nav-tile-label d-none d-sm-inline" style="font-size:.9rem;">{msg:layoutNavTileStatsLabel()}</span>
                     </div>
                 </div>
                 </a>
@@ -334,7 +355,7 @@
                 <div class="card app-card nav-tile h-100">
                     <div class="card-body py-2 px-1 px-sm-2 px-md-3 d-flex align-items-center justify-content-center gap-2">
                         <i class="bi bi-file-text nav-tile-icon flex-shrink-0 d-inline-block d-sm-none d-md-inline-block" style="font-size:18px;"></i>
-                        <span class="fw-semibold nav-tile-label d-none d-sm-inline" style="font-size:.9rem;">Playlists</span>
+                        <span class="fw-semibold nav-tile-label d-none d-sm-inline" style="font-size:.9rem;">{msg:layoutNavTilePlaylistsLabel()}</span>
                     </div>
                 </div>
                 </a>
@@ -344,7 +365,7 @@
                 <div class="card app-card nav-tile h-100">
                     <div class="card-body py-2 px-1 px-sm-2 px-md-3 d-flex align-items-center justify-content-center gap-2">
                         <i class="bi bi-check-circle-fill nav-tile-icon flex-shrink-0 d-inline-block d-sm-none d-md-inline-block" style="font-size:18px;"></i>
-                        <span class="fw-semibold nav-tile-label d-none d-sm-inline" style="font-size:.9rem;">Checks</span>
+                        <span class="fw-semibold nav-tile-label d-none d-sm-inline" style="font-size:.9rem;">{msg:layoutNavTileChecksLabel()}</span>
                     </div>
                 </div>
                 </a>
@@ -354,11 +375,11 @@
                 <div class="card app-card nav-tile h-100">
                     <div class="card-body py-2 px-1 px-sm-2 px-md-3 d-flex align-items-center justify-content-center gap-2">
                         <i class="bi bi-book nav-tile-icon flex-shrink-0 d-inline-block d-sm-none d-md-inline-block" style="font-size:18px;"></i>
-                        <span class="fw-semibold nav-tile-label d-none d-sm-inline" style="font-size:.9rem;">Catalog</span>
+                        <span class="fw-semibold nav-tile-label d-none d-sm-inline" style="font-size:.9rem;">{msg:layoutNavTileCatalogLabel()}</span>
                     </div>
                 </div>
                 {#if undecidedArtistCount > 0}
-                <span class="badge rounded-pill" style="position:absolute;top:-6px;right:-6px;background-color:#e0b870;color:#1a1a1a;font-size:.65rem;" data-testid="nav-tile-catalog-badge" title="{undecidedArtistCount.formatted} artist(s) awaiting sync decision">{undecidedArtistCount.formatted}</span>
+                <span class="badge rounded-pill" style="position:absolute;top:-6px;right:-6px;background-color:#e0b870;color:#1a1a1a;font-size:.65rem;" data-testid="nav-tile-catalog-badge" title="{msg:layoutCatalogBadgeTooltip(undecidedArtistCount.formatted)}">{undecidedArtistCount.formatted}</span>
                 {/if}
                 </a>
             </div>
@@ -367,7 +388,7 @@
                 <div class="card app-card nav-tile h-100">
                     <div class="card-body py-2 px-1 px-sm-2 px-md-3 d-flex align-items-center justify-content-center gap-2">
                         <i class="bi bi-play-fill nav-tile-icon flex-shrink-0 d-inline-block d-sm-none d-md-inline-block" style="font-size:18px;"></i>
-                        <span class="fw-semibold nav-tile-label d-none d-sm-inline" style="font-size:.9rem;">Playback</span>
+                        <span class="fw-semibold nav-tile-label d-none d-sm-inline" style="font-size:.9rem;">{msg:layoutNavTilePlaybackLabel()}</span>
                     </div>
                 </div>
                 </a>
@@ -378,6 +399,7 @@
     <script src="/webjars/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script src="/webjars/marked/lib/marked.umd.js"></script>
     <script src="/sse-utils.js"></script>
+    <script src="/language-utils.js"></script>
     {#insert scripts}{/insert}
     {#insert navbarSse}
     <script>
@@ -397,7 +419,7 @@
                     var cell = row.querySelector('.outbox-blocked-until');
                     if (!cell) return;
                     if (remaining <= 1000) {
-                        cell.textContent = 'now';
+                        cell.textContent = '{msg:layoutOutboxCountdownNow()}';
                     } else if (remaining < TWENTY_FOUR_HOURS_MS) {
                         cell.textContent = formatCountdown(remaining);
                     } else {
