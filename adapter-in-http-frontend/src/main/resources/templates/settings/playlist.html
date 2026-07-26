@@ -1,28 +1,28 @@
 {#include layout.html}
-    {#title}SpCtl – Playlists{/title}
+    {#title}{msg:commonAppName()} – {playlists:settingsTitle()}{/title}
     {#scripts}<script src="/settings-utils.js"></script>{/scripts}
     {#content}
     <div class="app-page-container py-4 px-3 px-md-4">
         <div class="d-flex align-items-center mb-4 gap-3">
-            <h1 class="fs-4 fw-semibold mb-0">Playlists</h1>
-            <button id="sync-now-btn" class="btn btn-spotify btn-sm">Sync Now</button>
+            <h1 class="fs-4 fw-semibold mb-0">{playlists:settingsTitle()}</h1>
+            <button id="sync-now-btn" class="btn btn-spotify btn-sm">{playlists:settingsSyncNowButton()}</button>
         </div>
 
         <div id="status-banner" class="alert d-none mb-3" role="alert"></div>
 
         {#if rows.empty}
-        <p class="text-secondary">No playlists found. Playlist data is synced automatically every hour.</p>
+        <p class="text-secondary">{playlists:settingsEmptyState()}</p>
         {#else}
         <div class="table-responsive">
         <table class="table table-dark table-hover align-middle">
             <thead>
                 <tr>
-                    <th style="width:3rem">#</th>
-                    <th style="width:2.5rem">Sync</th>
-                    <th>Name</th>
-                    <th style="width:5rem">Tracks</th>
-                    <th style="width:6rem">Artists</th>
-                    <th style="width:14rem">Last Sync</th>
+                    <th style="width:3rem">{playlists:settingsTableIndexHeader()}</th>
+                    <th style="width:2.5rem">{playlists:settingsTableSyncHeader()}</th>
+                    <th>{playlists:settingsTableNameHeader()}</th>
+                    <th style="width:5rem">{playlists:settingsTableTracksHeader()}</th>
+                    <th style="width:6rem">{playlists:settingsTableArtistsHeader()}</th>
+                    <th style="width:14rem">{playlists:settingsTableLastSyncHeader()}</th>
                     <th style="width:2.5rem"></th>
                 </tr>
             </thead>
@@ -35,8 +35,8 @@
                             class="btn btn-link p-0 border-0 sync-toggle"
                             data-playlist-id="{row.playlist.spotifyPlaylistId}"
                             data-sync-status="{row.playlist.syncStatus}"
-                            title="Click to toggle sync status"
-                            aria-label="Toggle sync status for {row.playlist.name}"
+                            title="{playlists:settingsToggleSyncTooltip()}"
+                            aria-label="{playlists:settingsToggleSyncAriaLabel(row.playlist.name)}"
                         >
                             {#status-icon condition=row.active size=20/}
                         </button>
@@ -47,16 +47,18 @@
                         <span class="badge text-bg-secondary ms-1" style="font-size:.7rem;vertical-align:middle;">{row.typeLabel}</span>
                         {/if}
                     </td>
-                    <td class="text-secondary small tabular-nums">{#if row.numberOfTracks}{row.numberOfTracks}{#else}–{/if}</td>
-                    <td class="text-secondary small tabular-nums">{#if row.numberOfArtists != null}{row.numberOfArtists} ({row.numberOfMissingArtists}){#else}–{/if}</td>
+                    <td class="text-secondary small tabular-nums">{#if row.numberOfTracks}{row.numberOfTracks}{#else}{playlists:settingsEmptyValuePlaceholder()}{/if}</td>
+                    <td class="text-secondary small tabular-nums">
+                        {#if row.numberOfArtists != null}{row.numberOfArtists} ({row.numberOfMissingArtists}){#else}{playlists:settingsEmptyValuePlaceholder()}{/if}
+                    </td>
                     <td class="text-secondary small">{row.lastSyncTime.formattedShort}</td>
                     <td>
                         {#if row.active}
                         <button
                             class="btn btn-link p-0 border-0 sync-playlist-btn"
                             data-playlist-id="{row.playlist.spotifyPlaylistId}"
-                            title="Sync now"
-                            aria-label="Sync playlist {row.playlist.name}"
+                            title="{playlists:settingsSyncPlaylistTooltip()}"
+                            aria-label="{playlists:settingsSyncPlaylistAriaLabel(row.playlist.name)}"
                         >
                             <i class="bi bi-arrow-clockwise" style="font-size:20px;color:#1db954;"></i>
                         </button>
@@ -71,7 +73,7 @@
     </div>
     <script>
         document.getElementById('sync-now-btn').addEventListener('click', function() {
-            postWithButton(this, '/settings/playlist/sync', 'Sync enqueued successfully.', 'Sync failed');
+            postWithButton(this, '/settings/playlist/sync', '{playlists:settingsSyncNowSuccess()}', '{playlists:settingsSyncNowErrorPrefix()}');
         });
 
         document.querySelectorAll('.sync-toggle').forEach(function(btn) {
@@ -98,13 +100,15 @@
                         button.innerHTML = isActive
                             ? '<i class="bi bi-check-circle-fill" style="font-size:20px;color:#1db954;"></i>'
                             : '<i class="bi bi-x-circle-fill" style="font-size:20px;color:#dc3545;"></i>';
-                        showBanner('Sync status updated successfully.', 'success');
+                        showBanner('{playlists:settingsSyncStatusUpdatedSuccess()}', 'success');
                     } else {
-                        showBanner('Failed to update sync status: ' + (result.data.error || 'Unknown error'), 'danger');
+                        var unknownError = (typeof SPCTL_I18N !== 'undefined' && SPCTL_I18N.unknownError) || 'Unknown error';
+                        showBanner('{playlists:settingsSyncStatusUpdateErrorPrefix()}: ' + (result.data.error || unknownError), 'danger');
                     }
                 })
                 .catch(function(err) {
-                    showBanner('Request failed: ' + err.message, 'danger');
+                    var requestFailed = (typeof SPCTL_I18N !== 'undefined' && SPCTL_I18N.requestFailed) || 'Request failed';
+                    showBanner(requestFailed + ': ' + err.message, 'danger');
                 });
             });
         });
@@ -115,8 +119,8 @@
                 postWithButton(
                     this,
                     '/settings/playlist/' + encodeURIComponent(playlistId) + '/sync',
-                    'Playlist sync enqueued successfully.',
-                    'Failed to enqueue playlist sync'
+                    '{playlists:settingsSyncPlaylistSuccess()}',
+                    '{playlists:settingsSyncPlaylistErrorPrefix()}'
                 );
             });
         });

@@ -1,16 +1,16 @@
 {#include layout.html}
-    {#title}SpCtl – Playback{/title}
+    {#title}{msg:commonAppName()} – {playback:playbackTitle()}{/title}
     {#scripts}<script src="/settings-utils.js"></script>{/scripts}
     {#content}
     <div class="app-page-container py-4 px-3 px-md-4">
-        <h1 class="fs-4 fw-semibold mb-4">Playback</h1>
+        <h1 class="fs-4 fw-semibold mb-4">{playback:playbackTitle()}</h1>
 
         <div class="row g-3 mb-4">
             <div class="col-6 col-sm-auto">
                 <a href="/playback/events{#if eventsDate}?date={eventsDate}{/if}" class="text-decoration-none">
                 <div class="card app-card">
                     <div class="card-body">
-                        <p class="card-subtitle mb-1 app-section-label">Playback Events (Last 30 Days)</p>
+                        <p class="card-subtitle mb-1 app-section-label">{playback:playbackStatsEventsLast30DaysLabel()}</p>
                         <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.playbackEventsLast30Days.formatted}</p>
                     </div>
                 </div>
@@ -20,7 +20,7 @@
                 <a href="/playback/events{#if eventsDate}?date={eventsDate}{/if}" class="text-decoration-none">
                 <div class="card app-card">
                     <div class="card-body">
-                        <p class="card-subtitle mb-1 app-section-label">Total Playback Events</p>
+                        <p class="card-subtitle mb-1 app-section-label">{playback:playbackStatsTotalEventsLabel()}</p>
                         <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{stats.totalPlaybackEvents.formatted}</p>
                     </div>
                 </div>
@@ -30,28 +30,28 @@
 
         <div id="status-banner" class="alert d-none mb-3" role="alert"></div>
 
-        <h2 class="fs-5 fw-semibold mb-2">Playback Data</h2>
-        <p class="text-secondary small mb-3">Rebuild all processed playback data (app_playback and app_track_data) from scratch by reprocessing the raw Spotify data. Use this if your playback stats appear incomplete or outdated.</p>
-        <button id="rebuild-playback-btn" class="btn btn-spotify btn-sm mb-4">Recreate Playback Data</button>
+        <h2 class="fs-5 fw-semibold mb-2">{playback:playbackDataHeading()}</h2>
+        <p class="text-secondary small mb-3">{playback:playbackDataDescription()}</p>
+        <button id="rebuild-playback-btn" class="btn btn-spotify btn-sm mb-4">{playback:playbackDataRebuildButton()}</button>
 
-        <h2 class="fs-5 fw-semibold mb-2">Missing Artists</h2>
-        <p class="text-secondary small mb-3">Sync artists that appear in your playback history but are not yet in the catalog, without re-syncing already known artists or rebuilding playback data.</p>
-        <button id="sync-missing-artists-btn" class="btn btn-spotify btn-sm mb-4">Sync Missing Artists</button>
+        <h2 class="fs-5 fw-semibold mb-2">{playback:playbackMissingArtistsHeading()}</h2>
+        <p class="text-secondary small mb-3">{playback:playbackMissingArtistsDescription()}</p>
+        <button id="sync-missing-artists-btn" class="btn btn-spotify btn-sm mb-4">{playback:playbackMissingArtistsSyncButton()}</button>
 
-        <h2 class="fs-5 fw-semibold mb-2">Playback Polling</h2>
-        <p class="text-secondary small mb-3">Fetch currently playing and recently played data from Spotify right now, instead of waiting for the next scheduled poll.</p>
-        <button id="poll-now-btn" class="btn btn-spotify btn-sm">Poll Now</button>
+        <h2 class="fs-5 fw-semibold mb-2">{playback:playbackPollingHeading()}</h2>
+        <p class="text-secondary small mb-3">{playback:playbackPollingDescription()}</p>
+        <button id="poll-now-btn" class="btn btn-spotify btn-sm">{playback:playbackPollingButton()}</button>
     </div>
 
     <script>
         document.getElementById('rebuild-playback-btn').addEventListener('click', function() {
-            postWithButton(this, '/settings/playback/rebuild', 'Playback data rebuild enqueued successfully.', 'Rebuild failed');
+            postWithButton(this, '/settings/playback/rebuild', '{playback:playbackDataRebuildSuccess()}', '{playback:playbackDataRebuildErrorPrefix()}');
         });
         document.getElementById('sync-missing-artists-btn').addEventListener('click', function() {
-            postWithButton(this, '/settings/playback/sync-missing-artists', 'Missing artists sync enqueued successfully.', 'Sync failed');
+            postWithButton(this, '/settings/playback/sync-missing-artists', '{playback:playbackMissingArtistsSyncSuccess()}', '{playback:playbackMissingArtistsSyncErrorPrefix()}');
         });
         document.getElementById('poll-now-btn').addEventListener('click', function() {
-            postWithButton(this, '/settings/playback/poll', 'Playback poll enqueued successfully.', 'Poll failed');
+            postWithButton(this, '/settings/playback/poll', '{playback:playbackPollingSuccess()}', '{playback:playbackPollingErrorPrefix()}');
         });
     </script>
     {/content}

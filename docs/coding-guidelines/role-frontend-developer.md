@@ -71,6 +71,17 @@ Dark, technical appearance – fitting a developer tool. No generic Bootstrap de
 - Navigation state is reflected visually (active nav item highlighted)
 - Pagination controls are shown only when there is more than one page
 
+## Internationalization (i18n)
+
+All UI-facing text goes through Quarkus `@MessageBundle` message bundles – **never hardcode a string directly in a template, a static JS file, or a Kotlin resource class that feeds one.**
+
+- **Default locale is `en`** (`quarkus.default-locale=en`, `adapter-in-http-frontend/src/main/resources/application.properties`). There is no second real translation locale (unlike the DE/EN split some sibling projects use) – only the `en` source of truth and the generated `xx` pseudo-locale below.
+- **Bundle interfaces** live in `adapter-in-http-frontend/src/main/kotlin/de/chrgroth/spotify/control/adapter/in/http/frontend/i18n/`, one per functional area (`AppMessages` for the shared app shell/login/error/reusable tag fragments – unqualified `@MessageBundle`, Qute namespace `msg` – plus `DashboardMessages`, `CatalogMessages`, `PlaybackMessages`, `PlaylistsMessages`, `ConfigMessages`, `HealthMessages`, `MonitoringMessages`, `StatsMessages`, `DocsMessages`, each `@MessageBundle("qualifier")`). Add new pages to an existing bundle if they clearly belong to that area, otherwise create a new `@MessageBundle("newQualifier")` interface plus a matching `messages/newQualifier_en.properties` file and register the qualifier in `pseudoLocaleBundleQualifiers` in `adapter-in-http-frontend/build.gradle.kts`.
+- **Templates** reference messages as `{qualifier:methodName()}` (e.g. `{msg:commonLogout()}`, `{dashboard:dashboardTitle()}`), including inside `title`/`aria-label`/`placeholder`/`alt` attributes and inline `<script>` string literals.
+- **Backend-sourced strings** (flash/validation/error messages placed into template data or JSON error payloads) are sourced the same way: constructor-inject the relevant `*Messages` bundle into the resource class instead of returning string literals (see `LoginResource`, `GlobalExceptionMapper`).
+- **Static JS files** (`sse-utils.js`, `settings-utils.js`) can't use Qute interpolation directly. The handful of strings they need are exposed once via a small `window.SPCTL_I18N` object populated in `layout.html`.
+- **`xx` pseudo-locale:** the `generatePseudoLocaleMessages` Gradle task (`adapter-in-http-frontend/build.gradle.kts`) regenerates `messages/<qualifier>_xx.properties` from every `<qualifier>_en.properties` on every build – every non-whitespace character becomes `__`, whitespace is preserved, `{param}` placeholders are preserved untouched. Never hand-edit an `_xx.properties` file; it exists purely so untranslated/missing strings are visually obvious (as a wall of `__`) when testing with the `xx` language toggle. Properties values must stay on a single physical line (no Java `\` line-continuation) since the generator does a naive line-by-line scan.
+
 ## Error Code Mapping
 
 The backend passes domain error codes to the frontend as URL query parameters (e.g. `/?error=AUTH-001`). The frontend is responsible for mapping these stable codes to user-facing messages.

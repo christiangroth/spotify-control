@@ -30,7 +30,7 @@ dependencies {
 
 // Bundle qualifiers to pseudo-localize, matching the `messages/<qualifier>_en.properties` files (see AppMessages and
 // its domain-specific siblings in the i18n package).
-val pseudoLocaleBundleQualifiers = listOf("msg", "dashboard", "catalog", "playback", "playlists", "config", "monitoring", "stats", "docs")
+val pseudoLocaleBundleQualifiers = listOf("msg", "dashboard", "catalog", "playback", "playlists", "config", "health", "monitoring", "stats", "docs")
 val pseudoLocaleOutputDir = layout.buildDirectory.dir("generated/resources/pseudoLocale")
 
 sourceSets {

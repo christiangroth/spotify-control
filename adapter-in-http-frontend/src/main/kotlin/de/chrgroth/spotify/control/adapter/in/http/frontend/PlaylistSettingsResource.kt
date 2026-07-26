@@ -1,5 +1,6 @@
 package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
+import de.chrgroth.spotify.control.adapter.`in`.http.frontend.i18n.PlaylistsMessages
 import de.chrgroth.spotify.control.domain.error.PlaylistSyncError
 import mu.KLogging
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSyncStatus
@@ -23,6 +24,7 @@ import jakarta.ws.rs.core.Response
 class PlaylistSettingsResource(
   private val playlist: PlaylistPort,
   private val httpResponseMetrics: ResponseTimingPort,
+  private val messages: PlaylistsMessages,
 ) {
 
   @PUT
@@ -36,7 +38,7 @@ class PlaylistSettingsResource(
   ): Response = httpResponseMetrics.timed("rest.playlist.sync-status-update") {
     val syncStatus = PlaylistSyncStatus.entries.find { it.name == request.syncStatus }
       ?: return@timed Response.status(Response.Status.BAD_REQUEST)
-        .entity(mapOf("error" to "Invalid sync status: ${request.syncStatus}"))
+        .entity(mapOf("error" to messages.settingsErrorInvalidSyncStatus(request.syncStatus)))
         .build()
     when (playlist.updateSyncStatus(playlistId, syncStatus).isRight()) {
       true -> {
@@ -46,7 +48,7 @@ class PlaylistSettingsResource(
       false -> {
         logger.warn { "Playlist $playlistId not found during sync status update" }
         Response.status(Response.Status.NOT_FOUND)
-          .entity(mapOf("error" to "Playlist not found"))
+          .entity(mapOf("error" to messages.settingsErrorPlaylistNotFound()))
           .build()
       }
     }
@@ -65,7 +67,7 @@ class PlaylistSettingsResource(
   ): Response = httpResponseMetrics.timed("rest.playlist.type-update") {
     val type = PlaylistType.entries.find { it.name == request.type }
       ?: return@timed Response.status(Response.Status.BAD_REQUEST)
-        .entity(mapOf("error" to "Invalid playlist type: ${request.type}"))
+        .entity(mapOf("error" to messages.settingsErrorInvalidPlaylistType(request.type)))
         .build()
     playlist.updatePlaylistType(playlistId, type).fold(
       ifLeft = { error ->
@@ -73,19 +75,19 @@ class PlaylistSettingsResource(
           PlaylistSyncError.PLAYLIST_TYPE_CONFLICT -> {
             logger.warn { "Playlist type update conflict for $playlistId: ${error.code}" }
             Response.status(Response.Status.CONFLICT)
-              .entity(mapOf("error" to "Only one playlist of type ALL is allowed"))
+              .entity(mapOf("error" to messages.settingsErrorPlaylistTypeConflict()))
               .build()
           }
           PlaylistSyncError.PLAYLIST_NOT_ACTIVE -> {
             logger.warn { "Playlist type update rejected for inactive playlist $playlistId: ${error.code}" }
             Response.status(Response.Status.BAD_REQUEST)
-              .entity(mapOf("error" to "Playlist type can only be set for active playlists"))
+              .entity(mapOf("error" to messages.settingsErrorPlaylistTypeInactive()))
               .build()
           }
           else -> {
             logger.warn { "Playlist $playlistId not found during type update: ${error.code}" }
             Response.status(Response.Status.NOT_FOUND)
-              .entity(mapOf("error" to "Playlist not found"))
+              .entity(mapOf("error" to messages.settingsErrorPlaylistNotFound()))
               .build()
           }
         }
@@ -116,13 +118,13 @@ class PlaylistSettingsResource(
           PlaylistSyncError.PLAYLIST_SYNC_INACTIVE -> {
             logger.warn { "Sync enqueue rejected for inactive playlist $playlistId: ${error.code}" }
             Response.status(Response.Status.BAD_REQUEST)
-              .entity(mapOf("error" to "Sync enqueue failed: ${error.code}"))
+              .entity(mapOf("error" to messages.settingsErrorSyncEnqueueFailed(error.code)))
               .build()
           }
           else -> {
             logger.warn { "Sync enqueue failed for playlist $playlistId: ${error.code}" }
             Response.status(Response.Status.NOT_FOUND)
-              .entity(mapOf("error" to "Sync enqueue failed: ${error.code}"))
+              .entity(mapOf("error" to messages.settingsErrorSyncEnqueueFailed(error.code)))
               .build()
           }
         }

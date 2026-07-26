@@ -1,5 +1,6 @@
 package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
+import de.chrgroth.spotify.control.adapter.`in`.http.frontend.i18n.StatsMessages
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
@@ -39,6 +40,7 @@ class StatsResource(
   private val appAlbumRepository: AppAlbumRepositoryPort,
   private val appArtistRepository: AppArtistRepositoryPort,
   private val httpResponseMetrics: ResponseTimingPort,
+  private val messages: StatsMessages,
 ) {
 
   @GET
@@ -180,9 +182,10 @@ class StatsResource(
     val orderedEntries = DayOfWeek.values().flatMap { day ->
       ActivityTimeWindow.entries.map { window ->
         val totalSeconds = byKey[day to window] ?: 0L
+        val dayName = weekdayName(day)
         ActivityBarEntryView(
-          label = "${day.shortLabel} ${window.label}",
-          tooltip = "${day.name} ${window.label} • ${TemplateFormattingExtensions.formattedDuration(totalSeconds)}",
+          label = "${dayName.take(WEEKDAY_SHORT_LABEL_LENGTH)} ${window.label}",
+          tooltip = messages.statsActivityTooltip(dayName, window.label, TemplateFormattingExtensions.formattedDuration(totalSeconds)),
           totalSeconds = totalSeconds,
         )
       }
@@ -231,22 +234,32 @@ class StatsResource(
   }
 
   private fun tabLabel(type: AggregationPeriodType): String = when (type) {
-    AggregationPeriodType.DAY -> "Day"
-    AggregationPeriodType.WEEK -> "Week"
-    AggregationPeriodType.MONTH -> "Month"
-    AggregationPeriodType.QUARTER -> "Quarter"
-    AggregationPeriodType.YEAR -> "Year"
+    AggregationPeriodType.DAY -> messages.statsTabDay()
+    AggregationPeriodType.WEEK -> messages.statsTabWeek()
+    AggregationPeriodType.MONTH -> messages.statsTabMonth()
+    AggregationPeriodType.QUARTER -> messages.statsTabQuarter()
+    AggregationPeriodType.YEAR -> messages.statsTabYear()
   }
 
   private fun periodLabel(index: Int, periodStart: LocalDate, singleSelected: Boolean): String {
     if (singleSelected) {
-      return "Selected ($periodStart)"
+      return messages.statsPeriodSelected(periodStart.toString())
     }
     return when (index) {
-      0 -> "Current"
-      1 -> "Previous"
-      else -> "Two periods ago"
-    } + " ($periodStart)"
+      0 -> messages.statsPeriodCurrent(periodStart.toString())
+      1 -> messages.statsPeriodPrevious(periodStart.toString())
+      else -> messages.statsPeriodTwoAgo(periodStart.toString())
+    }
+  }
+
+  private fun weekdayName(day: DayOfWeek): String = when (day) {
+    DayOfWeek.MONDAY -> messages.statsWeekdayMonday()
+    DayOfWeek.TUESDAY -> messages.statsWeekdayTuesday()
+    DayOfWeek.WEDNESDAY -> messages.statsWeekdayWednesday()
+    DayOfWeek.THURSDAY -> messages.statsWeekdayThursday()
+    DayOfWeek.FRIDAY -> messages.statsWeekdayFriday()
+    DayOfWeek.SATURDAY -> messages.statsWeekdaySaturday()
+    DayOfWeek.SUNDAY -> messages.statsWeekdaySunday()
   }
 
   data class AggregationTab(val id: String, val label: String, val first: Boolean, val aggregations: List<AggregationView>)
@@ -291,19 +304,9 @@ class StatsResource(
     private const val TOP_ENTRIES_LIMIT = 5
     private const val MONTHS_PER_QUARTER = 3
     private const val PERCENT_SCALE = 100L
+    private const val WEEKDAY_SHORT_LABEL_LENGTH = 3
   }
 }
-
-private val DayOfWeek.shortLabel: String
-  get() = when (this) {
-    DayOfWeek.MONDAY -> "Mon"
-    DayOfWeek.TUESDAY -> "Tue"
-    DayOfWeek.WEDNESDAY -> "Wed"
-    DayOfWeek.THURSDAY -> "Thu"
-    DayOfWeek.FRIDAY -> "Fri"
-    DayOfWeek.SATURDAY -> "Sat"
-    DayOfWeek.SUNDAY -> "Sun"
-  }
 
 private val ActivityTimeWindow.label: String
   get() = when (this) {

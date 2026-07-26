@@ -1,25 +1,26 @@
 {#include layout.html}
-    {#title}SpCtl – Playlist Checks{/title}
+    {#title}{msg:commonAppName()} – {playlists:checksTitle()}{/title}
     {#content}
     <div class="app-page-container py-4 px-3 px-md-4">
 
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1 class="fs-4 fw-semibold mb-0">Playlist Checks</h1>
-            <button type="button" id="trigger-checks-btn" class="btn btn-sm btn-outline-secondary p-1 lh-1" aria-label="Run Playlist Checks" title="Run Playlist Checks" data-testid="trigger-checks-btn">
+            <h1 class="fs-4 fw-semibold mb-0">{playlists:checksTitle()}</h1>
+            <button type="button" id="trigger-checks-btn" class="btn btn-sm btn-outline-secondary p-1 lh-1"
+                aria-label="{playlists:checksTriggerAllLabel()}" title="{playlists:checksTriggerAllLabel()}" data-testid="trigger-checks-btn">
                 <i class="bi bi-arrow-clockwise" style="font-size:16px;"></i>
             </button>
         </div>
         <div id="status-banner" class="alert d-none mb-3" role="alert"></div>
 
         {#if groups.empty}
-        <p class="text-secondary">No playlist check results available yet. Checks run automatically after playlist data is synced.</p>
+        <p class="text-secondary">{playlists:checksEmptyState()}</p>
         {#else}
         {#for group in groups}
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h2 class="fs-5 fw-semibold mb-0" style="color:#ccc;">{group.checkName}</h2>
             <button type="button" class="btn btn-sm btn-outline-secondary p-1 lh-1"
-                aria-label="Run {group.checkName} check" title="Run {group.checkName} check"
-                onclick="postWithButton(this, '/playlist-checks/{group.checkType}/trigger', 'Check enqueued successfully.', 'Trigger failed')">
+                aria-label="{playlists:checksTriggerGroupLabel(group.checkName)}" title="{playlists:checksTriggerGroupLabel(group.checkName)}"
+                onclick="postWithButton(this, '/playlist-checks/{group.checkType}/trigger', '{playlists:checksTriggerGroupSuccess()}', '{playlists:checksTriggerErrorPrefix()}')">
                 <i class="bi bi-arrow-clockwise" style="font-size:16px;"></i>
             </button>
         </div>
@@ -27,9 +28,9 @@
             <table class="table table-dark table-hover align-middle">
                 <thead>
                     <tr class="app-section-label" style="font-size:.8rem;">
-                        <th>Playlist</th>
-                        <th>Checked</th>
-                        <th>Violations</th>
+                        <th>{playlists:checksTablePlaylistHeader()}</th>
+                        <th>{playlists:checksTableCheckedHeader()}</th>
+                        <th>{playlists:checksTableViolationsHeader()}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -42,11 +43,11 @@
                         <td style="color:#888;font-size:.82rem;">{row.checkDateFormatted}</td>
                         <td style="color:#888;font-size:.82rem;">
                             {#if row.check.violations.empty}
-                            -
+                            {playlists:checksNoViolationsPlaceholder()}
                             {#else}
                             <button type="button" class="btn btn-link p-0" style="color:#ccc;text-decoration:underline;"
                                 data-bs-toggle="modal" data-bs-target="#violations-modal-{row.playlistIdValue}-{row.checkType}"
-                                aria-label="Show violations for {group.checkName} on {row.playlistName}">
+                                aria-label="{playlists:checksShowViolationsAriaLabel(group.checkName, row.playlistName)}">
                                 {row.check.violations.size}
                             </button>
                             {/if}
@@ -67,19 +68,19 @@
                         <h5 class="modal-title" id="violations-modal-label-{row.playlistIdValue}-{row.checkType}" style="color:var(--color-text-primary);">
                             {row.playlistName} – {group.checkName}
                         </h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="{playlists:checksCloseButton()}"></button>
                     </div>
                     <div class="modal-body">
                         {#if row.hasfix}
                         <div class="d-flex gap-2 mb-3">
-                            <button type="button" class="btn btn-sm btn-outline-secondary violations-select-all">Alle auswählen</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary violations-select-none">Keine auswählen</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary violations-select-all">{playlists:checksSelectAllButton()}</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary violations-select-none">{playlists:checksSelectNoneButton()}</button>
                         </div>
                         <ul class="list-unstyled mb-0">
                             {#for violation in row.check.violations}
                             <li class="d-flex align-items-center gap-2 mb-2">
                                 <button type="button" class="btn btn-link p-0 border-0 violation-toggle" data-violation-id="{violation.id}" data-selected="true"
-                                    aria-label="Toggle fix for {violation.message}">
+                                    aria-label="{playlists:checksToggleFixAriaLabel(violation.message)}">
                                     <i class="bi bi-check-circle-fill" style="font-size:18px;color:#1db954;"></i>
                                 </button>
                                 <span style="color:var(--color-text-primary);font-size:.9rem;">{violation.message}</span>
@@ -95,11 +96,11 @@
                         {/if}
                     </div>
                     <div class="modal-footer border-secondary">
-                        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">{playlists:checksCloseButton()}</button>
                         {#if row.hasfix}
                         <button type="button" class="btn btn-spotify btn-sm violations-fix-btn"
                             data-playlist-id="{row.playlistIdValue}" data-check-type="{row.checkType}">
-                            Fix
+                            {playlists:checksFixButton()}
                         </button>
                         {/if}
                     </div>
@@ -114,7 +115,7 @@
     <script src="/settings-utils.js"></script>
     <script>
         document.getElementById('trigger-checks-btn').addEventListener('click', function() {
-            postWithButton(this, '/playlist-checks/trigger', 'Playlist checks enqueued successfully.', 'Trigger failed');
+            postWithButton(this, '/playlist-checks/trigger', '{playlists:checksTriggerAllSuccess()}', '{playlists:checksTriggerErrorPrefix()}');
         });
 
         function setViolationToggleState(el, selected) {
@@ -162,14 +163,16 @@
                 .then(function(result) {
                     if (result.ok) {
                         bootstrap.Modal.getOrCreateInstance(modal).hide();
-                        showBanner('Fix enqueued – playlist will be re-synced shortly', 'success');
+                        showBanner('{playlists:checksFixSuccess()}', 'success');
                         setTimeout(function() { location.reload(); }, 1000);
                     } else {
-                        showBanner('Fix failed: ' + (result.data.error || 'Unknown error'), 'danger');
+                        var unknownError = (typeof SPCTL_I18N !== 'undefined' && SPCTL_I18N.unknownError) || 'Unknown error';
+                        showBanner('{playlists:checksFixErrorPrefix()}: ' + (result.data.error || unknownError), 'danger');
                     }
                 })
                 .catch(function(err) {
-                    showBanner('Request failed: ' + err.message, 'danger');
+                    var requestFailed = (typeof SPCTL_I18N !== 'undefined' && SPCTL_I18N.requestFailed) || 'Request failed';
+                    showBanner(requestFailed + ': ' + err.message, 'danger');
                 })
                 .finally(function() {
                     button.disabled = false;

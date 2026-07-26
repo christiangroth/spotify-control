@@ -1,8 +1,8 @@
 {#include layout.html}
-    {#title}SpCtl – Release Notes{/title}
+    {#title}{msg:commonAppName()} – {docs:releaseNotesTitle()}{/title}
     {#content}
     <div class="app-page-container py-4 px-3 px-md-4">
-        <h1 class="mb-4">Release Notes</h1>
+        <h1 class="mb-4">{docs:releaseNotesTitle()}</h1>
         <div class="accordion" id="release-notes-accordion">
             {#for group in groups}
             <div class="accordion-item app-card app-accordion-item mb-2">

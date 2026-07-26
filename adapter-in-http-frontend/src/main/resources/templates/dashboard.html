@@ -1,12 +1,12 @@
 {#include layout.html}
-    {#title}SpCtl – Dashboard{/title}
+    {#title}{msg:commonAppName()} – {dashboard:dashboardTitle()}{/title}
     {#scripts}<script src="/settings-utils.js"></script>{/scripts}
     {#content}
     <div class="app-page-container py-4 px-3 px-md-4">
 
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1 class="fs-4 fw-semibold mb-0" data-testid="welcome-message">Hej {displayName}!</h1>
-            <button type="button" id="refresh-profile-btn" class="btn btn-sm btn-outline-secondary p-1 lh-1" aria-label="Refresh Profile" title="Refresh Profile" data-testid="refresh-profile-btn">
+            <h1 class="fs-4 fw-semibold mb-0" data-testid="welcome-message">{dashboard:dashboardWelcomeMessage(displayName)}</h1>
+            <button type="button" id="refresh-profile-btn" class="btn btn-sm btn-outline-secondary p-1 lh-1" aria-label="{dashboard:dashboardRefreshProfileLabel()}" title="{dashboard:dashboardRefreshProfileLabel()}" data-testid="refresh-profile-btn">
                 <i class="bi bi-arrow-clockwise" style="font-size:16px;"></i>
             </button>
         </div>
@@ -17,11 +17,11 @@
             <div id="snippet-playback-histogram" class="card mb-4 app-card">
                 {#fragment id="snippet_playback_histogram"}
                 <div class="card-body">
-                    <p class="card-subtitle mb-3 app-section-label">Playback Events per Day (Last 30 Days)</p>
+                    <p class="card-subtitle mb-3 app-section-label">{dashboard:dashboardPlaybackHistogramTitle()}</p>
                     <div style="overflow-x:auto;">
                         <div class="d-flex align-items-end" style="height:80px;gap:2px;" data-testid="histogram">
                             {#for entry in stats.playbackEventsPerDay}
-                            <a href="/stats?date={entry.date}" style="flex:1;min-width:6px;height:100%;display:flex;align-items:flex-end;text-decoration:none;" title="{entry.count.formatted} events on {entry.date}" aria-label="{entry.count.formatted} events on {entry.date}">
+                            <a href="/stats?date={entry.date}" style="flex:1;min-width:6px;height:100%;display:flex;align-items:flex-end;text-decoration:none;" title="{dashboard:dashboardHistogramBarTooltip(entry.count.formatted, entry.date)}" aria-label="{dashboard:dashboardHistogramBarTooltip(entry.count.formatted, entry.date)}">
                             <div style="height:{entry.heightPercent}%;min-height:2px;width:100%;background-color:var(--spotify-green);border-radius:2px 2px 0 0;cursor:pointer;" class="histogram-bar"></div>
                             </a>
                             {/for}
@@ -41,9 +41,9 @@
                     {#fragment id="snippet_recently_played"}
                     <div class="card h-100 app-card">
                         <div class="card-body">
-                            <p class="card-subtitle mb-3 app-section-label">Recently Played</p>
+                            <p class="card-subtitle mb-3 app-section-label">{dashboard:dashboardRecentlyPlayedTitle()}</p>
                             {#if stats.recentlyPlayedTracks.empty}
-                            <p style="color:#888;font-size:.85rem;">No recently played tracks available yet.</p>
+                            <p style="color:#888;font-size:.85rem;">{dashboard:dashboardRecentlyPlayedEmpty()}</p>
                             {#else}
                             <ul class="list-unstyled mb-0" data-testid="recently-played-list">
                                 {#for track in stats.recentlyPlayedTracks}
@@ -51,13 +51,13 @@
                                     {#if track.imageLink}
                                     <img src="{track.imageLink}" alt="{track.trackName}" width="40" height="40" style="min-width:40px;border-radius:4px;margin-right:10px;object-fit:cover;">
                                     {#else}
-                                    <div style="width:40px;height:40px;min-width:40px;border-radius:4px;margin-right:10px;background:#333;display:flex;align-items:center;justify-content:center;" aria-label="Album cover placeholder" role="img">
+                                    <div style="width:40px;height:40px;min-width:40px;border-radius:4px;margin-right:10px;background:#333;display:flex;align-items:center;justify-content:center;" aria-label="{msg:tagAlbumCoverPlaceholderAriaLabel()}" role="img">
                                         <i class="bi bi-vinyl-fill" style="font-size:22px;color:#555;"></i>
                                     </div>
                                     {/if}
                                     <div style="overflow:hidden;">
                                         <div class="fw-semibold text-truncate" style="color:#fff;font-size:.85rem;">{track.trackName}</div>
-                                        <div class="text-truncate" style="color:#888;font-size:.75rem;">{#if track.albumName}{track.albumName}{#else}Unknown Album{/if} &bull; {#if track.artistNames.empty}Unknown Artist{#else}{track.artistNames.get(0)}{/if}</div>
+                                        <div class="text-truncate" style="color:#888;font-size:.75rem;">{#if track.albumName}{track.albumName}{#else}{msg:tagUnknownAlbum()}{/if} &bull; {#if track.artistNames.empty}{msg:tagUnknownArtist()}{#else}{track.artistNames.get(0)}{/if}</div>
                                         <div style="color:#666;font-size:.72rem;">{track.playedAt.formattedShort}{#if track.durationSeconds} &bull; {track.durationSeconds.formattedDuration}{/if}</div>
                                     </div>
                                 </li>
@@ -72,15 +72,15 @@
                     {#fragment id="snippet_listening_stats"}
                     <div class="card h-100 app-card">
                         <div class="card-body">
-                            <p class="card-subtitle mb-3 app-section-label">Listening Stats (Last 30 Days)</p>
+                            <p class="card-subtitle mb-3 app-section-label">{dashboard:dashboardListeningStatsTitle()}</p>
                             <p class="mb-3" style="color:#fff;font-size:.85rem;" data-testid="listened-minutes">
                                 <span style="color:var(--spotify-green);font-weight:600;">{stats.listeningStats.listenedMinutesLast30Days.formattedListeningDuration}</span>
-                                <span style="color:#888;"> listened</span>
+                                <span style="color:#888;"> {dashboard:dashboardListenedLabel()}</span>
                             </p>
                             <div class="mb-3">
-                                <p class="mb-1" style="color:#888;font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;">Top Tracks</p>
+                                <p class="mb-1" style="color:#888;font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;">{dashboard:dashboardTopTracksTitle()}</p>
                                 {#if stats.listeningStats.topTracksLast30Days.empty}
-                                <p style="color:#888;font-size:.8rem;">No data yet – listen to some tracks and check back later.</p>
+                                <p style="color:#888;font-size:.8rem;">{dashboard:dashboardStatsEmpty()}</p>
                                 {#else}
                                 <ul class="list-unstyled mb-0" data-testid="top-tracks-list">
                                     {#for entry in stats.listeningStats.topTracksLast30Days}
@@ -90,9 +90,9 @@
                                 {/if}
                             </div>
                             <div class="mb-3">
-                                <p class="mb-1" style="color:#888;font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;">Top Artists</p>
+                                <p class="mb-1" style="color:#888;font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;">{dashboard:dashboardTopArtistsTitle()}</p>
                                 {#if stats.listeningStats.topArtistsLast30Days.empty}
-                                <p style="color:#888;font-size:.8rem;">No data yet – listen to some tracks and check back later.</p>
+                                <p style="color:#888;font-size:.8rem;">{dashboard:dashboardStatsEmpty()}</p>
                                 {#else}
                                 <ul class="list-unstyled mb-0" data-testid="top-artists-list">
                                     {#for entry in stats.listeningStats.topArtistsLast30Days}
@@ -102,9 +102,9 @@
                                 {/if}
                             </div>
                             <div class="mb-3">
-                                <p class="mb-1" style="color:#888;font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;">Top Albums</p>
+                                <p class="mb-1" style="color:#888;font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;">{dashboard:dashboardTopAlbumsTitle()}</p>
                                 {#if stats.listeningStats.topAlbumsLast30Days.empty}
-                                <p style="color:#888;font-size:.8rem;">No data yet – listen to some tracks and check back later.</p>
+                                <p style="color:#888;font-size:.8rem;">{dashboard:dashboardStatsEmpty()}</p>
                                 {#else}
                                 <ul class="list-unstyled mb-0" data-testid="top-albums-list">
                                     {#for entry in stats.listeningStats.topAlbumsLast30Days}
@@ -130,7 +130,7 @@
             }
         });
         document.getElementById('refresh-profile-btn').addEventListener('click', function() {
-            postWithButton(this, '/settings/playback/profile/refresh', 'Profile refresh enqueued successfully.', 'Refresh failed');
+            postWithButton(this, '/settings/playback/profile/refresh', '{dashboard:dashboardProfileRefreshSuccess()}', '{dashboard:dashboardProfileRefreshErrorPrefix()}');
         });
     </script>
     {/content}

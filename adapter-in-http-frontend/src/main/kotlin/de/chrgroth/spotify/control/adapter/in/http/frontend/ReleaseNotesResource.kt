@@ -1,5 +1,6 @@
 package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
+import de.chrgroth.spotify.control.adapter.`in`.http.frontend.i18n.DocsMessages
 import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
 import io.quarkus.qute.Location
 import io.quarkus.qute.Template
@@ -28,6 +29,7 @@ class ReleaseNotesResource(
   @param:Location("release-notes.html")
   private val releaseNotesTemplate: Template,
   private val httpResponseMetrics: ResponseTimingPort,
+  private val messages: DocsMessages,
 ) {
 
   @GET
@@ -44,11 +46,12 @@ class ReleaseNotesResource(
   private fun toView(group: ReleaseNotesMinorGroup, expanded: Boolean): ReleaseNotesGroupView {
     val dateRange = if (group.fromDate == group.toDate) group.toDate else "${group.fromDate} – ${group.toDate}"
     val versionCount = group.versions.size
+    val versionWord = if (versionCount == 1) messages.releaseNotesVersionSingular() else messages.releaseNotesVersionPlural()
     return ReleaseNotesGroupView(
       id = "release-notes-group-${group.minorVersion.replace(".", "-")}",
       title = "v${group.minorVersion}",
       dateRange = dateRange,
-      versionsLabel = "$versionCount version${if (versionCount == 1) "" else "s"}: ${group.versions.joinToString(", ") { "v$it" }}",
+      versionsLabel = "$versionCount $versionWord: ${group.versions.joinToString(", ") { "v$it" }}",
       markdownContent = toMarkdown(group),
       expanded = expanded,
     )

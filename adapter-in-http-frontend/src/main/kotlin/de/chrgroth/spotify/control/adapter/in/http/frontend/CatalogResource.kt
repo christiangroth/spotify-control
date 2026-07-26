@@ -1,5 +1,6 @@
 package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
+import de.chrgroth.spotify.control.adapter.`in`.http.frontend.i18n.CatalogMessages
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumBrowseItem
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistBrowseItem
 import de.chrgroth.spotify.control.domain.model.catalog.TrackBrowseItem
@@ -33,6 +34,7 @@ class CatalogResource(
   private val catalog: CatalogPort,
   private val dashboard: DashboardPort,
   private val httpResponseMetrics: ResponseTimingPort,
+  private val messages: CatalogMessages,
 ) {
 
   @GET
@@ -111,7 +113,7 @@ class CatalogResource(
   @Authenticated
   @Produces(MediaType.TEXT_PLAIN)
   fun artistSyncTrace(@PathParam("artistId") artistId: String): Response = httpResponseMetrics.timed("rest.catalog.artist-sync-trace") {
-    val trace = catalogBrowser.getArtistSyncTrace(artistId) ?: return@timed Response.ok(NO_TRACE_AVAILABLE).build()
+    val trace = catalogBrowser.getArtistSyncTrace(artistId) ?: return@timed Response.ok(messages.catalogSyncTraceNotAvailable()).build()
     Response.ok("${trace.description} (${trace.triggeredAt})").build()
   }
 
@@ -120,11 +122,7 @@ class CatalogResource(
   @Authenticated
   @Produces(MediaType.TEXT_PLAIN)
   fun albumSyncTrace(@PathParam("albumId") albumId: String): Response = httpResponseMetrics.timed("rest.catalog.album-sync-trace") {
-    val trace = catalogBrowser.getAlbumSyncTrace(albumId) ?: return@timed Response.ok(NO_TRACE_AVAILABLE).build()
+    val trace = catalogBrowser.getAlbumSyncTrace(albumId) ?: return@timed Response.ok(messages.catalogSyncTraceNotAvailable()).build()
     Response.ok("${trace.description} (${trace.triggeredAt})").build()
-  }
-
-  companion object {
-    private const val NO_TRACE_AVAILABLE = "No sync trigger information available."
   }
 }

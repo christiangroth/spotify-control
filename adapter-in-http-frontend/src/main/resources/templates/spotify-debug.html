@@ -1,35 +1,33 @@
 {#include layout.html}
-    {#title}SpCtl – Spotify Debug{/title}
+    {#title}{msg:commonAppName()} – {monitoring:spotifyDebugTitle()}{/title}
     {#content}
     <div class="app-page-container py-4 px-3 px-md-4">
 
-        <h1 class="mb-2 fs-4 fw-semibold">Spotify Debug</h1>
+        <h1 class="mb-2 fs-4 fw-semibold">{monitoring:spotifyDebugHeading()}</h1>
         <p class="text-secondary small mb-4">
-            Manually trigger the individual requests the backend performs against the Spotify Web API and inspect the raw JSON result.
-            This is a read-only debugging tool — nothing is persisted and no further processing happens with the result.
-            Requests use your own valid Spotify access token and hit the real Spotify Web API.
+            {monitoring:spotifyDebugDescription()}
         </p>
 
         <ul class="nav nav-tabs mb-3" id="spotify-debug-domain-tabs" role="tablist">
-            <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#domain-user" type="button" role="tab">User</button></li>
-            <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#domain-playback" type="button" role="tab">Playback</button></li>
-            <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#domain-playlist" type="button" role="tab">Playlist</button></li>
-            <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#domain-catalog" type="button" role="tab">Catalog</button></li>
+            <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#domain-user" type="button" role="tab">{monitoring:spotifyDebugTabUser()}</button></li>
+            <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#domain-playback" type="button" role="tab">{monitoring:spotifyDebugTabPlayback()}</button></li>
+            <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#domain-playlist" type="button" role="tab">{monitoring:spotifyDebugTabPlaylist()}</button></li>
+            <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#domain-catalog" type="button" role="tab">{monitoring:spotifyDebugTabCatalog()}</button></li>
         </ul>
 
         <div class="tab-content" id="spotify-debug-domain-tabs-content">
 
             <div class="tab-pane fade show active" id="domain-user" role="tabpanel">
                 <ul class="nav nav-pills mb-3" role="tablist">
-                    <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tab-current-user" type="button" role="tab">Current User</button></li>
+                    <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tab-current-user" type="button" role="tab">{monitoring:spotifyDebugPillCurrentUser()}</button></li>
                 </ul>
                 <div class="tab-content">
 
                     <div class="tab-pane fade show active" id="tab-current-user" role="tabpanel">
-                        <p class="text-secondary small mb-3"><code>GET /v1/me</code> — the current user's Spotify profile.</p>
+                        <p class="text-secondary small mb-3"><code>GET /v1/me</code> {monitoring:spotifyDebugDescCurrentUser()}</p>
                         <div id="form-current-user" class="mb-3"></div>
-                        <button type="button" class="btn btn-spotify btn-sm mb-3" onclick="executeOperation('current-user', 'form-current-user', 'result-current-user')">Execute</button>
-                        <div id="result-current-user" class="debug-result">No result yet. Click &quot;Execute&quot; to run this request.</div>
+                        <button type="button" class="btn btn-spotify btn-sm mb-3" onclick="executeOperation('current-user', 'form-current-user', 'result-current-user')">{monitoring:spotifyDebugExecuteButton()}</button>
+                        <div id="result-current-user" class="debug-result">{monitoring:spotifyDebugNoResultYetMessage()}</div>
                     </div>
 
                 </div>
@@ -37,30 +35,30 @@
 
             <div class="tab-pane fade" id="domain-playback" role="tabpanel">
                 <ul class="nav nav-pills mb-3" role="tablist">
-                    <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tab-currently-playing" type="button" role="tab">Currently Playing</button></li>
-                    <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-recently-played" type="button" role="tab">Recently Played</button></li>
+                    <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tab-currently-playing" type="button" role="tab">{monitoring:spotifyDebugPillCurrentlyPlaying()}</button></li>
+                    <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-recently-played" type="button" role="tab">{monitoring:spotifyDebugPillRecentlyPlayed()}</button></li>
                 </ul>
                 <div class="tab-content">
 
                     <div class="tab-pane fade show active" id="tab-currently-playing" role="tabpanel">
-                        <p class="text-secondary small mb-3"><code>GET /v1/me/player/currently-playing</code> — the track currently playing for the user.</p>
+                        <p class="text-secondary small mb-3"><code>GET /v1/me/player/currently-playing</code> {monitoring:spotifyDebugDescCurrentlyPlaying()}</p>
                         <div id="form-currently-playing" class="mb-3"></div>
-                        <button type="button" class="btn btn-spotify btn-sm mb-3" onclick="executeOperation('currently-playing', 'form-currently-playing', 'result-currently-playing')">Execute</button>
-                        <div id="result-currently-playing" class="debug-result">No result yet. Click &quot;Execute&quot; to run this request.</div>
+                        <button type="button" class="btn btn-spotify btn-sm mb-3" onclick="executeOperation('currently-playing', 'form-currently-playing', 'result-currently-playing')">{monitoring:spotifyDebugExecuteButton()}</button>
+                        <div id="result-currently-playing" class="debug-result">{monitoring:spotifyDebugNoResultYetMessage()}</div>
                     </div>
 
                     <div class="tab-pane fade" id="tab-recently-played" role="tabpanel">
-                        <p class="text-secondary small mb-3"><code>GET /v1/me/player/recently-played</code> — the user's recently played tracks, since &quot;after&quot; (all pages).</p>
+                        <p class="text-secondary small mb-3"><code>GET /v1/me/player/recently-played</code> {monitoring:spotifyDebugDescRecentlyPlayed()}</p>
                         <div id="form-recently-played" class="mb-3">
                             <div class="row g-2" style="max-width:420px;">
                                 <div class="col-auto">
-                                    <label class="form-label small text-secondary mb-1">After (epoch ms, optional)</label>
+                                    <label class="form-label small text-secondary mb-1">{monitoring:spotifyDebugLabelAfter()}</label>
                                     <input type="number" class="form-control form-control-sm debug-input" data-param="after" style="width:180px;">
                                 </div>
                             </div>
                         </div>
-                        <button type="button" class="btn btn-spotify btn-sm mb-3" onclick="executeOperation('recently-played', 'form-recently-played', 'result-recently-played')">Execute</button>
-                        <div id="result-recently-played" class="debug-result">No result yet. Click &quot;Execute&quot; to run this request.</div>
+                        <button type="button" class="btn btn-spotify btn-sm mb-3" onclick="executeOperation('recently-played', 'form-recently-played', 'result-recently-played')">{monitoring:spotifyDebugExecuteButton()}</button>
+                        <div id="result-recently-played" class="debug-result">{monitoring:spotifyDebugNoResultYetMessage()}</div>
                     </div>
 
                 </div>
@@ -68,35 +66,35 @@
 
             <div class="tab-pane fade" id="domain-playlist" role="tabpanel">
                 <ul class="nav nav-pills mb-3" role="tablist">
-                    <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tab-user-playlists" type="button" role="tab">My Playlists</button></li>
-                    <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-playlist-tracks" type="button" role="tab">Playlist Tracks</button></li>
+                    <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tab-user-playlists" type="button" role="tab">{monitoring:spotifyDebugPillMyPlaylists()}</button></li>
+                    <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-playlist-tracks" type="button" role="tab">{monitoring:spotifyDebugPillPlaylistTracks()}</button></li>
                 </ul>
                 <div class="tab-content">
 
                     <div class="tab-pane fade show active" id="tab-user-playlists" role="tabpanel">
-                        <p class="text-secondary small mb-3"><code>GET /v1/me/playlists</code> — playlists owned or followed by the user (all pages).</p>
+                        <p class="text-secondary small mb-3"><code>GET /v1/me/playlists</code> {monitoring:spotifyDebugDescUserPlaylists()}</p>
                         <div id="form-user-playlists" class="mb-3"></div>
-                        <button type="button" class="btn btn-spotify btn-sm mb-3" onclick="executeOperation('user-playlists', 'form-user-playlists', 'result-user-playlists')">Execute</button>
-                        <div id="result-user-playlists" class="debug-result">No result yet. Click &quot;Execute&quot; to run this request.</div>
+                        <button type="button" class="btn btn-spotify btn-sm mb-3" onclick="executeOperation('user-playlists', 'form-user-playlists', 'result-user-playlists')">{monitoring:spotifyDebugExecuteButton()}</button>
+                        <div id="result-user-playlists" class="debug-result">{monitoring:spotifyDebugNoResultYetMessage()}</div>
                     </div>
 
                     <div class="tab-pane fade" id="tab-playlist-tracks" role="tabpanel">
-                        <p class="text-secondary small mb-3"><code>GET /v1/playlists/{"{"}playlist_id{"}"}/items</code> — a single page of a playlist's tracks.</p>
+                        <p class="text-secondary small mb-3"><code>GET /v1/playlists/{"{"}playlist_id{"}"}/items</code> {monitoring:spotifyDebugDescPlaylistTracks()}</p>
                         <div id="form-playlist-tracks" class="mb-3">
                             <div id="picker-playlist" class="mb-2" style="max-width:420px;">
-                                <label class="form-label small text-secondary mb-1">Playlist</label>
-                                <input type="text" class="form-control form-control-sm picker-search" placeholder="Search playlist by name..." autocomplete="off">
+                                <label class="form-label small text-secondary mb-1">{monitoring:spotifyDebugLabelPlaylist()}</label>
+                                <input type="text" class="form-control form-control-sm picker-search" placeholder="{monitoring:spotifyDebugPlaceholderSearchPlaylist()}" autocomplete="off">
                                 <div class="list-group mt-1 picker-results" style="max-height:180px;overflow-y:auto;"></div>
                                 <input type="hidden" class="picker-value" data-param="playlistId">
                                 <div class="small mt-1 picker-label" style="color:var(--spotify-green);"></div>
                             </div>
                             <div class="mb-2" style="max-width:420px;">
-                                <label class="form-label small text-secondary mb-1">Page URL (optional, from a previous result's &quot;nextUrl&quot;)</label>
+                                <label class="form-label small text-secondary mb-1">{monitoring:spotifyDebugLabelPageUrl()}</label>
                                 <input type="text" class="form-control form-control-sm debug-input" data-param="pageUrl">
                             </div>
                         </div>
-                        <button type="button" class="btn btn-spotify btn-sm mb-3" onclick="executeOperation('playlist-tracks', 'form-playlist-tracks', 'result-playlist-tracks')">Execute</button>
-                        <div id="result-playlist-tracks" class="debug-result">No result yet. Click &quot;Execute&quot; to run this request.</div>
+                        <button type="button" class="btn btn-spotify btn-sm mb-3" onclick="executeOperation('playlist-tracks', 'form-playlist-tracks', 'result-playlist-tracks')">{monitoring:spotifyDebugExecuteButton()}</button>
+                        <div id="result-playlist-tracks" class="debug-result">{monitoring:spotifyDebugNoResultYetMessage()}</div>
                     </div>
 
                 </div>
@@ -104,75 +102,75 @@
 
             <div class="tab-pane fade" id="domain-catalog" role="tabpanel">
                 <ul class="nav nav-pills mb-3" role="tablist">
-                    <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tab-artist" type="button" role="tab">Artist</button></li>
-                    <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-artist-albums" type="button" role="tab">Artist Albums</button></li>
-                    <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-album" type="button" role="tab">Album</button></li>
-                    <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-album-tracks" type="button" role="tab">Album Tracks</button></li>
+                    <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tab-artist" type="button" role="tab">{monitoring:spotifyDebugPillArtist()}</button></li>
+                    <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-artist-albums" type="button" role="tab">{monitoring:spotifyDebugPillArtistAlbums()}</button></li>
+                    <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-album" type="button" role="tab">{monitoring:spotifyDebugPillAlbum()}</button></li>
+                    <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-album-tracks" type="button" role="tab">{monitoring:spotifyDebugPillAlbumTracks()}</button></li>
                 </ul>
                 <div class="tab-content">
 
                     <div class="tab-pane fade show active" id="tab-artist" role="tabpanel">
-                        <p class="text-secondary small mb-3"><code>GET /v1/artists/{"{"}id{"}"}</code> — a single artist's details.</p>
+                        <p class="text-secondary small mb-3"><code>GET /v1/artists/{"{"}id{"}"}</code> {monitoring:spotifyDebugDescArtist()}</p>
                         <div id="form-artist" class="mb-3">
                             <div id="picker-artist-for-artist" class="mb-2" style="max-width:420px;">
-                                <label class="form-label small text-secondary mb-1">Artist</label>
-                                <input type="text" class="form-control form-control-sm picker-search" placeholder="Search artist by name..." autocomplete="off">
+                                <label class="form-label small text-secondary mb-1">{monitoring:spotifyDebugLabelArtist()}</label>
+                                <input type="text" class="form-control form-control-sm picker-search" placeholder="{monitoring:spotifyDebugPlaceholderSearchArtist()}" autocomplete="off">
                                 <div class="list-group mt-1 picker-results" style="max-height:180px;overflow-y:auto;"></div>
                                 <input type="hidden" class="picker-value" data-param="artistId">
                                 <div class="small mt-1 picker-label" style="color:var(--spotify-green);"></div>
                             </div>
                         </div>
-                        <button type="button" class="btn btn-spotify btn-sm mb-3" onclick="executeOperation('artist', 'form-artist', 'result-artist')">Execute</button>
-                        <div id="result-artist" class="debug-result">No result yet. Click &quot;Execute&quot; to run this request.</div>
+                        <button type="button" class="btn btn-spotify btn-sm mb-3" onclick="executeOperation('artist', 'form-artist', 'result-artist')">{monitoring:spotifyDebugExecuteButton()}</button>
+                        <div id="result-artist" class="debug-result">{monitoring:spotifyDebugNoResultYetMessage()}</div>
                     </div>
 
                     <div class="tab-pane fade" id="tab-artist-albums" role="tabpanel">
-                        <p class="text-secondary small mb-3"><code>GET /v1/artists/{"{"}id{"}"}/albums</code> — a single page of an artist's albums.</p>
+                        <p class="text-secondary small mb-3"><code>GET /v1/artists/{"{"}id{"}"}/albums</code> {monitoring:spotifyDebugDescArtistAlbums()}</p>
                         <div id="form-artist-albums" class="mb-3">
                             <div id="picker-artist-for-artist-albums" class="mb-2" style="max-width:420px;">
-                                <label class="form-label small text-secondary mb-1">Artist</label>
-                                <input type="text" class="form-control form-control-sm picker-search" placeholder="Search artist by name..." autocomplete="off">
+                                <label class="form-label small text-secondary mb-1">{monitoring:spotifyDebugLabelArtist()}</label>
+                                <input type="text" class="form-control form-control-sm picker-search" placeholder="{monitoring:spotifyDebugPlaceholderSearchArtist()}" autocomplete="off">
                                 <div class="list-group mt-1 picker-results" style="max-height:180px;overflow-y:auto;"></div>
                                 <input type="hidden" class="picker-value" data-param="artistId">
                                 <div class="small mt-1 picker-label" style="color:var(--spotify-green);"></div>
                             </div>
                             <div class="mb-2" style="max-width:420px;">
-                                <label class="form-label small text-secondary mb-1">Page URL (optional, from a previous result's &quot;nextUrl&quot;)</label>
+                                <label class="form-label small text-secondary mb-1">{monitoring:spotifyDebugLabelPageUrl()}</label>
                                 <input type="text" class="form-control form-control-sm debug-input" data-param="nextUrl">
                             </div>
                         </div>
-                        <button type="button" class="btn btn-spotify btn-sm mb-3" onclick="executeOperation('artist-albums', 'form-artist-albums', 'result-artist-albums')">Execute</button>
-                        <div id="result-artist-albums" class="debug-result">No result yet. Click &quot;Execute&quot; to run this request.</div>
+                        <button type="button" class="btn btn-spotify btn-sm mb-3" onclick="executeOperation('artist-albums', 'form-artist-albums', 'result-artist-albums')">{monitoring:spotifyDebugExecuteButton()}</button>
+                        <div id="result-artist-albums" class="debug-result">{monitoring:spotifyDebugNoResultYetMessage()}</div>
                     </div>
 
                     <div class="tab-pane fade" id="tab-album" role="tabpanel">
-                        <p class="text-secondary small mb-3"><code>GET /v1/albums/{"{"}id{"}"}</code> — a single album's details, including all its tracks.</p>
+                        <p class="text-secondary small mb-3"><code>GET /v1/albums/{"{"}id{"}"}</code> {monitoring:spotifyDebugDescAlbum()}</p>
                         <div id="form-album" class="mb-3">
                             <div id="picker-album-for-album" class="mb-2" style="max-width:420px;">
-                                <label class="form-label small text-secondary mb-1">Album</label>
-                                <input type="text" class="form-control form-control-sm picker-search" placeholder="Search album by title..." autocomplete="off">
+                                <label class="form-label small text-secondary mb-1">{monitoring:spotifyDebugLabelAlbum()}</label>
+                                <input type="text" class="form-control form-control-sm picker-search" placeholder="{monitoring:spotifyDebugPlaceholderSearchAlbum()}" autocomplete="off">
                                 <div class="list-group mt-1 picker-results" style="max-height:180px;overflow-y:auto;"></div>
                                 <input type="hidden" class="picker-value" data-param="albumId">
                                 <div class="small mt-1 picker-label" style="color:var(--spotify-green);"></div>
                             </div>
                         </div>
-                        <button type="button" class="btn btn-spotify btn-sm mb-3" onclick="executeOperation('album', 'form-album', 'result-album')">Execute</button>
-                        <div id="result-album" class="debug-result">No result yet. Click &quot;Execute&quot; to run this request.</div>
+                        <button type="button" class="btn btn-spotify btn-sm mb-3" onclick="executeOperation('album', 'form-album', 'result-album')">{monitoring:spotifyDebugExecuteButton()}</button>
+                        <div id="result-album" class="debug-result">{monitoring:spotifyDebugNoResultYetMessage()}</div>
                     </div>
 
                     <div class="tab-pane fade" id="tab-album-tracks" role="tabpanel">
-                        <p class="text-secondary small mb-3"><code>GET /v1/albums/{"{"}id{"}"}/tracks</code> — the tracks of an album (fetches the album first to resolve its metadata).</p>
+                        <p class="text-secondary small mb-3"><code>GET /v1/albums/{"{"}id{"}"}/tracks</code> {monitoring:spotifyDebugDescAlbumTracks()}</p>
                         <div id="form-album-tracks" class="mb-3">
                             <div id="picker-album-for-album-tracks" class="mb-2" style="max-width:420px;">
-                                <label class="form-label small text-secondary mb-1">Album</label>
-                                <input type="text" class="form-control form-control-sm picker-search" placeholder="Search album by title..." autocomplete="off">
+                                <label class="form-label small text-secondary mb-1">{monitoring:spotifyDebugLabelAlbum()}</label>
+                                <input type="text" class="form-control form-control-sm picker-search" placeholder="{monitoring:spotifyDebugPlaceholderSearchAlbum()}" autocomplete="off">
                                 <div class="list-group mt-1 picker-results" style="max-height:180px;overflow-y:auto;"></div>
                                 <input type="hidden" class="picker-value" data-param="albumId">
                                 <div class="small mt-1 picker-label" style="color:var(--spotify-green);"></div>
                             </div>
                         </div>
-                        <button type="button" class="btn btn-spotify btn-sm mb-3" onclick="executeOperation('album-tracks', 'form-album-tracks', 'result-album-tracks')">Execute</button>
-                        <div id="result-album-tracks" class="debug-result">No result yet. Click &quot;Execute&quot; to run this request.</div>
+                        <button type="button" class="btn btn-spotify btn-sm mb-3" onclick="executeOperation('album-tracks', 'form-album-tracks', 'result-album-tracks')">{monitoring:spotifyDebugExecuteButton()}</button>
+                        <div id="result-album-tracks" class="debug-result">{monitoring:spotifyDebugNoResultYetMessage()}</div>
                     </div>
 
                 </div>
@@ -280,7 +278,7 @@
         function renderPickerOptions(container, options, onPick) {
             container.innerHTML = '';
             if (!options || options.length === 0) {
-                container.innerHTML = '<div class="text-secondary small px-2 py-1">No matches.</div>';
+                container.innerHTML = '<div class="text-secondary small px-2 py-1">{monitoring:spotifyDebugNoMatchesMessage()}</div>';
                 return;
             }
             options.forEach(function(option) {
@@ -446,13 +444,13 @@
             });
             const resultEl = document.getElementById(resultElementId);
             resultEl.classList.remove('json-viewer');
-            resultEl.textContent = 'Loading…';
+            resultEl.textContent = '{monitoring:spotifyDebugLoadingMessage()}';
             fetch('/spotify-debug/execute/' + encodeURIComponent(operation) + '?' + params.toString(), { method: 'POST' })
                 .then(function(r) { return r.json(); })
                 .then(function(json) { renderJsonResult(resultEl, json); })
                 .catch(function(err) {
                     resultEl.classList.remove('json-viewer');
-                    resultEl.textContent = 'Error: ' + err;
+                    resultEl.textContent = '{monitoring:spotifyDebugErrorPrefix()}' + ': ' + err;
                 });
         }
 
