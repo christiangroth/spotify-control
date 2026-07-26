@@ -1,36 +1,35 @@
 {#include layout.html}
-    {#title}SpCtl – Artist Settings{/title}
+    {#title}{msg:commonAppName()} – {catalog:catalogArtistSettingsTitle()}{/title}
     {#scripts}<script src="/settings-utils.js"></script>{/scripts}
     {#content}
     <div class="app-page-container py-4 px-3 px-md-4">
         <div class="d-flex align-items-center mb-2 gap-3">
-            <h1 class="fs-4 fw-semibold mb-0">Artist Settings</h1>
-            <a href="/catalog" class="btn btn-outline-secondary btn-sm">Back to Catalog</a>
+            <h1 class="fs-4 fw-semibold mb-0">{catalog:catalogArtistSettingsTitle()}</h1>
+            <a href="/catalog" class="btn btn-outline-secondary btn-sm">{catalog:catalogBackToCatalogButton()}</a>
         </div>
         <p class="text-secondary small mb-4">
-            Newly discovered artists are automatically assigned a guessed sync status. Confirm or correct each artist below
-            to move it out of this list into its final Sync or Shallow status.
+            {catalog:catalogArtistSettingsDescription()}
         </p>
 
         <div id="status-banner" class="alert d-none mb-3" role="alert"></div>
 
         {#if truncated}
         <p class="text-secondary small mb-3">
-            Showing the first {artists.size} artists. Resolve some of them to see more.
+            {catalog:catalogArtistSettingsTruncatedNotice(artists.size)}
         </p>
         {/if}
 
         <div id="undecided-artist-list">
         {#if artists.empty}
-        <p class="text-secondary">No artists are awaiting a sync decision.</p>
+        <p class="text-secondary">{catalog:catalogArtistSettingsEmptyState()}</p>
         {#else}
         <table class="table table-dark table-hover align-middle mb-0">
             <thead>
                 <tr class="app-section-label" style="font-size:.8rem;">
                     <th style="width:50px;"></th>
-                    <th>Artist</th>
-                    <th>Assumption</th>
-                    <th>Actions</th>
+                    <th>{catalog:catalogTableArtistHeader()}</th>
+                    <th>{catalog:catalogTableAssumptionHeader()}</th>
+                    <th>{catalog:catalogTableActionsHeader()}</th>
                 </tr>
             </thead>
             <tbody>
@@ -41,7 +40,7 @@
                         <img src="{artist.imageLink}" alt="{artist.artistName}" width="40" height="40"
                              style="border-radius:50%;object-fit:cover;">
                         {#else}
-                        <div style="width:40px;height:40px;border-radius:50%;background:#333;display:flex;align-items:center;justify-content:center;" aria-label="Artist image placeholder" role="img">
+                        <div style="width:40px;height:40px;border-radius:50%;background:#333;display:flex;align-items:center;justify-content:center;" aria-label="{catalog:catalogArtistImagePlaceholderAriaLabel()}" role="img">
                             <i class="bi bi-person-circle" style="font-size:20px;color:#888;"></i>
                         </div>
                         {/if}
@@ -49,19 +48,19 @@
                     <td style="color:#fff;font-size:.9rem;">{artist.artistName}</td>
                     <td>
                         {#if artist.isShallow}
-                        <span class="badge" style="background-color:#5a1a1a;color:#e07070;font-size:.72rem;font-weight:400;">shallow</span>
+                        <span class="badge" style="background-color:#5a1a1a;color:#e07070;font-size:.72rem;font-weight:400;">{catalog:catalogBadgeShallow()}</span>
                         {#else}
-                        <span class="badge" style="background-color:#1a4a2a;color:#6fcf97;font-size:.72rem;font-weight:400;">sync</span>
+                        <span class="badge" style="background-color:#1a4a2a;color:#6fcf97;font-size:.72rem;font-weight:400;">{catalog:catalogBadgeSync()}</span>
                         {/if}
                     </td>
                     <td style="padding:8px;">
                         <button class="btn btn-sm btn-outline-success py-0 px-2 confirm-sync-artist-btn"
                             data-artist-id="{artist.artistId}"
-                            aria-label="Confirm {artist.artistName} as sync">Set Sync</button>
+                            aria-label="{catalog:catalogConfirmSyncAriaLabel(artist.artistName)}">{catalog:catalogSetSyncButton()}</button>
                         <button class="btn btn-sm py-0 px-2 ms-1 confirm-shallow-artist-btn"
                             style="border-color:var(--color-danger);color:var(--color-danger);"
                             data-artist-id="{artist.artistId}"
-                            aria-label="Confirm {artist.artistName} as shallow">Set Shallow</button>
+                            aria-label="{catalog:catalogConfirmShallowAriaLabel(artist.artistName)}">{catalog:catalogSetShallowButton()}</button>
                     </td>
                 </tr>
                 {/for}
@@ -76,7 +75,7 @@
             const setSyncBtn = e.target.closest('.confirm-sync-artist-btn');
             if (setSyncBtn) {
                 const artistId = setSyncBtn.dataset.artistId;
-                postWithButton(setSyncBtn, '/settings/playback/artists/' + encodeURIComponent(artistId) + '/set-sync', 'Artist set to sync. Albums and tracks will be synced.', 'Set sync failed', function() {
+                postWithButton(setSyncBtn, '/settings/playback/artists/' + encodeURIComponent(artistId) + '/set-sync', '{catalog:catalogArtistSettingsSetSyncSuccessMessage()}', '{catalog:catalogSetSyncErrorPrefix()}', function() {
                     const row = document.getElementById('undecided-artist-row-' + artistId);
                     if (row) row.remove();
                 });
@@ -85,7 +84,7 @@
             const setShallowBtn = e.target.closest('.confirm-shallow-artist-btn');
             if (setShallowBtn) {
                 const artistId = setShallowBtn.dataset.artistId;
-                postWithButton(setShallowBtn, '/settings/playback/artists/' + encodeURIComponent(artistId) + '/set-shallow', 'Artist set to shallow.', 'Set shallow failed', function() {
+                postWithButton(setShallowBtn, '/settings/playback/artists/' + encodeURIComponent(artistId) + '/set-shallow', '{catalog:catalogArtistSettingsSetShallowSuccessMessage()}', '{catalog:catalogSetShallowErrorPrefix()}', function() {
                     const row = document.getElementById('undecided-artist-row-' + artistId);
                     if (row) row.remove();
                 });

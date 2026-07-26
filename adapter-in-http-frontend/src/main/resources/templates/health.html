@@ -1,24 +1,24 @@
 {#include layout.html}
-    {#title}SpCtl – Health{/title}
+    {#title}{msg:commonAppName()} – {health:healthTitle()}{/title}
     {#content}
     <div class="app-page-container py-4 px-3 px-md-4">
 
-        <h1 class="mb-4 fs-4 fw-semibold">System Health</h1>
+        <h1 class="mb-4 fs-4 fw-semibold">{health:healthHeading()}</h1>
 
         <div id="health-section">
-            <h2 class="mb-3 fs-6 fw-semibold text-uppercase" style="color:#888;letter-spacing:.05em;">Communication</h2>
+            <h2 class="mb-3 fs-6 fw-semibold text-uppercase" style="color:#888;letter-spacing:.05em;">{health:healthCommunicationHeading()}</h2>
             <div class="row g-3 mb-4">
                 <div class="col-12 col-sm-6 col-lg-6">
                     <div id="snippet-outgoing-http-calls" class="card h-100 app-card">
                         {#fragment id="snippet_outgoing_http_calls"}
                         <div class="card-body">
-                            <p class="card-subtitle mb-3 app-section-label">Outgoing HTTP Requests (Last 24h)</p>
+                            <p class="card-subtitle mb-3 app-section-label">{health:healthOutgoingRequestsHeading()}</p>
                             <div class="table-responsive">
                                 <table class="table table-sm mb-0 app-table" data-testid="outgoing-requests-table">
                                     <thead>
                                         <tr>
-                                            <th>Endpoint</th>
-                                            <th class="text-end">#</th>
+                                            <th>{health:healthColumnEndpoint()}</th>
+                                            <th class="text-end">{health:healthColumnCount()}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -39,14 +39,14 @@
                     <div id="snippet-outbox-partitions" class="card h-100 app-card">
                         {#fragment id="snippet_outbox_partitions"}
                         <div class="card-body">
-                            <p class="card-subtitle mb-3 app-section-label">Outbox Partitions</p>
+                            <p class="card-subtitle mb-3 app-section-label">{health:healthOutboxPartitionsHeading()}</p>
                             <div class="table-responsive">
                                 <table class="table table-sm mb-0 app-table" data-testid="outbox-table">
                                     <thead>
                                         <tr>
-                                            <th>Partition</th>
-                                            <th class="text-end">Blocked</th>
-                                            <th class="text-end">#</th>
+                                            <th>{health:healthColumnPartition()}</th>
+                                            <th class="text-end">{health:healthColumnBlocked()}</th>
+                                            <th class="text-end">{health:healthColumnCount()}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -85,20 +85,20 @@
                 </div>
             </div>
 
-            <h2 class="mb-3 fs-6 fw-semibold text-uppercase" style="color:#888;letter-spacing:.05em;">Cronjobs &amp; State</h2>
+            <h2 class="mb-3 fs-6 fw-semibold text-uppercase" style="color:#888;letter-spacing:.05em;">{health:healthCronjobsStateHeading()}</h2>
             <div class="row g-3 mb-4">
                 <div class="col-12 col-lg-6">
                     <div id="snippet-cronjobs" class="card h-100 app-card">
                         {#fragment id="snippet_cronjobs"}
                         <div class="card-body">
-                            <p class="card-subtitle mb-3 app-section-label">Cronjobs</p>
+                            <p class="card-subtitle mb-3 app-section-label">{health:healthCronjobsHeading()}</p>
                             <div class="table-responsive">
                                 <table class="table table-sm mb-0 app-table" data-testid="cronjobs-table">
                                     <thead>
                                         <tr>
-                                            <th>Job</th>
-                                            <th>Cron</th>
-                                            <th class="text-end">Next</th>
+                                            <th>{health:healthColumnJob()}</th>
+                                            <th>{health:healthColumnCron()}</th>
+                                            <th class="text-end">{health:healthColumnNext()}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -109,7 +109,7 @@
                                                 {job.simpleName}
                                             </td>
                                             <td>{job.cronSchedule}</td>
-                                            <td class="cronjob-countdown text-end">{#if job.nextExecution}-{#else}N/A{/if}</td>
+                                            <td class="cronjob-countdown text-end">{#if job.nextExecution}-{#else}{msg:commonNotAvailable()}{/if}</td>
                                         </tr>
                                         {/for}
                                     </tbody>
@@ -123,13 +123,13 @@
                     <div id="snippet-predicates" class="card h-100 app-card">
                         {#fragment id="snippet_predicates"}
                         <div class="card-body">
-                            <p class="card-subtitle mb-3 app-section-label">State</p>
+                            <p class="card-subtitle mb-3 app-section-label">{health:healthStateHeading()}</p>
                             <div class="table-responsive">
                                 <table class="table table-sm mb-0 app-table" data-testid="predicates-table">
                                     <thead>
                                         <tr>
-                                            <th>Predicate</th>
-                                            <th class="text-end">Since</th>
+                                            <th>{health:healthColumnPredicate()}</th>
+                                            <th class="text-end">{health:healthColumnSince()}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -143,7 +143,7 @@
                                                 {/if}
                                                 {p.name}
                                             </td>
-                                            <td class="predicate-last-check text-end" {#if p.lastCheck}data-last-check="{p.lastCheck.toEpochMilliseconds()}"{/if}>{#if p.lastCheck}-{#else}N/A{/if}</td>
+                                            <td class="predicate-last-check text-end" {#if p.lastCheck}data-last-check="{p.lastCheck.toEpochMilliseconds()}"{/if}>{#if p.lastCheck}-{#else}{msg:commonNotAvailable()}{/if}</td>
                                         </tr>
                                         {/for}
                                     </tbody>
@@ -155,20 +155,20 @@
                 </div>
             </div>
 
-            <h2 class="mb-3 fs-6 fw-semibold text-uppercase" style="color:#888;letter-spacing:.05em;">MongoDB</h2>
+            <h2 class="mb-3 fs-6 fw-semibold text-uppercase" style="color:#888;letter-spacing:.05em;">{health:healthMongodbHeading()}</h2>
             <div class="row g-3 mb-4">
                 <div class="col-12 col-sm-6 col-lg-6">
                     <div id="snippet-mongodb-collections" class="card h-100 app-card">
                         {#fragment id="snippet_mongodb_collections"}
                         <div class="card-body">
-                            <p class="card-subtitle mb-3 app-section-label">Collections</p>
+                            <p class="card-subtitle mb-3 app-section-label">{health:healthCollectionsHeading()}</p>
                             <div class="table-responsive">
                                 <table class="table table-sm mb-0 app-table" data-testid="mongodb-collections-table">
                                     <thead>
                                         <tr>
-                                            <th>Collection</th>
-                                            <th class="text-end">#</th>
-                                            <th class="text-end">Size</th>
+                                            <th>{health:healthColumnCollection()}</th>
+                                            <th class="text-end">{health:healthColumnCount()}</th>
+                                            <th class="text-end">{health:healthColumnSize()}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -176,15 +176,15 @@
                                         <tr>
                                             <td>{c.name}</td>
                                             <td class="text-end">{c.documentCount.formatted}</td>
-                                            <td class="text-end">{c.sizeKb.formatted} kb</td>
+                                            <td class="text-end">{health:healthSizeKb(c.sizeKb.formatted)}</td>
                                         </tr>
                                         {/for}
                                     </tbody>
                                     <tfoot>
                                         <tr style="border-top:2px solid #555;">
-                                            <td style="color:#888;">Total</td>
+                                            <td style="color:#888;">{health:healthTotalLabel()}</td>
                                             <td class="text-end" style="color:#888;">{stats.mongoCollectionDocumentTotal.formatted}</td>
-                                            <td class="text-end" style="color:#888;">{stats.mongoCollectionSizeTotalKb.formatted} kb</td>
+                                            <td class="text-end" style="color:#888;">{health:healthSizeKb(stats.mongoCollectionSizeTotalKb.formatted)}</td>
                                         </tr>
                                     </tfoot>
                                 </table>
@@ -197,13 +197,13 @@
                     <div id="snippet-mongodb-queries" class="card h-100 app-card">
                         {#fragment id="snippet_mongodb_queries"}
                         <div class="card-body">
-                            <p class="card-subtitle mb-3 app-section-label">Queries (Last 24h)</p>
+                            <p class="card-subtitle mb-3 app-section-label">{health:healthQueriesHeading()}</p>
                             <div class="table-responsive">
                                 <table class="table table-sm mb-0 app-table" data-testid="mongodb-queries-table">
                                     <thead>
                                         <tr>
-                                            <th>Query</th>
-                                            <th class="text-end">Executions</th>
+                                            <th>{health:healthColumnQuery()}</th>
+                                            <th class="text-end">{health:healthColumnExecutions()}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -279,7 +279,7 @@
                     var remaining = nextExec - Date.now();
                     var cell = row.querySelector('.cronjob-countdown');
                     if (remaining <= 0) {
-                        if (cell) cell.textContent = 'now';
+                        if (cell) cell.textContent = '{msg:layoutOutboxCountdownNow()}';
                     } else {
                         if (cell) cell.textContent = formatCountdown(remaining);
                     }
@@ -303,7 +303,7 @@
                     var cell = row.querySelector('.outbox-blocked-until');
                     if (!cell) return;
                     if (remaining <= 1000) {
-                        cell.textContent = 'now';
+                        cell.textContent = '{msg:layoutOutboxCountdownNow()}';
                     } else if (remaining < TWENTY_FOUR_HOURS_MS) {
                         cell.textContent = formatCountdown(remaining);
                     } else {

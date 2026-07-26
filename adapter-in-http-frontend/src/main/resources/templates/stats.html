@@ -1,16 +1,16 @@
 {#include layout.html}
-    {#title}SpCtl – Stats{/title}
+    {#title}{msg:commonAppName()} – {stats:statsTitle()}{/title}
     {#scripts}<script src="/settings-utils.js"></script>{/scripts}
     {#content}
     <div class="app-page-container py-4 px-3 px-md-4">
 
-        <h1 class="mb-3 fs-4 fw-semibold">Stats</h1>
+        <h1 class="mb-3 fs-4 fw-semibold">{stats:statsTitle()}</h1>
 
         <div id="status-banner" class="alert d-none mb-3" role="alert"></div>
 
-        <h2 class="fs-5 fw-semibold mb-2">Playback Aggregations</h2>
-        <p class="text-secondary small mb-3">Delete all computed playback aggregations (day/week/month/quarter/year) and recompute them from scratch. Use this if stats look outdated or incomplete.</p>
-        <button id="rebuild-aggregations-btn" class="btn btn-spotify btn-sm mb-4">Rebuild Aggregations</button>
+        <h2 class="fs-5 fw-semibold mb-2">{stats:statsAggregationsHeading()}</h2>
+        <p class="text-secondary small mb-3">{stats:statsAggregationsDescription()}</p>
+        <button id="rebuild-aggregations-btn" class="btn btn-spotify btn-sm mb-4">{stats:statsRebuildAggregationsButton()}</button>
 
         <ul class="nav nav-tabs mb-3" id="statsTabNav" role="tablist" data-testid="stats-tabs" style="border-bottom:1px solid #333;">
             {#for tab in tabs}
@@ -41,20 +41,20 @@
                             <p class="mb-2 fw-semibold" style="font-size:.85rem;color:#fff;">
                                 {aggregation.periodLabel}
                                 {#if tab.id == 'day'}
-                                <a href="/playback/events?date={aggregation.periodStart}" class="text-decoration-none ms-2" style="font-size:.75rem;color:var(--spotify-green);" data-testid="stats-day-events-link">View Playback Events</a>
+                                <a href="/playback/events?date={aggregation.periodStart}" class="text-decoration-none ms-2" style="font-size:.75rem;color:var(--spotify-green);" data-testid="stats-day-events-link">{stats:statsViewPlaybackEventsLink()}</a>
                                 {/if}
                             </p>
                             {#if aggregation.data}
                             <p class="mb-3" style="color:#fff;font-size:.85rem;">
                                 <span style="color:var(--spotify-green);font-weight:600;">{aggregation.data.totalPlaybackSeconds.formattedListeningDurationFromSeconds}</span>
-                                <span style="color:#888;"> listened ({aggregation.data.eventCount.formatted} Events)</span>
+                                <span style="color:#888;"> {stats:statsListenedLabel()} {stats:statsEventsCountSuffix(aggregation.data.eventCount.formatted)}</span>
                             </p>
 
                             <div class="row g-2 mb-3">
                                 <div class="col-12 col-md-4">
-                                    <p class="mb-1" style="color:#888;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;">Top Tracks ({aggregation.topTracks.size}/{aggregation.data.distinctTrackCount})</p>
+                                    <p class="mb-1" style="color:#888;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;">{stats:statsTopTracksLabel(aggregation.topTracks.size.formatted, aggregation.data.distinctTrackCount.formatted)}</p>
                                     {#if aggregation.topTracks.empty}
-                                    <p class="mb-0" style="color:#666;font-size:.8rem;">No data</p>
+                                    <p class="mb-0" style="color:#666;font-size:.8rem;">{stats:statsNoData()}</p>
                                     {#else}
                                     <ul class="list-unstyled mb-0">
                                         {#for entry in aggregation.topTracks}
@@ -64,9 +64,9 @@
                                     {/if}
                                 </div>
                                 <div class="col-12 col-md-4">
-                                    <p class="mb-1" style="color:#888;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;">Top Albums ({aggregation.topAlbums.size}/{aggregation.data.distinctAlbumCount})</p>
+                                    <p class="mb-1" style="color:#888;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;">{stats:statsTopAlbumsLabel(aggregation.topAlbums.size.formatted, aggregation.data.distinctAlbumCount.formatted)}</p>
                                     {#if aggregation.topAlbums.empty}
-                                    <p class="mb-0" style="color:#666;font-size:.8rem;">No data</p>
+                                    <p class="mb-0" style="color:#666;font-size:.8rem;">{stats:statsNoData()}</p>
                                     {#else}
                                     <ul class="list-unstyled mb-0">
                                         {#for entry in aggregation.topAlbums}
@@ -76,9 +76,9 @@
                                     {/if}
                                 </div>
                                 <div class="col-12 col-md-4">
-                                    <p class="mb-1" style="color:#888;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;">Top Artists ({aggregation.topArtists.size}/{aggregation.data.distinctArtistCount})</p>
+                                    <p class="mb-1" style="color:#888;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;">{stats:statsTopArtistsLabel(aggregation.topArtists.size.formatted, aggregation.data.distinctArtistCount.formatted)}</p>
                                     {#if aggregation.topArtists.empty}
-                                    <p class="mb-0" style="color:#666;font-size:.8rem;">No data</p>
+                                    <p class="mb-0" style="color:#666;font-size:.8rem;">{stats:statsNoData()}</p>
                                     {#else}
                                     <ul class="list-unstyled mb-0">
                                         {#for entry in aggregation.topArtists}
@@ -91,34 +91,34 @@
 
                             {#if tab.id != 'day'}
                             <div class="mt-3" data-testid="stats-activity-section-{tab.id}">
-                                <p class="mb-1" style="color:#888;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;">Activity by Day and Time Window</p>
+                                <p class="mb-1" style="color:#888;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;">{stats:statsActivityHeading()}</p>
                                 {#if aggregation.data.activityEntries.empty}
-                                <p class="mb-0" style="color:#666;font-size:.8rem;">No data</p>
+                                <p class="mb-0" style="color:#666;font-size:.8rem;">{stats:statsNoData()}</p>
                                 {#else}
                                 {#bar-chart entries=aggregation.activityBars dataTestId='stats-activity-chart'/}
                                 {/if}
                             </div>
                             {/if}
                             {#else}
-                            <p class="mb-2" style="color:#666;font-size:.82rem;">No aggregation data available yet for this period.</p>
+                            <p class="mb-2" style="color:#666;font-size:.82rem;">{stats:statsNoAggregationDataMessage()}</p>
                             <div class="row g-2">
                                 <div class="col-12 col-md-4">
-                                    <p class="mb-1" style="color:#888;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;">Top Tracks</p>
-                                    <p class="mb-0" style="color:#666;font-size:.8rem;">No data</p>
+                                    <p class="mb-1" style="color:#888;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;">{stats:statsTopTracksTitle()}</p>
+                                    <p class="mb-0" style="color:#666;font-size:.8rem;">{stats:statsNoData()}</p>
                                 </div>
                                 <div class="col-12 col-md-4">
-                                    <p class="mb-1" style="color:#888;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;">Top Albums</p>
-                                    <p class="mb-0" style="color:#666;font-size:.8rem;">No data</p>
+                                    <p class="mb-1" style="color:#888;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;">{stats:statsTopAlbumsTitle()}</p>
+                                    <p class="mb-0" style="color:#666;font-size:.8rem;">{stats:statsNoData()}</p>
                                 </div>
                                 <div class="col-12 col-md-4">
-                                    <p class="mb-1" style="color:#888;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;">Top Artists</p>
-                                    <p class="mb-0" style="color:#666;font-size:.8rem;">No data</p>
+                                    <p class="mb-1" style="color:#888;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;">{stats:statsTopArtistsTitle()}</p>
+                                    <p class="mb-0" style="color:#666;font-size:.8rem;">{stats:statsNoData()}</p>
                                 </div>
                             </div>
                             {#if tab.id != 'day'}
                             <div class="mt-3" data-testid="stats-activity-section-{tab.id}">
-                                <p class="mb-1" style="color:#888;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;">Activity by Day and Time Window</p>
-                                <p class="mb-0" style="color:#666;font-size:.8rem;">No data</p>
+                                <p class="mb-1" style="color:#888;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;">{stats:statsActivityHeading()}</p>
+                                <p class="mb-0" style="color:#666;font-size:.8rem;">{stats:statsNoData()}</p>
                             </div>
                             {/if}
                             {/if}
@@ -135,7 +135,7 @@
 
     <script>
         document.getElementById('rebuild-aggregations-btn').addEventListener('click', function() {
-            postWithButton(this, '/settings/playback/aggregations/rebuild', 'Aggregation rebuild enqueued successfully.', 'Rebuild failed');
+            postWithButton(this, '/settings/playback/aggregations/rebuild', '{stats:statsRebuildAggregationsSuccess()}', '{stats:statsRebuildAggregationsErrorPrefix()}');
         });
     </script>
     {/content}

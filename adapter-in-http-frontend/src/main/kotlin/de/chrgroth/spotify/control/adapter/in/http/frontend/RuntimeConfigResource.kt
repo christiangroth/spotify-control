@@ -1,5 +1,6 @@
 package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
+import de.chrgroth.spotify.control.adapter.`in`.http.frontend.i18n.ConfigMessages
 import de.chrgroth.spotify.control.domain.port.`in`.user.RuntimeConfigPort
 import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
 import io.quarkus.security.Authenticated
@@ -18,6 +19,7 @@ import mu.KLogging
 class RuntimeConfigResource(
   private val runtimeConfig: RuntimeConfigPort,
   private val httpResponseMetrics: ResponseTimingPort,
+  private val messages: ConfigMessages,
 ) {
 
   @POST
@@ -28,7 +30,7 @@ class RuntimeConfigResource(
   fun updateThrottleInterval(request: ThrottleIntervalRequest): Response = httpResponseMetrics.timed("rest.config.throttle-interval-update") {
     if (request.intervalSeconds < 0) {
       return@timed Response.status(Response.Status.BAD_REQUEST)
-        .entity(mapOf("error" to "Throttle interval must be non-negative"))
+        .entity(mapOf("error" to messages.configThrottleNonNegativeError()))
         .build()
     }
     runtimeConfig.setThrottleIntervalSeconds(request.intervalSeconds)

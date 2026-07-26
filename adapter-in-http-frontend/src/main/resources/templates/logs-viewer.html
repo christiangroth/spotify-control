@@ -1,26 +1,26 @@
 {#include layout.html}
-    {#title}SpCtl – Logs{/title}
+    {#title}{msg:commonAppName()} – {health:logsTitle()}{/title}
     {#content}
     <div class="app-page-container py-4 px-3 px-md-4">
-        <h1 class="mb-4 fs-4 fw-semibold">Logs (last 2 hours)</h1>
-        <div class="btn-group btn-group-sm mb-3" role="group" aria-label="Logs view mode">
-            <a href="/logs-viewer" class="btn {#if viewMode == 'chronological'}btn-spotify{#else}btn-outline-secondary{/if}" data-testid="logs-view-chronological">Chronological</a>
-            <a href="/logs-viewer?view=grouped" class="btn {#if viewMode == 'grouped'}btn-spotify{#else}btn-outline-secondary{/if}" data-testid="logs-view-grouped">Grouped by class/type</a>
+        <h1 class="mb-4 fs-4 fw-semibold">{health:logsHeading()}</h1>
+        <div class="btn-group btn-group-sm mb-3" role="group" aria-label="{health:logsViewModeAriaLabel()}">
+            <a href="/logs-viewer" class="btn {#if viewMode == 'chronological'}btn-spotify{#else}btn-outline-secondary{/if}" data-testid="logs-view-chronological">{health:logsViewChronological()}</a>
+            <a href="/logs-viewer?view=grouped" class="btn {#if viewMode == 'grouped'}btn-spotify{#else}btn-outline-secondary{/if}" data-testid="logs-view-grouped">{health:logsViewGrouped()}</a>
         </div>
 
         {#if logs.empty}
-        <p class="text-secondary">No WARN or ERROR logs in the last 2 hours.</p>
+        <p class="text-secondary">{health:logsEmpty()}</p>
         {#else}
         {#if viewMode == "grouped"}
-        <p class="text-secondary small mb-3">Groups are sorted by level (ERROR before WARN), then by entry count (highest first). Newest entries first within each group.</p>
+        <p class="text-secondary small mb-3">{health:logsGroupedHint()}</p>
         {#for group in groups}
         <div class="mb-4">
             <div class="d-flex align-items-center gap-2 mb-2">
                 <h2 class="mb-0 fs-6 fw-semibold" style="color:#ccc;">{group.className}</h2>
                 {#if group.level == "WARN"}
-                <span class="badge" style="background-color:#fd7e14;color:#111;">WARN</span>
+                <span class="badge" style="background-color:#fd7e14;color:#111;">{health:logsBadgeWarn()}</span>
                 {#else}
-                <span class="badge" style="background-color:#dc3545;color:#fff;">ERROR</span>
+                <span class="badge" style="background-color:#dc3545;color:#fff;">{health:logsBadgeError()}</span>
                 {/if}
                 <span class="text-secondary small">({group.count})</span>
             </div>
@@ -28,9 +28,9 @@
                 <table class="table table-dark table-hover align-middle">
                     <thead>
                     <tr class="app-section-label" style="font-size:.8rem;">
-                        <th>Time</th>
-                        <th>Message</th>
-                        <th>Stacktrace</th>
+                        <th>{health:logsColumnTime()}</th>
+                        <th>{health:logsColumnMessage()}</th>
+                        <th>{health:logsColumnStacktrace()}</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -43,7 +43,7 @@
                         <td>
                             {#if log.stacktrace}
                             <details>
-                                <summary style="cursor:pointer;">Show</summary>
+                                <summary style="cursor:pointer;">{health:logsStacktraceShow()}</summary>
                                 <pre class="mb-0 mt-2" style="background-color:var(--color-bg-nested);border:1px solid var(--color-border);border-radius:4px;padding:.5rem .75rem;font-size:.74rem;color:#ccc;white-space:pre-wrap;">{log.stacktrace}</pre>
                             </details>
                             {#else}
@@ -58,16 +58,16 @@
         </div>
         {/for}
         {#else}
-        <p class="text-secondary small mb-3">Showing newest first. Maximum 500 entries.</p>
+        <p class="text-secondary small mb-3">{health:logsChronologicalHint()}</p>
         <div class="table-responsive">
             <table class="table table-dark table-hover align-middle">
                 <thead>
                 <tr class="app-section-label" style="font-size:.8rem;">
-                    <th>Time</th>
-                    <th>Level</th>
-                    <th>Class</th>
-                    <th>Message</th>
-                    <th>Stacktrace</th>
+                    <th>{health:logsColumnTime()}</th>
+                    <th>{health:logsColumnLevel()}</th>
+                    <th>{health:logsColumnClass()}</th>
+                    <th>{health:logsColumnMessage()}</th>
+                    <th>{health:logsColumnStacktrace()}</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -78,9 +78,9 @@
                     </td>
                     <td>
                         {#if log.level == "WARN"}
-                        <span class="badge" style="background-color:#fd7e14;color:#111;">WARN</span>
+                        <span class="badge" style="background-color:#fd7e14;color:#111;">{health:logsBadgeWarn()}</span>
                         {#else}
-                        <span class="badge" style="background-color:#dc3545;color:#fff;">ERROR</span>
+                        <span class="badge" style="background-color:#dc3545;color:#fff;">{health:logsBadgeError()}</span>
                         {/if}
                     </td>
                     <td style="color:#bbb;white-space:nowrap;">{log.className}</td>
@@ -88,7 +88,7 @@
                     <td>
                         {#if log.stacktrace}
                         <details>
-                            <summary style="cursor:pointer;">Show</summary>
+                            <summary style="cursor:pointer;">{health:logsStacktraceShow()}</summary>
                             <pre class="mb-0 mt-2" style="background-color:var(--color-bg-nested);border:1px solid var(--color-border);border-radius:4px;padding:.5rem .75rem;font-size:.74rem;color:#ccc;white-space:pre-wrap;">{log.stacktrace}</pre>
                         </details>
                         {#else}

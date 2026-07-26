@@ -1,6 +1,7 @@
 package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
 import arrow.core.Either
+import de.chrgroth.spotify.control.adapter.`in`.http.frontend.i18n.PlaybackMessages
 import de.chrgroth.spotify.control.domain.error.ArtistSettingsError
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogPort
@@ -27,6 +28,7 @@ class PlaybackSettingsResource(
   private val playbackAggregation: PlaybackAggregationPort,
   private val catalog: CatalogPort,
   private val httpResponseMetrics: ResponseTimingPort,
+  private val messages: PlaybackMessages,
 ) {
 
   @POST
@@ -95,13 +97,13 @@ class PlaybackSettingsResource(
             ArtistSettingsError.ARTIST_NOT_FOUND -> {
               logger.warn { "Artist $artistId not found for re-sync: ${error.code}" }
               Response.status(Response.Status.NOT_FOUND)
-                .entity(mapOf("error" to "Artist not found: $artistId"))
+                .entity(mapOf("error" to messages.playbackErrorArtistNotFound(artistId)))
                 .build()
             }
             else -> {
               logger.error { "Artist re-sync failed for $artistId: ${error.code}" }
               Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                .entity(mapOf("error" to "Re-sync failed: ${error.code}"))
+                .entity(mapOf("error" to messages.playbackErrorArtistResyncFailed(error.code)))
                 .build()
             }
           }
@@ -116,7 +118,7 @@ class PlaybackSettingsResource(
   @Produces(MediaType.APPLICATION_JSON)
   fun setArtistSync(@PathParam("artistId") artistId: String): Response =
     httpResponseMetrics.timed("rest.catalog.artist-set-sync") {
-      handleArtistAction(artistId, "set-sync") { catalog.setArtistSync(artistId) }
+      handleArtistAction(artistId, "set-sync", messages::playbackErrorArtistSetSyncFailed) { catalog.setArtistSync(artistId) }
     }
 
   @POST
@@ -125,23 +127,28 @@ class PlaybackSettingsResource(
   @Produces(MediaType.APPLICATION_JSON)
   fun setArtistShallow(@PathParam("artistId") artistId: String): Response =
     httpResponseMetrics.timed("rest.catalog.artist-set-shallow") {
-      handleArtistAction(artistId, "set-shallow") { catalog.setArtistShallow(artistId) }
+      handleArtistAction(artistId, "set-shallow", messages::playbackErrorArtistSetShallowFailed) { catalog.setArtistShallow(artistId) }
     }
 
-  private fun handleArtistAction(artistId: String, action: String, block: () -> Either<DomainError, Unit>): Response =
+  private fun handleArtistAction(
+    artistId: String,
+    action: String,
+    actionFailedMessage: (String) -> String,
+    block: () -> Either<DomainError, Unit>,
+  ): Response =
     block().fold(
       ifLeft = { error ->
         when (error) {
           ArtistSettingsError.ARTIST_NOT_FOUND -> {
             logger.warn { "Artist $artistId not found for $action: ${error.code}" }
             Response.status(Response.Status.NOT_FOUND)
-              .entity(mapOf("error" to "Artist not found: $artistId"))
+              .entity(mapOf("error" to messages.playbackErrorArtistNotFound(artistId)))
               .build()
           }
           else -> {
             logger.error { "Artist $action failed for $artistId: ${error.code}" }
             Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-              .entity(mapOf("error" to "${action.replaceFirstChar { it.uppercase() }} failed: ${error.code}"))
+              .entity(mapOf("error" to actionFailedMessage(error.code)))
               .build()
           }
         }

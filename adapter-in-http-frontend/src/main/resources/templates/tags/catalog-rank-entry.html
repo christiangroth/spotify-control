@@ -7,7 +7,7 @@
         <i class="bi bi-person-circle" style="font-size:18px;color:#888;"></i>
     </div>
     {#else}
-    <div style="width:36px;height:36px;min-width:36px;border-radius:3px;margin-right:10px;background:#333;display:flex;align-items:center;justify-content:center;" aria-label="Album cover placeholder" role="img">
+    <div style="width:36px;height:36px;min-width:36px;border-radius:3px;margin-right:10px;background:#333;display:flex;align-items:center;justify-content:center;" aria-label="{msg:tagAlbumCoverPlaceholderAriaLabel()}" role="img">
         <i class="bi bi-vinyl-fill" style="font-size:20px;color:#555;"></i>
     </div>
     {/if}
@@ -16,7 +16,7 @@
         <div class="text-truncate" style="color:#fff;font-size:.82rem;">{entry.name}</div>
         {#if kind == 'track'}
         <div class="text-truncate" style="color:#888;font-size:.75rem;">
-            {#if entry.albumName}{entry.albumName}{#else}Unknown Album{/if} &bull; {#if entry.artistName}{entry.artistName}{#else}Unknown Artist{/if}
+            {#if entry.albumName}{entry.albumName}{#else}{msg:tagUnknownAlbum()}{/if} &bull; {#if entry.artistName}{entry.artistName}{#else}{msg:tagUnknownArtist()}{/if}
         </div>
         {#else if kind == 'album' && entry.artistName}
         <div class="text-truncate" style="color:#888;font-size:.75rem;">{entry.artistName}</div>

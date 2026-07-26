@@ -1,5 +1,11 @@
 {#include layout.html}
-    {#leftNavLinks}{/leftNavLinks}
+    {#leftNavLinks}
+    <button type="button" id="language-toggle" class="nav-link text-white me-3 bg-transparent border-0 p-0 fw-bold" data-testid="language-toggle-button" title="{msg:layoutLanguageToggleLabel()}" aria-label="{msg:layoutLanguageToggleLabel()}">
+        <span class="language-toggle-label-en" aria-hidden="true">EN</span>
+        <span class="language-toggle-label-xx" aria-hidden="true">_</span>
+    </button>
+    <span class="me-auto"></span>
+    {/leftNavLinks}
     {#appVersion}<span class="app-version me-auto">{appBuildVersion}</span>{/appVersion}
     {#navLinks}{/navLinks}
     {#pageNav}{/pageNav}
@@ -10,9 +16,9 @@
             {#if errorMessage}
             <div class="alert alert-danger mb-4 text-start" role="alert">{errorMessage}</div>
             {/if}
-            <i class="bi bi-spotify d-block mx-auto mb-4" style="font-size:96px;color:#1db954;" aria-label="Spotify logo"></i>
+            <i class="bi bi-spotify d-block mx-auto mb-4" style="font-size:96px;color:#1db954;" aria-label="{msg:commonSpotifyLogoAriaLabel()}"></i>
             <a href="/oauth/authorize" class="btn btn-spotify btn-lg px-5 py-3" data-testid="login-button">
-                Log in with Spotify
+                {msg:loginButton()}
             </a>
         </div>
     </div>

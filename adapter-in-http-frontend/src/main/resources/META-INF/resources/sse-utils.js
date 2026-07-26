@@ -90,7 +90,7 @@ function connectSse(url, onMessage, onOpen) {
 var TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
 
 function formatCountdown(ms) {
-    if (ms <= 0) return 'now';
+    if (ms <= 0) return (typeof SPCTL_I18N !== 'undefined' && SPCTL_I18N.now) || 'now';
     var totalSeconds = Math.floor(ms / 1000);
     var hours = Math.floor(totalSeconds / 3600);
     var minutes = Math.floor((totalSeconds % 3600) / 60);

@@ -1,6 +1,7 @@
 package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
 import arrow.core.Either
+import de.chrgroth.spotify.control.adapter.`in`.http.frontend.i18n.MonitoringMessages
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumBrowseItem
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumSyncResult
@@ -54,6 +55,7 @@ class SpotifyDebugResource(
   private val spotifyPlaylist: SpotifyPlaylistPort,
   private val spotifyCatalog: SpotifyCatalogPort,
   private val httpResponseMetrics: ResponseTimingPort,
+  private val messages: MonitoringMessages,
 ) {
 
   @GET
@@ -111,7 +113,7 @@ class SpotifyDebugResource(
     val accessToken = try {
       spotifyAccessToken.getValidAccessToken()
     } catch (e: Exception) {
-      return@timed errorResponse(operation, "Failed to obtain a valid Spotify access token: ${e.message}")
+      return@timed errorResponse(operation, messages.spotifyDebugAccessTokenError(e.message.toString()))
     }
 
     try {
@@ -128,29 +130,29 @@ class SpotifyDebugResource(
         "user-playlists" -> spotifyPlaylist.getPlaylists(accessToken).toResponse(operation) { items -> items.map { it.toJson() } }
 
         "playlist-tracks" -> {
-          val playlistId = params["playlistId"] ?: return@timed errorResponse(operation, "playlistId is required")
+          val playlistId = params["playlistId"] ?: return@timed errorResponse(operation, messages.spotifyDebugPlaylistIdRequired())
           val pageUrl = params["pageUrl"]
           spotifyPlaylist.getPlaylistTracksPage(accessToken, playlistId, pageUrl).toResponse(operation) { it.toJson() }
         }
 
         "artist" -> {
-          val artistId = params["artistId"] ?: return@timed errorResponse(operation, "artistId is required")
+          val artistId = params["artistId"] ?: return@timed errorResponse(operation, messages.spotifyDebugArtistIdRequired())
           spotifyCatalog.getArtist(accessToken, artistId).toResponse(operation) { it?.toJson() }
         }
 
         "artist-albums" -> {
-          val artistId = params["artistId"] ?: return@timed errorResponse(operation, "artistId is required")
+          val artistId = params["artistId"] ?: return@timed errorResponse(operation, messages.spotifyDebugArtistIdRequired())
           val nextUrl = params["nextUrl"]
           spotifyCatalog.getArtistAlbumsPage(accessToken, artistId, nextUrl).toResponse(operation) { it.toJson() }
         }
 
         "album" -> {
-          val albumId = params["albumId"] ?: return@timed errorResponse(operation, "albumId is required")
+          val albumId = params["albumId"] ?: return@timed errorResponse(operation, messages.spotifyDebugAlbumIdRequired())
           spotifyCatalog.getAlbum(accessToken, albumId).toResponse(operation) { it.toJson() }
         }
 
         "album-tracks" -> {
-          val albumId = params["albumId"] ?: return@timed errorResponse(operation, "albumId is required")
+          val albumId = params["albumId"] ?: return@timed errorResponse(operation, messages.spotifyDebugAlbumIdRequired())
           val albumResult = details.detail("debug.execute.album") { spotifyCatalog.getAlbum(accessToken, albumId) }
           albumResult.fold(
             ifLeft = { errorResponse(operation, it.code) },
@@ -158,10 +160,10 @@ class SpotifyDebugResource(
           )
         }
 
-        else -> errorResponse(operation, "Unknown operation: $operation")
+        else -> errorResponse(operation, messages.spotifyDebugUnknownOperation(operation))
       }
     } catch (e: Exception) {
-      errorResponse(operation, "Unexpected error: ${e.message}")
+      errorResponse(operation, messages.spotifyDebugUnexpectedError(e.message.toString()))
     }
   }
 
@@ -280,13 +282,9 @@ class SpotifyDebugResource(
   )
 
   private fun AlbumBrowseItem.toPickerLabel(): String {
-    val albumTitle = title ?: UNTITLED_ALBUM
+    val albumTitle = title ?: messages.spotifyDebugUntitledAlbum()
     return if (artistName != null) "$albumTitle — $artistName" else albumTitle
   }
 
   data class PickerOption(val id: String, val name: String)
-
-  companion object {
-    private const val UNTITLED_ALBUM = "(untitled)"
-  }
 }

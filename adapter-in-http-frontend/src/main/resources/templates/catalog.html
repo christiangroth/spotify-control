@@ -1,20 +1,20 @@
 {#include layout.html}
-    {#title}SpCtl – Catalog{/title}
+    {#title}{msg:commonAppName()} – {catalog:catalogTitle()}{/title}
     {#scripts}<script src="/settings-utils.js"></script>{/scripts}
     {#content}
     <div class="app-page-container py-4 px-3 px-md-4">
 
-        <h1 class="mb-4 fs-4 fw-semibold">Catalog</h1>
+        <h1 class="mb-4 fs-4 fw-semibold">{catalog:catalogTitle()}</h1>
 
         <div class="row g-3 mb-4">
             <div class="col-6 col-sm-4">
                 <a href="/catalog/artists/settings" class="text-decoration-none">
                 <div class="card app-card">
                     <div class="card-body">
-                        <p class="card-subtitle mb-1 app-section-label">Artists</p>
+                        <p class="card-subtitle mb-1 app-section-label">{catalog:catalogStatsArtistsLabel()}</p>
                         <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{catalogStats.artistCount.formatted}</p>
                         {#if catalogStats.undecidedArtistCount > 0}
-                        <p class="mb-0" style="color:#e0b870;font-size:.75rem;">{catalogStats.undecidedArtistCount.formatted} undecided</p>
+                        <p class="mb-0" style="color:#e0b870;font-size:.75rem;">{catalog:catalogStatsUndecidedLabel(catalogStats.undecidedArtistCount.formatted)}</p>
                         {/if}
                     </div>
                 </div>
@@ -23,7 +23,7 @@
             <div class="col-6 col-sm-4">
                 <div class="card app-card">
                     <div class="card-body">
-                        <p class="card-subtitle mb-1 app-section-label">Albums</p>
+                        <p class="card-subtitle mb-1 app-section-label">{catalog:catalogStatsAlbumsLabel()}</p>
                         <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{catalogStats.albumCount.formatted}</p>
                     </div>
                 </div>
@@ -31,7 +31,7 @@
             <div class="col-6 col-sm-4">
                 <div class="card app-card">
                     <div class="card-body">
-                        <p class="card-subtitle mb-1 app-section-label">Tracks</p>
+                        <p class="card-subtitle mb-1 app-section-label">{catalog:catalogStatsTracksLabel()}</p>
                         <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{catalogStats.trackCount.formatted}</p>
                     </div>
                 </div>
@@ -42,14 +42,14 @@
 
         <div class="row g-3 mb-4">
             <div class="col-md-4">
-                <h2 class="fs-5 fw-semibold mb-2">Catalog Re-sync</h2>
-                <p class="text-secondary small mb-3">Re-queue all artists and tracks for re-sync from Spotify. Use this to refresh catalog metadata (images, track details) that may have changed since the last sync.</p>
-                <button id="resync-catalog-btn" class="btn btn-spotify btn-sm">Re-sync Catalog</button>
+                <h2 class="fs-5 fw-semibold mb-2">{catalog:catalogResyncHeading()}</h2>
+                <p class="text-secondary small mb-3">{catalog:catalogResyncDescription()}</p>
+                <button id="resync-catalog-btn" class="btn btn-spotify btn-sm">{catalog:catalogResyncButton()}</button>
             </div>
             <div class="col-md-4">
-                <h2 class="fs-5 fw-semibold mb-2">Wipe Catalog</h2>
-                <p class="text-secondary small mb-3">Delete all catalog data (artists, albums, tracks), remove catalog sync outbox events, set all playlists to sync inactive and delete all playlist checks. This operation cannot be undone.</p>
-                <button id="wipe-catalog-btn" class="btn btn-danger btn-sm">Wipe Catalog</button>
+                <h2 class="fs-5 fw-semibold mb-2">{catalog:catalogWipeCatalogLabel()}</h2>
+                <p class="text-secondary small mb-3">{catalog:catalogWipeDescription()}</p>
+                <button id="wipe-catalog-btn" class="btn btn-danger btn-sm">{catalog:catalogWipeCatalogLabel()}</button>
             </div>
         </div>
 
@@ -58,18 +58,18 @@
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content bg-dark border-secondary">
                     <div class="modal-header border-secondary">
-                        <h5 class="modal-title" id="wipe-catalog-modal-label" style="color:var(--color-text-primary);">Confirm Catalog Wipe</h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <h5 class="modal-title" id="wipe-catalog-modal-label" style="color:var(--color-text-primary);">{catalog:catalogWipeModalTitle()}</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="{catalog:catalogWipeModalCloseAriaLabel()}"></button>
                     </div>
                     <div class="modal-body">
-                        <p style="color:var(--color-text-muted);font-size:.9rem;">This will permanently delete all catalog data, outbox events, playlist checks and deactivate all playlist syncs. Type <strong style="color:var(--color-text-primary);">yes</strong> to confirm.</p>
+                        <p style="color:var(--color-text-muted);font-size:.9rem;">{catalog:catalogWipeModalBodyBeforeWord()} <strong style="color:var(--color-text-primary);">{catalog:catalogWipeConfirmWord()}</strong> {catalog:catalogWipeModalBodyAfterWord()}</p>
                         <input type="text" id="wipe-confirm-input" class="form-control"
                                style="background-color:#111;border-color:var(--color-border-muted);color:var(--color-text-primary);"
-                               placeholder="Type yes to confirm" autocomplete="off">
+                               placeholder="{catalog:catalogWipeConfirmPlaceholder()}" autocomplete="off">
                     </div>
                     <div class="modal-footer border-secondary">
-                        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                        <button type="button" id="wipe-confirm-btn" class="btn btn-danger btn-sm">Wipe Catalog</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">{catalog:catalogWipeModalCancelButton()}</button>
+                        <button type="button" id="wipe-confirm-btn" class="btn btn-danger btn-sm">{catalog:catalogWipeCatalogLabel()}</button>
                     </div>
                 </div>
             </div>
@@ -77,32 +77,32 @@
 
         <hr class="my-4" style="border-color:var(--color-border);">
 
-        <h2 class="fs-5 fw-semibold mb-3">Catalog Browser</h2>
+        <h2 class="fs-5 fw-semibold mb-3">{catalog:catalogBrowserHeading()}</h2>
 
         <div class="mb-3">
             <input type="text" id="catalog-filter" class="form-control"
                    style="background-color:var(--color-bg-card);border-color:var(--color-border-muted);color:var(--color-text-primary);max-width:400px;"
-                   aria-label="Filter artists by name"
-                   placeholder="Filter artists by name..."
+                   aria-label="{catalog:catalogFilterAriaLabel()}"
+                   placeholder="{catalog:catalogFilterPlaceholder()}"
                    value="{filter}">
         </div>
 
         <div id="artist-list-container">
             {#fragment id="snippet_artist_list"}
             {#if !filterActive}
-            <p style="color:#888;">Enter a filter to search for artists.</p>
+            <p style="color:#888;">{catalog:catalogFilterEmptyPrompt()}</p>
             {#else if artists.empty}
-            <p style="color:#888;">No artists found matching your filter.</p>
+            <p style="color:#888;">{catalog:catalogFilterNoResults()}</p>
             {#else}
             <div class="table-responsive">
                 <table class="table table-dark table-hover align-middle mb-0">
                     <thead>
                         <tr class="app-section-label" style="font-size:.8rem;">
                             <th style="width:50px;"></th>
-                            <th>Artist</th>
-                            <th class="text-end">Albums</th>
-                            <th class="text-end">Tracks</th>
-                            <th>Actions</th>
+                            <th>{catalog:catalogTableArtistHeader()}</th>
+                            <th class="text-end">{catalog:catalogTableAlbumsHeader()}</th>
+                            <th class="text-end">{catalog:catalogTableTracksHeader()}</th>
+                            <th>{catalog:catalogTableActionsHeader()}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -113,7 +113,7 @@
                                 <img src="{artist.imageLink}" alt="{artist.artistName}" width="40" height="40"
                                      style="border-radius:50%;object-fit:cover;">
                                 {#else}
-                                <div style="width:40px;height:40px;border-radius:50%;background:#333;display:flex;align-items:center;justify-content:center;" aria-label="Artist image placeholder" role="img">
+                                <div style="width:40px;height:40px;border-radius:50%;background:#333;display:flex;align-items:center;justify-content:center;" aria-label="{catalog:catalogArtistImagePlaceholderAriaLabel()}" role="img">
                                     <i class="bi bi-person-circle" style="font-size:20px;color:#888;"></i>
                                 </div>
                                 {/if}
@@ -121,10 +121,10 @@
                             <td style="color:#fff;font-size:.9rem;">
                                 {artist.artistName}
                                 {#if artist.isShallow}
-                                <span class="badge ms-1" style="background-color:#5a1a1a;color:#e07070;font-size:.68rem;font-weight:400;">shallow</span>
+                                <span class="badge ms-1" style="background-color:#5a1a1a;color:#e07070;font-size:.68rem;font-weight:400;">{catalog:catalogBadgeShallow()}</span>
                                 {/if}
                                 {#if artist.isAssumption}
-                                <span class="badge ms-1" style="background-color:#4a3a1a;color:#e0b870;font-size:.68rem;font-weight:400;">assumption</span>
+                                <span class="badge ms-1" style="background-color:#4a3a1a;color:#e0b870;font-size:.68rem;font-weight:400;">{catalog:catalogBadgeAssumption()}</span>
                                 {/if}
                             </td>
                             <td class="text-end" style="color:#888;font-size:.85rem;">{artist.albumCount.formatted}</td>
@@ -132,26 +132,26 @@
                             <td style="padding:8px;">
                                 <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 sync-trace-btn"
                                     data-trace-url="/catalog/artists/{artist.artistId}/sync-trace"
-                                    aria-label="Show sync trigger for {artist.artistName}">&#9432;</button>
+                                    aria-label="{catalog:catalogSyncTriggerForArtistAriaLabel(artist.artistName)}">&#9432;</button>
                                 <button class="btn btn-sm btn-outline-secondary py-0 px-2 resync-artist-btn"
                                     data-artist-id="{artist.artistId}"
-                                    aria-label="Re-sync {artist.artistName}">Re-sync</button>
+                                    aria-label="{catalog:catalogResyncArtistAriaLabel(artist.artistName)}">{catalog:catalogResyncArtistButton()}</button>
                                 {#if artist.isShallow}
                                 <button class="btn btn-sm btn-outline-success py-0 px-2 ms-1 set-sync-artist-btn"
                                     data-artist-id="{artist.artistId}"
-                                    aria-label="Set {artist.artistName} to sync">Set Sync</button>
+                                    aria-label="{catalog:catalogSetSyncAriaLabel(artist.artistName)}">{catalog:catalogSetSyncButton()}</button>
                                 {#else}
                                 <button class="btn btn-sm py-0 px-2 ms-1 set-shallow-artist-btn"
                                     style="border-color:var(--color-danger);color:var(--color-danger);"
                                     data-artist-id="{artist.artistId}"
-                                    aria-label="Set {artist.artistName} to shallow">Set Shallow</button>
+                                    aria-label="{catalog:catalogSetShallowAriaLabel(artist.artistName)}">{catalog:catalogSetShallowButton()}</button>
                                 {/if}
                             </td>
                         </tr>
                         <tr id="albums-row-{artist.artistId}" style="display:none;">
                             <td colspan="5" style="padding:0;">
                                 <div id="albums-container-{artist.artistId}" style="background-color:var(--color-bg-depth-albums);padding:12px 16px;">
-                                    <span style="color:#888;font-size:.82rem;">Loading albums…</span>
+                                    <span style="color:#888;font-size:.82rem;">{catalog:catalogLoadingAlbums()}</span>
                                 </div>
                             </td>
                         </tr>
@@ -171,10 +171,10 @@
                 <thead>
                     <tr style="color:#888;font-size:.75rem;border-color:var(--color-border-depth-albums);">
                         <th style="width:44px;"></th>
-                        <th>Album</th>
-                        <th>Released</th>
-                        <th class="text-end" style="border-color:var(--color-border-depth-albums);">Tracks</th>
-                        <th class="text-end" style="border-color:var(--color-border-depth-albums);">Duration</th>
+                        <th>{catalog:catalogTableAlbumHeader()}</th>
+                        <th>{catalog:catalogTableReleasedHeader()}</th>
+                        <th class="text-end" style="border-color:var(--color-border-depth-albums);">{catalog:catalogTableTracksHeader()}</th>
+                        <th class="text-end" style="border-color:var(--color-border-depth-albums);">{catalog:catalogTableDurationHeader()}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -185,16 +185,16 @@
                             <img src="{album.imageLink}" alt="{album.title}" width="36" height="36"
                                  style="border-radius:3px;object-fit:cover;">
                             {#else}
-                            <div style="width:36px;height:36px;border-radius:3px;background:#2a2a2a;display:flex;align-items:center;justify-content:center;" aria-label="Album image placeholder" role="img">
+                            <div style="width:36px;height:36px;border-radius:3px;background:#2a2a2a;display:flex;align-items:center;justify-content:center;" aria-label="{catalog:catalogAlbumImagePlaceholderAriaLabel()}" role="img">
                                 <i class="bi bi-vinyl-fill" style="font-size:20px;color:#444;"></i>
                             </div>
                             {/if}
                         </td>
                         <td style="color:#fff;">
-                            {#if album.title}{album.title}{#else}(untitled){/if}
+                            {#if album.title}{album.title}{#else}{catalog:catalogUntitledAlbum()}{/if}
                             <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1 ms-1 sync-trace-btn"
                                 data-trace-url="/catalog/albums/{album.albumId}/sync-trace"
-                                aria-label="Show sync trigger for {#if album.title}{album.title}{#else}this album{/if}">&#9432;</button>
+                                aria-label="{catalog:catalogSyncTriggerForPrefix()} {#if album.title}{album.title}{#else}{catalog:catalogAlbumFallbackName()}{/if}">&#9432;</button>
                         </td>
                         <td style="color:#888;">{album.releaseDate}</td>
                         <td class="text-end" style="border-color:var(--color-border-depth-albums);color:#888;">{album.trackCount.formatted}</td>
@@ -203,7 +203,7 @@
                     <tr id="tracks-row-{album.albumId}" style="display:none;border-color:var(--color-border-depth-albums);">
                         <td colspan="5" style="border-color:var(--color-border-depth-albums);padding:0;">
                             <div id="tracks-container-{album.albumId}" style="background-color:var(--color-bg-depth-tracks);padding:8px 16px;">
-                                <span style="color:#888;font-size:.78rem;">Loading tracks…</span>
+                                <span style="color:#888;font-size:.78rem;">{catalog:catalogLoadingTracks()}</span>
                             </div>
                         </td>
                     </tr>
@@ -220,9 +220,9 @@
         <table class="table table-dark align-middle mb-0" style="border-color:var(--color-border-depth-tracks);font-size:.8rem;">
             <thead>
                 <tr style="color:#666;font-size:.72rem;border-color:var(--color-border-depth-tracks);">
-                    <th style="width:40px;">#</th>
-                    <th>Title</th>
-                    <th class="text-end" style="border-color:var(--color-border-depth-tracks);">Duration</th>
+                    <th style="width:40px;">{catalog:catalogTableTrackNumberHeader()}</th>
+                    <th>{catalog:catalogTableTitleHeader()}</th>
+                    <th class="text-end" style="border-color:var(--color-border-depth-tracks);">{catalog:catalogTableDurationHeader()}</th>
                 </tr>
             </thead>
             <tbody>
@@ -242,7 +242,7 @@
 
     <script>
         document.getElementById('resync-catalog-btn').addEventListener('click', function() {
-            postWithButton(this, '/settings/playback/resync-catalog', 'Catalog re-sync enqueued successfully.', 'Re-sync failed');
+            postWithButton(this, '/settings/playback/resync-catalog', '{catalog:catalogResyncSuccessMessage()}', '{catalog:catalogResyncErrorPrefix()}');
         });
 
         (function() {
@@ -265,12 +265,12 @@
 
             document.getElementById('wipe-confirm-btn').addEventListener('click', function() {
                 const input = document.getElementById('wipe-confirm-input').value.trim().toLowerCase();
-                if (input !== 'yes') {
+                if (input !== '{catalog:catalogWipeConfirmWord()}') {
                     document.getElementById('wipe-confirm-input').style.borderColor = 'var(--color-danger)';
                     return;
                 }
                 wipeModal.hide();
-                postWithButton(document.getElementById('wipe-catalog-btn'), '/catalog/wipe', 'Catalog wipe enqueued successfully.', 'Wipe failed');
+                postWithButton(document.getElementById('wipe-catalog-btn'), '/catalog/wipe', '{catalog:catalogWipeSuccessMessage()}', '{catalog:catalogWipeErrorPrefix()}');
             });
         })();
 
@@ -331,12 +331,12 @@
             const rect = btn.getBoundingClientRect();
             syncTracePopover.style.left = (rect.left + window.scrollX) + 'px';
             syncTracePopover.style.top = (rect.bottom + window.scrollY + 4) + 'px';
-            syncTracePopover.textContent = 'Loading…';
+            syncTracePopover.textContent = '{catalog:catalogSyncTraceLoadingLabel()}';
             syncTracePopover.style.display = 'block';
             fetch(btn.dataset.traceUrl)
                 .then(function(r) { return r.text(); })
                 .then(function(text) { syncTracePopover.textContent = text; })
-                .catch(function() { syncTracePopover.textContent = 'Failed to load sync trigger information.'; });
+                .catch(function() { syncTracePopover.textContent = '{catalog:catalogSyncTraceLoadFailed()}'; });
         }
 
         document.addEventListener('click', function(e) {
@@ -358,14 +358,14 @@
             if (resyncBtn) {
                 e.stopPropagation();
                 const artistId = resyncBtn.dataset.artistId;
-                postWithButton(resyncBtn, '/settings/playback/artists/' + encodeURIComponent(artistId) + '/resync', 'Artist re-sync enqueued.', 'Re-sync failed');
+                postWithButton(resyncBtn, '/settings/playback/artists/' + encodeURIComponent(artistId) + '/resync', '{catalog:catalogArtistResyncSuccessMessage()}', '{catalog:catalogResyncErrorPrefix()}');
                 return;
             }
             const setShallowBtn = e.target.closest('.set-shallow-artist-btn');
             if (setShallowBtn) {
                 e.stopPropagation();
                 const artistId = setShallowBtn.dataset.artistId;
-                postWithButton(setShallowBtn, '/settings/playback/artists/' + encodeURIComponent(artistId) + '/set-shallow', 'Artist set to shallow. Albums and tracks removed, aggregations will be rebuilt.', 'Set shallow failed', function() {
+                postWithButton(setShallowBtn, '/settings/playback/artists/' + encodeURIComponent(artistId) + '/set-shallow', '{catalog:catalogSetShallowSuccessMessage()}', '{catalog:catalogSetShallowErrorPrefix()}', function() {
                     fetch('/catalog/artists?filter=' + encodeURIComponent(document.getElementById('catalog-filter').value))
                         .then(function(r) { return r.text(); })
                         .then(function(html) { document.getElementById('artist-list-container').innerHTML = html; });
@@ -376,7 +376,7 @@
             if (setSyncBtn) {
                 e.stopPropagation();
                 const artistId = setSyncBtn.dataset.artistId;
-                postWithButton(setSyncBtn, '/settings/playback/artists/' + encodeURIComponent(artistId) + '/set-sync', 'Artist set to sync. Albums and tracks will be synced, aggregations will be rebuilt.', 'Set sync failed', function() {
+                postWithButton(setSyncBtn, '/settings/playback/artists/' + encodeURIComponent(artistId) + '/set-sync', '{catalog:catalogSetSyncSuccessMessage()}', '{catalog:catalogSetSyncErrorPrefix()}', function() {
                     fetch('/catalog/artists?filter=' + encodeURIComponent(document.getElementById('catalog-filter').value))
                         .then(function(r) { return r.text(); })
                         .then(function(html) { document.getElementById('artist-list-container').innerHTML = html; });
