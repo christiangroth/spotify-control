@@ -1,3 +1,12 @@
+# 0.119.1 (2026.07.26)
+
+## Bugfixes / Chore
+* Fixed the Playlist Checks page sometimes showing "no results" even though checks had already run and been saved.
+
+
+
+---
+
 # 0.119.0 (2026.07.26)
 
 ## New Features
