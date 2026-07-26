@@ -19,9 +19,9 @@
         <div id="status-banner" class="alert d-none mb-3" role="alert"></div>
 
         {#if result.events.empty}
-        <p class="text-secondary">{playback:playbackEventsEmpty(result.date)}</p>
+        <p class="text-secondary">{playback:playbackEventsEmpty(result.date.toString)}</p>
         {#else}
-        <p class="text-secondary small mb-3">{playback:playbackEventsSummary(result.events.size.formatted, result.date)}</p>
+        <p class="text-secondary small mb-3">{playback:playbackEventsSummary(result.events.size.formatted, result.date.toString)}</p>
 
         {#for event in result.events}
 
