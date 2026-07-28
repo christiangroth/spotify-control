@@ -1,0 +1,74 @@
+{#include layout.html}
+    {#title}{msg:commonAppName()} – {catalog:catalogShallowArtistsTitle()}{/title}
+    {#scripts}<script src="/settings-utils.js"></script>{/scripts}
+    {#content}
+    <div class="app-page-container py-4 px-3 px-md-4">
+        <div class="d-flex align-items-center mb-2 gap-3">
+            <h1 class="fs-4 fw-semibold mb-0">{catalog:catalogShallowArtistsTitle()}</h1>
+            <a href="/catalog" class="btn btn-outline-secondary btn-sm">{catalog:catalogBackToCatalogButton()}</a>
+        </div>
+        <p class="text-secondary small mb-4">
+            {catalog:catalogShallowArtistsDescription()}
+        </p>
+
+        <div id="status-banner" class="alert d-none mb-3" role="alert"></div>
+
+        {#if truncated}
+        <p class="text-secondary small mb-3">
+            {catalog:catalogShallowArtistsTruncatedNotice(artists.size)}
+        </p>
+        {/if}
+
+        <div id="shallow-artist-list">
+        {#if artists.empty}
+        <p class="text-secondary">{catalog:catalogShallowArtistsEmptyState()}</p>
+        {#else}
+        <table class="table table-dark table-hover align-middle mb-0">
+            <thead>
+                <tr class="app-section-label" style="font-size:.8rem;">
+                    <th style="width:50px;"></th>
+                    <th>{catalog:catalogTableArtistHeader()}</th>
+                    <th>{catalog:catalogTableActionsHeader()}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {#for artist in artists}
+                <tr id="shallow-artist-row-{artist.artistId}">
+                    <td style="padding:8px;">
+                        {#if artist.imageLink}
+                        <img src="{artist.imageLink}" alt="{artist.artistName}" width="40" height="40"
+                             style="border-radius:50%;object-fit:cover;">
+                        {#else}
+                        <div style="width:40px;height:40px;border-radius:50%;background:#333;display:flex;align-items:center;justify-content:center;" aria-label="{catalog:catalogArtistImagePlaceholderAriaLabel()}" role="img">
+                            <i class="bi bi-person-circle" style="font-size:20px;color:#888;"></i>
+                        </div>
+                        {/if}
+                    </td>
+                    <td style="color:#fff;font-size:.9rem;">{artist.artistName}</td>
+                    <td style="padding:8px;">
+                        <button class="btn btn-sm btn-outline-success py-0 px-2 set-sync-artist-btn"
+                            data-artist-id="{artist.artistId}"
+                            aria-label="{catalog:catalogSetSyncAriaLabel(artist.artistName)}">{catalog:catalogSetSyncButton()}</button>
+                    </td>
+                </tr>
+                {/for}
+            </tbody>
+        </table>
+        {/if}
+        </div>
+    </div>
+
+    <script>
+        document.querySelector('.app-page-container').addEventListener('click', function(e) {
+            const setSyncBtn = e.target.closest('.set-sync-artist-btn');
+            if (setSyncBtn) {
+                const artistId = setSyncBtn.dataset.artistId;
+                postWithButton(setSyncBtn, '/settings/playback/artists/' + encodeURIComponent(artistId) + '/set-sync', '{catalog:catalogSetSyncSuccessMessage()}', '{catalog:catalogSetSyncErrorPrefix()}', function() {
+                    const row = document.getElementById('shallow-artist-row-' + artistId);
+                    if (row) row.remove();
+                });
+            }
+        });
+    </script>
+    {/content}
+{/include}

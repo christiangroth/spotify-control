@@ -5,4 +5,5 @@ data class CatalogStats(
   val albumCount: Long,
   val trackCount: Long,
   val undecidedArtistCount: Long = 0L,
+  val shallowArtistCount: Long = 0L,
 )

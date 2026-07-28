@@ -8,17 +8,20 @@
 
         <div class="row g-3 mb-4">
             <div class="col-6 col-sm-4">
-                <a href="/catalog/artists/settings" class="text-decoration-none">
                 <div class="card app-card">
                     <div class="card-body">
+                        <a href="/catalog/artists/settings" class="d-block text-decoration-none">
                         <p class="card-subtitle mb-1 app-section-label">{catalog:catalogStatsArtistsLabel()}</p>
                         <p class="card-text fs-3 fw-bold mb-0" style="color:var(--spotify-green);">{catalogStats.artistCount.formatted}</p>
+                        </a>
                         {#if catalogStats.undecidedArtistCount > 0}
-                        <p class="mb-0" style="color:#e0b870;font-size:.75rem;">{catalog:catalogStatsUndecidedLabel(catalogStats.undecidedArtistCount.formatted)}</p>
+                        <a href="/catalog/artists/settings" class="d-block text-decoration-none" style="color:#e0b870;font-size:.75rem;">{catalog:catalogStatsUndecidedLabel(catalogStats.undecidedArtistCount.formatted)}</a>
+                        {/if}
+                        {#if catalogStats.shallowArtistCount > 0}
+                        <a href="/catalog/artists/shallow" class="d-block text-decoration-none" style="color:#e07070;font-size:.75rem;">{catalog:catalogStatsShallowLabel(catalogStats.shallowArtistCount.formatted)}</a>
                         {/if}
                     </div>
                 </div>
-                </a>
             </div>
             <div class="col-6 col-sm-4">
                 <div class="card app-card">

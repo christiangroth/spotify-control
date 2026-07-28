@@ -248,8 +248,9 @@ from scratch over all source data.
 
 ## Artist Sync Status
 
-The catalog settings pages (`/catalog/artists/settings` for undecided artists, the Catalog UI for
-confirmed ones) let users control how much of an artist's catalog is synced via `app_artist.syncStatus`
+The catalog settings pages (`/catalog/artists/settings` for undecided artists, `/catalog/artists/shallow`
+for artists currently flagged shallow, the Catalog UI for confirmed ones) let users control how much of
+an artist's catalog is synced via `app_artist.syncStatus`
 (`ArtistSyncStatus`). `SYNC` and `SHALLOW` are final: `SYNC` performs a full catalog sync (albums,
 tracks) and includes the artist in aggregation/statistics, while `SHALLOW` syncs only the artist
 document (deleting any existing albums/tracks whose main artist is this artist) and excludes its
