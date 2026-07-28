@@ -1,3 +1,13 @@
+# 0.121.0 (2026.07.28)
+
+## New Features
+* Added a "Shallow Artists" page listing all artists currently flagged as shallow, with a one-click option to set them back to sync.
+* The Catalog page now links to this new list when there are shallow artists, alongside the existing undecided-artists link.
+
+
+
+---
+
 # 0.120.0 (2026.07.26)
 
 ## New Features
