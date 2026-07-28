@@ -4,7 +4,7 @@ import io.quarkus.qute.i18n.Message
 import io.quarkus.qute.i18n.MessageBundle
 
 /**
- * UI strings for the catalog domain pages: `catalog.html`, `catalog-sync.html` and `catalog-artists-settings.html`.
+ * UI strings for the catalog domain pages: `catalog.html`, `catalog-sync.html`, `catalog-artists-settings.html` and `catalog-shallow-artists.html`.
  */
 @MessageBundle("catalog")
 interface CatalogMessages {
@@ -64,6 +64,9 @@ interface CatalogMessages {
 
   @Message("{count} undecided")
   fun catalogStatsUndecidedLabel(count: String): String
+
+  @Message("{count} shallow")
+  fun catalogStatsShallowLabel(count: String): String
 
   @Message
   fun catalogStatsAlbumsLabel(): String
@@ -249,4 +252,17 @@ interface CatalogMessages {
 
   @Message
   fun catalogArtistSettingsSetShallowSuccessMessage(): String
+
+  // catalog-shallow-artists.html
+  @Message
+  fun catalogShallowArtistsTitle(): String
+
+  @Message
+  fun catalogShallowArtistsDescription(): String
+
+  @Message("Showing the first {count} artists.")
+  fun catalogShallowArtistsTruncatedNotice(count: Int): String
+
+  @Message
+  fun catalogShallowArtistsEmptyState(): String
 }

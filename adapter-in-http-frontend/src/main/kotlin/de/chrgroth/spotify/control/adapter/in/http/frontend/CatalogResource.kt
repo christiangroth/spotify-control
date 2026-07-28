@@ -30,6 +30,8 @@ class CatalogResource(
   private val catalogTemplate: Template,
   @param:Location("catalog-artists-settings.html")
   private val artistSettingsTemplate: Template,
+  @param:Location("catalog-shallow-artists.html")
+  private val shallowArtistsTemplate: Template,
   private val catalogBrowser: CatalogBrowserPort,
   private val catalog: CatalogPort,
   private val dashboard: DashboardPort,
@@ -76,6 +78,18 @@ class CatalogResource(
     artistSettingsTemplate
       .data("artists", artists)
       .data("truncated", totalUndecidedCount > artists.size)
+  }
+
+  @GET
+  @Path("/artists/shallow")
+  @Authenticated
+  @Produces(MediaType.TEXT_HTML)
+  fun shallowArtists(): TemplateInstance = httpResponseMetrics.timed("fragment.catalog.shallow-artists") { details ->
+    val artists = details.detail("catalog.shallow-artists.artists") { catalogBrowser.getShallowArtists() }
+    val totalShallowCount = details.detail("catalog.shallow-artists.stats") { catalogBrowser.getCatalogStats().shallowArtistCount }
+    shallowArtistsTemplate
+      .data("artists", artists)
+      .data("truncated", totalShallowCount > artists.size)
   }
 
   @GET

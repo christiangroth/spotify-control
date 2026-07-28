@@ -37,6 +37,7 @@ class CatalogStatsCache(
         albumCount = appAlbumRepository.countAll(),
         trackCount = appTrackRepository.countAll(),
         undecidedArtistCount = appArtistRepository.countByStatuses(ASSUMPTION_STATUSES),
+        shallowArtistCount = appArtistRepository.countByStatuses(SHALLOW_STATUSES),
       )
     } catch (e: Exception) {
       logger.warn(e) { "Failed to refresh catalog stats cache, keeping previous values" }
@@ -45,5 +46,6 @@ class CatalogStatsCache(
 
   companion object : KLogging() {
     private val ASSUMPTION_STATUSES = setOf(ArtistSyncStatus.SYNC_ASSUMPTION, ArtistSyncStatus.SHALLOW_ASSUMPTION)
+    private val SHALLOW_STATUSES = setOf(ArtistSyncStatus.SHALLOW)
   }
 }

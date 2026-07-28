@@ -110,6 +110,22 @@ class CatalogBrowserServiceTests {
   }
 
   @Test
+  fun `getShallowArtists returns only SHALLOW artists sorted by name without loading album or track counts`() {
+    val bravo = AppArtist(id = ArtistId("artist-2"), artistName = "Bravo", lastSync = triggeredAt, syncStatus = ArtistSyncStatus.SHALLOW)
+    val alpha = AppArtist(id = ArtistId("artist-1"), artistName = "Alpha", lastSync = triggeredAt, syncStatus = ArtistSyncStatus.SHALLOW)
+    every {
+      appArtistRepository.findByStatuses(setOf(ArtistSyncStatus.SHALLOW), CatalogBrowserService.SHALLOW_ARTISTS_LIMIT)
+    } returns listOf(bravo, alpha)
+
+    val result = service.getShallowArtists()
+
+    assertThat(result.map { it.artistId }).containsExactly("artist-1", "artist-2")
+    assertThat(result).allSatisfy { assertThat(it.isShallow).isTrue() }
+    verify(exactly = 0) { appAlbumRepository.findByArtistIds(any()) }
+    verify(exactly = 0) { appTrackRepository.findByArtistIds(any()) }
+  }
+
+  @Test
   fun `getArtistSyncTrace returns null when no trace recorded`() {
     every { syncTraceRepository.find(SyncTraceEntityType.ARTIST, "artist-1") } returns null
 

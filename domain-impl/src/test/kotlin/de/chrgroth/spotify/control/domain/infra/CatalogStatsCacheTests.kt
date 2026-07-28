@@ -19,6 +19,7 @@ class CatalogStatsCacheTests {
   private val cache = CatalogStatsCache(appArtistRepository, appAlbumRepository, appTrackRepository)
 
   private val assumptionStatuses = setOf(ArtistSyncStatus.SYNC_ASSUMPTION, ArtistSyncStatus.SHALLOW_ASSUMPTION)
+  private val shallowStatuses = setOf(ArtistSyncStatus.SHALLOW)
 
   @Test
   fun `current is zeroed out before the first refresh`() {
@@ -31,10 +32,13 @@ class CatalogStatsCacheTests {
     every { appAlbumRepository.countAll() } returns 5L
     every { appTrackRepository.countAll() } returns 42L
     every { appArtistRepository.countByStatuses(assumptionStatuses) } returns 2L
+    every { appArtistRepository.countByStatuses(shallowStatuses) } returns 1L
 
     cache.refresh()
 
-    assertThat(cache.current()).isEqualTo(CatalogStats(artistCount = 3L, albumCount = 5L, trackCount = 42L, undecidedArtistCount = 2L))
+    assertThat(cache.current()).isEqualTo(
+      CatalogStats(artistCount = 3L, albumCount = 5L, trackCount = 42L, undecidedArtistCount = 2L, shallowArtistCount = 1L),
+    )
   }
 
   @Test
@@ -43,12 +47,15 @@ class CatalogStatsCacheTests {
     every { appAlbumRepository.countAll() } returns 5L
     every { appTrackRepository.countAll() } returns 42L
     every { appArtistRepository.countByStatuses(assumptionStatuses) } returns 2L
+    every { appArtistRepository.countByStatuses(shallowStatuses) } returns 1L
     cache.refresh()
 
     every { appArtistRepository.countAll() } throws IllegalStateException("mongo unreachable")
     cache.refresh()
 
-    assertThat(cache.current()).isEqualTo(CatalogStats(artistCount = 3L, albumCount = 5L, trackCount = 42L, undecidedArtistCount = 2L))
+    assertThat(cache.current()).isEqualTo(
+      CatalogStats(artistCount = 3L, albumCount = 5L, trackCount = 42L, undecidedArtistCount = 2L, shallowArtistCount = 1L),
+    )
   }
 
   @Test
@@ -57,6 +64,7 @@ class CatalogStatsCacheTests {
     every { appAlbumRepository.countAll() } returns 0L
     every { appTrackRepository.countAll() } returns 0L
     every { appArtistRepository.countByStatuses(assumptionStatuses) } returns 0L
+    every { appArtistRepository.countByStatuses(shallowStatuses) } returns 0L
     cache.refresh()
 
     repeat(5) { cache.current() }

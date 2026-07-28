@@ -60,6 +60,20 @@ class CatalogBrowserService(
         )
       }
 
+  override fun getShallowArtists(): List<ArtistBrowseItem> =
+    appArtistRepository.findByStatuses(SHALLOW_STATUSES, SHALLOW_ARTISTS_LIMIT)
+      .sortedBy { it.artistName.lowercase() }
+      .map { artist ->
+        ArtistBrowseItem(
+          artistId = artist.id.value,
+          artistName = artist.artistName,
+          imageLink = artist.imageLink,
+          albumCount = 0,
+          trackCount = 0,
+          syncStatus = artist.syncStatus,
+        )
+      }
+
   private fun toBrowseItems(artists: List<AppArtist>): List<ArtistBrowseItem> {
     val artistIds = artists.map { it.id }.toSet()
     val albumCountByArtistId = appAlbumRepository.findByArtistIds(artistIds).groupingBy { it.artistId?.value }.eachCount()
@@ -223,6 +237,8 @@ class CatalogBrowserService(
   companion object {
     internal const val SEARCH_RESULT_LIMIT = 50
     internal const val UNDECIDED_ARTISTS_LIMIT = 200
+    internal const val SHALLOW_ARTISTS_LIMIT = 200
     private val ASSUMPTION_STATUSES = setOf(ArtistSyncStatus.SYNC_ASSUMPTION, ArtistSyncStatus.SHALLOW_ASSUMPTION)
+    private val SHALLOW_STATUSES = setOf(ArtistSyncStatus.SHALLOW)
   }
 }
