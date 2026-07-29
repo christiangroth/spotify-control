@@ -88,7 +88,8 @@ class PlaylistService(
 
   override fun getMissingArtists(playlistId: String): List<MissingArtist> {
     currentUserResolver.userId() ?: return emptyList()
-    val artistIds = playlistRepository.findDistinctArtistIds()[playlistId] ?: return emptyList()
+    val playlist = playlistRepository.findByPlaylistId(playlistId) ?: return emptyList()
+    val artistIds = playlist.tracks.flatMap { it.artistIds }.toSet()
     val existingArtistIds = appArtistRepository.findByArtistIds(artistIds).map { it.id }.toSet()
     val missingArtistIds = artistIds.filterNot { it in existingArtistIds }
     if (missingArtistIds.isEmpty()) return emptyList()

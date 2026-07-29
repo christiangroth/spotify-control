@@ -130,6 +130,13 @@ class PlaylistServiceTests {
 
   // --- getMissingArtists tests ---
 
+  private fun buildPlaylistWithArtists(playlistId: String, vararg artistIds: String) = Playlist(
+    spotifyPlaylistId = playlistId,
+    tracks = artistIds.mapIndexed { index, artistId ->
+      PlaylistTrack(trackId = TrackId("t${index + 1}"), artistIds = listOf(ArtistId(artistId)), albumId = null)
+    },
+  )
+
   @Test
   fun `getMissingArtists returns empty list when no user exists`() {
     every { currentUserResolver.userId() } returns null
@@ -137,15 +144,13 @@ class PlaylistServiceTests {
     val result = adapter.getMissingArtists("p1")
 
     assertThat(result).isEmpty()
-    verify(exactly = 0) { playlistRepository.findDistinctArtistIds() }
+    verify(exactly = 0) { playlistRepository.findByPlaylistId(any()) }
   }
 
   @Test
   fun `getMissingArtists returns empty list when playlist is unknown`() {
     every { currentUserResolver.userId() } returns userId
-    every { playlistRepository.findDistinctArtistIds() } returns mapOf(
-      "p1" to setOf(ArtistId("artist-1")),
-    )
+    every { playlistRepository.findByPlaylistId("p2") } returns null
 
     val result = adapter.getMissingArtists("p2")
 
@@ -155,9 +160,7 @@ class PlaylistServiceTests {
   @Test
   fun `getMissingArtists returns empty list when all artists are already in catalog`() {
     every { currentUserResolver.userId() } returns userId
-    every { playlistRepository.findDistinctArtistIds() } returns mapOf(
-      "p1" to setOf(ArtistId("artist-1")),
-    )
+    every { playlistRepository.findByPlaylistId("p1") } returns buildPlaylistWithArtists("p1", "artist-1")
     every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns listOf(
       AppArtist(id = ArtistId("artist-1"), artistName = "Artist 1", lastSync = now),
     )
@@ -171,9 +174,7 @@ class PlaylistServiceTests {
   @Test
   fun `getMissingArtists resolves names for missing artists via Spotify and sorts by name`() {
     every { currentUserResolver.userId() } returns userId
-    every { playlistRepository.findDistinctArtistIds() } returns mapOf(
-      "p1" to setOf(ArtistId("artist-1"), ArtistId("artist-2")),
-    )
+    every { playlistRepository.findByPlaylistId("p1") } returns buildPlaylistWithArtists("p1", "artist-1", "artist-2")
     every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"), ArtistId("artist-2"))) } returns emptyList()
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyCatalog.getArtist(accessToken, "artist-1") } returns AppArtist(id = ArtistId("artist-1"), artistName = "Zeta", lastSync = now).right()
@@ -190,9 +191,7 @@ class PlaylistServiceTests {
   @Test
   fun `getMissingArtists falls back to null name when Spotify lookup fails`() {
     every { currentUserResolver.userId() } returns userId
-    every { playlistRepository.findDistinctArtistIds() } returns mapOf(
-      "p1" to setOf(ArtistId("artist-1")),
-    )
+    every { playlistRepository.findByPlaylistId("p1") } returns buildPlaylistWithArtists("p1", "artist-1")
     every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns emptyList()
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyCatalog.getArtist(accessToken, "artist-1") } returns SpotifyRateLimitError(1.seconds).left()

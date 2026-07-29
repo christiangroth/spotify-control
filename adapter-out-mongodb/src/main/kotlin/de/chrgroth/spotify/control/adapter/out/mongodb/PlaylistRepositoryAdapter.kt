@@ -1,9 +1,11 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
+import com.mongodb.client.model.Accumulators
 import com.mongodb.client.model.Aggregates
 import com.mongodb.client.model.Filters
 import com.mongodb.client.model.Projections
 import com.mongodb.client.model.Updates
+import com.mongodb.client.model.UnwindOptions
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.model.playlist.Playlist
@@ -70,34 +72,36 @@ class PlaylistRepositoryAdapter(
   }
 
   override fun findDistinctArtistIds(): Map<String, Set<ArtistId>> {
-    // Uses $reduce/$setUnion instead of $unwind so playlists with zero tracks or tracks without artistIds
-    // are still included (with an empty set), matching findTrackCounts() semantics. $unwind would otherwise
-    // silently drop any document whose target path is missing, null or an empty array.
-    // Both $tracks itself and each track's artistIds are wrapped in $ifNull: if $tracks were missing,
-    // $reduce would otherwise return null instead of an empty array, causing the getList() below to NPE.
+    // Uses two $unwind stages (tracks, then each track's artistIds) plus a $group/$addToSet instead of the
+    // previous $reduce/$setUnion accumulation: $setUnion re-scans the whole growing "seen so far" array on every
+    // track, making the old pipeline O(n^2) in the number of tracks per playlist - measurably slow for large
+    // playlists. $addToSet is a hash-based accumulator, so this version stays close to O(n).
+    // Both $unwind stages use preserveNullAndEmptyArrays so playlists with zero tracks, or tracks without
+    // artistIds, still produce one output row (with a null artistId that is filtered out below), matching
+    // findTrackCounts() semantics of including every playlist rather than silently dropping it.
     val pipeline = listOf(
       Aggregates.project(
         Projections.fields(
           Projections.include("spotifyPlaylistId"),
-          Projections.computed(
-            "artistIds",
-            Document(
-              "\$reduce",
-              Document("input", Document("\$ifNull", listOf("\$tracks", emptyList<String>())))
-                .append("initialValue", emptyList<String>())
-                .append(
-                  "in",
-                  Document("\$setUnion", listOf("\$\$value", Document("\$ifNull", listOf("\$\$this.artistIds", emptyList<String>())))),
-                ),
-            ),
-          ),
+          Projections.computed("tracks", Document("\$ifNull", listOf("\$tracks", emptyList<Document>()))),
         ),
       ),
+      Aggregates.unwind("\$tracks", UnwindOptions().preserveNullAndEmptyArrays(true)),
+      Aggregates.project(
+        Projections.fields(
+          Projections.include("spotifyPlaylistId"),
+          Projections.computed("artistId", Document("\$ifNull", listOf("\$tracks.artistIds", emptyList<String>()))),
+        ),
+      ),
+      Aggregates.unwind("\$artistId", UnwindOptions().preserveNullAndEmptyArrays(true)),
+      Aggregates.group("\$spotifyPlaylistId", Accumulators.addToSet("artistIds", "\$artistId")),
     )
     return mongoQueryMetrics.timed("spotify_playlist.findDistinctArtistIds") {
       playlistDocumentRepository.mongoCollection()
         .aggregate(pipeline, Document::class.java)
-        .associate { it.getString("spotifyPlaylistId") to it.getList("artistIds", String::class.java).map { artistId -> ArtistId(artistId) }.toSet() }
+        .associate { doc ->
+          doc.getString("_id") to doc.getList("artistIds", String::class.java).filterNotNull().map { artistId -> ArtistId(artistId) }.toSet()
+        }
     }
   }
 

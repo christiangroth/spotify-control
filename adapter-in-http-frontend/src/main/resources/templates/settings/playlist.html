@@ -50,14 +50,13 @@
                     <td class="text-secondary small tabular-nums">{#if row.numberOfTracks}{row.numberOfTracks}{#else}{playlists:settingsEmptyValuePlaceholder()}{/if}</td>
                     <td class="text-secondary small tabular-nums">
                         {#if row.numberOfArtists != null}
-                            {row.numberOfArtists} ({#if row.numberOfMissingArtists > 0}<button
+                            {row.numberOfArtists}{#if row.numberOfMissingArtists > 0} <button
                                 type="button"
-                                class="btn btn-link p-0 missing-artists-btn"
-                                style="color:#dc3545;text-decoration:underline;"
+                                class="btn btn-link p-0 border-0 missing-artists-btn"
                                 data-playlist-id="{row.playlist.spotifyPlaylistId}"
                                 data-playlist-name="{row.playlist.name}"
                                 aria-label="{playlists:settingsShowMissingArtistsAriaLabel(row.playlist.name)}"
-                            >{row.numberOfMissingArtists}</button>{#else}{row.numberOfMissingArtists}{/if})
+                            ><span class="badge rounded-pill text-bg-danger" style="vertical-align:middle;">{row.numberOfMissingArtists}</span></button>{/if}
                         {#else}
                             {playlists:settingsEmptyValuePlaceholder()}
                         {/if}
