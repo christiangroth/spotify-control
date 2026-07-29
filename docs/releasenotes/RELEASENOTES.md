@@ -1,3 +1,13 @@
+# 0.122.0 (2026.07.29)
+
+## New Features
+* On the Playlists settings page, the missing-artist count is now clickable whenever a playlist has artists missing from the catalog.
+* Clicking it opens a modal listing the missing artists with their Spotify id and name.
+
+
+
+---
+
 # 0.121.0 (2026.07.28)
 
 ## New Features
