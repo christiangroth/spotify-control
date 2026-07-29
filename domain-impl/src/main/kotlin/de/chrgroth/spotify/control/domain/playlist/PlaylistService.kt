@@ -7,6 +7,7 @@ import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.PlaylistSyncError
 import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
 import de.chrgroth.spotify.control.domain.model.playlist.ArtistStats
+import de.chrgroth.spotify.control.domain.model.playlist.MissingArtist
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.playlist.Playlist
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSyncStatus
@@ -16,6 +17,7 @@ import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.catalog.SpotifyCatalogPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.AppPlaylistCheckRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.infra.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
@@ -48,6 +50,7 @@ class PlaylistService(
   private val syncController: SyncController,
   private val catalogPort: CatalogPort,
   private val appArtistRepository: AppArtistRepositoryPort,
+  private val spotifyCatalog: SpotifyCatalogPort,
   private val meterRegistry: MeterRegistry,
 ) : PlaylistPort {
 
@@ -81,6 +84,24 @@ class PlaylistService(
         missingFromCatalog = artistIds.count { it !in existingArtistIds },
       )
     }
+  }
+
+  override fun getMissingArtists(playlistId: String): List<MissingArtist> {
+    currentUserResolver.userId() ?: return emptyList()
+    val artistIds = playlistRepository.findDistinctArtistIds()[playlistId] ?: return emptyList()
+    val existingArtistIds = appArtistRepository.findByArtistIds(artistIds).map { it.id }.toSet()
+    val missingArtistIds = artistIds.filterNot { it in existingArtistIds }
+    if (missingArtistIds.isEmpty()) return emptyList()
+    val accessToken = spotifyAccessToken.getValidAccessToken()
+    return missingArtistIds
+      .map { artistId ->
+        val name = spotifyCatalog.getArtist(accessToken, artistId.value).fold(
+          ifLeft = { null },
+          ifRight = { it?.artistName },
+        )
+        MissingArtist(id = artistId.value, name = name)
+      }
+      .sortedBy { it.name ?: it.id }
   }
 
   override fun enqueueUpdates() {

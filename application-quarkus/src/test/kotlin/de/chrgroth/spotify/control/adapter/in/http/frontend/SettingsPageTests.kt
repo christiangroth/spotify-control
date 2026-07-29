@@ -119,7 +119,8 @@ class SettingsPageTests {
       .get("/playlists/settings")
       .then()
       .statusCode(200)
-      .body(containsString("2 (2)"))
+      .body(containsString("2 ("))
+      .body(containsString(">2</button>)"))
   }
 
   @Test
@@ -162,7 +163,8 @@ class SettingsPageTests {
       .get("/playlists/settings")
       .then()
       .statusCode(200)
-      .body(containsString("2 (1)"))
+      .body(containsString("2 ("))
+      .body(containsString(">1</button>)"))
   }
 
   @Test

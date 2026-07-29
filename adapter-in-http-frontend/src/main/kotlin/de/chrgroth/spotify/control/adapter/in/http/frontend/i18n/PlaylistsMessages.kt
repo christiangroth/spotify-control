@@ -71,6 +71,30 @@ interface PlaylistsMessages {
   @Message
   fun settingsSyncPlaylistErrorPrefix(): String
 
+  @Message("Show missing artists for {name}")
+  fun settingsShowMissingArtistsAriaLabel(name: String): String
+
+  @Message
+  fun settingsMissingArtistsModalTitle(): String
+
+  @Message
+  fun settingsMissingArtistsModalCloseAriaLabel(): String
+
+  @Message
+  fun settingsMissingArtistsCloseButton(): String
+
+  @Message
+  fun settingsMissingArtistsLoading(): String
+
+  @Message
+  fun settingsMissingArtistsEmptyState(): String
+
+  @Message
+  fun settingsMissingArtistsUnknownName(): String
+
+  @Message
+  fun settingsMissingArtistsErrorPrefix(): String
+
   // playlist settings errors (surfaced via /settings/playlist/* JSON responses)
   @Message("Invalid sync status: {syncStatus}")
   fun settingsErrorInvalidSyncStatus(syncStatus: String): String
