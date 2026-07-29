@@ -10,6 +10,7 @@ import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
 import io.quarkus.security.Authenticated
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.ws.rs.Consumes
+import jakarta.ws.rs.GET
 import jakarta.ws.rs.POST
 import jakarta.ws.rs.PUT
 import jakarta.ws.rs.Path
@@ -55,6 +56,17 @@ class PlaylistSettingsResource(
   }
 
   data class SyncStatusRequest(val syncStatus: String = "")
+
+  @GET
+  @Authenticated
+  @Path("/{playlistId}/missing-artists")
+  @Produces(MediaType.APPLICATION_JSON)
+  fun missingArtists(@PathParam("playlistId") playlistId: String): Response = httpResponseMetrics.timed("rest.playlist.missing-artists") {
+    val artists = playlist.getMissingArtists(playlistId).map { MissingArtistResponse(id = it.id, name = it.name) }
+    Response.ok(artists).build()
+  }
+
+  data class MissingArtistResponse(val id: String, val name: String?)
 
   @PUT
   @Authenticated
