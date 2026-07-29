@@ -1,3 +1,13 @@
+# 0.122.1 (2026.07.29)
+
+## Bugfixes / Chore
+* Sped up loading of playlist artist counts and the missing-artists list on the playlist settings page.
+* Replaced the missing-artist count shown in parentheses with a small red badge.
+
+
+
+---
+
 # 0.122.0 (2026.07.29)
 
 ## New Features
