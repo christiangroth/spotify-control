@@ -1,3 +1,12 @@
+# 0.122.2 (2026.07.30)
+
+## Bugfixes / Chore
+* Fixed the missing-artist count and list on the playlist settings page to only check each track's main artist, so featured artists are no longer incorrectly reported as missing.
+
+
+
+---
+
 # 0.122.1 (2026.07.29)
 
 ## Bugfixes / Chore
