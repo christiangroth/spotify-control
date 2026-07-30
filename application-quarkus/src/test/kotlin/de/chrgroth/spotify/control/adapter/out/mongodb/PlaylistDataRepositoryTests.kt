@@ -150,6 +150,23 @@ class PlaylistDataRepositoryTests {
   }
 
   @Test
+  fun `findDistinctArtistIds only considers each track's main artist, ignoring featured artists`() {
+    val playlistId = "playlist-${UUID.randomUUID()}"
+    playlistRepository.save(
+      Playlist(
+        spotifyPlaylistId = playlistId,
+        tracks = listOf(
+          PlaylistTrack(trackId = TrackId("t1"), artistIds = listOf(ArtistId("main-1"), ArtistId("featured-1")), albumId = AlbumId("al1")),
+        ),
+      ),
+    )
+
+    val result = playlistRepository.findDistinctArtistIds()
+
+    assertThat(result[playlistId]).containsExactly(ArtistId("main-1"))
+  }
+
+  @Test
   fun `findDistinctArtistIds and findTrackCounts do not fail for a document with a missing tracks field`() {
     val playlistId = "playlist-${UUID.randomUUID()}"
     val rawCollection = playlistDocumentRepository.mongoCollection().withDocumentClass(Document::class.java)

@@ -189,6 +189,23 @@ class PlaylistServiceTests {
   }
 
   @Test
+  fun `getMissingArtists only checks the main artist per track, ignoring featured artists`() {
+    every { currentUserResolver.userId() } returns userId
+    every { playlistRepository.findByPlaylistId("p1") } returns Playlist(
+      spotifyPlaylistId = "p1",
+      tracks = listOf(PlaylistTrack(trackId = TrackId("t1"), artistIds = listOf(ArtistId("artist-1"), ArtistId("artist-2")), albumId = null)),
+    )
+    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns emptyList()
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
+    every { spotifyCatalog.getArtist(accessToken, "artist-1") } returns AppArtist(id = ArtistId("artist-1"), artistName = "Main", lastSync = now).right()
+
+    val result = adapter.getMissingArtists("p1")
+
+    assertThat(result).containsExactly(MissingArtist(id = "artist-1", name = "Main"))
+    verify(exactly = 0) { spotifyCatalog.getArtist(accessToken, "artist-2") }
+  }
+
+  @Test
   fun `getMissingArtists falls back to null name when Spotify lookup fails`() {
     every { currentUserResolver.userId() } returns userId
     every { playlistRepository.findByPlaylistId("p1") } returns buildPlaylistWithArtists("p1", "artist-1")
