@@ -13,6 +13,12 @@ interface SpotifyCatalogPort {
   fun getArtist(accessToken: AccessToken, artistId: String): Either<DomainError, AppArtist?>
 
   /**
+   * Fetches metadata for several artists in as few HTTP calls as possible (chunked into batches of up to 50 ids
+   * via GET /v1/artists), instead of one throttled request per artist. Unknown ids are silently omitted from the result.
+   */
+  fun getArtists(accessToken: AccessToken, artistIds: List<String>): Either<DomainError, List<AppArtist>>
+
+  /**
    * Fetches an album's full metadata and all tracks via GET /v1/albums/{id}.
    * Used as a fallback for albums whose metadata is not yet known locally.
    */

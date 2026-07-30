@@ -1,6 +1,7 @@
 package de.chrgroth.spotify.control.domain.playlist
 
 import arrow.core.Either
+import arrow.core.getOrElse
 import arrow.core.left
 import arrow.core.right
 import de.chrgroth.spotify.control.domain.error.DomainError
@@ -97,14 +98,13 @@ class PlaylistService(
     val missingArtistIds = artistIds.filterNot { it in existingArtistIds }
     if (missingArtistIds.isEmpty()) return emptyList()
     val accessToken = spotifyAccessToken.getValidAccessToken()
+    // Resolved in as few batched Spotify calls as possible (up to 50 ids per request), rather than one
+    // throttled request per missing artist, which made this endpoint take minutes for larger playlists.
+    val resolvedNamesById = spotifyCatalog.getArtists(accessToken, missingArtistIds.map { it.value })
+      .getOrElse { emptyList() }
+      .associate { it.id to it.artistName }
     return missingArtistIds
-      .map { artistId ->
-        val name = spotifyCatalog.getArtist(accessToken, artistId.value).fold(
-          ifLeft = { null },
-          ifRight = { it?.artistName },
-        )
-        MissingArtist(id = artistId.value, name = name)
-      }
+      .map { artistId -> MissingArtist(id = artistId.value, name = resolvedNamesById[artistId]) }
       .sortedBy { it.name ?: it.id }
   }
 

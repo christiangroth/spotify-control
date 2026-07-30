@@ -177,8 +177,10 @@ class PlaylistServiceTests {
     every { playlistRepository.findByPlaylistId("p1") } returns buildPlaylistWithArtists("p1", "artist-1", "artist-2")
     every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"), ArtistId("artist-2"))) } returns emptyList()
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
-    every { spotifyCatalog.getArtist(accessToken, "artist-1") } returns AppArtist(id = ArtistId("artist-1"), artistName = "Zeta", lastSync = now).right()
-    every { spotifyCatalog.getArtist(accessToken, "artist-2") } returns AppArtist(id = ArtistId("artist-2"), artistName = "Alpha", lastSync = now).right()
+    every { spotifyCatalog.getArtists(accessToken, listOf("artist-1", "artist-2")) } returns listOf(
+      AppArtist(id = ArtistId("artist-1"), artistName = "Zeta", lastSync = now),
+      AppArtist(id = ArtistId("artist-2"), artistName = "Alpha", lastSync = now),
+    ).right()
 
     val result = adapter.getMissingArtists("p1")
 
@@ -197,12 +199,14 @@ class PlaylistServiceTests {
     )
     every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns emptyList()
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
-    every { spotifyCatalog.getArtist(accessToken, "artist-1") } returns AppArtist(id = ArtistId("artist-1"), artistName = "Main", lastSync = now).right()
+    every { spotifyCatalog.getArtists(accessToken, listOf("artist-1")) } returns listOf(
+      AppArtist(id = ArtistId("artist-1"), artistName = "Main", lastSync = now),
+    ).right()
 
     val result = adapter.getMissingArtists("p1")
 
     assertThat(result).containsExactly(MissingArtist(id = "artist-1", name = "Main"))
-    verify(exactly = 0) { spotifyCatalog.getArtist(accessToken, "artist-2") }
+    verify(exactly = 1) { spotifyCatalog.getArtists(accessToken, listOf("artist-1")) }
   }
 
   @Test
@@ -211,7 +215,7 @@ class PlaylistServiceTests {
     every { playlistRepository.findByPlaylistId("p1") } returns buildPlaylistWithArtists("p1", "artist-1")
     every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns emptyList()
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
-    every { spotifyCatalog.getArtist(accessToken, "artist-1") } returns SpotifyRateLimitError(1.seconds).left()
+    every { spotifyCatalog.getArtists(accessToken, listOf("artist-1")) } returns SpotifyRateLimitError(1.seconds).left()
 
     val result = adapter.getMissingArtists("p1")
 
