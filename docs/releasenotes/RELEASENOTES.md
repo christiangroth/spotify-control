@@ -1,3 +1,12 @@
+# 0.122.5 (2026.07.30)
+
+## Bugfixes / Chore
+* Fixed the missing-artists modal on the playlist settings page sometimes showing "Unknown Artist" instead of the real artist name.
+
+
+
+---
+
 # 0.122.4 (2026.07.30)
 
 ## Bugfixes / Chore
