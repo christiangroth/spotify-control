@@ -62,6 +62,33 @@ class SpotifyCatalogAdapter(
     }
   }
 
+  override fun getArtists(
+    accessToken: AccessToken,
+    artistIds: List<String>,
+  ): Either<DomainError, List<AppArtist>> {
+    if (artistIds.isEmpty()) return emptyList<AppArtist>().right()
+    return try {
+      SpotifyApiAuthContext.set(accessToken)
+      artistIds.chunked(SEVERAL_ARTISTS_PAGE_SIZE)
+        .flatMap { chunk ->
+          throttler.throttle(DomainOutboxPartition.ToSpotifyCatalog.key)
+          val response = httpMetrics.timed("/v1/artists") { apiClient.getSeveralArtists(chunk.joinToString(",")) }
+          response.artists.filterNotNull().map { parseArtist(it) }
+        }
+        .right()
+    } catch (e: SpotifyRateLimitException) {
+      SpotifyRateLimitError(e.retryAfterSeconds.seconds).left()
+    } catch (e: SpotifyApiException) {
+      logger.error { "Spotify several-artists fetch failed for ${artistIds.size} id(s): ${e.statusCode}" }
+      SyncError.ARTIST_DETAILS_FETCH_FAILED.left()
+    } catch (e: Exception) {
+      logger.error(e) { "Unexpected error fetching several artists (${artistIds.size} id(s))" }
+      SyncError.ARTIST_DETAILS_FETCH_FAILED.left()
+    } finally {
+      SpotifyApiAuthContext.clear()
+    }
+  }
+
   override fun getAlbum(
     accessToken: AccessToken,
     albumId: String,
@@ -265,5 +292,6 @@ class SpotifyCatalogAdapter(
     private const val ALBUM_TRACKS_PAGE_SIZE = 50
     private const val ARTIST_ALBUMS_PAGE_SIZE = 10
     private const val ARTIST_ALBUMS_INCLUDE_GROUPS = "album,single"
+    private const val SEVERAL_ARTISTS_PAGE_SIZE = 50
   }
 }

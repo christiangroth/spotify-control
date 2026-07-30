@@ -95,3 +95,11 @@ data class PagingArtistDiscographyAlbumObject(
   val items: List<ArtistDiscographyAlbumObject> = emptyList(),
   val next: String? = null,
 )
+
+/**
+ * Response of GET /v1/artists (Get Several Artists). Spotify returns null entries for unknown ids.
+ */
+@Serializable
+data class SeveralArtistsObject(
+  val artists: List<ArtistObject?> = emptyList(),
+)

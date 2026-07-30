@@ -9,6 +9,7 @@ import de.chrgroth.spotify.control.adapter.out.spotify.model.PagingPlaylistObjec
 import de.chrgroth.spotify.control.adapter.out.spotify.model.PagingPlaylistTrackObject
 import de.chrgroth.spotify.control.adapter.out.spotify.model.PagingSimplifiedTrackObject
 import de.chrgroth.spotify.control.adapter.out.spotify.model.PrivateUserObject
+import de.chrgroth.spotify.control.adapter.out.spotify.model.SeveralArtistsObject
 import jakarta.ws.rs.Consumes
 import jakarta.ws.rs.DELETE
 import jakarta.ws.rs.GET
@@ -51,6 +52,13 @@ interface SpotifyApiRestClient {
   fun getArtist(
     @PathParam("artistId") artistId: String,
   ): ArtistObject
+
+  @GET
+  @Path("/v1/artists")
+  @Produces(MediaType.APPLICATION_JSON)
+  fun getSeveralArtists(
+    @QueryParam("ids") ids: String,
+  ): SeveralArtistsObject
 
   @GET
   @Path("/v1/artists/{artistId}/albums")
