@@ -89,7 +89,10 @@ class PlaylistService(
   override fun getMissingArtists(playlistId: String): List<MissingArtist> {
     currentUserResolver.userId() ?: return emptyList()
     val playlist = playlistRepository.findByPlaylistId(playlistId) ?: return emptyList()
-    val artistIds = playlist.tracks.flatMap { it.artistIds }.toSet()
+    // Only the main (first) artist per track is checked against the catalog, matching syncPlaylistData()'s
+    // catalog sync which only ever adds a track's primary artist - featured/additional artists are never added
+    // and would otherwise always be reported as missing.
+    val artistIds = playlist.tracks.mapNotNull { it.artistIds.firstOrNull() }.toSet()
     val existingArtistIds = appArtistRepository.findByArtistIds(artistIds).map { it.id }.toSet()
     val missingArtistIds = artistIds.filterNot { it in existingArtistIds }
     if (missingArtistIds.isEmpty()) return emptyList()
