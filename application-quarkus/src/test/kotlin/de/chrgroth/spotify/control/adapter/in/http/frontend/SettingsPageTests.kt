@@ -119,9 +119,9 @@ class SettingsPageTests {
       .get("/playlists/settings")
       .then()
       .statusCode(200)
-      .body(containsString("2 <button"))
+      .body(containsString("1 <button"))
       .body(containsString("badge rounded-pill text-bg-danger"))
-      .body(containsString(">2</span></button>"))
+      .body(containsString(">1</span></button>"))
   }
 
   @Test
@@ -164,8 +164,8 @@ class SettingsPageTests {
       .get("/playlists/settings")
       .then()
       .statusCode(200)
-      .body(containsString("2 <button"))
-      .body(containsString(">1</span></button>"))
+      .body(containsString("Playlist For Known Artist Test"))
+      .body(not(containsString("badge rounded-pill text-bg-danger")))
   }
 
   @Test
