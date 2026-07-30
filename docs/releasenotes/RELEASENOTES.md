@@ -1,3 +1,13 @@
+# 0.122.3 (2026.07.30)
+
+## Bugfixes / Chore
+* Fixed unreadable dark-on-dark text in the missing-artists modal on the playlist settings page.
+* Further sped up loading of playlist artist counts on the playlist settings page.
+
+
+
+---
+
 # 0.122.2 (2026.07.30)
 
 ## Bugfixes / Chore
