@@ -1,3 +1,12 @@
+# 0.122.4 (2026.07.30)
+
+## Bugfixes / Chore
+* Fixed the missing-artists list on the playlist settings page taking minutes to load for playlists with many missing artists.
+
+
+
+---
+
 # 0.122.3 (2026.07.30)
 
 ## Bugfixes / Chore
