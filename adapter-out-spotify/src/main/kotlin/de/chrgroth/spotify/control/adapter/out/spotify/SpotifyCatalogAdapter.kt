@@ -67,23 +67,29 @@ class SpotifyCatalogAdapter(
     artistIds: List<String>,
   ): Either<DomainError, List<AppArtist>> {
     if (artistIds.isEmpty()) return emptyList<AppArtist>().right()
-    return try {
+    try {
       SpotifyApiAuthContext.set(accessToken)
-      artistIds.chunked(SEVERAL_ARTISTS_PAGE_SIZE)
-        .flatMap { chunk ->
-          throttler.throttle(DomainOutboxPartition.ToSpotifyCatalog.key)
+      val resolved = mutableListOf<AppArtist>()
+      var lastError: DomainError? = null
+      // Each chunk is resolved independently, so a failure fetching one chunk (e.g. a transient error or rate
+      // limit hit partway through a large batch) does not discard artists already resolved from earlier chunks.
+      artistIds.chunked(SEVERAL_ARTISTS_PAGE_SIZE).forEach { chunk ->
+        throttler.throttle(DomainOutboxPartition.ToSpotifyCatalog.key)
+        try {
           val response = httpMetrics.timed("/v1/artists") { apiClient.getSeveralArtists(chunk.joinToString(",")) }
-          response.artists.filterNotNull().map { parseArtist(it) }
+          resolved += response.artists.filterNotNull().map { parseArtist(it) }
+        } catch (e: SpotifyRateLimitException) {
+          lastError = SpotifyRateLimitError(e.retryAfterSeconds.seconds)
+        } catch (e: SpotifyApiException) {
+          logger.error { "Spotify several-artists fetch failed for ${chunk.size} id(s): ${e.statusCode}" }
+          lastError = SyncError.ARTIST_DETAILS_FETCH_FAILED
+        } catch (e: Exception) {
+          logger.error(e) { "Unexpected error fetching several artists (${chunk.size} id(s))" }
+          lastError = SyncError.ARTIST_DETAILS_FETCH_FAILED
         }
-        .right()
-    } catch (e: SpotifyRateLimitException) {
-      SpotifyRateLimitError(e.retryAfterSeconds.seconds).left()
-    } catch (e: SpotifyApiException) {
-      logger.error { "Spotify several-artists fetch failed for ${artistIds.size} id(s): ${e.statusCode}" }
-      SyncError.ARTIST_DETAILS_FETCH_FAILED.left()
-    } catch (e: Exception) {
-      logger.error(e) { "Unexpected error fetching several artists (${artistIds.size} id(s))" }
-      SyncError.ARTIST_DETAILS_FETCH_FAILED.left()
+      }
+      val error = lastError
+      return if (resolved.isNotEmpty() || error == null) resolved.right() else error.left()
     } finally {
       SpotifyApiAuthContext.clear()
     }
