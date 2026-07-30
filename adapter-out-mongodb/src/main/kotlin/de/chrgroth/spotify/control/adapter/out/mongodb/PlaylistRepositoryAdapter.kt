@@ -1,11 +1,9 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
-import com.mongodb.client.model.Accumulators
 import com.mongodb.client.model.Aggregates
 import com.mongodb.client.model.Filters
 import com.mongodb.client.model.Projections
 import com.mongodb.client.model.Updates
-import com.mongodb.client.model.UnwindOptions
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.model.playlist.Playlist
@@ -75,37 +73,31 @@ class PlaylistRepositoryAdapter(
     // Only the main (first) artist of each track is considered: PlaylistService.syncPlaylistData() only ever
     // syncs a track's primary artist into the app catalog, so featured/additional artists would always show up
     // as "missing from catalog" if they were included here.
-    // Uses a $unwind stage (tracks) plus a $group/$addToSet instead of the previous $reduce/$setUnion
-    // accumulation: $setUnion re-scans the whole growing "seen so far" array on every track, making the old
-    // pipeline O(n^2) in the number of tracks per playlist - measurably slow for large playlists. $addToSet is
-    // a hash-based accumulator, so this version stays close to O(n).
-    // The $unwind stage uses preserveNullAndEmptyArrays so playlists with zero tracks still produce one output
-    // row (with a null mainArtistId that is filtered out below), matching findTrackCounts() semantics of
-    // including every playlist rather than silently dropping it.
+    // Extracts the main artist id per track with a single $project/$map, one output document per playlist -
+    // no $unwind/$group shuffle across the whole collection is needed, since each playlist is already its own
+    // document. Deduping the per-track ids happens client-side via toSet(), which is a cheap O(n) hash pass and
+    // far faster in practice than making MongoDB unwind and regroup every track in every playlist.
     val pipeline = listOf(
       Aggregates.project(
         Projections.fields(
           Projections.include("spotifyPlaylistId"),
-          Projections.computed("tracks", Document("\$ifNull", listOf("\$tracks", emptyList<Document>()))),
-        ),
-      ),
-      Aggregates.unwind("\$tracks", UnwindOptions().preserveNullAndEmptyArrays(true)),
-      Aggregates.project(
-        Projections.fields(
-          Projections.include("spotifyPlaylistId"),
           Projections.computed(
-            "mainArtistId",
-            Document("\$arrayElemAt", listOf(Document("\$ifNull", listOf("\$tracks.artistIds", emptyList<String>())), 0)),
+            "mainArtistIds",
+            Document(
+              "\$map",
+              Document("input", Document("\$ifNull", listOf("\$tracks", emptyList<Document>())))
+                .append("as", "track")
+                .append("in", Document("\$arrayElemAt", listOf(Document("\$ifNull", listOf("\$\$track.artistIds", emptyList<String>())), 0))),
+            ),
           ),
         ),
       ),
-      Aggregates.group("\$spotifyPlaylistId", Accumulators.addToSet("artistIds", "\$mainArtistId")),
     )
     return mongoQueryMetrics.timed("spotify_playlist.findDistinctArtistIds") {
       playlistDocumentRepository.mongoCollection()
         .aggregate(pipeline, Document::class.java)
         .associate { doc ->
-          doc.getString("_id") to doc.getList("artistIds", String::class.java).filterNotNull().map { artistId -> ArtistId(artistId) }.toSet()
+          doc.getString("spotifyPlaylistId") to doc.getList("mainArtistIds", String::class.java).filterNotNull().map { artistId -> ArtistId(artistId) }.toSet()
         }
     }
   }

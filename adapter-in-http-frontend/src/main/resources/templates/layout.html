@@ -64,6 +64,13 @@
             background-color: var(--color-bg-card);
             border-color: var(--color-border) !important;
         }
+        /* Bootstrap's .modal-content sets color: var(--bs-body-color), which this app never
+           overrides (no data-bs-theme), so it defaults to Bootstrap's light-theme near-black
+           text - unreadable on the app's bg-dark modals unless every element inside sets its
+           own color explicitly. */
+        .modal-content {
+            color: var(--color-text-primary);
+        }
         /* Shared page-content wrapper: full width on small/medium screens, capped and centered
            on large screens so lines/tables don't stretch edge-to-edge on wide monitors. Used
            by every page instead of Bootstrap's `.container`/`.container-fluid` directly. */
