@@ -6,11 +6,13 @@ import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.model.user.AccessToken
 import de.chrgroth.spotify.control.domain.model.user.RefreshToken
 import de.chrgroth.spotify.control.domain.model.user.User
+import de.chrgroth.spotify.control.domain.port.out.user.AuthNotificationPort
 import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAuthPort
 import de.chrgroth.spotify.control.domain.port.out.user.TokenEncryptionPort
 import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
@@ -21,14 +23,25 @@ class SpotifyAccessTokenAdapter(
   private val spotifyAuth: SpotifyAuthPort,
   private val userRepository: UserRepositoryPort,
   private val tokenEncryption: TokenEncryptionPort,
+  private val authNotification: AuthNotificationPort,
 ) : SpotifyAccessTokenPort {
+
+  private val refreshFailureNotified = AtomicBoolean(false)
 
   override fun getValidAccessToken(): AccessToken {
     val user = requireNotNull(userRepository.get()) { "No user found" }
     return if (isTokenExpiringSoon(user)) {
       refreshAndPersist(user).fold(
-        ifLeft = { error("Failed to refresh access token for user ${user.spotifyUserId.value}: ${it.code}") },
-        ifRight = { it }
+        ifLeft = {
+          if (refreshFailureNotified.compareAndSet(false, true)) {
+            authNotification.notifyTokenRefreshFailed()
+          }
+          error("Failed to refresh access token for user ${user.spotifyUserId.value}: ${it.code}")
+        },
+        ifRight = {
+          refreshFailureNotified.set(false)
+          it
+        }
       )
     } else {
       tokenEncryption.decrypt(user.encryptedAccessToken).fold(

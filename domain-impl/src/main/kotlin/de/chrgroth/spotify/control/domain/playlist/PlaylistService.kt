@@ -23,6 +23,7 @@ import de.chrgroth.spotify.control.domain.port.out.playlist.AppPlaylistCheckRepo
 import de.chrgroth.spotify.control.domain.port.out.infra.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistSyncNotificationPort
 import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.catalog.SyncController
 import de.chrgroth.spotify.control.domain.catalog.CatalogSyncRequest
@@ -53,6 +54,7 @@ class PlaylistService(
   private val appArtistRepository: AppArtistRepositoryPort,
   private val spotifyCatalog: SpotifyCatalogPort,
   private val meterRegistry: MeterRegistry,
+  private val syncNotification: PlaylistSyncNotificationPort,
 ) : PlaylistPort {
 
   private val lastSyncJobSuccessTimestamp = AtomicLong()
@@ -117,7 +119,11 @@ class PlaylistService(
   override fun syncPlaylists(): Either<DomainError, Unit> {
     val userId = currentUserResolver.userId() ?: return Unit.right()
     val accessToken = spotifyAccessToken.getValidAccessToken()
-    return spotifyPlaylist.getPlaylists(accessToken).map { spotifyPlaylists ->
+    val playlistsResult = spotifyPlaylist.getPlaylists(accessToken)
+    if (playlistsResult is Either.Left && playlistsResult.value !is SpotifyRateLimitError) {
+      syncNotification.notifySyncFailed(playlistsResult.value.code)
+    }
+    return playlistsResult.map { spotifyPlaylists ->
       val now = Clock.System.now()
       val existingById = playlistRepository.findAll().associateBy { it.spotifyPlaylistId }
       val updatedPlaylists = spotifyPlaylists.filter { it.ownerId == userId.value }.map { item ->

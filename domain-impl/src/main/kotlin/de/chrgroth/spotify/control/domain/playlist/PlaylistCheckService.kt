@@ -70,7 +70,7 @@ class PlaylistCheckService(
     results.forEach { check ->
       val previous = playlistCheckRepository.findByCheckId(check.checkId)
       playlistCheckRepository.save(check)
-      notifyIfChanged(previous, check)
+      notifyIfChanged(previous, check, currentPlaylistInfo?.name)
     }
 
     val totalViolations = results.sumOf { it.violations.size }
@@ -162,12 +162,17 @@ class PlaylistCheckService(
     }
   }
 
-  private fun notifyIfChanged(previous: AppPlaylistCheck?, current: AppPlaylistCheck) {
-    if (previous == null) return
+  private fun notifyIfChanged(previous: AppPlaylistCheck?, current: AppPlaylistCheck, playlistName: String?) {
+    if (previous == null) {
+      if (!current.succeeded) {
+        notification.notifyViolationsChanged(current, playlistName, previousViolationCount = null)
+      }
+      return
+    }
     if (!previous.succeeded && current.succeeded) {
-      notification.notifyCheckPassed(current)
+      notification.notifyCheckPassed(current, playlistName)
     } else if (!previous.succeeded && !current.succeeded && previous.violations != current.violations) {
-      notification.notifyViolationsChanged(current)
+      notification.notifyViolationsChanged(current, playlistName, previousViolationCount = previous.violations.size)
     }
   }
 

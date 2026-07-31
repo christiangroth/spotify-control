@@ -18,6 +18,7 @@ import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPor
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.playback.AppPlaybackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playback.PlaybackAggregationRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.playback.PlaybackDigestNotificationPort
 import de.chrgroth.spotify.control.domain.user.CurrentUserResolver
 import io.micrometer.core.instrument.Gauge
 import io.micrometer.core.instrument.MeterRegistry
@@ -45,6 +46,7 @@ class PlaybackAggregationService(
   private val aggregationRepository: PlaybackAggregationRepositoryPort,
   private val outboxPort: OutboxPort,
   private val meterRegistry: MeterRegistry,
+  private val digestNotification: PlaybackDigestNotificationPort,
 ) : PlaybackAggregationPort {
 
   private val lastAggregationSuccessTimestamps = ConcurrentHashMap<AggregationPeriodType, AtomicLong>()
@@ -189,6 +191,9 @@ class PlaybackAggregationService(
       )
     }
     recordAggregationSuccess(event.type)
+    if (event.type == AggregationPeriodType.WEEK) {
+      aggregationRepository.findByPeriod(AggregationPeriodType.WEEK, event.periodStart)?.let { digestNotification.notifyWeeklyDigest(it) }
+    }
     return Unit.right()
   }
 
