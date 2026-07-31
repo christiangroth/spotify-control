@@ -314,6 +314,59 @@ class DashboardServiceTests {
   }
 
   @Test
+  fun `recently played tracks backfill further history so filtered shallow artists don't shrink the list`() {
+    setupCommonMocks()
+
+    val shallowArtist = artist1.copy(syncStatus = ArtistSyncStatus.SHALLOW_ASSUMPTION)
+    val syncedArtist = AppArtist(id = ArtistId("artist-2"), artistName = "Artist Two", lastSync = syncTimestamp)
+
+    fun validTrack(id: String) = AppTrack(
+      id = TrackId(id), title = id, artistId = ArtistId("artist-2"), artistName = "Artist Two", durationMs = 200_000L, lastSync = syncTimestamp,
+    )
+    fun shallowTrack(id: String) = track1.copy(id = TrackId(id), artistId = ArtistId("artist-1"))
+    fun playbackFor(trackId: String, epochSeconds: Long) = AppPlaybackItem(playedAt = Instant.fromEpochSeconds(epochSeconds), trackId = trackId, secondsPlayed = 100L)
+
+    // first page (limit = 5): only 2 out of 5 items resolve to a non-shallow artist
+    val firstPageIds = listOf("shallow-1", "valid-1", "shallow-2", "valid-2", "shallow-3")
+    val firstPagePlayback = firstPageIds.mapIndexed { index, id -> playbackFor(id, 1000L - index) }
+    every { appPlaybackRepository.findRecentlyPlayed(5) } returns firstPagePlayback
+    every { appTrackRepository.findByTrackIds(firstPageIds.map { TrackId(it) }.toSet()) } returns
+      firstPageIds.map { if (it.startsWith("valid")) validTrack(it) else shallowTrack(it) }
+    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"), ArtistId("artist-2"))) } returns listOf(shallowArtist, syncedArtist)
+
+    // second page (limit = 10, doubled after the first page came up short): 5 out of 10 items resolve to a non-shallow artist
+    val secondPageIds = listOf("shallow-1", "valid-1", "shallow-2", "valid-2", "shallow-3", "valid-3", "valid-4", "shallow-4", "valid-5", "shallow-5")
+    val secondPagePlayback = secondPageIds.mapIndexed { index, id -> playbackFor(id, 1000L - index) }
+    every { appPlaybackRepository.findRecentlyPlayed(10) } returns secondPagePlayback
+    every { appTrackRepository.findByTrackIds(secondPageIds.map { TrackId(it) }.toSet()) } returns
+      secondPageIds.map { if (it.startsWith("valid")) validTrack(it) else shallowTrack(it) }
+
+    val stats = adapter.getStats()
+
+    assertThat(stats.recentlyPlayedTracks).hasSize(5)
+    assertThat(stats.recentlyPlayedTracks.map { it.trackId.value }).containsExactly("valid-1", "valid-2", "valid-3", "valid-4", "valid-5")
+  }
+
+  @Test
+  fun `recently played tracks stop backfilling once playback history is exhausted`() {
+    setupCommonMocks()
+
+    val shallowArtist = artist1.copy(syncStatus = ArtistSyncStatus.SHALLOW_ASSUMPTION)
+    val shallowTrack = track1.copy(id = TrackId("track-shallow"), artistId = ArtistId("artist-1"))
+    val playbackItem = AppPlaybackItem(playedAt = Instant.fromEpochSeconds(1000), trackId = "track-shallow", secondsPlayed = 100L)
+
+    // repository has fewer items than the requested limit (5), so it stays exhausted even without reaching the limit
+    every { appPlaybackRepository.findRecentlyPlayed(5) } returns listOf(playbackItem)
+    every { appTrackRepository.findByTrackIds(setOf(TrackId("track-shallow"))) } returns listOf(shallowTrack)
+    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns listOf(shallowArtist)
+
+    val stats = adapter.getStats()
+
+    assertThat(stats.recentlyPlayedTracks).isEmpty()
+    verify(exactly = 1) { appPlaybackRepository.findRecentlyPlayed(any()) }
+  }
+
+  @Test
   fun `getPlaybackStats only queries aggregation repository`() {
     every { currentUserResolver.userId() } returns userId
     val summary = emptySummary().copy(eventCount = 7L)

@@ -161,41 +161,51 @@ class DashboardService(
   }
 
   private fun buildRecentlyPlayedTracks(): List<RecentlyPlayedItem> {
-    val recentPlaybackItems = appPlaybackRepository.findRecentlyPlayed(recentlyPlayedLimit)
-    val trackIds = recentPlaybackItems.map { it.trackId }.toSet()
-    val trackMap = appTrackRepository.findByTrackIds(trackIds.map { TrackId(it) }.toSet()).associateBy { it.id.value }
-    val albumIds = trackMap.values.mapNotNull { it.albumId }.toSet()
-    val allArtistIds = trackMap.values.flatMap { it.allArtistIds() }.toSet()
-    val albumMapFuture = managedExecutor.supplyAsync { appAlbumRepository.findByAlbumIds(albumIds).associateBy { it.id.value } }
-    val artistMapFuture = managedExecutor.supplyAsync {
-      appArtistRepository.findByArtistIds(allArtistIds.map { ArtistId(it) }.toSet()).associateBy { it.id.value }
-    }
-    val albumMap = albumMapFuture.join()
-    val artistMap = artistMapFuture.join()
-    val shallowArtistIds = artistMap.values
-      .filter { it.syncStatus == ArtistSyncStatus.SHALLOW || it.syncStatus == ArtistSyncStatus.SHALLOW_ASSUMPTION }
-      .map { it.id.value }
-      .toSet()
-    return recentPlaybackItems
-      .filter { playback ->
+    var fetchLimit = recentlyPlayedLimit
+    while (true) {
+      val recentPlaybackItems = appPlaybackRepository.findRecentlyPlayed(fetchLimit)
+      val trackIds = recentPlaybackItems.map { it.trackId }.toSet()
+      val trackMap = appTrackRepository.findByTrackIds(trackIds.map { TrackId(it) }.toSet()).associateBy { it.id.value }
+      val albumIds = trackMap.values.mapNotNull { it.albumId }.toSet()
+      val allArtistIds = trackMap.values.flatMap { it.allArtistIds() }.toSet()
+      val albumMapFuture = managedExecutor.supplyAsync { appAlbumRepository.findByAlbumIds(albumIds).associateBy { it.id.value } }
+      val artistMapFuture = managedExecutor.supplyAsync {
+        appArtistRepository.findByArtistIds(allArtistIds.map { ArtistId(it) }.toSet()).associateBy { it.id.value }
+      }
+      val albumMap = albumMapFuture.join()
+      val artistMap = artistMapFuture.join()
+      val shallowArtistIds = artistMap.values
+        .filter { it.syncStatus == ArtistSyncStatus.SHALLOW || it.syncStatus == ArtistSyncStatus.SHALLOW_ASSUMPTION }
+        .map { it.id.value }
+        .toSet()
+      val filteredItems = recentPlaybackItems.filter { playback ->
         val artistId = trackMap[playback.trackId]?.artistId?.value
         artistId != null && artistId !in shallowArtistIds
       }
-      .map { playback ->
-        val track = trackMap[playback.trackId]
-        val trackArtistIds = track?.allArtistIds() ?: emptyList()
-        val album = track?.albumId?.let { albumMap[it.value] }
-        RecentlyPlayedItem(
-          trackId = TrackId(playback.trackId),
-          trackName = track?.title ?: playback.trackId,
-          artistIds = trackArtistIds.map { ArtistId(it) },
-          artistNames = trackArtistIds.mapNotNull { artistMap[it]?.artistName },
-          playedAt = playback.playedAt,
-          albumName = album?.title ?: track?.albumName,
-          imageLink = album?.imageLink,
-          durationSeconds = playback.secondsPlayed.takeIf { it > 0 },
-        )
+
+      // keep backfilling from further back in the playback history until the requested count is reached,
+      // so filtering out shallow artists does not shrink the recently-played list shown on the dashboard
+      val exhausted = recentPlaybackItems.size < fetchLimit
+      if (filteredItems.size >= recentlyPlayedLimit || exhausted) {
+        return filteredItems.take(recentlyPlayedLimit).map { playback ->
+          val track = trackMap[playback.trackId]
+          val trackArtistIds = track?.allArtistIds() ?: emptyList()
+          val album = track?.albumId?.let { albumMap[it.value] }
+          RecentlyPlayedItem(
+            trackId = TrackId(playback.trackId),
+            trackName = track?.title ?: playback.trackId,
+            artistIds = trackArtistIds.map { ArtistId(it) },
+            artistNames = trackArtistIds.mapNotNull { artistMap[it]?.artistName },
+            playedAt = playback.playedAt,
+            albumName = album?.title ?: track?.albumName,
+            imageLink = album?.imageLink,
+            durationSeconds = playback.secondsPlayed.takeIf { it > 0 },
+          )
+        }
       }
+
+      fetchLimit *= 2
+    }
   }
 
   private fun buildListeningStats(dailyAggs: List<DailyPlaybackSummary>): ListeningStats {
