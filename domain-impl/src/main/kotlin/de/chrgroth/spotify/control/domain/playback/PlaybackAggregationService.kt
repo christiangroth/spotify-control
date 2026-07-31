@@ -235,7 +235,7 @@ class PlaybackAggregationService(
 
     val filteredItems = items.filter { item ->
       val artistId = tracks[TrackId(item.trackId)]?.artistId
-      artistId == null || artistId !in shallowArtistIds
+      artistId != null && artistId !in shallowArtistIds
     }
 
     if (filteredItems.isEmpty()) {
@@ -318,10 +318,10 @@ class PlaybackAggregationService(
     val durationPerAlbumId = mutableMapOf<String, Long>()
     val albumNamesById = mutableMapOf<String, String>()
     filteredItems.forEach { item ->
-      val track = tracks[TrackId(item.trackId)]
-      val artistId = track?.artistId?.value ?: UNKNOWN_ARTIST_ID
+      val track = tracks.getValue(TrackId(item.trackId))
+      val artistId = track.artistId.value
       val albumId = track.albumAggregationId(item.trackId)
-      val albumName = track?.albumName ?: track?.title ?: albumId
+      val albumName = track.albumName ?: track.title
       durationPerArtistId[artistId] = (durationPerArtistId[artistId] ?: 0L) + item.secondsPlayed
       durationPerAlbumId[albumId] = (durationPerAlbumId[albumId] ?: 0L) + item.secondsPlayed
       albumNamesById.putIfAbsent(albumId, albumName)
@@ -361,7 +361,6 @@ class PlaybackAggregationService(
   )
 
   companion object : KLogging() {
-    private const val UNKNOWN_ARTIST_ID = "unknown"
     private const val FALLBACK_ALBUM_ID_PREFIX = "fallback:"
     private const val DAYS_IN_WEEK = 6L
     private const val MONTHS_PER_QUARTER = 3L

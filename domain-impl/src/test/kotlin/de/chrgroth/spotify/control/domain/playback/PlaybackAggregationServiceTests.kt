@@ -128,6 +128,29 @@ class PlaybackAggregationServiceTests {
   }
 
   @Test
+  fun `aggregate day excludes playback with unresolvable track instead of falling back to unknown artist`() {
+    every { currentUserResolver.userId() } returns userId
+    val savedAggregation = slot<PlaybackAggregation>()
+    every { aggregationRepository.save(capture(savedAggregation)) } returns Unit
+    every { appPlaybackRepository.findAllBetween(any(), any()) } returns listOf(
+      AppPlaybackItem(Instant.fromEpochSeconds(1), "track-1", 120L),
+      AppPlaybackItem(Instant.fromEpochSeconds(2), "track-2", 180L),
+    )
+    every { appTrackRepository.findByTrackIds(setOf(TrackId("track-1"), TrackId("track-2"))) } returns listOf(
+      AppTrack(id = TrackId("track-1"), title = "Track One", artistId = ArtistId("artist-1"), lastSync = syncTimestamp),
+    )
+    every { appArtistRepository.findByArtistIds(any()) } returns listOf(
+      AppArtist(id = ArtistId("artist-1"), artistName = "Artist One", lastSync = syncTimestamp, syncStatus = ArtistSyncStatus.SYNC),
+    )
+
+    val result = service.handle(DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.DAY, date))
+
+    assertThat(result.isRight()).isTrue()
+    assertThat(savedAggregation.captured.totalPlaybackSeconds).isEqualTo(120L)
+    assertThat(savedAggregation.captured.artistEntries.map { it.id }).containsExactly("artist-1")
+  }
+
+  @Test
   fun `aggregate week merges album entries from day aggregations`() {
     every { currentUserResolver.userId() } returns userId
     val weekStart = LocalDate(2024, 1, 15)
