@@ -120,7 +120,7 @@ class SettingsPageTests {
       .then()
       .statusCode(200)
       .body(containsString("1 <button"))
-      .body(containsString("badge rounded-pill text-bg-danger"))
+      .body(containsString("badge rounded-pill text-bg-secondary"))
       .body(containsString(">1</span></button>"))
   }
 
@@ -165,7 +165,7 @@ class SettingsPageTests {
       .then()
       .statusCode(200)
       .body(containsString("Playlist For Known Artist Test"))
-      .body(not(containsString("badge rounded-pill text-bg-danger")))
+      .body(not(containsString("badge rounded-pill text-bg-secondary")))
   }
 
   @Test
