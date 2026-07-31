@@ -56,7 +56,7 @@
                                 data-playlist-id="{row.playlist.spotifyPlaylistId}"
                                 data-playlist-name="{row.playlist.name}"
                                 aria-label="{playlists:settingsShowMissingArtistsAriaLabel(row.playlist.name)}"
-                            ><span class="badge rounded-pill text-bg-danger" style="vertical-align:middle;">{row.numberOfMissingArtists}</span></button>{/if}
+                            ><span class="badge rounded-pill text-bg-secondary" style="vertical-align:middle;">{row.numberOfMissingArtists}</span></button>{/if}
                         {#else}
                             {playlists:settingsEmptyValuePlaceholder()}
                         {/if}
