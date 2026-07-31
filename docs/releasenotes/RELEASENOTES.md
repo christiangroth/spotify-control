@@ -1,3 +1,13 @@
+# 0.122.6 (2026.07.31)
+
+## Bugfixes / Chore
+* Fixed listening stats sometimes showing "unknown" as the top artist instead of simply excluding not-yet-synced tracks, consistent with how shallow artists are already excluded.
+* Changed the missing-artists badge on the playlist settings page from red to a neutral color, since it is informational and not an error.
+
+
+
+---
+
 # 0.122.5 (2026.07.30)
 
 ## Bugfixes / Chore
