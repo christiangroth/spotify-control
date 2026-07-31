@@ -2,6 +2,7 @@ package de.chrgroth.spotify.control.domain.infra
 
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
+import de.chrgroth.spotify.control.domain.model.catalog.ArtistSyncStatus
 import de.chrgroth.spotify.control.domain.model.DashboardStats
 import de.chrgroth.spotify.control.domain.model.playback.DayCount
 import de.chrgroth.spotify.control.domain.model.catalog.AppTrack
@@ -171,21 +172,30 @@ class DashboardService(
     }
     val albumMap = albumMapFuture.join()
     val artistMap = artistMapFuture.join()
-    return recentPlaybackItems.map { playback ->
-      val track = trackMap[playback.trackId]
-      val trackArtistIds = track?.allArtistIds() ?: emptyList()
-      val album = track?.albumId?.let { albumMap[it.value] }
-      RecentlyPlayedItem(
-        trackId = TrackId(playback.trackId),
-        trackName = track?.title ?: playback.trackId,
-        artistIds = trackArtistIds.map { ArtistId(it) },
-        artistNames = trackArtistIds.mapNotNull { artistMap[it]?.artistName },
-        playedAt = playback.playedAt,
-        albumName = album?.title ?: track?.albumName,
-        imageLink = album?.imageLink,
-        durationSeconds = playback.secondsPlayed.takeIf { it > 0 },
-      )
-    }
+    val shallowArtistIds = artistMap.values
+      .filter { it.syncStatus == ArtistSyncStatus.SHALLOW || it.syncStatus == ArtistSyncStatus.SHALLOW_ASSUMPTION }
+      .map { it.id.value }
+      .toSet()
+    return recentPlaybackItems
+      .filter { playback ->
+        val artistId = trackMap[playback.trackId]?.artistId?.value
+        artistId != null && artistId !in shallowArtistIds
+      }
+      .map { playback ->
+        val track = trackMap[playback.trackId]
+        val trackArtistIds = track?.allArtistIds() ?: emptyList()
+        val album = track?.albumId?.let { albumMap[it.value] }
+        RecentlyPlayedItem(
+          trackId = TrackId(playback.trackId),
+          trackName = track?.title ?: playback.trackId,
+          artistIds = trackArtistIds.map { ArtistId(it) },
+          artistNames = trackArtistIds.mapNotNull { artistMap[it]?.artistName },
+          playedAt = playback.playedAt,
+          albumName = album?.title ?: track?.albumName,
+          imageLink = album?.imageLink,
+          durationSeconds = playback.secondsPlayed.takeIf { it > 0 },
+        )
+      }
   }
 
   private fun buildListeningStats(dailyAggs: List<DailyPlaybackSummary>): ListeningStats {

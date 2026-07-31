@@ -7,6 +7,7 @@ import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
 import de.chrgroth.spotify.control.domain.model.playback.AppPlaybackItem
 import de.chrgroth.spotify.control.domain.model.catalog.AppTrack
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
+import de.chrgroth.spotify.control.domain.model.catalog.ArtistSyncStatus
 import de.chrgroth.spotify.control.domain.model.catalog.CatalogStats
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationRankEntry
@@ -271,6 +272,45 @@ class DashboardServiceTests {
 
     assertThat(stats.recentlyPlayedTracks).hasSize(1)
     assertThat(stats.recentlyPlayedTracks[0].durationSeconds).isEqualTo(210L)
+  }
+
+  @Test
+  fun `recently played tracks exclude playback from shallow artists`() {
+    setupCommonMocks()
+
+    val shallowArtist = artist1.copy(syncStatus = ArtistSyncStatus.SHALLOW_ASSUMPTION)
+    val shallowTrack = track1.copy(id = TrackId("track-shallow"), artistId = ArtistId("artist-1"))
+    val syncedArtist = AppArtist(id = ArtistId("artist-2"), artistName = "Artist Two", lastSync = syncTimestamp)
+    val syncedTrack = AppTrack(
+      id = TrackId("track-synced"), title = "Track Synced",
+      artistId = ArtistId("artist-2"), artistName = "Artist Two", durationMs = 200_000L,
+      lastSync = syncTimestamp,
+    )
+
+    val shallowPlaybackItem = AppPlaybackItem(playedAt = Instant.fromEpochSeconds(1000), trackId = "track-shallow", secondsPlayed = 100L)
+    val syncedPlaybackItem = AppPlaybackItem(playedAt = Instant.fromEpochSeconds(2000), trackId = "track-synced", secondsPlayed = 200L)
+    every { appPlaybackRepository.findRecentlyPlayed(any()) } returns listOf(syncedPlaybackItem, shallowPlaybackItem)
+    every { appTrackRepository.findByTrackIds(setOf("track-synced", "track-shallow").map { TrackId(it) }.toSet()) } returns
+      listOf(syncedTrack, shallowTrack)
+    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"), ArtistId("artist-2"))) } returns listOf(shallowArtist, syncedArtist)
+
+    val stats = adapter.getStats()
+
+    assertThat(stats.recentlyPlayedTracks).hasSize(1)
+    assertThat(stats.recentlyPlayedTracks[0].trackId).isEqualTo(TrackId("track-synced"))
+  }
+
+  @Test
+  fun `recently played tracks exclude playback with unresolvable track`() {
+    setupCommonMocks()
+
+    val playbackItem = AppPlaybackItem(playedAt = Instant.fromEpochSeconds(1000), trackId = "track-unresolvable", secondsPlayed = 100L)
+    every { appPlaybackRepository.findRecentlyPlayed(any()) } returns listOf(playbackItem)
+    every { appTrackRepository.findByTrackIds(setOf(TrackId("track-unresolvable"))) } returns emptyList()
+
+    val stats = adapter.getStats()
+
+    assertThat(stats.recentlyPlayedTracks).isEmpty()
   }
 
   @Test
