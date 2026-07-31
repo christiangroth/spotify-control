@@ -123,12 +123,31 @@ class PlaylistCheckServiceTests {
 
     assertThat(result.isRight()).isTrue()
     verify(exactly = 0) { playlistCheckRepository.findByCheckId(any()) }
-    verify(exactly = 0) { notification.notifyCheckPassed(any()) }
-    verify(exactly = 0) { notification.notifyViolationsChanged(any()) }
+    verify(exactly = 0) { notification.notifyCheckPassed(any(), any()) }
+    verify(exactly = 0) { notification.notifyViolationsChanged(any(), any(), any()) }
   }
 
   @Test
-  fun `handle runs check and saves result with no previous check - no notification`() {
+  fun `handle sends notifyViolationsChanged with playlist name when first check already has violations`() {
+    val playlist = buildPlaylist(listOf(buildTrack("t1"), buildTrack("t2")))
+    val check = buildCheck(succeeded = false, violations = listOf(PlaylistCheckViolation("a", "Artist A – Track A")))
+    setupCheckRunner(check)
+    every { currentUserResolver.userId() } returns userId
+    every { playlistRepository.findByPlaylistId(playlistId) } returns playlist
+    every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo())
+    every { playlistCheckRepository.findByCheckId(fullCheckId) } returns null
+    every { playlistCheckRepository.save(any()) } just runs
+    every { dashboardRefresh.notifyUserPlaylistChecks() } just runs
+    every { notification.notifyViolationsChanged(any(), any(), any()) } just runs
+
+    val result = adapter.handle(event)
+
+    assertThat(result.isRight()).isTrue()
+    verify(exactly = 1) { notification.notifyViolationsChanged(check, "Playlist $playlistId", null) }
+  }
+
+  @Test
+  fun `handle runs check and saves result with no previous check and no violations - no notification`() {
     val playlist = buildPlaylist(listOf(buildTrack("t1"), buildTrack("t2")))
     val check = buildCheck(succeeded = true)
     setupCheckRunner(check)
@@ -143,12 +162,12 @@ class PlaylistCheckServiceTests {
 
     assertThat(result.isRight()).isTrue()
     verify(exactly = 1) { playlistCheckRepository.save(any()) }
-    verify(exactly = 0) { notification.notifyCheckPassed(any()) }
-    verify(exactly = 0) { notification.notifyViolationsChanged(any()) }
+    verify(exactly = 0) { notification.notifyCheckPassed(any(), any()) }
+    verify(exactly = 0) { notification.notifyViolationsChanged(any(), any(), any()) }
   }
 
   @Test
-  fun `handle sends notifyCheckPassed when check changes from failed to passed`() {
+  fun `handle sends notifyCheckPassed with playlist name when check changes from failed to passed`() {
     val playlist = buildPlaylist(listOf(buildTrack("t1"), buildTrack("t2")))
     val check = buildCheck(succeeded = true)
     val previousCheck = buildCheck(succeeded = false, violations = listOf(PlaylistCheckViolation("t1", "Artist – Track t1")))
@@ -159,17 +178,17 @@ class PlaylistCheckServiceTests {
     every { playlistCheckRepository.findByCheckId(fullCheckId) } returns previousCheck
     every { playlistCheckRepository.save(any()) } just runs
     every { dashboardRefresh.notifyUserPlaylistChecks() } just runs
-    every { notification.notifyCheckPassed(any()) } just runs
+    every { notification.notifyCheckPassed(any(), any()) } just runs
 
     val result = adapter.handle(event)
 
     assertThat(result.isRight()).isTrue()
-    verify(exactly = 1) { notification.notifyCheckPassed(any()) }
-    verify(exactly = 0) { notification.notifyViolationsChanged(any()) }
+    verify(exactly = 1) { notification.notifyCheckPassed(check, "Playlist $playlistId") }
+    verify(exactly = 0) { notification.notifyViolationsChanged(any(), any(), any()) }
   }
 
   @Test
-  fun `handle sends notifyViolationsChanged when check stays failed with different violations`() {
+  fun `handle sends notifyViolationsChanged with violation count delta when check stays failed with different violations`() {
     val playlist = buildPlaylist(listOf(buildTrack("t1")))
     val check = buildCheck(
       succeeded = false,
@@ -183,13 +202,13 @@ class PlaylistCheckServiceTests {
     every { playlistCheckRepository.findByCheckId(fullCheckId) } returns previousCheck
     every { playlistCheckRepository.save(any()) } just runs
     every { dashboardRefresh.notifyUserPlaylistChecks() } just runs
-    every { notification.notifyViolationsChanged(any()) } just runs
+    every { notification.notifyViolationsChanged(any(), any(), any()) } just runs
 
     val result = adapter.handle(event)
 
     assertThat(result.isRight()).isTrue()
-    verify(exactly = 0) { notification.notifyCheckPassed(any()) }
-    verify(exactly = 1) { notification.notifyViolationsChanged(any()) }
+    verify(exactly = 0) { notification.notifyCheckPassed(any(), any()) }
+    verify(exactly = 1) { notification.notifyViolationsChanged(check, "Playlist $playlistId", 1) }
   }
 
   @Test
@@ -209,8 +228,8 @@ class PlaylistCheckServiceTests {
     val result = adapter.handle(event)
 
     assertThat(result.isRight()).isTrue()
-    verify(exactly = 0) { notification.notifyCheckPassed(any()) }
-    verify(exactly = 0) { notification.notifyViolationsChanged(any()) }
+    verify(exactly = 0) { notification.notifyCheckPassed(any(), any()) }
+    verify(exactly = 0) { notification.notifyViolationsChanged(any(), any(), any()) }
   }
 
   @Test
@@ -229,8 +248,8 @@ class PlaylistCheckServiceTests {
     val result = adapter.handle(event)
 
     assertThat(result.isRight()).isTrue()
-    verify(exactly = 0) { notification.notifyCheckPassed(any()) }
-    verify(exactly = 0) { notification.notifyViolationsChanged(any()) }
+    verify(exactly = 0) { notification.notifyCheckPassed(any(), any()) }
+    verify(exactly = 0) { notification.notifyViolationsChanged(any(), any(), any()) }
   }
 
   @Test

@@ -17,6 +17,7 @@ import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPor
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.playback.AppPlaybackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playback.PlaybackAggregationRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.playback.PlaybackDigestNotificationPort
 import de.chrgroth.spotify.control.domain.user.CurrentUserResolver
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.mockk.every
@@ -37,6 +38,7 @@ class PlaybackAggregationServiceTests {
   private val aggregationRepository: PlaybackAggregationRepositoryPort = mockk(relaxed = true)
   private val outboxPort: OutboxPort = mockk(relaxed = true)
   private val meterRegistry = SimpleMeterRegistry()
+  private val digestNotification: PlaybackDigestNotificationPort = mockk(relaxed = true)
 
   private val service = PlaybackAggregationService(
     currentUserResolver = currentUserResolver,
@@ -46,6 +48,7 @@ class PlaybackAggregationServiceTests {
     aggregationRepository = aggregationRepository,
     outboxPort = outboxPort,
     meterRegistry = meterRegistry,
+    digestNotification = digestNotification,
   )
 
   private val userId = UserId("user-1")
@@ -184,6 +187,44 @@ class PlaybackAggregationServiceTests {
       AggregationRankEntry("album-2", "Album Two", 60L),
     )
     verify(exactly = 1) { aggregationRepository.findByTypeAndPeriodRange(AggregationPeriodType.DAY, weekStart, LocalDate(2024, 1, 21)) }
+  }
+
+  @Test
+  fun `handle AggregatePlaybackData notifies weekly digest when type is WEEK`() {
+    every { currentUserResolver.userId() } returns userId
+    val weekStart = LocalDate(2024, 1, 15)
+    every {
+      aggregationRepository.findByTypeAndPeriodRange(AggregationPeriodType.DAY, weekStart, LocalDate(2024, 1, 21))
+    } returns emptyList()
+    val digestAggregation = PlaybackAggregation(
+      type = AggregationPeriodType.WEEK,
+      periodStart = weekStart,
+      totalPlaybackSeconds = 600L,
+      eventCount = 5L,
+      distinctArtistCount = 1,
+      distinctTrackCount = 1,
+      distinctAlbumCount = 1,
+      artistEntries = listOf(AggregationRankEntry("artist-1", "Top Artist", 600L)),
+      albumEntries = emptyList(),
+      trackEntries = listOf(AggregationRankEntry("track-1", "Top Track", 600L)),
+      activityEntries = emptyList(),
+    )
+    every { aggregationRepository.findByPeriod(AggregationPeriodType.WEEK, weekStart) } returns digestAggregation
+
+    service.handle(DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.WEEK, weekStart))
+
+    verify(exactly = 1) { digestNotification.notifyWeeklyDigest(digestAggregation) }
+  }
+
+  @Test
+  fun `handle AggregatePlaybackData does not notify weekly digest when type is DAY`() {
+    every { currentUserResolver.userId() } returns userId
+    every { appPlaybackRepository.findAllBetween(any(), any()) } returns emptyList()
+
+    service.handle(DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.DAY, date))
+
+    verify(exactly = 0) { digestNotification.notifyWeeklyDigest(any()) }
+    verify(exactly = 0) { aggregationRepository.findByPeriod(any(), any()) }
   }
 
   @Test

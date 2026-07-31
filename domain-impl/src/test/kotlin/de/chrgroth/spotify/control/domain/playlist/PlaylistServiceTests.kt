@@ -26,6 +26,7 @@ import de.chrgroth.spotify.control.domain.port.out.playlist.AppPlaylistCheckRepo
 import de.chrgroth.spotify.control.domain.port.out.infra.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistSyncNotificationPort
 import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.SpotifyPlaylistPort
 import de.chrgroth.spotify.control.domain.catalog.SyncController
@@ -60,6 +61,7 @@ class PlaylistServiceTests {
   private val appArtistRepository: AppArtistRepositoryPort = mockk()
   private val spotifyCatalog: SpotifyCatalogPort = mockk()
   private val meterRegistry = SimpleMeterRegistry()
+  private val syncNotification: PlaylistSyncNotificationPort = mockk(relaxed = true)
 
   private val adapter = PlaylistService(
     currentUserResolver, playlistRepository,
@@ -71,6 +73,7 @@ class PlaylistServiceTests {
     appArtistRepository,
     spotifyCatalog,
     meterRegistry,
+    syncNotification,
   )
 
   private val userId = UserId("user-1")
@@ -419,6 +422,17 @@ class PlaylistServiceTests {
   }
 
   @Test
+  fun `syncPlaylists notifies sync failure when spotify fetch fails`() {
+    every { currentUserResolver.userId() } returns userId
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
+    every { spotifyPlaylist.getPlaylists(accessToken) } returns PlaylistSyncError.PLAYLIST_FETCH_FAILED.left()
+
+    adapter.syncPlaylists()
+
+    verify(exactly = 1) { syncNotification.notifySyncFailed(PlaylistSyncError.PLAYLIST_FETCH_FAILED.code) }
+  }
+
+  @Test
   fun `syncPlaylists returns Left with SpotifyRateLimitError when rate limited`() {
     every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
@@ -428,6 +442,17 @@ class PlaylistServiceTests {
 
     assertThat(result.isLeft()).isTrue()
     assertThat(result.leftOrNull()).isInstanceOf(SpotifyRateLimitError::class.java)
+  }
+
+  @Test
+  fun `syncPlaylists does not notify sync failure when rate limited`() {
+    every { currentUserResolver.userId() } returns userId
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
+    every { spotifyPlaylist.getPlaylists(accessToken) } returns SpotifyRateLimitError(30.seconds).left()
+
+    adapter.syncPlaylists()
+
+    verify(exactly = 0) { syncNotification.notifySyncFailed(any()) }
   }
 
   // --- updateSyncStatus tests ---

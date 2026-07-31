@@ -8,6 +8,7 @@ import de.chrgroth.spotify.control.domain.model.user.RefreshToken
 import de.chrgroth.spotify.control.domain.model.user.SpotifyRefreshedTokens
 import de.chrgroth.spotify.control.domain.model.user.User
 import de.chrgroth.spotify.control.domain.model.user.UserId
+import de.chrgroth.spotify.control.domain.port.out.user.AuthNotificationPort
 import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAuthPort
 import de.chrgroth.spotify.control.domain.port.out.user.TokenEncryptionPort
 import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
@@ -29,8 +30,9 @@ class SpotifyAccessTokenAdapterTests {
   private val spotifyAuth: SpotifyAuthPort = mockk()
   private val userRepository: UserRepositoryPort = mockk()
   private val tokenEncryption: TokenEncryptionPort = mockk()
+  private val authNotification: AuthNotificationPort = mockk(relaxed = true)
 
-  private val adapter = SpotifyAccessTokenAdapter(spotifyAuth, userRepository, tokenEncryption)
+  private val adapter = SpotifyAccessTokenAdapter(spotifyAuth, userRepository, tokenEncryption, authNotification)
 
   private val userId = UserId("user-1")
 
@@ -118,5 +120,38 @@ class SpotifyAccessTokenAdapterTests {
     assertThatThrownBy { adapter.getValidAccessToken() }
       .isInstanceOf(IllegalStateException::class.java)
       .hasMessageContaining("user-1")
+  }
+
+  @Test
+  fun `notifies once when token refresh fails`() {
+    val user = buildUser(Clock.System.now() + 1.minutes)
+    every { userRepository.get() } returns user
+    every { tokenEncryption.decrypt("enc-refresh") } returns "plain-refresh".right()
+    every { spotifyAuth.refreshToken(RefreshToken("plain-refresh")) } returns AuthError.TOKEN_REFRESH_FAILED.left()
+
+    assertThatThrownBy { adapter.getValidAccessToken() }.isInstanceOf(IllegalStateException::class.java)
+    assertThatThrownBy { adapter.getValidAccessToken() }.isInstanceOf(IllegalStateException::class.java)
+
+    verify(exactly = 1) { authNotification.notifyTokenRefreshFailed() }
+  }
+
+  @Test
+  fun `notifies again after a successful refresh following a previous failure`() {
+    val user = buildUser(Clock.System.now() + 1.minutes)
+    every { userRepository.get() } returns user
+    every { tokenEncryption.decrypt("enc-refresh") } returns "plain-refresh".right()
+    every { spotifyAuth.refreshToken(RefreshToken("plain-refresh")) } returnsMany listOf(
+      AuthError.TOKEN_REFRESH_FAILED.left(),
+      SpotifyRefreshedTokens(accessToken = AccessToken("new-access"), refreshToken = null, expiresInSeconds = 3600).right(),
+      AuthError.TOKEN_REFRESH_FAILED.left(),
+    )
+    every { tokenEncryption.encrypt("new-access") } returns "enc-new-access".right()
+    every { userRepository.upsert(any()) } just runs
+
+    assertThatThrownBy { adapter.getValidAccessToken() }.isInstanceOf(IllegalStateException::class.java)
+    adapter.getValidAccessToken()
+    assertThatThrownBy { adapter.getValidAccessToken() }.isInstanceOf(IllegalStateException::class.java)
+
+    verify(exactly = 2) { authNotification.notifyTokenRefreshFailed() }
   }
 }

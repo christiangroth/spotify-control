@@ -9,6 +9,7 @@ import de.chrgroth.quarkus.outbox.domain.event.OutboxTaskRescheduledEvent
 import de.chrgroth.quarkus.outbox.domain.event.OutboxTaskRetryScheduledEvent
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPartitionObserver
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxTaskCountObserver
+import de.chrgroth.spotify.control.domain.port.out.infra.OutboxTaskFailedObserver
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.enterprise.event.ObservesAsync
 import jakarta.enterprise.inject.Any
@@ -19,6 +20,7 @@ import jakarta.enterprise.inject.Instance
 class OutboxPartitionEventAdapter(
   @param:Any private val partitionObservers: Instance<OutboxPartitionObserver>,
   @param:Any private val taskCountObservers: Instance<OutboxTaskCountObserver>,
+  @param:Any private val taskFailedObservers: Instance<OutboxTaskFailedObserver>,
 ) {
 
   // the outbox library fires all of these events via Event.fireAsync(), which the CDI spec only delivers to @ObservesAsync observers
@@ -41,9 +43,9 @@ class OutboxPartitionEventAdapter(
     taskCountObservers.forEach { it.onOutboxTaskCountChanged() }
   }
 
-  @Suppress("UnusedParameter")
   fun onTaskFailed(@ObservesAsync event: OutboxTaskFailedEvent) {
     taskCountObservers.forEach { it.onOutboxTaskCountChanged() }
+    taskFailedObservers.forEach { it.onTaskFailed(event.partition.key, event.eventType) }
   }
 
   @Suppress("UnusedParameter")
