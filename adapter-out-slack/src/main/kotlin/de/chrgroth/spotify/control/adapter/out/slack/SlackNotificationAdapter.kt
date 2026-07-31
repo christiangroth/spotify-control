@@ -3,6 +3,7 @@ package de.chrgroth.spotify.control.adapter.out.slack
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.PlaybackAggregation
 import de.chrgroth.spotify.control.domain.model.playlist.AppPlaylistCheck
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPartitionObserver
+import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxTaskFailedObserver
 import de.chrgroth.spotify.control.domain.port.out.playback.PlaybackDigestNotificationPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistCheckNotificationPort
@@ -18,7 +19,15 @@ import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import java.util.Optional
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.time.Clock
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Instant
+import kotlin.time.toJavaInstant
 
 /**
  * Sends system notifications to a configured Slack webhook.
@@ -60,6 +69,7 @@ class SlackNotificationAdapter(
   private val syncFailedEnabled: Boolean,
   @param:ConfigProperty(name = "app.slack.playback-digest-notifications.weekly")
   private val weeklyDigestEnabled: Boolean,
+  private val outboxPort: OutboxPort,
 ) : OutboxPartitionObserver,
   OutboxTaskFailedObserver,
   PlaylistCheckNotificationPort,
@@ -68,6 +78,11 @@ class SlackNotificationAdapter(
   PlaybackDigestNotificationPort {
 
   private val enabled: Boolean = webhookUrl.orElse("").isNotBlank()
+
+  // the outbox library re-announces every partition's recovered state via onPartitionPaused/onPartitionActivated
+  // during application boot; individual notifications for those are suppressed until onStartup has run and instead
+  // folded into the single startup summary below, so a restart doesn't cause one Slack message per partition
+  private val startupCompleted = AtomicBoolean(false)
 
   init {
     if (enabled) {
@@ -80,6 +95,8 @@ class SlackNotificationAdapter(
   @Suppress("UnusedParameter")
   fun onStartup(@Observes event: StartupEvent) {
     if (startupEnabled) send("SpCtl $version started")
+    if (partitionPausedEnabled || partitionResumedEnabled) send(partitionSummary())
+    startupCompleted.set(true)
   }
 
   @Suppress("UnusedParameter")
@@ -88,13 +105,38 @@ class SlackNotificationAdapter(
   }
 
   override fun onPartitionPaused(partitionKey: String, reason: String) {
-    if (!partitionPausedEnabled) return
-    send("Outbox partition $partitionKey paused (reason: $reason)")
+    if (!startupCompleted.get() || !partitionPausedEnabled) return
+    val until = outboxPort.getPartitionStats().firstOrNull { it.name == partitionKey }?.blockedUntil
+    val untilText = until?.let { ", paused until ${formatInstant(it)}" } ?: ""
+    send("Outbox partition $partitionKey paused (reason: $reason)$untilText")
   }
 
   override fun onPartitionActivated(partitionKey: String) {
-    if (partitionResumedEnabled) send("Outbox partition $partitionKey resumed")
+    if (startupCompleted.get() && partitionResumedEnabled) send("Outbox partition $partitionKey resumed")
   }
+
+  private fun partitionSummary(): String {
+    val stats = outboxPort.getPartitionStats()
+    val inactive = stats.filterNot { it.status == ACTIVE_STATUS }
+    return buildString {
+      append("${stats.size - inactive.size}/${stats.size} outbox partitions active")
+      if (inactive.isNotEmpty()) {
+        val now = Clock.System.now()
+        append(" (")
+        append(
+          inactive.joinToString(", ") { partition ->
+            val until = partition.blockedUntil
+            if (until != null && until > now) "${partition.name}: paused for ${formatRemaining(until - now)}" else partition.name
+          }
+        )
+        append(")")
+      }
+    }
+  }
+
+  private fun formatRemaining(duration: Duration): String = duration.coerceAtLeast(Duration.ZERO).inWholeMinutes.minutes.toString()
+
+  private fun formatInstant(instant: Instant): String = instantFormatter.format(instant.toJavaInstant())
 
   override fun notifyCheckPassed(check: AppPlaylistCheck, playlistName: String?) {
     if (checkPassedEnabled) {
@@ -184,6 +226,8 @@ class SlackNotificationAdapter(
   companion object : KLogging() {
     private const val HTTP_OK = 200
     private const val SECONDS_PER_MINUTE = 60L
+    private const val ACTIVE_STATUS = "ACTIVE"
     private val httpClient: HttpClient = HttpClient.newHttpClient()
+    private val instantFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm 'UTC'").withZone(ZoneOffset.UTC)
   }
 }

@@ -1,12 +1,19 @@
 package de.chrgroth.spotify.control.adapter.out.slack
 
+import de.chrgroth.spotify.control.domain.model.infra.OutboxPartitionStats
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationPeriodType
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationRankEntry
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.PlaybackAggregation
+import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import io.quarkus.runtime.ShutdownEvent
 import io.quarkus.runtime.StartupEvent
 import org.junit.jupiter.api.Test
 import java.util.Optional
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.hours
 import kotlinx.datetime.LocalDate
 
 class SlackNotificationAdapterTests {
@@ -25,6 +32,7 @@ class SlackNotificationAdapterTests {
     tokenRefreshFailedEnabled: Boolean = false,
     syncFailedEnabled: Boolean = false,
     weeklyDigestEnabled: Boolean = false,
+    outboxPort: OutboxPort = mockk { every { getPartitionStats() } returns emptyList() },
   ) = SlackNotificationAdapter(
     version = "1.0.0-TEST",
     webhookUrl = webhookUrl,
@@ -40,6 +48,7 @@ class SlackNotificationAdapterTests {
     tokenRefreshFailedEnabled = tokenRefreshFailedEnabled,
     syncFailedEnabled = syncFailedEnabled,
     weeklyDigestEnabled = weeklyDigestEnabled,
+    outboxPort = outboxPort,
   )
 
   @Test
@@ -63,6 +72,32 @@ class SlackNotificationAdapterTests {
   }
 
   @Test
+  fun `startup partition summary queries outbox stats when paused notification enabled`() {
+    val outboxPort: OutboxPort = mockk { every { getPartitionStats() } returns emptyList() }
+    adapter(partitionPausedEnabled = true, outboxPort = outboxPort).onStartup(StartupEvent())
+    verify { outboxPort.getPartitionStats() }
+  }
+
+  @Test
+  fun `startup partition summary queries outbox stats when resumed notification enabled`() {
+    val outboxPort: OutboxPort = mockk { every { getPartitionStats() } returns emptyList() }
+    adapter(partitionResumedEnabled = true, outboxPort = outboxPort).onStartup(StartupEvent())
+    verify { outboxPort.getPartitionStats() }
+  }
+
+  @Test
+  fun `startup partition summary handles a mix of active and paused partitions with and without a known pause end`() {
+    val outboxPort: OutboxPort = mockk {
+      every { getPartitionStats() } returns listOf(
+        OutboxPartitionStats(name = "to-spotify-catalog", status = "ACTIVE", documentCount = 0L, blockedUntil = null),
+        OutboxPartitionStats(name = "to-spotify-playback", status = "PAUSED", documentCount = 0L, blockedUntil = Clock.System.now() + 2.hours),
+        OutboxPartitionStats(name = "to-spotify-user", status = "PAUSED", documentCount = 0L, blockedUntil = null),
+      )
+    }
+    adapter(partitionPausedEnabled = true, outboxPort = outboxPort).onStartup(StartupEvent())
+  }
+
+  @Test
   fun `stopping notification does not throw when disabled`() {
     adapter().onShutdown(ShutdownEvent())
   }
@@ -78,18 +113,41 @@ class SlackNotificationAdapterTests {
   }
 
   @Test
-  fun `partition paused notification does not throw when no webhook url configured`() {
-    adapter(partitionPausedEnabled = true).onPartitionPaused("test-partition", "RATE_LIMITED")
+  fun `partition paused notification before startup is suppressed`() {
+    val outboxPort: OutboxPort = mockk()
+    adapter(partitionPausedEnabled = true, outboxPort = outboxPort).onPartitionPaused("test-partition", "RATE_LIMITED")
+    verify(exactly = 0) { outboxPort.getPartitionStats() }
   }
 
   @Test
-  fun `partition paused notification includes status reason`() {
-    adapter(partitionPausedEnabled = true).onPartitionPaused("test-partition", "RATE_LIMITED")
+  fun `partition paused notification after startup does not throw when no webhook url configured`() {
+    val adapter = adapter(partitionPausedEnabled = true)
+    adapter.onStartup(StartupEvent())
+    adapter.onPartitionPaused("test-partition", "RATE_LIMITED")
   }
 
   @Test
-  fun `partition paused notification handles blank reason`() {
-    adapter(partitionPausedEnabled = true).onPartitionPaused("test-partition", "unknown")
+  fun `partition paused notification after startup includes status reason and pause end when known`() {
+    val outboxPort: OutboxPort = mockk {
+      every { getPartitionStats() } returns listOf(
+        OutboxPartitionStats(name = "test-partition", status = "PAUSED", documentCount = 0L, blockedUntil = Clock.System.now() + 2.hours),
+      )
+    }
+    val adapter = adapter(partitionPausedEnabled = true, outboxPort = outboxPort)
+    adapter.onStartup(StartupEvent())
+    adapter.onPartitionPaused("test-partition", "RATE_LIMITED")
+  }
+
+  @Test
+  fun `partition paused notification after startup handles blank reason and unknown pause end`() {
+    val outboxPort: OutboxPort = mockk {
+      every { getPartitionStats() } returns listOf(
+        OutboxPartitionStats(name = "test-partition", status = "PAUSED", documentCount = 0L, blockedUntil = null),
+      )
+    }
+    val adapter = adapter(partitionPausedEnabled = true, outboxPort = outboxPort)
+    adapter.onStartup(StartupEvent())
+    adapter.onPartitionPaused("test-partition", "unknown")
   }
 
   @Test
@@ -98,8 +156,15 @@ class SlackNotificationAdapterTests {
   }
 
   @Test
-  fun `partition resumed notification does not throw when no webhook url configured`() {
+  fun `partition resumed notification before startup is suppressed`() {
     adapter(partitionResumedEnabled = true).onPartitionActivated("test-partition")
+  }
+
+  @Test
+  fun `partition resumed notification after startup does not throw when no webhook url configured`() {
+    val adapter = adapter(partitionResumedEnabled = true)
+    adapter.onStartup(StartupEvent())
+    adapter.onPartitionActivated("test-partition")
   }
 
   @Test
