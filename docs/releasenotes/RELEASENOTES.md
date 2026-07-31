@@ -1,3 +1,12 @@
+# 0.122.7 (2026.07.31)
+
+## Bugfixes / Chore
+* Recently played tracks on the dashboard no longer show tracks by artists that are only shallow-synced.
+
+
+
+---
+
 # 0.122.6 (2026.07.31)
 
 ## Bugfixes / Chore
