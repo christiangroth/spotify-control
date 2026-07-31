@@ -1,3 +1,12 @@
+# 0.122.8 (2026.07.31)
+
+## Bugfixes / Chore
+* Fixed the "Recently Played" dashboard list showing fewer tracks than usual after hiding tracks from not-yet-synced artists; it now keeps showing the usual number of tracks by looking further back in your playback history.
+
+
+
+---
+
 # 0.122.7 (2026.07.31)
 
 ## Bugfixes / Chore
