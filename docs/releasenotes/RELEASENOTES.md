@@ -1,3 +1,13 @@
+# 0.123.2 (2026.08.03)
+
+## Bugfixes / Chore
+* The playlist settings page's artist statistics now load much faster instead of taking several seconds.
+* Playlist tracks without any artist are no longer synced, instead of being kept without a usable artist reference.
+
+
+
+---
+
 # 0.123.1 (2026.08.03)
 
 ## Bugfixes / Chore
