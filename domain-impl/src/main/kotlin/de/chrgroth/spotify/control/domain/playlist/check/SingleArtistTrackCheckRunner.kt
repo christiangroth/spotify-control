@@ -33,9 +33,7 @@ class SingleArtistTrackCheckRunner(
     } else {
       emptyMap()
     }
-    val tracksByArtistId = playlist.tracks
-      .mapNotNull { track -> track.mainArtistId?.let { it to track } }
-      .groupBy(keySelector = { it.first }, valueTransform = { it.second })
+    val tracksByArtistId = playlist.tracks.groupBy { it.mainArtistId }
     val violations = tracksByArtistId
       .filterValues { it.size > 1 }
       .flatMap { (artistId, tracks) ->

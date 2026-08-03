@@ -118,7 +118,7 @@ class PlaylistRepositoryAdapter(
         Document("trackId", track.trackId.value)
           .append("artistIds", track.artistIds.map { it.value })
           .append("albumId", track.albumId?.value)
-          .append("mainArtistId", track.mainArtistId?.value)
+          .append("mainArtistId", track.mainArtistId.value)
       }
       val result = playlistDocumentRepository.mongoCollection().updateOne(
         Filters.eq("_id", playlistId),
@@ -165,12 +165,17 @@ class PlaylistRepositoryAdapter(
     tracks = tracks.map { it.toDomain() },
   )
 
-  private fun PlaylistTrackSubdocument.toDomain() = PlaylistTrack(
-    trackId = TrackId(trackId),
-    artistIds = artistIds.map { ArtistId(it) },
-    albumId = albumId?.let { AlbumId(it) },
-    mainArtistId = mainArtistId?.let { ArtistId(it) },
-  )
+  private fun PlaylistTrackSubdocument.toDomain(): PlaylistTrack {
+    val trackArtistIds = artistIds.map { ArtistId(it) }
+    return PlaylistTrack(
+      trackId = TrackId(trackId),
+      artistIds = trackArtistIds,
+      albumId = albumId?.let { AlbumId(it) },
+      // mainArtistId may still be unset on documents persisted before it was backfilled (see
+      // BackfillPlaylistMainArtistIdStarter); fall back to computing it from artistIds for those.
+      mainArtistId = mainArtistId?.let { ArtistId(it) } ?: trackArtistIds.first(),
+    )
+  }
 
   private fun Playlist.toDocument() = PlaylistDocument().apply {
     id = this@toDocument.spotifyPlaylistId
@@ -182,7 +187,7 @@ class PlaylistRepositoryAdapter(
     trackId = this@toSubdocument.trackId.value
     artistIds = this@toSubdocument.artistIds.map { it.value }
     albumId = this@toSubdocument.albumId?.value
-    mainArtistId = this@toSubdocument.mainArtistId?.value
+    mainArtistId = this@toSubdocument.mainArtistId.value
   }
 
   override fun setAllSyncInactive() {

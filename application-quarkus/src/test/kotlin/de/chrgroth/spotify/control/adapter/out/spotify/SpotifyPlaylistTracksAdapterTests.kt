@@ -109,6 +109,16 @@ class SpotifyPlaylistTracksAdapterTests {
   }
 
   @Test
+  fun `getPlaylistTracks skips track that has no artists at all`() {
+    val result = spotifyPlaylist.getPlaylistTracks(AccessToken("mock-access-token"), "mock-playlist-4")
+
+    assertThat(result).isInstanceOf(Either.Right::class.java)
+    val playlist = (result as Either.Right).value
+    assertThat(playlist.tracks.none { it.trackId == TrackId("track-5") }).isTrue
+    assertThat(playlist.tracks.any { it.trackId == TrackId("track-1") }).isTrue
+  }
+
+  @Test
   fun `getPlaylistTracks records spotify request metrics`() {
     spotifyPlaylist.getPlaylistTracks(AccessToken("mock-access-token"), "mock-playlist-1")
 
