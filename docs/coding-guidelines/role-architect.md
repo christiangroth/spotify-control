@@ -75,10 +75,15 @@ When in doubt: if it compiles without `domain-api` in scope, it belongs in an ad
 - Three-stage playback pipeline (Raw → Enriched → Aggregated)
 - Outbox pattern with partitions for Spotify rate limit resilience
 - Token bucket + backoff in `adapter-out-spotify`
+- Precomputed read model per UI page, rebuilt via the existing `domain` outbox partition and
+  bootstrapped via the `Starter` mechanism – see [ADR-0014](../adr/0014-precomputed-read-models-per-ui-page.md).
+  Ports live in `domain-api/port/out/readmodel`; rebuild logic stays in the existing domain service
+  for that data, invoked wherever it already handles the relevant outbox event(s) – no new service
+  layer, no separate read datastore or broker
 
 **Not allowed:**
 
-- No CQRS, no event sourcing beyond the outbox pattern
+- No general CQRS or event sourcing beyond the outbox pattern and the precomputed read models below
 - No message brokers (Kafka, RabbitMQ) – CDI events + persistent outbox are sufficient
 - No separate frontend deployment – Qute SSR in the same Quarkus process
 - No custom user management – strict single-user application (see [ADR-0008](../adr/0008-single-user-architecture.md)); any Spotify account that completes login becomes the application's user

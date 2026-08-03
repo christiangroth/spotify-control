@@ -20,12 +20,15 @@ import de.chrgroth.spotify.control.domain.model.playlist.SpotifyPlaylistItem
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.model.playlist.MissingArtist
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSettingsEntry
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSettingsView
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.SpotifyCatalogPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.AppPlaylistCheckRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.infra.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.readmodel.PlaylistSettingsViewRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistSyncNotificationPort
 import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.SpotifyPlaylistPort
@@ -62,6 +65,7 @@ class PlaylistServiceTests {
   private val spotifyCatalog: SpotifyCatalogPort = mockk()
   private val meterRegistry = SimpleMeterRegistry()
   private val syncNotification: PlaylistSyncNotificationPort = mockk(relaxed = true)
+  private val playlistSettingsViewRepository: PlaylistSettingsViewRepositoryPort = mockk(relaxed = true)
 
   private val adapter = PlaylistService(
     currentUserResolver, playlistRepository,
@@ -74,6 +78,7 @@ class PlaylistServiceTests {
     spotifyCatalog,
     meterRegistry,
     syncNotification,
+    playlistSettingsViewRepository,
   )
 
   private val userId = UserId("user-1")
@@ -99,37 +104,6 @@ class PlaylistServiceTests {
     snapshotId = snapshotId,
     ownerId = ownerId,
   )
-
-  // --- getArtistStats tests ---
-
-  @Test
-  fun `getArtistStats returns empty map when no user exists`() {
-    every { currentUserResolver.userId() } returns null
-
-    val result = adapter.getArtistStats()
-
-    assertThat(result).isEmpty()
-    verify(exactly = 0) { playlistRepository.findDistinctArtistIds() }
-  }
-
-  @Test
-  fun `getArtistStats computes total and missing counts per playlist`() {
-    every { currentUserResolver.userId() } returns userId
-    every { playlistRepository.findDistinctArtistIds() } returns mapOf(
-      "p1" to setOf(ArtistId("artist-1"), ArtistId("artist-2")),
-      "p2" to setOf(ArtistId("artist-2"), ArtistId("artist-3")),
-    )
-    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"), ArtistId("artist-2"), ArtistId("artist-3"))) } returns listOf(
-      AppArtist(id = ArtistId("artist-1"), artistName = "Artist 1", lastSync = now),
-    )
-
-    val result = adapter.getArtistStats()
-
-    assertThat(result["p1"]!!.total).isEqualTo(2)
-    assertThat(result["p1"]!!.missingFromCatalog).isEqualTo(1)
-    assertThat(result["p2"]!!.total).isEqualTo(2)
-    assertThat(result["p2"]!!.missingFromCatalog).isEqualTo(2)
-  }
 
   // --- getMissingArtists tests ---
 
@@ -269,6 +243,7 @@ class PlaylistServiceTests {
     every { playlistRepository.findAll() } returns emptyList()
     every { playlistRepository.replaceAll(any()) } just runs
     every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
+    every { outboxPort.enqueue(any()) } just runs
 
     val result = adapter.syncPlaylists()
 
@@ -287,6 +262,7 @@ class PlaylistServiceTests {
     every { playlistRepository.findAll() } returns emptyList()
     every { playlistRepository.replaceAll(any()) } just runs
     every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
+    every { outboxPort.enqueue(any()) } just runs
 
     val result = adapter.syncPlaylists()
 
@@ -305,6 +281,7 @@ class PlaylistServiceTests {
     every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1")).right()
     every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE))
     every { playlistRepository.replaceAll(any()) } just runs
+    every { outboxPort.enqueue(any()) } just runs
 
     adapter.syncPlaylists()
 
@@ -321,6 +298,7 @@ class PlaylistServiceTests {
     every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.ACTIVE))
     every { playlistRepository.replaceAll(any()) } just runs
     every { playlistRepository.findByPlaylistId("p1") } returns mockk()
+    every { outboxPort.enqueue(any()) } just runs
 
     adapter.syncPlaylists()
 
@@ -337,6 +315,7 @@ class PlaylistServiceTests {
     every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1", snapshotId = "snap-1"))
     every { playlistRepository.replaceAll(any()) } just runs
     every { playlistRepository.findByPlaylistId("p1") } returns mockk()
+    every { outboxPort.enqueue(any()) } just runs
 
     adapter.syncPlaylists()
 
@@ -387,6 +366,7 @@ class PlaylistServiceTests {
     every { playlistRepository.replaceAll(any()) } just runs
     every { playlistRepository.findByPlaylistId("p1") } returns mockk()
     every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
+    every { outboxPort.enqueue(any()) } just runs
 
     val result = adapter.syncPlaylists()
 
@@ -402,6 +382,7 @@ class PlaylistServiceTests {
     every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1"))
     every { playlistRepository.replaceAll(any()) } just runs
     every { playlistRepository.findByPlaylistId("p1") } returns mockk()
+    every { outboxPort.enqueue(any()) } just runs
 
     val result = adapter.syncPlaylists()
 
@@ -489,6 +470,7 @@ class PlaylistServiceTests {
     every { playlistRepository.findByPlaylistId("p1") } returns mockk()
     every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
     every { playlistCheckRepository.deleteByPlaylistId("p1") } just runs
+    every { outboxPort.enqueue(any()) } just runs
 
     val result = adapter.updateSyncStatus("p1", PlaylistSyncStatus.PASSIVE)
 
@@ -536,6 +518,7 @@ class PlaylistServiceTests {
     every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1")).right()
     every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE))
     every { playlistRepository.replaceAll(any()) } just runs
+    every { outboxPort.enqueue(any()) } just runs
 
     adapter.syncPlaylists()
 
@@ -550,6 +533,7 @@ class PlaylistServiceTests {
     every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1"))
     every { playlistRepository.replaceAll(any()) } just runs
     every { playlistRepository.findByPlaylistId("p1") } returns mockk()
+    every { outboxPort.enqueue(any()) } just runs
 
     adapter.syncPlaylists()
 
@@ -803,6 +787,7 @@ class PlaylistServiceTests {
     every { playlistRepository.findByPlaylistId("p1") } returns mockk()
     every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
     every { playlistCheckRepository.deleteByPlaylistId("p1") } just runs
+    every { outboxPort.enqueue(any()) } just runs
 
     val result = adapter.updateSyncStatus("p1", PlaylistSyncStatus.PASSIVE)
 
@@ -833,6 +818,7 @@ class PlaylistServiceTests {
     every { playlistRepository.findByPlaylistId("p1") } returns mockk()
     every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
     every { playlistCheckRepository.deleteByPlaylistId("p1") } just runs
+    every { outboxPort.enqueue(any()) } just runs
 
     val result = adapter.updateSyncStatus("p1", PlaylistSyncStatus.PASSIVE)
 
@@ -934,5 +920,126 @@ class PlaylistServiceTests {
 
     assertThat(result.isRight()).isTrue()
     verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData("p1")) }
+  }
+
+  // --- Playlist Settings View read model tests (ADR-0014) ---
+
+  @Test
+  fun `getPlaylistSettingsView returns empty view when nothing has been built yet`() {
+    every { playlistSettingsViewRepository.find() } returns null
+
+    val result = adapter.getPlaylistSettingsView()
+
+    assertThat(result.entries).isEmpty()
+  }
+
+  @Test
+  fun `getPlaylistSettingsView returns the precomputed view`() {
+    val view = PlaylistSettingsView(
+      entries = listOf(PlaylistSettingsEntry(playlist = buildPlaylistInfo("p1"), numberOfTracks = 5, numberOfArtists = 3, numberOfMissingArtists = 1)),
+    )
+    every { playlistSettingsViewRepository.find() } returns view
+
+    val result = adapter.getPlaylistSettingsView()
+
+    assertThat(result).isEqualTo(view)
+  }
+
+  @Test
+  fun `rebuildPlaylistSettingsView composes playlists, track counts and artist stats into one view`() {
+    every { currentUserResolver.userId() } returns userId
+    every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1"), buildPlaylistInfo("p2"))
+    every { playlistRepository.findTrackCounts() } returns mapOf("p1" to 10, "p2" to 20)
+    every { playlistRepository.findDistinctArtistIds() } returns mapOf(
+      "p1" to setOf(ArtistId("artist-1"), ArtistId("artist-2")),
+      "p2" to setOf(ArtistId("artist-2"), ArtistId("artist-3")),
+    )
+    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"), ArtistId("artist-2"), ArtistId("artist-3"))) } returns listOf(
+      AppArtist(id = ArtistId("artist-1"), artistName = "Artist 1", lastSync = now),
+    )
+    val savedSlot = slot<PlaylistSettingsView>()
+    every { playlistSettingsViewRepository.save(capture(savedSlot)) } just runs
+
+    adapter.rebuildPlaylistSettingsView()
+
+    val entries = savedSlot.captured.entries.associateBy { it.playlist.spotifyPlaylistId }
+    assertThat(entries["p1"]!!.numberOfTracks).isEqualTo(10)
+    assertThat(entries["p1"]!!.numberOfArtists).isEqualTo(2)
+    assertThat(entries["p1"]!!.numberOfMissingArtists).isEqualTo(1)
+    assertThat(entries["p2"]!!.numberOfTracks).isEqualTo(20)
+    assertThat(entries["p2"]!!.numberOfArtists).isEqualTo(2)
+    assertThat(entries["p2"]!!.numberOfMissingArtists).isEqualTo(2)
+  }
+
+  @Test
+  fun `handle RebuildPlaylistSettingsView skips when no user exists`() {
+    every { currentUserResolver.userId() } returns null
+
+    val result = adapter.handle(DomainOutboxEvent.RebuildPlaylistSettingsView())
+
+    assertThat(result.isRight()).isTrue()
+    verify(exactly = 0) { playlistSettingsViewRepository.save(any()) }
+  }
+
+  @Test
+  fun `handle RebuildPlaylistSettingsView rebuilds the view for the current user`() {
+    every { currentUserResolver.userId() } returns userId
+    every { playlistRepository.findAll() } returns emptyList()
+    every { playlistRepository.findTrackCounts() } returns emptyMap()
+    every { playlistRepository.findDistinctArtistIds() } returns emptyMap()
+    every { appArtistRepository.findByArtistIds(emptySet()) } returns emptyList()
+    every { playlistSettingsViewRepository.save(any()) } just runs
+
+    val result = adapter.handle(DomainOutboxEvent.RebuildPlaylistSettingsView())
+
+    assertThat(result.isRight()).isTrue()
+    verify(exactly = 1) { playlistSettingsViewRepository.save(any()) }
+  }
+
+  @Test
+  fun `syncPlaylists enqueues RebuildPlaylistSettingsView and RebuildDashboardReadModel`() {
+    every { currentUserResolver.userId() } returns userId
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
+    every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1")).right()
+    every { playlistRepository.findAll() } returns emptyList()
+    every { playlistRepository.replaceAll(any()) } just runs
+    every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
+    every { outboxPort.enqueue(any()) } just runs
+
+    adapter.syncPlaylists()
+
+    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.RebuildPlaylistSettingsView()) }
+    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.RebuildDashboardReadModel()) }
+  }
+
+  @Test
+  fun `syncPlaylistData enqueues RebuildPlaylistSettingsView only once all pages are complete`() {
+    val page = buildTracksPage()
+    every { currentUserResolver.userId() } returns userId
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
+    every { spotifyPlaylist.getPlaylistTracksPage(accessToken, "p1", null) } returns page.right()
+    every { playlistRepository.save(any()) } just runs
+    every { outboxPort.enqueue(any()) } just runs
+    every { playlistRepository.updateLastSyncTime("p1", any()) } just runs
+
+    adapter.syncPlaylistData("p1")
+
+    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.RebuildPlaylistSettingsView()) }
+  }
+
+  @Test
+  fun `updateSyncStatus enqueues RebuildPlaylistSettingsView and RebuildDashboardReadModel`() {
+    every { currentUserResolver.userId() } returns userId
+    every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.ACTIVE))
+    every { playlistRepository.replaceAll(any()) } just runs
+    every { playlistRepository.findByPlaylistId("p1") } returns mockk()
+    every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
+    every { playlistCheckRepository.deleteByPlaylistId("p1") } just runs
+    every { outboxPort.enqueue(any()) } just runs
+
+    adapter.updateSyncStatus("p1", PlaylistSyncStatus.PASSIVE)
+
+    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.RebuildPlaylistSettingsView()) }
+    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.RebuildDashboardReadModel()) }
   }
 }

@@ -206,6 +206,7 @@ class CatalogServiceTests {
     every { appArtistRepository.setSyncStatus(ArtistId("artist-1"), ArtistSyncStatus.SHALLOW) } just runs
     every { appTrackRepository.deleteByArtistId(ArtistId("artist-1")) } just runs
     every { appAlbumRepository.deleteByArtistId(ArtistId("artist-1")) } just runs
+    every { outboxPort.enqueue(any()) } just runs
 
     val result = adapter.handle(DomainOutboxEvent.ConfirmArtistShallow("artist-1"))
 
@@ -463,6 +464,7 @@ class CatalogServiceTests {
     every { spotifyCatalog.getAlbum(accessToken, "album-1") } returns albumSyncResult.right()
     every { appTrackRepository.upsertAll(any()) } just runs
     every { appAlbumRepository.upsertAll(any()) } just runs
+    every { outboxPort.enqueue(any()) } just runs
 
     adapter.handle(DomainOutboxEvent.SyncAlbumDetails("album-1"))
 

@@ -5,6 +5,7 @@ import de.chrgroth.spotify.control.domain.port.out.infra.MongoQueryStatsPort
 import io.micrometer.core.instrument.Counter
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Timer
+import io.quarkus.mongodb.panache.kotlin.PanacheMongoRepositoryBase
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
 import org.eclipse.microprofile.config.inject.ConfigProperty
@@ -31,6 +32,15 @@ class MongoQueryMetrics(
     val durationMs = System.currentTimeMillis() - startMs
     recordMetrics(operation, durationMs)
     return result
+  }
+
+  // Shared by the single-document read-model adapters (see ADR-0014): each collection holds exactly one
+  // document keyed by SINGLETON_ID, so the timed find/save wrapper and the id itself only need to live here.
+  fun <Doc : Any> findSingleton(repository: PanacheMongoRepositoryBase<Doc, String>, collection: String): Doc? =
+    timed("$collection.find") { repository.findById(SINGLETON_ID) }
+
+  fun <Doc : Any> saveSingleton(repository: PanacheMongoRepositoryBase<Doc, String>, collection: String, document: Doc) {
+    timed("$collection.save") { repository.persistOrUpdate(document) }
   }
 
   override fun current(): List<MongoQueryStats> {
@@ -85,5 +95,6 @@ class MongoQueryMetrics(
 
   companion object : KLogging() {
     private const val WINDOW_SECONDS = 24L * 60L * 60L
+    const val SINGLETON_ID = "singleton"
   }
 }

@@ -1,18 +1,12 @@
 package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
 import de.chrgroth.spotify.control.adapter.`in`.http.frontend.i18n.StatsMessages
-import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
-import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
-import de.chrgroth.spotify.control.domain.model.catalog.TrackId
-import de.chrgroth.spotify.control.domain.model.catalog.displayArtistName
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.ActivityTimeWindow
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationPeriodType
+import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationRankEntry
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.PlaybackAggregation
-import de.chrgroth.spotify.control.domain.port.out.catalog.AppAlbumRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
+import de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackAggregationPort
 import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
-import de.chrgroth.spotify.control.domain.port.out.playback.PlaybackAggregationRepositoryPort
 import io.quarkus.qute.Location
 import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
@@ -35,10 +29,7 @@ import java.time.DayOfWeek
 class StatsResource(
   @param:Location("stats.html")
   private val statsTemplate: Template,
-  private val aggregationRepository: PlaybackAggregationRepositoryPort,
-  private val appTrackRepository: AppTrackRepositoryPort,
-  private val appAlbumRepository: AppAlbumRepositoryPort,
-  private val appArtistRepository: AppArtistRepositoryPort,
+  private val playbackAggregationPort: PlaybackAggregationPort,
   private val httpResponseMetrics: ResponseTimingPort,
   private val messages: StatsMessages,
 ) {
@@ -46,14 +37,14 @@ class StatsResource(
   @GET
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun stats(@QueryParam("date") dateParam: String?): TemplateInstance = httpResponseMetrics.timed("page.stats.view") { details ->
+  fun stats(@QueryParam("date") dateParam: String?): TemplateInstance = httpResponseMetrics.timed("page.stats.view") {
     val today = currentPeriodStart(AggregationPeriodType.DAY)
     val requestedDate = dateParam?.let { runCatching { LocalDate.parse(it) }.getOrNull() }?.let { if (it > today) today else it }
     val periodStartsByType = AggregationPeriodType.entries.associateWith { type ->
       if (type == AggregationPeriodType.DAY && requestedDate != null) listOf(requestedDate) else threePeriodStarts(type)
     }
     val requestedPeriods = periodStartsByType.flatMap { (type, periodStarts) -> periodStarts.map { type to it } }
-    val aggregationsByTypeAndPeriod = details.detail("stats.view.aggregations") { aggregationRepository.findByPeriods(requestedPeriods, TOP_ENTRIES_LIMIT) }
+    val aggregationsByTypeAndPeriod = playbackAggregationPort.findByPeriods(requestedPeriods, TOP_ENTRIES_LIMIT)
     val tabs = AggregationPeriodType.entries.mapIndexed { index, type ->
       val periodStarts = periodStartsByType.getValue(type)
       AggregationTab(
@@ -61,118 +52,33 @@ class StatsResource(
         label = tabLabel(type),
         first = index == 0,
         aggregations = periodStarts.mapIndexed { periodIndex, periodStart ->
+          val data = aggregationsByTypeAndPeriod[type to periodStart]
           AggregationView(
             periodLabel = periodLabel(periodIndex, periodStart, singleSelected = periodStarts.size == 1),
             periodStart = periodStart.toString(),
-            data = aggregationsByTypeAndPeriod[type to periodStart],
+            data = data,
+            topArtists = topEntries(data?.artistEntries),
+            topAlbums = topEntries(data?.albumEntries),
+            topTracks = topEntries(data?.trackEntries),
+            activityBars = activityBars(data),
           )
         },
       )
     }
-    val tracksById = details.detail("stats.view.tracks") { loadTracksById(tabs) }
-    val albumsById = details.detail("stats.view.albums") { loadAlbumsById(tabs, tracksById) }
-    val artistsById = details.detail("stats.view.artists") { loadArtistsById(tabs) }
-    val renderedTabs = tabs.map { tab ->
-      tab.copy(aggregations = tab.aggregations.map { aggregation ->
-        aggregation.copy(
-          topArtists = topArtists(aggregation.data, artistsById),
-          topAlbums = topAlbums(aggregation.data, albumsById),
-          topTracks = topTracks(aggregation.data, tracksById, albumsById, artistsById),
-          activityBars = activityBars(aggregation.data),
-        )
-      })
-    }
-    statsTemplate.instance().data("tabs", renderedTabs)
+    statsTemplate.instance().data("tabs", tabs)
   }
 
-  private fun loadTracksById(tabs: List<AggregationTab>) = appTrackRepository.findByTrackIds(
-    tabs.flatMap { tab ->
-      tab.aggregations.flatMap { aggregation ->
-        aggregation.data?.trackEntries?.take(TOP_ENTRIES_LIMIT)?.map { TrackId(it.id) } ?: emptyList()
-      }
-    }.toSet(),
-  ).associateBy { it.id }
-
-  private fun loadAlbumsById(
-    tabs: List<AggregationTab>,
-    tracksById: Map<TrackId, de.chrgroth.spotify.control.domain.model.catalog.AppTrack>,
-  ) = appAlbumRepository.findByAlbumIds(
-    (
-      tracksById.values.mapNotNull { it.albumId } +
-        tabs.flatMap { tab ->
-          tab.aggregations.flatMap { aggregation ->
-            aggregation.data?.albumEntries?.take(TOP_ENTRIES_LIMIT)?.map { AlbumId(it.id) } ?: emptyList()
-          }
-        }
-      ).toSet(),
-  ).associateBy { it.id }
-
-  private fun loadArtistsById(tabs: List<AggregationTab>) = appArtistRepository.findByArtistIds(
-    tabs.flatMap { tab ->
-      tab.aggregations.flatMap { aggregation ->
-        aggregation.data?.artistEntries?.take(TOP_ENTRIES_LIMIT)?.map { ArtistId(it.id) } ?: emptyList()
-      }
-    }.toSet(),
-  ).associateBy { it.id }
-
-  private fun topArtists(
-    aggregation: PlaybackAggregation?,
-    artistsById: Map<ArtistId, de.chrgroth.spotify.control.domain.model.catalog.AppArtist>,
-  ): List<RankEntryView> {
-    if (aggregation == null) {
-      return emptyList()
+  private fun topEntries(entries: List<AggregationRankEntry>?): List<RankEntryView> =
+    entries.orEmpty().take(TOP_ENTRIES_LIMIT).map { entry ->
+      RankEntryView(
+        name = entry.name,
+        totalSeconds = entry.totalSeconds,
+        imageLink = entry.imageLink,
+        artistName = entry.artistName,
+        albumName = entry.albumName,
+        trackDurationMs = entry.trackDurationMs,
+      )
     }
-    return aggregation.artistEntries
-      .take(TOP_ENTRIES_LIMIT)
-      .map { entry ->
-        val artist = artistsById[ArtistId(entry.id)]
-        RankEntryView(name = artist?.artistName ?: entry.name, totalSeconds = entry.totalSeconds, imageLink = artist?.imageLink)
-      }
-  }
-
-  private fun topAlbums(
-    aggregation: PlaybackAggregation?,
-    albumsById: Map<AlbumId, de.chrgroth.spotify.control.domain.model.catalog.AppAlbum>,
-  ): List<RankEntryView> {
-    if (aggregation == null) {
-      return emptyList()
-    }
-    return aggregation.albumEntries
-      .take(TOP_ENTRIES_LIMIT)
-      .map { entry ->
-        val album = albumsById[AlbumId(entry.id)]
-        RankEntryView(
-          name = album?.title ?: entry.name,
-          totalSeconds = entry.totalSeconds,
-          imageLink = album?.imageLink,
-          artistName = album?.artistName,
-        )
-      }
-  }
-
-  private fun topTracks(
-    aggregation: PlaybackAggregation?,
-    tracksById: Map<TrackId, de.chrgroth.spotify.control.domain.model.catalog.AppTrack>,
-    albumsById: Map<AlbumId, de.chrgroth.spotify.control.domain.model.catalog.AppAlbum>,
-    artistsById: Map<ArtistId, de.chrgroth.spotify.control.domain.model.catalog.AppArtist>,
-  ): List<RankEntryView> {
-    if (aggregation == null) {
-      return emptyList()
-    }
-    return aggregation.trackEntries
-      .take(TOP_ENTRIES_LIMIT)
-      .map { entry ->
-        val track = tracksById[TrackId(entry.id)]
-        RankEntryView(
-          name = track?.title ?: entry.name,
-          totalSeconds = entry.totalSeconds,
-          imageLink = track?.albumId?.let { albumsById[it]?.imageLink },
-          artistName = track?.displayArtistName { artistId -> artistsById[artistId]?.artistName },
-          albumName = track?.albumName ?: track?.albumId?.let { albumsById[it]?.title },
-          trackDurationMs = track?.durationMs,
-        )
-      }
-  }
 
   private fun activityBars(aggregation: PlaybackAggregation?): List<ActivityBarEntryView> {
     if (aggregation == null) {

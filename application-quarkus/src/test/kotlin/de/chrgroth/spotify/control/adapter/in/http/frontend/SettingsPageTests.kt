@@ -9,6 +9,7 @@ import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistTrack
 import de.chrgroth.spotify.control.domain.model.user.User
 import de.chrgroth.spotify.control.domain.model.user.UserId
+import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
@@ -36,6 +37,9 @@ class SettingsPageTests {
 
   @Inject
   lateinit var appArtistRepository: AppArtistRepositoryPort
+
+  @Inject
+  lateinit var playlistPort: PlaylistPort
 
   @BeforeEach
   fun ensureCurrentUser() {
@@ -77,6 +81,7 @@ class SettingsPageTests {
         ),
       ),
     )
+    playlistPort.rebuildPlaylistSettingsView()
 
     given()
       .`when`()
@@ -113,6 +118,7 @@ class SettingsPageTests {
         ),
       ),
     )
+    playlistPort.rebuildPlaylistSettingsView()
 
     given()
       .`when`()
@@ -158,6 +164,7 @@ class SettingsPageTests {
         ),
       ),
     )
+    playlistPort.rebuildPlaylistSettingsView()
 
     given()
       .`when`()

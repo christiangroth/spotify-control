@@ -1,5 +1,8 @@
 package de.chrgroth.spotify.control.domain.infra
 
+import arrow.core.Either
+import arrow.core.right
+import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistSyncStatus
@@ -14,6 +17,7 @@ import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.playback.RecentlyPlayedItem
 import de.chrgroth.spotify.control.domain.model.playback.TopEntry
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
+import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogBrowserPort
 import de.chrgroth.spotify.control.domain.port.`in`.infra.DashboardPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppAlbumRepositoryPort
@@ -23,6 +27,7 @@ import de.chrgroth.spotify.control.domain.port.out.playback.PlaybackAggregationR
 import de.chrgroth.spotify.control.domain.port.out.playlist.AppPlaylistCheckRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.readmodel.DashboardViewRepositoryPort
 import de.chrgroth.spotify.control.domain.user.CurrentUserResolver
 import jakarta.enterprise.context.ApplicationScoped
 import kotlin.time.Clock
@@ -47,13 +52,27 @@ class DashboardService(
   private val playlistCheckRepository: AppPlaylistCheckRepositoryPort,
   private val currentUserResolver: CurrentUserResolver,
   private val managedExecutor: ManagedExecutor,
+  private val dashboardViewRepository: DashboardViewRepositoryPort,
   @param:ConfigProperty(name = "dashboard.recently-played.limit")
   private val recentlyPlayedLimit: Int,
   @param:ConfigProperty(name = "dashboard.listening-stats.top-entries-limit")
   private val topEntriesLimit: Int,
 ) : DashboardPort {
 
-  override fun getStats(): DashboardStats {
+  override fun getStats(): DashboardStats =
+    dashboardViewRepository.find() ?: DashboardStats.EMPTY
+
+  override fun rebuildDashboardView() {
+    dashboardViewRepository.save(buildStats())
+  }
+
+  override fun handle(event: DomainOutboxEvent.RebuildDashboardReadModel): Either<DomainError, Unit> {
+    currentUserResolver.userId() ?: return Unit.right()
+    rebuildDashboardView()
+    return Unit.right()
+  }
+
+  private fun buildStats(): DashboardStats {
     currentUserResolver.userId() ?: return DashboardStats.EMPTY
     val dailyAggsFuture = managedExecutor.supplyAsync { fetchDailyAggregations() }
     val totalPlaybackEventsFuture = managedExecutor.supplyAsync { aggregationRepository.sumEventCount() }

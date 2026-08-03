@@ -5,6 +5,7 @@ import de.chrgroth.spotify.control.domain.playlist.check.PlaylistCheckRunner
 import de.chrgroth.spotify.control.domain.error.PlaylistFixError
 import de.chrgroth.spotify.control.domain.model.playlist.AppPlaylistCheck
 import de.chrgroth.spotify.control.domain.model.playlist.Playlist
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistCheckDashboardSummary
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistCheckViolation
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSyncStatus
@@ -22,6 +23,7 @@ import de.chrgroth.spotify.control.domain.port.out.infra.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistCheckNotificationPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.readmodel.PlaylistCheckDashboardRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
 import de.chrgroth.spotify.control.domain.user.CurrentUserResolver
@@ -51,6 +53,7 @@ class PlaylistCheckServiceTests {
   private val currentUserResolver: CurrentUserResolver = mockk()
   private val spotifyAccessToken: SpotifyAccessTokenPort = mockk()
   private val outboxPort: OutboxPort = mockk()
+  private val playlistCheckDashboardRepository: PlaylistCheckDashboardRepositoryPort = mockk()
   private val meterRegistry = SimpleMeterRegistry()
   private val managedExecutor: ManagedExecutor = mockk {
     every { supplyAsync(any<Supplier<Any>>()) } answers {
@@ -68,6 +71,7 @@ class PlaylistCheckServiceTests {
     notification,
     spotifyAccessToken,
     outboxPort,
+    playlistCheckDashboardRepository,
     meterRegistry,
     managedExecutor,
   )
@@ -138,6 +142,10 @@ class PlaylistCheckServiceTests {
     every { playlistCheckRepository.findByCheckId(fullCheckId) } returns null
     every { playlistCheckRepository.save(any()) } just runs
     every { dashboardRefresh.notifyUserPlaylistChecks() } just runs
+    every { userRepository.get() } returns null
+    every { playlistCheckRepository.findAll() } returns emptyList()
+    every { playlistCheckDashboardRepository.save(any()) } just runs
+    every { outboxPort.enqueue(any()) } just runs
     every { notification.notifyViolationsChanged(any(), any(), any()) } just runs
 
     val result = adapter.handle(event)
@@ -157,6 +165,10 @@ class PlaylistCheckServiceTests {
     every { playlistCheckRepository.findByCheckId(fullCheckId) } returns null
     every { playlistCheckRepository.save(any()) } just runs
     every { dashboardRefresh.notifyUserPlaylistChecks() } just runs
+    every { userRepository.get() } returns null
+    every { playlistCheckRepository.findAll() } returns emptyList()
+    every { playlistCheckDashboardRepository.save(any()) } just runs
+    every { outboxPort.enqueue(any()) } just runs
 
     val result = adapter.handle(event)
 
@@ -164,6 +176,9 @@ class PlaylistCheckServiceTests {
     verify(exactly = 1) { playlistCheckRepository.save(any()) }
     verify(exactly = 0) { notification.notifyCheckPassed(any(), any()) }
     verify(exactly = 0) { notification.notifyViolationsChanged(any(), any(), any()) }
+    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.RebuildPlaylistChecksDashboard()) }
+    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.RebuildDashboardReadModel()) }
+    verify(exactly = 0) { playlistCheckDashboardRepository.save(any()) }
   }
 
   @Test
@@ -178,6 +193,10 @@ class PlaylistCheckServiceTests {
     every { playlistCheckRepository.findByCheckId(fullCheckId) } returns previousCheck
     every { playlistCheckRepository.save(any()) } just runs
     every { dashboardRefresh.notifyUserPlaylistChecks() } just runs
+    every { userRepository.get() } returns null
+    every { playlistCheckRepository.findAll() } returns emptyList()
+    every { playlistCheckDashboardRepository.save(any()) } just runs
+    every { outboxPort.enqueue(any()) } just runs
     every { notification.notifyCheckPassed(any(), any()) } just runs
 
     val result = adapter.handle(event)
@@ -202,6 +221,10 @@ class PlaylistCheckServiceTests {
     every { playlistCheckRepository.findByCheckId(fullCheckId) } returns previousCheck
     every { playlistCheckRepository.save(any()) } just runs
     every { dashboardRefresh.notifyUserPlaylistChecks() } just runs
+    every { userRepository.get() } returns null
+    every { playlistCheckRepository.findAll() } returns emptyList()
+    every { playlistCheckDashboardRepository.save(any()) } just runs
+    every { outboxPort.enqueue(any()) } just runs
     every { notification.notifyViolationsChanged(any(), any(), any()) } just runs
 
     val result = adapter.handle(event)
@@ -224,6 +247,10 @@ class PlaylistCheckServiceTests {
     every { playlistCheckRepository.findByCheckId(fullCheckId) } returns previousCheck
     every { playlistCheckRepository.save(any()) } just runs
     every { dashboardRefresh.notifyUserPlaylistChecks() } just runs
+    every { userRepository.get() } returns null
+    every { playlistCheckRepository.findAll() } returns emptyList()
+    every { playlistCheckDashboardRepository.save(any()) } just runs
+    every { outboxPort.enqueue(any()) } just runs
 
     val result = adapter.handle(event)
 
@@ -244,6 +271,10 @@ class PlaylistCheckServiceTests {
     every { playlistCheckRepository.findByCheckId(fullCheckId) } returns previousCheck
     every { playlistCheckRepository.save(any()) } just runs
     every { dashboardRefresh.notifyUserPlaylistChecks() } just runs
+    every { userRepository.get() } returns null
+    every { playlistCheckRepository.findAll() } returns emptyList()
+    every { playlistCheckDashboardRepository.save(any()) } just runs
+    every { outboxPort.enqueue(any()) } just runs
 
     val result = adapter.handle(event)
 
@@ -271,6 +302,10 @@ class PlaylistCheckServiceTests {
     every { playlistRepository.findByPlaylistId(playlistId) } returns playlist
     every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo())
     every { dashboardRefresh.notifyUserPlaylistChecks() } just runs
+    every { userRepository.get() } returns null
+    every { playlistCheckRepository.findAll() } returns emptyList()
+    every { playlistCheckDashboardRepository.save(any()) } just runs
+    every { outboxPort.enqueue(any()) } just runs
 
     val result = adapter.handle(event)
 
@@ -279,7 +314,44 @@ class PlaylistCheckServiceTests {
   }
 
   @Test
-  fun `getCheckDashboard returns dashboard with user display name, checks and metadata`() {
+  fun `getCheckDashboard returns read model summary enriched with live display names and metadata`() {
+    val check = buildCheck(succeeded = true)
+    val summary = PlaylistCheckDashboardSummary(
+      displayName = "John Doe",
+      checks = listOf(check),
+      playlistNameById = mapOf(playlistId to "Playlist $playlistId"),
+    )
+    every { playlistCheckDashboardRepository.find() } returns summary
+    every { checkRunners.iterator() } answers { mutableListOf(checkRunner).iterator() }
+    every { checkRunner.checkId } returns checkId
+    every { checkRunner.displayName } returns "Test Check"
+    every { checkRunner.canFix() } returns true
+
+    val dashboard = adapter.getCheckDashboard()
+
+    assertThat(dashboard.displayName).isEqualTo("John Doe")
+    assertThat(dashboard.checks).containsExactly(check)
+    assertThat(dashboard.playlistNameById).containsEntry(playlistId, "Playlist $playlistId")
+    assertThat(dashboard.displayNames).containsEntry(checkId, "Test Check")
+    assertThat(dashboard.fixableCheckIds).containsExactly(checkId)
+    verify(exactly = 0) { userRepository.get() }
+    verify(exactly = 0) { playlistCheckRepository.findAll() }
+  }
+
+  @Test
+  fun `getCheckDashboard returns empty dashboard when read model has not been built yet`() {
+    every { playlistCheckDashboardRepository.find() } returns null
+    every { checkRunners.iterator() } answers { mutableListOf<PlaylistCheckRunner>().iterator() }
+
+    val dashboard = adapter.getCheckDashboard()
+
+    assertThat(dashboard.displayName).isEqualTo("")
+    assertThat(dashboard.checks).isEmpty()
+    assertThat(dashboard.playlistNameById).isEmpty()
+  }
+
+  @Test
+  fun `rebuildCheckDashboard persists display name, playlist names and checks from underlying repositories`() {
     val user = User(
       spotifyUserId = userId,
       displayName = "John Doe",
@@ -293,34 +365,63 @@ class PlaylistCheckServiceTests {
     every { userRepository.get() } returns user
     every { playlistRepository.findAll() } returns listOf(playlistInfo)
     every { playlistCheckRepository.findAll() } returns listOf(check)
-    every { checkRunners.iterator() } answers { mutableListOf(checkRunner).iterator() }
-    every { checkRunner.checkId } returns checkId
-    every { checkRunner.displayName } returns "Test Check"
-    every { checkRunner.canFix() } returns true
+    every { playlistCheckDashboardRepository.save(any()) } just runs
+    every { outboxPort.enqueue(any()) } just runs
 
-    val dashboard = adapter.getCheckDashboard()
+    adapter.rebuildCheckDashboard()
 
-    assertThat(dashboard.displayName).isEqualTo("John Doe")
-    assertThat(dashboard.checks).containsExactly(check)
-    assertThat(dashboard.playlistNameById).containsEntry(playlistId, "Playlist $playlistId")
-    assertThat(dashboard.displayNames).containsEntry(checkId, "Test Check")
-    assertThat(dashboard.fixableCheckIds).containsExactly(checkId)
+    verify(exactly = 1) {
+      playlistCheckDashboardRepository.save(
+        PlaylistCheckDashboardSummary(
+          displayName = "John Doe",
+          checks = listOf(check),
+          playlistNameById = mapOf(playlistId to "Playlist $playlistId"),
+        ),
+      )
+    }
   }
 
   @Test
-  fun `getCheckDashboard falls back to empty display name but still returns checks when no user exists`() {
+  fun `rebuildCheckDashboard falls back to empty display name when no user exists`() {
     val check = buildCheck(succeeded = true)
     val playlistInfo = buildPlaylistInfo()
     every { userRepository.get() } returns null
     every { playlistRepository.findAll() } returns listOf(playlistInfo)
     every { playlistCheckRepository.findAll() } returns listOf(check)
-    every { checkRunners.iterator() } answers { mutableListOf<PlaylistCheckRunner>().iterator() }
+    every { playlistCheckDashboardRepository.save(any()) } just runs
+    every { outboxPort.enqueue(any()) } just runs
 
-    val dashboard = adapter.getCheckDashboard()
+    adapter.rebuildCheckDashboard()
 
-    assertThat(dashboard.displayName).isEqualTo("")
-    assertThat(dashboard.checks).containsExactly(check)
-    assertThat(dashboard.playlistNameById).containsEntry(playlistId, "Playlist $playlistId")
+    verify(exactly = 1) {
+      playlistCheckDashboardRepository.save(
+        match { it.displayName == "" && it.checks == listOf(check) },
+      )
+    }
+  }
+
+  @Test
+  fun `handle RebuildPlaylistChecksDashboard skips when no user exists`() {
+    every { currentUserResolver.userId() } returns null
+
+    val result = adapter.handle(DomainOutboxEvent.RebuildPlaylistChecksDashboard())
+
+    assertThat(result.isRight()).isTrue()
+    verify(exactly = 0) { playlistCheckDashboardRepository.save(any()) }
+  }
+
+  @Test
+  fun `handle RebuildPlaylistChecksDashboard rebuilds the dashboard for the current user`() {
+    every { currentUserResolver.userId() } returns userId
+    every { userRepository.get() } returns null
+    every { playlistRepository.findAll() } returns emptyList()
+    every { playlistCheckRepository.findAll() } returns emptyList()
+    every { playlistCheckDashboardRepository.save(any()) } just runs
+
+    val result = adapter.handle(DomainOutboxEvent.RebuildPlaylistChecksDashboard())
+
+    assertThat(result.isRight()).isTrue()
+    verify(exactly = 1) { playlistCheckDashboardRepository.save(any()) }
   }
 
   @Test
@@ -510,6 +611,10 @@ class PlaylistCheckServiceTests {
     every { playlistCheckRepository.findByCheckId(fullCheckId) } returns null
     every { playlistCheckRepository.save(any()) } just runs
     every { dashboardRefresh.notifyUserPlaylistChecks() } just runs
+    every { userRepository.get() } returns null
+    every { playlistCheckRepository.findAll() } returns emptyList()
+    every { playlistCheckDashboardRepository.save(any()) } just runs
+    every { outboxPort.enqueue(any()) } just runs
 
     val result = adapter.handle(DomainOutboxEvent.RunPlaylistChecks(playlistId, checkId))
 

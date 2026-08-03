@@ -359,6 +359,53 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
     }
   }
 
+  /**
+   * Rebuilds the precomputed Playlist Checks Tab dashboard read model (see ADR-0014). Deduplicated so that
+   * a "run all checks" burst enqueuing one [RunPlaylistChecks] per playlist collapses into a single rebuild,
+   * instead of one full rebuild per playlist.
+   */
+  data class RebuildPlaylistChecksDashboard(val placeholder: String = "") : DomainOutboxEvent {
+    override val key = KEY
+    override val deduplicationKey = KEY
+    override val partition = DomainOutboxPartition.Domain
+    override val serializePayload = ""
+
+    companion object {
+      const val KEY = "RebuildPlaylistChecksDashboard"
+    }
+  }
+
+  /**
+   * Rebuilds the precomputed Playlist Settings Tab read model (see ADR-0014). Deduplicated so
+   * that multiple triggers in quick succession (e.g. several playlist syncs) collapse into one rebuild.
+   */
+  data class RebuildPlaylistSettingsView(val placeholder: String = "") : DomainOutboxEvent {
+    override val key = KEY
+    override val deduplicationKey = KEY
+    override val partition = DomainOutboxPartition.Domain
+    override val serializePayload = ""
+
+    companion object {
+      const val KEY = "RebuildPlaylistSettingsView"
+    }
+  }
+
+  /**
+   * Rebuilds the precomputed Dashboard read model (see ADR-0014). Deduplicated so that bursts of
+   * triggers from its several source services (playlist sync, playlist checks, playback aggregation,
+   * playback append, catalog sync) collapse into one rebuild.
+   */
+  data class RebuildDashboardReadModel(val placeholder: String = "") : DomainOutboxEvent {
+    override val key = KEY
+    override val deduplicationKey = KEY
+    override val partition = DomainOutboxPartition.Domain
+    override val serializePayload = ""
+
+    companion object {
+      const val KEY = "RebuildDashboardReadModel"
+    }
+  }
+
   companion object {
     val allKeys: List<String> = listOf(
       FetchPlaybackData.KEY,
@@ -378,6 +425,9 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
       FixPlaylistCheck.KEY,
       AggregatePlaybackData.KEY,
       RebuildAllAggregations.KEY,
+      RebuildPlaylistChecksDashboard.KEY,
+      RebuildPlaylistSettingsView.KEY,
+      RebuildDashboardReadModel.KEY,
     )
 
     @Suppress("CyclomaticComplexMethod")
@@ -399,6 +449,9 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
       FixPlaylistCheck.KEY -> FixPlaylistCheck.fromPayload(payload)
       AggregatePlaybackData.KEY -> AggregatePlaybackData.fromPayload(payload)
       RebuildAllAggregations.KEY -> RebuildAllAggregations()
+      RebuildPlaylistChecksDashboard.KEY -> RebuildPlaylistChecksDashboard()
+      RebuildPlaylistSettingsView.KEY -> RebuildPlaylistSettingsView()
+      RebuildDashboardReadModel.KEY -> RebuildDashboardReadModel()
       else -> throw IllegalArgumentException("Unknown outbox event type: $key")
     }
   }

@@ -135,6 +135,10 @@ class PlaybackAggregationRepositoryAdapter(
     id = this@toEntryDocument.id
     name = this@toEntryDocument.name
     totalSeconds = this@toEntryDocument.totalSeconds
+    imageLink = this@toEntryDocument.imageLink
+    artistName = this@toEntryDocument.artistName
+    albumName = this@toEntryDocument.albumName
+    trackDurationMs = this@toEntryDocument.trackDurationMs
   }
 
   private fun ActivityEntry.toActivityDocument(): PlaybackAggregationActivityEntryDocument = PlaybackAggregationActivityEntryDocument().apply {
@@ -169,6 +173,10 @@ class PlaybackAggregationRepositoryAdapter(
     id = id,
     name = name,
     totalSeconds = totalSeconds,
+    imageLink = imageLink,
+    artistName = artistName,
+    albumName = albumName,
+    trackDurationMs = trackDurationMs,
   )
 
   private fun PlaybackAggregationActivityEntryDocument.toDomain(): ActivityEntry = ActivityEntry(

@@ -2,12 +2,14 @@ package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
 import de.chrgroth.spotify.control.domain.error.PlaylistFixError
 import de.chrgroth.spotify.control.domain.model.playlist.AppPlaylistCheck
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistCheckDashboard
 import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistCheckPort
 import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
 import io.quarkus.qute.Location
 import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
 import io.quarkus.security.Authenticated
+import io.quarkus.security.identity.SecurityIdentity
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.ws.rs.Consumes
 import jakarta.ws.rs.GET
@@ -28,6 +30,7 @@ import kotlin.time.toJavaInstant
 class PlaylistChecksResource(
   @param:Location("playlist-checks.html")
   private val playlistChecksTemplate: Template,
+  private val securityIdentity: SecurityIdentity,
   private val playlistCheckPort: PlaylistCheckPort,
   private val httpResponseMetrics: ResponseTimingPort,
 ) {
@@ -37,23 +40,9 @@ class PlaylistChecksResource(
   @Produces(MediaType.TEXT_HTML)
   fun playlistChecks(): TemplateInstance = httpResponseMetrics.timed("page.playlist.checks") {
     val dashboard = playlistCheckPort.getCheckDashboard()
-    val groups = dashboard.checks
-      .map { check ->
-        PlaylistCheckRow(
-          check = check,
-          playlistName = dashboard.playlistNameById[check.playlistId.value] ?: check.playlistId.value,
-          hasfix = dashboard.fixableCheckIds.contains(check.checkId.substringAfterLast(":")),
-        )
-      }
-      .groupBy { it.check.checkId.substringAfterLast(":") }
-      .map { (checkType, rows) ->
-        val name = dashboard.displayNames[checkType] ?: checkType
-        PlaylistCheckGroup(name, checkType, rows.sortedBy { it.playlistName })
-      }
-      .sortedBy { it.checkName }
     playlistChecksTemplate
-      .data("displayName", dashboard.displayName)
-      .data("groups", groups)
+      .data("displayName", dashboard.displayName.ifEmpty { securityIdentity.principal.name })
+      .data("groups", buildCheckGroups(dashboard))
   }
 
   @POST
@@ -112,5 +101,23 @@ class PlaylistChecksResource(
     companion object {
       private val DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm", Locale.GERMAN)
     }
+  }
+
+  companion object {
+    fun buildCheckGroups(dashboard: PlaylistCheckDashboard): List<PlaylistCheckGroup> =
+      dashboard.checks
+        .map { check ->
+          PlaylistCheckRow(
+            check = check,
+            playlistName = dashboard.playlistNameById[check.playlistId.value] ?: check.playlistId.value,
+            hasfix = dashboard.fixableCheckIds.contains(check.checkId.substringAfterLast(":")),
+          )
+        }
+        .groupBy { it.check.checkId.substringAfterLast(":") }
+        .map { (checkType, rows) ->
+          val name = dashboard.displayNames[checkType] ?: checkType
+          PlaylistCheckGroup(name, checkType, rows.sortedBy { it.playlistName })
+        }
+        .sortedBy { it.checkName }
   }
 }

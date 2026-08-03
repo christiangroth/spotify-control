@@ -10,6 +10,7 @@ import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxPartition
 import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogPort
+import de.chrgroth.spotify.control.domain.port.`in`.infra.DashboardPort
 import de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackAggregationPort
 import de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackPort
 import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistCheckPort
@@ -29,6 +30,7 @@ class DomainOutboxTaskDispatcher(
   private val playlist: PlaylistPort,
   private val playlistCheck: PlaylistCheckPort,
   private val userProfile: UserProfilePort,
+  private val dashboard: DashboardPort,
 ) : ApplicationOutboxDispatcher {
 
   override fun getAllPartitions(): List<ApplicationOutboxPartition> = DomainOutboxPartition.all
@@ -59,6 +61,9 @@ class DomainOutboxTaskDispatcher(
         is DomainOutboxEvent.WipeCatalog -> catalog.handle(event)
         is DomainOutboxEvent.RunPlaylistChecks -> playlistCheck.handle(event)
         is DomainOutboxEvent.FixPlaylistCheck -> playlistCheck.handle(event)
+        is DomainOutboxEvent.RebuildPlaylistChecksDashboard -> playlistCheck.handle(event)
+        is DomainOutboxEvent.RebuildPlaylistSettingsView -> playlist.handle(event)
+        is DomainOutboxEvent.RebuildDashboardReadModel -> dashboard.handle(event)
       }
     }
 

@@ -49,6 +49,40 @@ class PlaybackAggregationRepositoryTests {
   }
 
   @Test
+  fun `save persists and findByPeriod returns enriched rank entry fields`() {
+    val periodStart = LocalDate(2024, 1, 10)
+    aggregationRepository.save(
+      aggregation(AggregationPeriodType.DAY, periodStart).copy(
+        trackEntries = listOf(
+          AggregationRankEntry(
+            id = "track-1",
+            name = "Track One",
+            totalSeconds = 60L,
+            imageLink = "https://example.org/album-1.jpg",
+            artistName = "Artist One",
+            albumName = "Album One",
+            trackDurationMs = 210_000L,
+          ),
+        ),
+      ),
+    )
+
+    val result = aggregationRepository.findByPeriod(AggregationPeriodType.DAY, periodStart)
+
+    assertThat(result?.trackEntries).containsExactly(
+      AggregationRankEntry(
+        id = "track-1",
+        name = "Track One",
+        totalSeconds = 60L,
+        imageLink = "https://example.org/album-1.jpg",
+        artistName = "Artist One",
+        albumName = "Album One",
+        trackDurationMs = 210_000L,
+      ),
+    )
+  }
+
+  @Test
   fun `findByPeriod returns null when no aggregation exists`() {
     val result = aggregationRepository.findByPeriod(AggregationPeriodType.DAY, LocalDate(2024, 1, 1))
     assertThat(result).isNull()

@@ -2,6 +2,8 @@ package de.chrgroth.spotify.control.domain.port.`in`.playback
 
 import arrow.core.Either
 import de.chrgroth.spotify.control.domain.error.DomainError
+import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationPeriodType
+import de.chrgroth.spotify.control.domain.model.playback.aggregation.PlaybackAggregation
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import kotlinx.datetime.LocalDate
 
@@ -13,6 +15,7 @@ interface PlaybackAggregationPort {
   fun enqueueAggregateYear(yearStart: LocalDate)
   fun rebuildAllAggregations()
   fun enqueueRebuildAllAggregations()
+  fun findByPeriods(periods: List<Pair<AggregationPeriodType, LocalDate>>, topEntriesLimit: Int): Map<Pair<AggregationPeriodType, LocalDate>, PlaybackAggregation>
   fun handle(event: DomainOutboxEvent.AggregatePlaybackData): Either<DomainError, Unit>
   fun handle(event: DomainOutboxEvent.RebuildAllAggregations): Either<DomainError, Unit>
 }

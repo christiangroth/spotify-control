@@ -2,6 +2,7 @@ package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
 import de.chrgroth.spotify.control.domain.model.user.User
 import de.chrgroth.spotify.control.domain.model.user.UserId
+import de.chrgroth.spotify.control.domain.port.`in`.infra.DashboardPort
 import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
 import io.quarkus.test.junit.QuarkusTest
 import io.quarkus.test.security.TestSecurity
@@ -20,6 +21,9 @@ class DashboardPageTests {
   @Inject
   lateinit var userRepository: UserRepositoryPort
 
+  @Inject
+  lateinit var dashboardPort: DashboardPort
+
   @BeforeEach
   fun seedUser() {
     val now = Clock.System.now()
@@ -33,6 +37,9 @@ class DashboardPageTests {
         lastLoginAt = now,
       ),
     )
+    // populates the precomputed app_dashboard_view read model (ADR-0014) so /dashboard renders the
+    // full 30-day histogram instead of the empty bootstrap state
+    dashboardPort.rebuildDashboardView()
   }
 
   @Test

@@ -1,6 +1,7 @@
 package de.chrgroth.spotify.control.domain.playback
 
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
+import de.chrgroth.spotify.control.domain.model.catalog.AppAlbum
 import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
 import de.chrgroth.spotify.control.domain.model.catalog.AppTrack
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
@@ -12,6 +13,7 @@ import de.chrgroth.spotify.control.domain.model.playback.aggregation.Aggregation
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.PlaybackAggregation
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
+import de.chrgroth.spotify.control.domain.port.out.catalog.AppAlbumRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
@@ -35,6 +37,7 @@ class PlaybackAggregationServiceTests {
   private val appPlaybackRepository: AppPlaybackRepositoryPort = mockk()
   private val appTrackRepository: AppTrackRepositoryPort = mockk()
   private val appArtistRepository: AppArtistRepositoryPort = mockk()
+  private val appAlbumRepository: AppAlbumRepositoryPort = mockk(relaxed = true)
   private val aggregationRepository: PlaybackAggregationRepositoryPort = mockk(relaxed = true)
   private val outboxPort: OutboxPort = mockk(relaxed = true)
   private val meterRegistry = SimpleMeterRegistry()
@@ -45,6 +48,7 @@ class PlaybackAggregationServiceTests {
     appPlaybackRepository = appPlaybackRepository,
     appTrackRepository = appTrackRepository,
     appArtistRepository = appArtistRepository,
+    appAlbumRepository = appAlbumRepository,
     aggregationRepository = aggregationRepository,
     outboxPort = outboxPort,
     meterRegistry = meterRegistry,
@@ -103,6 +107,112 @@ class PlaybackAggregationServiceTests {
       AggregationRankEntry(id = "album-1", name = "Album One", totalSeconds = 300L),
       AggregationRankEntry(id = "fallback:Loose Single", name = "Loose Single", totalSeconds = 60L),
     )
+  }
+
+  @Test
+  fun `aggregate day enriches track, artist and album entries with images and names`() {
+    every { currentUserResolver.userId() } returns userId
+    val savedAggregation = slot<PlaybackAggregation>()
+    every { aggregationRepository.save(capture(savedAggregation)) } returns Unit
+    every { appPlaybackRepository.findAllBetween(any(), any()) } returns listOf(
+      AppPlaybackItem(Instant.fromEpochSeconds(1), "track-1", 120L),
+    )
+    every { appTrackRepository.findByTrackIds(setOf(TrackId("track-1"))) } returns listOf(
+      AppTrack(
+        id = TrackId("track-1"),
+        title = "Track One",
+        albumId = AlbumId("album-1"),
+        albumName = "Album One",
+        artistId = ArtistId("artist-1"),
+        durationMs = 210_000L,
+        lastSync = syncTimestamp,
+      ),
+    )
+    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns listOf(
+      AppArtist(id = ArtistId("artist-1"), artistName = "Artist One", imageLink = "https://example.org/artist-1.jpg", lastSync = syncTimestamp),
+    )
+    every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"))) } returns listOf(
+      AppAlbum(id = AlbumId("album-1"), title = "Album One", imageLink = "https://example.org/album-1.jpg", artistName = "Artist One", lastSync = syncTimestamp),
+    )
+
+    val result = service.handle(DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.DAY, date))
+
+    assertThat(result.isRight()).isTrue()
+    assertThat(savedAggregation.captured.trackEntries).containsExactly(
+      AggregationRankEntry(
+        id = "track-1",
+        name = "Track One",
+        totalSeconds = 120L,
+        imageLink = "https://example.org/album-1.jpg",
+        artistName = "Artist One",
+        albumName = "Album One",
+        trackDurationMs = 210_000L,
+      ),
+    )
+    assertThat(savedAggregation.captured.artistEntries).containsExactly(
+      AggregationRankEntry(id = "artist-1", name = "Artist One", totalSeconds = 120L, imageLink = "https://example.org/artist-1.jpg"),
+    )
+    assertThat(savedAggregation.captured.albumEntries).containsExactly(
+      AggregationRankEntry(
+        id = "album-1",
+        name = "Album One",
+        totalSeconds = 120L,
+        imageLink = "https://example.org/album-1.jpg",
+        artistName = "Artist One",
+      ),
+    )
+  }
+
+  @Test
+  fun `aggregate week merge carries forward enrichment fields from the first daily entry`() {
+    every { currentUserResolver.userId() } returns userId
+    val weekStart = LocalDate(2024, 1, 15)
+    val savedAggregation = slot<PlaybackAggregation>()
+    every { aggregationRepository.save(capture(savedAggregation)) } returns Unit
+    every {
+      aggregationRepository.findByTypeAndPeriodRange(AggregationPeriodType.DAY, weekStart, LocalDate(2024, 1, 21))
+    } returns listOf(
+      dayAggregation(
+        weekStart,
+        trackEntries = listOf(
+          AggregationRankEntry(
+            id = "track-1",
+            name = "Track One",
+            totalSeconds = 120L,
+            imageLink = "https://example.org/album-1.jpg",
+            artistName = "Artist One",
+            albumName = "Album One",
+            trackDurationMs = 210_000L,
+          ),
+        ),
+      ),
+    )
+
+    val result = service.handle(DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.WEEK, weekStart))
+
+    assertThat(result.isRight()).isTrue()
+    assertThat(savedAggregation.captured.trackEntries).containsExactly(
+      AggregationRankEntry(
+        id = "track-1",
+        name = "Track One",
+        totalSeconds = 120L,
+        imageLink = "https://example.org/album-1.jpg",
+        artistName = "Artist One",
+        albumName = "Album One",
+        trackDurationMs = 210_000L,
+      ),
+    )
+  }
+
+  @Test
+  fun `findByPeriods delegates to aggregation repository`() {
+    val periods = listOf(AggregationPeriodType.DAY to date)
+    every { aggregationRepository.findByPeriods(periods, 5) } returns emptyMap()
+
+    val result = service.findByPeriods(periods, 5)
+
+    assertThat(result).isEmpty()
+    verify(exactly = 1) { aggregationRepository.findByPeriods(periods, 5) }
   }
 
   @Test

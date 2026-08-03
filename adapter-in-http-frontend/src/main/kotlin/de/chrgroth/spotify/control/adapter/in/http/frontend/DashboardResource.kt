@@ -1,6 +1,5 @@
 package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
-import de.chrgroth.spotify.control.domain.model.DashboardStats
 import de.chrgroth.spotify.control.domain.port.`in`.infra.DashboardPort
 import de.chrgroth.spotify.control.domain.port.`in`.user.UserProfilePort
 import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
@@ -32,7 +31,7 @@ class DashboardResource(
   @Produces(MediaType.TEXT_HTML)
   fun dashboard(): TemplateInstance = httpResponseMetrics.timed("page.dashboard.view") { details ->
     val displayName = details.detail("dashboard.view.display-name") { userProfile.getDisplayName() ?: securityIdentity.principal.name }
-    val stats = details.detail("dashboard.view.stats") { dashboard.getStats() }
+    val stats = dashboard.getStats()
     dashboardTemplate
       .data("displayName", displayName)
       .data("stats", stats)
