@@ -1,3 +1,12 @@
+# 0.123.3 (2026.08.03)
+
+## Bugfixes / Chore
+* The playback statistics page now loads faster, since only the top entries per period are fetched instead of the full lists.
+
+
+
+---
+
 # 0.123.2 (2026.08.03)
 
 ## Bugfixes / Chore
