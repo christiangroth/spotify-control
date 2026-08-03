@@ -539,18 +539,20 @@ The outbox archive is disabled (`outbox.archive.enabled=false`); completed and f
 
 Some UI pages read a single precomputed MongoDB document instead of composing several on-demand
 queries per request (see [ADR-0014](../adr/0014-precomputed-read-models-per-ui-page.md)). Where a
-read model has a single, already-event-driven source (e.g. the Playlist Checks Tab), the rebuild is
-invoked directly wherever that service already handles the relevant event — no new event type is
-introduced. Where a read model is fed by several unrelated services (Playlist Settings Tab,
-Dashboard), a dedicated, deduplicated `domain` outbox event (e.g. `RebuildPlaylistSettingsView`,
-`RebuildDashboardReadModel`) is enqueued from each source instead, so bursts of triggers collapse
-into one rebuild without adding a cross-domain port dependency between those services. First-time
-backfill for an existing deployment uses the regular `Starter` mechanism, calling the same rebuild
-method the event-triggered path uses.
+read model has a single, already-event-driven source and that event is not itself fanned out per
+item, the rebuild is invoked directly wherever that service already handles the relevant event — no
+new event type is introduced. Where a read model is fed by several unrelated services (Playlist
+Settings Tab, Dashboard) — or by a single service whose triggering event fans out per item (Playlist
+Checks Tab: `RunPlaylistChecks` is deduplicated per playlist, so "run all checks" enqueues one per
+playlist) — a dedicated, deduplicated `domain` outbox event (e.g. `RebuildPlaylistSettingsView`,
+`RebuildDashboardReadModel`, `RebuildPlaylistChecksDashboard`) is enqueued from each source instead,
+so bursts of triggers collapse into one rebuild without adding a cross-domain port dependency
+between those services. First-time backfill for an existing deployment uses the regular `Starter`
+mechanism, calling the same rebuild method the event-triggered path uses.
 
 | Page                 | Read Model Port                          | Rebuilt on                                                                                                             |
 |----------------------|-------------------------------------------|--------------------------------------------------------------------------------------------------------------------|
-| Playlist Checks Tab  | `PlaylistCheckDashboardRepositoryPort`    | `RunPlaylistChecks` handling                                                                                          |
+| Playlist Checks Tab  | `PlaylistCheckDashboardRepositoryPort`    | `RebuildPlaylistChecksDashboard` (enqueued from `RunPlaylistChecks` handling, deduplicated across a "run all checks" burst) |
 | Playlist Settings Tab| `PlaylistSettingsViewRepositoryPort`      | `RebuildPlaylistSettingsView` (enqueued from playlist sync/status/type changes and catalog artist confirm/discovery) |
 | Dashboard            | `DashboardViewRepositoryPort`             | `RebuildDashboardReadModel` (enqueued from playlist sync, playlist checks, daily playback aggregation, playback append, catalog sync) |
 | Stats View           | `PlaybackAggregationPort.findByPeriods`   | daily/weekly/monthly/quarterly/yearly `AggregatePlaybackData` handling (enriches `app_playback_aggregation` in place, see ADR-0014) |

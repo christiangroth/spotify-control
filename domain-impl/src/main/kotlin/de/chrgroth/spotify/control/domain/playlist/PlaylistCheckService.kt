@@ -80,8 +80,14 @@ class PlaylistCheckService(
     val status = if (totalViolations == 0) "all passed" else "$totalViolations violation(s)"
     logger.info { "Ran playlist checks for playlist ${event.playlistId}: $status" }
     dashboardRefresh.notifyUserPlaylistChecks()
-    rebuildCheckDashboard()
+    outboxPort.enqueue(DomainOutboxEvent.RebuildPlaylistChecksDashboard())
     outboxPort.enqueue(DomainOutboxEvent.RebuildDashboardReadModel())
+    return Unit.right()
+  }
+
+  override fun handle(event: DomainOutboxEvent.RebuildPlaylistChecksDashboard): Either<DomainError, Unit> {
+    currentUserResolver.userId() ?: return Unit.right()
+    rebuildCheckDashboard()
     return Unit.right()
   }
 

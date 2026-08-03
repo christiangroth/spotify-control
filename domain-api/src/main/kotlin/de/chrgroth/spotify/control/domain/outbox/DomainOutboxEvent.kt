@@ -360,6 +360,22 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
   }
 
   /**
+   * Rebuilds the precomputed Playlist Checks Tab dashboard read model (see ADR-0014). Deduplicated so that
+   * a "run all checks" burst enqueuing one [RunPlaylistChecks] per playlist collapses into a single rebuild,
+   * instead of one full rebuild per playlist.
+   */
+  data class RebuildPlaylistChecksDashboard(val placeholder: String = "") : DomainOutboxEvent {
+    override val key = KEY
+    override val deduplicationKey = KEY
+    override val partition = DomainOutboxPartition.Domain
+    override val serializePayload = ""
+
+    companion object {
+      const val KEY = "RebuildPlaylistChecksDashboard"
+    }
+  }
+
+  /**
    * Rebuilds the precomputed Playlist Settings Tab read model (see ADR-0014). Deduplicated so
    * that multiple triggers in quick succession (e.g. several playlist syncs) collapse into one rebuild.
    */
@@ -409,6 +425,7 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
       FixPlaylistCheck.KEY,
       AggregatePlaybackData.KEY,
       RebuildAllAggregations.KEY,
+      RebuildPlaylistChecksDashboard.KEY,
       RebuildPlaylistSettingsView.KEY,
       RebuildDashboardReadModel.KEY,
     )
@@ -432,6 +449,7 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
       FixPlaylistCheck.KEY -> FixPlaylistCheck.fromPayload(payload)
       AggregatePlaybackData.KEY -> AggregatePlaybackData.fromPayload(payload)
       RebuildAllAggregations.KEY -> RebuildAllAggregations()
+      RebuildPlaylistChecksDashboard.KEY -> RebuildPlaylistChecksDashboard()
       RebuildPlaylistSettingsView.KEY -> RebuildPlaylistSettingsView()
       RebuildDashboardReadModel.KEY -> RebuildDashboardReadModel()
       else -> throw IllegalArgumentException("Unknown outbox event type: $key")

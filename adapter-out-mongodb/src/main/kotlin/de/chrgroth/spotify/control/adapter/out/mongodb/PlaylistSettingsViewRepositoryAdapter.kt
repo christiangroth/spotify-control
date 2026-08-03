@@ -1,5 +1,6 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
+import de.chrgroth.spotify.control.adapter.out.mongodb.MongoQueryMetrics.Companion.SINGLETON_ID
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSettingsEntry
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSettingsView
@@ -17,16 +18,11 @@ class PlaylistSettingsViewRepositoryAdapter(
 ) : PlaylistSettingsViewRepositoryPort {
 
   override fun save(view: PlaylistSettingsView) {
-    val document = view.toDocument()
-    mongoQueryMetrics.timed("app_playlist_settings_view.save") {
-      playlistSettingsViewDocumentRepository.persistOrUpdate(document)
-    }
+    mongoQueryMetrics.saveSingleton(playlistSettingsViewDocumentRepository, "app_playlist_settings_view", view.toDocument())
   }
 
   override fun find(): PlaylistSettingsView? =
-    mongoQueryMetrics.timed("app_playlist_settings_view.find") {
-      playlistSettingsViewDocumentRepository.findById(SINGLETON_ID)?.toDomain()
-    }
+    mongoQueryMetrics.findSingleton(playlistSettingsViewDocumentRepository, "app_playlist_settings_view")?.toDomain()
 
   private fun PlaylistSettingsViewDocument.toDomain() = PlaylistSettingsView(
     entries = entries.map { entry ->
@@ -63,9 +59,5 @@ class PlaylistSettingsViewRepositoryAdapter(
         numberOfMissingArtists = entry.numberOfMissingArtists
       }
     }
-  }
-
-  companion object {
-    const val SINGLETON_ID = "singleton"
   }
 }

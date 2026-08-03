@@ -1,5 +1,6 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
+import de.chrgroth.spotify.control.adapter.out.mongodb.MongoQueryMetrics.Companion.SINGLETON_ID
 import de.chrgroth.spotify.control.domain.model.playlist.AppPlaylistCheck
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistCheckDashboardSummary
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistCheckViolation
@@ -16,16 +17,11 @@ class PlaylistCheckDashboardRepositoryAdapter(
 ) : PlaylistCheckDashboardRepositoryPort {
 
   override fun save(summary: PlaylistCheckDashboardSummary) {
-    val document = summary.toDocument()
-    mongoQueryMetrics.timed("app_playlist_check_dashboard.save") {
-      playlistCheckDashboardDocumentRepository.persistOrUpdate(document)
-    }
+    mongoQueryMetrics.saveSingleton(playlistCheckDashboardDocumentRepository, "app_playlist_check_dashboard", summary.toDocument())
   }
 
   override fun find(): PlaylistCheckDashboardSummary? =
-    mongoQueryMetrics.timed("app_playlist_check_dashboard.find") {
-      playlistCheckDashboardDocumentRepository.findById(SINGLETON_ID)?.toDomain()
-    }
+    mongoQueryMetrics.findSingleton(playlistCheckDashboardDocumentRepository, "app_playlist_check_dashboard")?.toDomain()
 
   private fun PlaylistCheckDashboardDocument.toDomain() = PlaylistCheckDashboardSummary(
     displayName = displayName,
@@ -59,9 +55,5 @@ class PlaylistCheckDashboardRepositoryAdapter(
         }
       }
     }
-  }
-
-  companion object {
-    const val SINGLETON_ID = "singleton"
   }
 }

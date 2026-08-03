@@ -1,5 +1,6 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
+import de.chrgroth.spotify.control.adapter.out.mongodb.MongoQueryMetrics.Companion.SINGLETON_ID
 import de.chrgroth.spotify.control.domain.model.DashboardStats
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
@@ -23,16 +24,11 @@ class DashboardViewRepositoryAdapter(
 ) : DashboardViewRepositoryPort {
 
   override fun save(stats: DashboardStats) {
-    val document = stats.toDocument()
-    mongoQueryMetrics.timed("app_dashboard_view.save") {
-      dashboardViewDocumentRepository.persistOrUpdate(document)
-    }
+    mongoQueryMetrics.saveSingleton(dashboardViewDocumentRepository, "app_dashboard_view", stats.toDocument())
   }
 
   override fun find(): DashboardStats? =
-    mongoQueryMetrics.timed("app_dashboard_view.find") {
-      dashboardViewDocumentRepository.findById(SINGLETON_ID)?.toDomain()
-    }
+    mongoQueryMetrics.findSingleton(dashboardViewDocumentRepository, "app_dashboard_view")?.toDomain()
 
   private fun DashboardViewDocument.toDomain() = DashboardStats(
     syncedPlaylists = syncedPlaylists,
@@ -145,9 +141,5 @@ class DashboardViewRepositoryAdapter(
     artistName = this@toDocument.artistName
     albumName = this@toDocument.albumName
     trackDurationMs = this@toDocument.trackDurationMs
-  }
-
-  companion object {
-    const val SINGLETON_ID = "singleton"
   }
 }

@@ -176,7 +176,9 @@ class PlaylistCheckServiceTests {
     verify(exactly = 1) { playlistCheckRepository.save(any()) }
     verify(exactly = 0) { notification.notifyCheckPassed(any(), any()) }
     verify(exactly = 0) { notification.notifyViolationsChanged(any(), any(), any()) }
+    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.RebuildPlaylistChecksDashboard()) }
     verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.RebuildDashboardReadModel()) }
+    verify(exactly = 0) { playlistCheckDashboardRepository.save(any()) }
   }
 
   @Test
@@ -396,6 +398,30 @@ class PlaylistCheckServiceTests {
         match { it.displayName == "" && it.checks == listOf(check) },
       )
     }
+  }
+
+  @Test
+  fun `handle RebuildPlaylistChecksDashboard skips when no user exists`() {
+    every { currentUserResolver.userId() } returns null
+
+    val result = adapter.handle(DomainOutboxEvent.RebuildPlaylistChecksDashboard())
+
+    assertThat(result.isRight()).isTrue()
+    verify(exactly = 0) { playlistCheckDashboardRepository.save(any()) }
+  }
+
+  @Test
+  fun `handle RebuildPlaylistChecksDashboard rebuilds the dashboard for the current user`() {
+    every { currentUserResolver.userId() } returns userId
+    every { userRepository.get() } returns null
+    every { playlistRepository.findAll() } returns emptyList()
+    every { playlistCheckRepository.findAll() } returns emptyList()
+    every { playlistCheckDashboardRepository.save(any()) } just runs
+
+    val result = adapter.handle(DomainOutboxEvent.RebuildPlaylistChecksDashboard())
+
+    assertThat(result.isRight()).isTrue()
+    verify(exactly = 1) { playlistCheckDashboardRepository.save(any()) }
   }
 
   @Test

@@ -9,6 +9,7 @@ import io.quarkus.qute.Location
 import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
 import io.quarkus.security.Authenticated
+import io.quarkus.security.identity.SecurityIdentity
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.ws.rs.Consumes
 import jakarta.ws.rs.GET
@@ -29,6 +30,7 @@ import kotlin.time.toJavaInstant
 class PlaylistChecksResource(
   @param:Location("playlist-checks.html")
   private val playlistChecksTemplate: Template,
+  private val securityIdentity: SecurityIdentity,
   private val playlistCheckPort: PlaylistCheckPort,
   private val httpResponseMetrics: ResponseTimingPort,
 ) {
@@ -39,7 +41,7 @@ class PlaylistChecksResource(
   fun playlistChecks(): TemplateInstance = httpResponseMetrics.timed("page.playlist.checks") {
     val dashboard = playlistCheckPort.getCheckDashboard()
     playlistChecksTemplate
-      .data("displayName", dashboard.displayName)
+      .data("displayName", dashboard.displayName.ifEmpty { securityIdentity.principal.name })
       .data("groups", buildCheckGroups(dashboard))
   }
 

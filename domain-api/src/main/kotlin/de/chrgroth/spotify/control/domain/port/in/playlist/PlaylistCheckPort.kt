@@ -8,6 +8,7 @@ import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 interface PlaylistCheckPort {
   fun handle(event: DomainOutboxEvent.RunPlaylistChecks): Either<DomainError, Unit>
   fun handle(event: DomainOutboxEvent.FixPlaylistCheck): Either<DomainError, Unit>
+  fun handle(event: DomainOutboxEvent.RebuildPlaylistChecksDashboard): Either<DomainError, Unit>
   fun getCheckDashboard(): PlaylistCheckDashboard
   fun rebuildCheckDashboard()
   fun getDisplayNames(): Map<String, String>

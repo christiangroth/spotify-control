@@ -61,6 +61,7 @@ class DomainOutboxTaskDispatcher(
         is DomainOutboxEvent.WipeCatalog -> catalog.handle(event)
         is DomainOutboxEvent.RunPlaylistChecks -> playlistCheck.handle(event)
         is DomainOutboxEvent.FixPlaylistCheck -> playlistCheck.handle(event)
+        is DomainOutboxEvent.RebuildPlaylistChecksDashboard -> playlistCheck.handle(event)
         is DomainOutboxEvent.RebuildPlaylistSettingsView -> playlist.handle(event)
         is DomainOutboxEvent.RebuildDashboardReadModel -> dashboard.handle(event)
       }

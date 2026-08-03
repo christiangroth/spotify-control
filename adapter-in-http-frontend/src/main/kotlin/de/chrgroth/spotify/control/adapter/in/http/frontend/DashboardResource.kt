@@ -1,6 +1,5 @@
 package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
-import de.chrgroth.spotify.control.domain.model.DashboardStats
 import de.chrgroth.spotify.control.domain.port.`in`.infra.DashboardPort
 import de.chrgroth.spotify.control.domain.port.`in`.user.UserProfilePort
 import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
