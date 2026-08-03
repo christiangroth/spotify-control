@@ -105,37 +105,6 @@ class PlaylistServiceTests {
     ownerId = ownerId,
   )
 
-  // --- getArtistStats tests ---
-
-  @Test
-  fun `getArtistStats returns empty map when no user exists`() {
-    every { currentUserResolver.userId() } returns null
-
-    val result = adapter.getArtistStats()
-
-    assertThat(result).isEmpty()
-    verify(exactly = 0) { playlistRepository.findDistinctArtistIds() }
-  }
-
-  @Test
-  fun `getArtistStats computes total and missing counts per playlist`() {
-    every { currentUserResolver.userId() } returns userId
-    every { playlistRepository.findDistinctArtistIds() } returns mapOf(
-      "p1" to setOf(ArtistId("artist-1"), ArtistId("artist-2")),
-      "p2" to setOf(ArtistId("artist-2"), ArtistId("artist-3")),
-    )
-    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"), ArtistId("artist-2"), ArtistId("artist-3"))) } returns listOf(
-      AppArtist(id = ArtistId("artist-1"), artistName = "Artist 1", lastSync = now),
-    )
-
-    val result = adapter.getArtistStats()
-
-    assertThat(result["p1"]!!.total).isEqualTo(2)
-    assertThat(result["p1"]!!.missingFromCatalog).isEqualTo(1)
-    assertThat(result["p2"]!!.total).isEqualTo(2)
-    assertThat(result["p2"]!!.missingFromCatalog).isEqualTo(2)
-  }
-
   // --- getMissingArtists tests ---
 
   private fun buildPlaylistWithArtists(playlistId: String, vararg artistIds: String) = Playlist(
@@ -979,21 +948,27 @@ class PlaylistServiceTests {
   @Test
   fun `rebuildPlaylistSettingsView composes playlists, track counts and artist stats into one view`() {
     every { currentUserResolver.userId() } returns userId
-    every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1"))
-    every { playlistRepository.findTrackCounts() } returns mapOf("p1" to 10)
-    every { playlistRepository.findDistinctArtistIds() } returns mapOf("p1" to setOf(ArtistId("artist-1")))
-    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns emptyList()
+    every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1"), buildPlaylistInfo("p2"))
+    every { playlistRepository.findTrackCounts() } returns mapOf("p1" to 10, "p2" to 20)
+    every { playlistRepository.findDistinctArtistIds() } returns mapOf(
+      "p1" to setOf(ArtistId("artist-1"), ArtistId("artist-2")),
+      "p2" to setOf(ArtistId("artist-2"), ArtistId("artist-3")),
+    )
+    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"), ArtistId("artist-2"), ArtistId("artist-3"))) } returns listOf(
+      AppArtist(id = ArtistId("artist-1"), artistName = "Artist 1", lastSync = now),
+    )
     val savedSlot = slot<PlaylistSettingsView>()
     every { playlistSettingsViewRepository.save(capture(savedSlot)) } just runs
 
     adapter.rebuildPlaylistSettingsView()
 
-    assertThat(savedSlot.captured.entries).hasSize(1)
-    val entry = savedSlot.captured.entries[0]
-    assertThat(entry.playlist.spotifyPlaylistId).isEqualTo("p1")
-    assertThat(entry.numberOfTracks).isEqualTo(10)
-    assertThat(entry.numberOfArtists).isEqualTo(1)
-    assertThat(entry.numberOfMissingArtists).isEqualTo(1)
+    val entries = savedSlot.captured.entries.associateBy { it.playlist.spotifyPlaylistId }
+    assertThat(entries["p1"]!!.numberOfTracks).isEqualTo(10)
+    assertThat(entries["p1"]!!.numberOfArtists).isEqualTo(2)
+    assertThat(entries["p1"]!!.numberOfMissingArtists).isEqualTo(1)
+    assertThat(entries["p2"]!!.numberOfTracks).isEqualTo(20)
+    assertThat(entries["p2"]!!.numberOfArtists).isEqualTo(2)
+    assertThat(entries["p2"]!!.numberOfMissingArtists).isEqualTo(2)
   }
 
   @Test

@@ -75,12 +75,12 @@ class PlaylistService(
     return playlistRepository.findAll()
   }
 
-  override fun getTrackCounts(): Map<String, Int> {
+  private fun getTrackCounts(): Map<String, Int> {
     currentUserResolver.userId() ?: return emptyMap()
     return playlistRepository.findTrackCounts()
   }
 
-  override fun getArtistStats(): Map<String, ArtistStats> {
+  private fun getArtistStats(): Map<String, ArtistStats> {
     currentUserResolver.userId() ?: return emptyMap()
     val artistIdsByPlaylist = playlistRepository.findDistinctArtistIds()
     val allArtistIds = artistIdsByPlaylist.values.flatten().toSet()

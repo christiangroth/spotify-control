@@ -2,6 +2,7 @@ package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
 import de.chrgroth.spotify.control.domain.error.PlaylistFixError
 import de.chrgroth.spotify.control.domain.model.playlist.AppPlaylistCheck
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistCheckDashboard
 import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistCheckPort
 import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
 import io.quarkus.qute.Location
@@ -37,23 +38,9 @@ class PlaylistChecksResource(
   @Produces(MediaType.TEXT_HTML)
   fun playlistChecks(): TemplateInstance = httpResponseMetrics.timed("page.playlist.checks") {
     val dashboard = playlistCheckPort.getCheckDashboard()
-    val groups = dashboard.checks
-      .map { check ->
-        PlaylistCheckRow(
-          check = check,
-          playlistName = dashboard.playlistNameById[check.playlistId.value] ?: check.playlistId.value,
-          hasfix = dashboard.fixableCheckIds.contains(check.checkId.substringAfterLast(":")),
-        )
-      }
-      .groupBy { it.check.checkId.substringAfterLast(":") }
-      .map { (checkType, rows) ->
-        val name = dashboard.displayNames[checkType] ?: checkType
-        PlaylistCheckGroup(name, checkType, rows.sortedBy { it.playlistName })
-      }
-      .sortedBy { it.checkName }
     playlistChecksTemplate
       .data("displayName", dashboard.displayName)
-      .data("groups", groups)
+      .data("groups", buildCheckGroups(dashboard))
   }
 
   @POST
@@ -112,5 +99,23 @@ class PlaylistChecksResource(
     companion object {
       private val DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm", Locale.GERMAN)
     }
+  }
+
+  companion object {
+    fun buildCheckGroups(dashboard: PlaylistCheckDashboard): List<PlaylistCheckGroup> =
+      dashboard.checks
+        .map { check ->
+          PlaylistCheckRow(
+            check = check,
+            playlistName = dashboard.playlistNameById[check.playlistId.value] ?: check.playlistId.value,
+            hasfix = dashboard.fixableCheckIds.contains(check.checkId.substringAfterLast(":")),
+          )
+        }
+        .groupBy { it.check.checkId.substringAfterLast(":") }
+        .map { (checkType, rows) ->
+          val name = dashboard.displayNames[checkType] ?: checkType
+          PlaylistCheckGroup(name, checkType, rows.sortedBy { it.playlistName })
+        }
+        .sortedBy { it.checkName }
   }
 }

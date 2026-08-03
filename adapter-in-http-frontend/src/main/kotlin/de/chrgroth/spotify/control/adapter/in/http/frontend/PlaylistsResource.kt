@@ -73,22 +73,8 @@ class PlaylistsResource(
   @Produces(MediaType.TEXT_HTML)
   fun checks(): TemplateInstance = httpResponseMetrics.timed("page.playlist.checks-tab") {
     val dashboard = playlistCheckPort.getCheckDashboard()
-    val groups = dashboard.checks
-      .map { check ->
-        PlaylistChecksResource.PlaylistCheckRow(
-          check = check,
-          playlistName = dashboard.playlistNameById[check.playlistId.value] ?: check.playlistId.value,
-          hasfix = dashboard.fixableCheckIds.contains(check.checkId.substringAfterLast(":")),
-        )
-      }
-      .groupBy { it.check.checkId.substringAfterLast(":") }
-      .map { (checkType, rows) ->
-        val name = dashboard.displayNames[checkType] ?: checkType
-        PlaylistChecksResource.PlaylistCheckGroup(name, checkType, rows.sortedBy { it.playlistName })
-      }
-      .sortedBy { it.checkName }
     playlistChecksTemplate
       .data("displayName", dashboard.displayName.ifEmpty { securityIdentity.principal.name })
-      .data("groups", groups)
+      .data("groups", PlaylistChecksResource.buildCheckGroups(dashboard))
   }
 }

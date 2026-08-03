@@ -36,7 +36,7 @@ class PlaybackResource(
   @Produces(MediaType.TEXT_HTML)
   fun playback(@QueryParam("date") dateParam: String?): TemplateInstance = httpResponseMetrics.timed("page.playback.view") { details ->
     val displayName = details.detail("playback.view.display-name") { userProfile.getDisplayName() ?: securityIdentity.principal.name }
-    val stats = details.detail("playback.view.stats") { dashboard.getPlaybackStats() }
+    val stats = dashboard.getStats()
     val today = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
     val requestedDate = dateParam?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
     val eventsDate = requestedDate?.let { if (it > today) today else it }
