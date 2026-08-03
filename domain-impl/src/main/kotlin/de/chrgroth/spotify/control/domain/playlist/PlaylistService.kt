@@ -95,7 +95,7 @@ class PlaylistService(
     // Only the main (first) artist per track is checked against the catalog, matching syncPlaylistData()'s
     // catalog sync which only ever adds a track's primary artist - featured/additional artists are never added
     // and would otherwise always be reported as missing.
-    val artistIds = playlist.tracks.mapNotNull { it.artistIds.firstOrNull() }.toSet()
+    val artistIds = playlist.tracks.map { it.mainArtistId }.toSet()
     val existingArtistIds = appArtistRepository.findByArtistIds(artistIds).map { it.id }.toSet()
     val missingArtistIds = artistIds.filterNot { it in existingArtistIds }
     if (missingArtistIds.isEmpty()) return emptyList()
@@ -172,7 +172,7 @@ class PlaylistService(
       }
 
       val catalogRequests = page.tracks.map {
-        CatalogSyncRequest(it.trackId.value, listOfNotNull(it.artistIds.firstOrNull()?.value), SyncCause.Playlist(playlistId, it.trackId.value))
+        CatalogSyncRequest(it.trackId.value, listOf(it.mainArtistId.value), SyncCause.Playlist(playlistId, it.trackId.value))
       }
       syncController.syncForTracks(catalogRequests)
       catalogPort.promoteAssumptionArtistsFoundOnPlaylist(catalogRequests.flatMap { it.artistIds }.toSet())

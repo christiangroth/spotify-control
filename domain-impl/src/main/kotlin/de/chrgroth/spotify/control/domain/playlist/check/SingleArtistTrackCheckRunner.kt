@@ -33,15 +33,13 @@ class SingleArtistTrackCheckRunner(
     } else {
       emptyMap()
     }
-    val tracksByArtistId = playlist.tracks
-      .filter { it.artistIds.isNotEmpty() }
-      .groupBy { it.artistIds.first() }
+    val tracksByArtistId = playlist.tracks.groupBy { it.mainArtistId }
     val violations = tracksByArtistId
       .filterValues { it.size > 1 }
-      .flatMap { (_, tracks) ->
+      .flatMap { (artistId, tracks) ->
         tracks.map { track ->
           val appTrack = appTrackById[track.trackId.value]
-          val artistName = appTrack?.artistName ?: track.artistIds.first().value
+          val artistName = appTrack?.artistName ?: artistId.value
           PlaylistCheckViolation(id = track.trackId.value, message = "$artistName – ${appTrack?.title ?: track.trackId.value}")
         }
       }

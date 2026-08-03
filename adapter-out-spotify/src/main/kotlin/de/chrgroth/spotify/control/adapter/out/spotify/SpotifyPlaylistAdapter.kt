@@ -165,6 +165,10 @@ class SpotifyPlaylistAdapter(
           ArtistId(artist.id)
         }
       }
+      if (artistIds.isEmpty()) {
+        logger.warn { "Track ${track.id} has no artists, skipping track" }
+        return@mapNotNull null
+      }
       PlaylistTrack(
         trackId = TrackId(track.id),
         artistIds = artistIds,

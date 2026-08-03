@@ -16,4 +16,5 @@ class PlaylistTrackSubdocument {
   lateinit var trackId: String
   lateinit var artistIds: List<String>
   var albumId: String? = null
+  var mainArtistId: String? = null
 }

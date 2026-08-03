@@ -182,18 +182,24 @@ class PlaylistDataRepositoryTests {
   @Test
   fun `findDistinctArtistIds includes playlists with no artists instead of omitting them`() {
     val playlistIdNoTracks = "playlist-${UUID.randomUUID()}"
+    // PlaylistTrack always requires an artist, so a track without a mainArtistId can only occur for legacy
+    // documents predating that invariant - simulated here via a raw insert rather than the domain model.
     val playlistIdEmptyArtistIds = "playlist-${UUID.randomUUID()}"
     playlistRepository.save(Playlist(spotifyPlaylistId = playlistIdNoTracks, tracks = emptyList()))
-    playlistRepository.save(
-      Playlist(
-        spotifyPlaylistId = playlistIdEmptyArtistIds,
-        tracks = listOf(PlaylistTrack(trackId = TrackId("t1"), artistIds = emptyList(), albumId = AlbumId("al1"))),
-      ),
+    val rawCollection = playlistDocumentRepository.mongoCollection().withDocumentClass(Document::class.java)
+    rawCollection.insertOne(
+      Document("_id", playlistIdEmptyArtistIds)
+        .append("spotifyPlaylistId", playlistIdEmptyArtistIds)
+        .append("tracks", listOf(Document("trackId", "t1").append("artistIds", emptyList<String>()).append("albumId", "al1"))),
     )
 
-    val result = playlistRepository.findDistinctArtistIds()
+    try {
+      val result = playlistRepository.findDistinctArtistIds()
 
-    assertThat(result).containsEntry(playlistIdNoTracks, emptySet())
-    assertThat(result).containsEntry(playlistIdEmptyArtistIds, emptySet())
+      assertThat(result).containsEntry(playlistIdNoTracks, emptySet())
+      assertThat(result).containsEntry(playlistIdEmptyArtistIds, emptySet())
+    } finally {
+      rawCollection.deleteOne(Filters.eq("_id", playlistIdEmptyArtistIds))
+    }
   }
 }

@@ -73,10 +73,12 @@ class PlaylistRepositoryAdapter(
     // Only the main (first) artist of each track is considered: PlaylistService.syncPlaylistData() only ever
     // syncs a track's primary artist into the app catalog, so featured/additional artists would always show up
     // as "missing from catalog" if they were included here.
-    // Extracts the main artist id per track with a single $project/$map, one output document per playlist -
-    // no $unwind/$group shuffle across the whole collection is needed, since each playlist is already its own
-    // document. Deduping the per-track ids happens client-side via toSet(), which is a cheap O(n) hash pass and
-    // far faster in practice than making MongoDB unwind and regroup every track in every playlist.
+    // mainArtistId is denormalized onto each track subdocument at write time (see PlaylistTrack.mainArtistId /
+    // appendTracks()/toSubdocument()), so this only has to project that stored field per track with a single
+    // $project/$map, one output document per playlist - no $unwind/$group shuffle across the whole collection,
+    // and no per-track $arrayElemAt computation. Deduping the per-track ids happens client-side via toSet(),
+    // which is a cheap O(n) hash pass and far faster in practice than making MongoDB unwind and regroup every
+    // track in every playlist.
     val pipeline = listOf(
       Aggregates.project(
         Projections.fields(
@@ -87,7 +89,7 @@ class PlaylistRepositoryAdapter(
               "\$map",
               Document("input", Document("\$ifNull", listOf("\$tracks", emptyList<Document>())))
                 .append("as", "track")
-                .append("in", Document("\$arrayElemAt", listOf(Document("\$ifNull", listOf("\$\$track.artistIds", emptyList<String>())), 0))),
+                .append("in", "\$\$track.mainArtistId"),
             ),
           ),
         ),
@@ -116,6 +118,7 @@ class PlaylistRepositoryAdapter(
         Document("trackId", track.trackId.value)
           .append("artistIds", track.artistIds.map { it.value })
           .append("albumId", track.albumId?.value)
+          .append("mainArtistId", track.mainArtistId.value)
       }
       val result = playlistDocumentRepository.mongoCollection().updateOne(
         Filters.eq("_id", playlistId),
@@ -162,11 +165,17 @@ class PlaylistRepositoryAdapter(
     tracks = tracks.map { it.toDomain() },
   )
 
-  private fun PlaylistTrackSubdocument.toDomain() = PlaylistTrack(
-    trackId = TrackId(trackId),
-    artistIds = artistIds.map { ArtistId(it) },
-    albumId = albumId?.let { AlbumId(it) },
-  )
+  private fun PlaylistTrackSubdocument.toDomain(): PlaylistTrack {
+    val trackArtistIds = artistIds.map { ArtistId(it) }
+    return PlaylistTrack(
+      trackId = TrackId(trackId),
+      artistIds = trackArtistIds,
+      albumId = albumId?.let { AlbumId(it) },
+      // mainArtistId may still be unset on documents persisted before it was backfilled (see
+      // BackfillPlaylistMainArtistIdStarter); fall back to computing it from artistIds for those.
+      mainArtistId = mainArtistId?.let { ArtistId(it) } ?: trackArtistIds.first(),
+    )
+  }
 
   private fun Playlist.toDocument() = PlaylistDocument().apply {
     id = this@toDocument.spotifyPlaylistId
@@ -178,6 +187,7 @@ class PlaylistRepositoryAdapter(
     trackId = this@toSubdocument.trackId.value
     artistIds = this@toSubdocument.artistIds.map { it.value }
     albumId = this@toSubdocument.albumId?.value
+    mainArtistId = this@toSubdocument.mainArtistId.value
   }
 
   override fun setAllSyncInactive() {

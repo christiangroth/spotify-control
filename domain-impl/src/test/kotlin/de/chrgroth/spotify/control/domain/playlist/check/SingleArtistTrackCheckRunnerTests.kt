@@ -169,18 +169,6 @@ class SingleArtistTrackCheckRunnerTests {
   }
 
   @Test
-  fun `run skips tracks with no artistIds`() {
-    val t1 = buildPlaylistTrack("t1")
-    val t2 = buildPlaylistTrack("t2")
-    every { appTrackRepository.findByTrackIds(setOf(TrackId("t1"), TrackId("t2"))) } returns emptyList()
-
-    val result = runner.run(playlistId, buildPlaylist(t1, t2), null, emptyList())
-
-    assertThat(result.succeeded).isTrue()
-    assertThat(result.violations.map { it.message }).isEmpty()
-  }
-
-  @Test
   fun `canFix returns false`() {
     assertThat(runner.canFix()).isFalse()
   }
