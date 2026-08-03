@@ -8,7 +8,8 @@ import de.chrgroth.spotify.control.domain.model.playback.DayCount
 import de.chrgroth.spotify.control.domain.model.catalog.AppTrack
 import de.chrgroth.spotify.control.domain.model.catalog.displayArtistName
 import de.chrgroth.spotify.control.domain.model.playback.ListeningStats
-import de.chrgroth.spotify.control.domain.model.playback.aggregation.DailyPlaybackSummary
+import de.chrgroth.spotify.control.domain.model.playback.aggregation.DailyEventCount
+import de.chrgroth.spotify.control.domain.model.playback.aggregation.RollingPlaybackSummary
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistCheckStats
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.playback.RecentlyPlayedItem
@@ -55,16 +56,16 @@ class DashboardService(
 
   override fun getStats(): DashboardStats {
     currentUserResolver.userId() ?: return DashboardStats.EMPTY
-    val dailyAggsFuture = managedExecutor.supplyAsync { fetchDailyAggregations() }
+    val dailyEventCountsFuture = managedExecutor.supplyAsync { fetchDailyEventCounts() }
+    val rollingSummaryFuture = managedExecutor.supplyAsync { aggregationRepository.findRollingSummary() }
     val totalPlaybackEventsFuture = managedExecutor.supplyAsync { aggregationRepository.sumEventCount() }
     val playlistMetadataFuture = managedExecutor.supplyAsync { computePlaylistMetadata() }
     val playlistCheckStatsFuture = managedExecutor.supplyAsync { computePlaylistCheckStats() }
     val recentlyPlayedFuture = managedExecutor.supplyAsync { buildRecentlyPlayedTracks() }
     val catalogStatsFuture = managedExecutor.supplyAsync { catalogBrowser.getCatalogStats() }
 
-    val dailyAggs = dailyAggsFuture.join()
-    val listeningStatsFuture = managedExecutor.supplyAsync { buildListeningStats(dailyAggs) }
-    val playbackStats = buildPlaybackStats(dailyAggs, totalPlaybackEventsFuture.join())
+    val listeningStatsFuture = managedExecutor.supplyAsync { buildListeningStats(rollingSummaryFuture.join()) }
+    val playbackStats = buildPlaybackStats(dailyEventCountsFuture.join(), totalPlaybackEventsFuture.join())
     val playlistMetadata = playlistMetadataFuture.join()
     return DashboardStats(
       syncedPlaylists = playlistMetadata.syncedPlaylists,
@@ -81,7 +82,7 @@ class DashboardService(
 
   override fun getPlaybackStats(): DashboardStats {
     currentUserResolver.userId() ?: return DashboardStats.EMPTY
-    return buildPlaybackStats(fetchDailyAggregations(), aggregationRepository.sumEventCount())
+    return buildPlaybackStats(fetchDailyEventCounts(), aggregationRepository.sumEventCount())
   }
 
   override fun getPlaylistMetadata(): DashboardStats {
@@ -96,7 +97,7 @@ class DashboardService(
 
   override fun getListeningStats(): DashboardStats {
     currentUserResolver.userId() ?: return DashboardStats.EMPTY
-    return DashboardStats.EMPTY.copy(listeningStats = buildListeningStats(fetchDailyAggregations()))
+    return DashboardStats.EMPTY.copy(listeningStats = buildListeningStats(aggregationRepository.findRollingSummary()))
   }
 
   override fun getPlaylistCheckStats(): DashboardStats =
@@ -110,16 +111,16 @@ class DashboardService(
     return (today - DatePeriod(days = STATS_DAYS - 1)) to today
   }
 
-  private fun fetchDailyAggregations(): List<DailyPlaybackSummary> {
+  private fun fetchDailyEventCounts(): List<DailyEventCount> {
     val (from, to) = statsDateRange()
-    return aggregationRepository.findDailySummaryByPeriodRange(from, to)
+    return aggregationRepository.findDailyEventCountsByPeriodRange(from, to)
   }
 
-  private fun buildPlaybackStats(dailyAggs: List<DailyPlaybackSummary>, total: Long): DashboardStats {
+  private fun buildPlaybackStats(dailyEventCounts: List<DailyEventCount>, total: Long): DashboardStats {
     val (_, today) = statsDateRange()
-    val last30Days = dailyAggs.sumOf { it.eventCount }
+    val last30Days = dailyEventCounts.sumOf { it.eventCount }
 
-    val countByDate = dailyAggs.associate { it.periodStart to it.eventCount }
+    val countByDate = dailyEventCounts.associate { it.periodStart to it.eventCount }
     val allDays = ((STATS_DAYS - 1) downTo 0).map { today - DatePeriod(days = it) }
     val maxCount = countByDate.values.maxOrNull() ?: 1L
     val perDay = allDays.map { date ->
@@ -208,14 +209,10 @@ class DashboardService(
     }
   }
 
-  private fun buildListeningStats(dailyAggs: List<DailyPlaybackSummary>): ListeningStats {
-    val secondsByTrackId = dailyAggs.flatMap { it.trackEntries }
-      .groupBy { it.id }
-      .mapValues { (_, entries) -> entries.sumOf { it.totalSeconds } }
-    val secondsByArtistId = dailyAggs.flatMap { it.artistEntries }
-      .groupBy { it.id }
-      .mapValues { (_, entries) -> entries.sumOf { it.totalSeconds } }
-    val listenedMinutes = dailyAggs.sumOf { it.totalPlaybackSeconds } / SECONDS_PER_MINUTE
+  private fun buildListeningStats(rollingSummary: RollingPlaybackSummary?): ListeningStats {
+    val secondsByTrackId = rollingSummary?.trackEntries?.associate { it.id to it.totalSeconds } ?: emptyMap()
+    val secondsByArtistId = rollingSummary?.artistEntries?.associate { it.id to it.totalSeconds } ?: emptyMap()
+    val listenedMinutes = (rollingSummary?.totalPlaybackSeconds ?: 0L) / SECONDS_PER_MINUTE
 
     // resolving the album for every track played in the period is unavoidable (needed for per-album totals below),
     // but full track details (title, artists, duration, ...) are only ever displayed for the top-N tracks.

@@ -10,6 +10,7 @@ import de.chrgroth.spotify.control.domain.model.playback.AppPlaybackItem
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationPeriodType
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationRankEntry
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.PlaybackAggregation
+import de.chrgroth.spotify.control.domain.model.playback.aggregation.RollingPlaybackSummary
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
@@ -228,12 +229,12 @@ class PlaybackAggregationServiceTests {
   }
 
   @Test
-  fun `aggregate week persists only top entries but keeps full distinct counts`() {
+  fun `aggregate week persists all track entries uncapped while keeping full distinct counts`() {
     every { currentUserResolver.userId() } returns userId
     val weekStart = LocalDate(2024, 1, 15)
     val savedAggregation = slot<PlaybackAggregation>()
     every { aggregationRepository.save(capture(savedAggregation)) } returns Unit
-    val manyTrackEntries = (1..STORED_ENTRIES_LIMIT_PLUS_MARGIN).map { AggregationRankEntry(id = "track-$it", name = "Track $it", totalSeconds = it.toLong()) }
+    val manyTrackEntries = (1..MANY_TRACK_ENTRIES_COUNT).map { AggregationRankEntry(id = "track-$it", name = "Track $it", totalSeconds = it.toLong()) }
     every {
       aggregationRepository.findByTypeAndPeriodRange(AggregationPeriodType.DAY, weekStart, LocalDate(2024, 1, 21))
     } returns listOf(dayAggregation(weekStart, trackEntries = manyTrackEntries))
@@ -241,11 +242,32 @@ class PlaybackAggregationServiceTests {
     val result = service.handle(DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.WEEK, weekStart))
 
     assertThat(result.isRight()).isTrue()
-    assertThat(savedAggregation.captured.distinctTrackCount).isEqualTo(STORED_ENTRIES_LIMIT_PLUS_MARGIN)
-    assertThat(savedAggregation.captured.trackEntries).hasSize(STORED_ENTRIES_LIMIT)
+    assertThat(savedAggregation.captured.distinctTrackCount).isEqualTo(MANY_TRACK_ENTRIES_COUNT)
+    assertThat(savedAggregation.captured.trackEntries).hasSize(MANY_TRACK_ENTRIES_COUNT)
     assertThat(savedAggregation.captured.trackEntries.map { it.id }).containsExactly(
-      *manyTrackEntries.sortedByDescending { it.totalSeconds }.take(STORED_ENTRIES_LIMIT).map { it.id }.toTypedArray(),
+      *manyTrackEntries.sortedByDescending { it.totalSeconds }.map { it.id }.toTypedArray(),
     )
+  }
+
+  @Test
+  fun `handle AggregatePlaybackData for DAY updates the rolling 30-day summary from the last 30 daily aggregations`() {
+    every { currentUserResolver.userId() } returns userId
+    every { appPlaybackRepository.findAllBetween(any(), any()) } returns emptyList()
+    val windowStart = LocalDate(2023, 12, 17)
+    every {
+      aggregationRepository.findByTypeAndPeriodRange(AggregationPeriodType.DAY, windowStart, date)
+    } returns listOf(
+      dayAggregation(windowStart, trackEntries = listOf(AggregationRankEntry("track-1", "Track One", 120L))),
+      dayAggregation(date, trackEntries = listOf(AggregationRankEntry("track-1", "Track One", 60L))),
+    )
+    val savedSummary = slot<RollingPlaybackSummary>()
+    every { aggregationRepository.saveRollingSummary(capture(savedSummary)) } returns Unit
+
+    service.handle(DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.DAY, date))
+
+    assertThat(savedSummary.captured.windowStart).isEqualTo(windowStart)
+    assertThat(savedSummary.captured.totalPlaybackSeconds).isEqualTo(180L)
+    assertThat(savedSummary.captured.trackEntries).containsExactly(AggregationRankEntry("track-1", "Track One", 180L))
   }
 
   @Test
@@ -296,7 +318,6 @@ class PlaybackAggregationServiceTests {
   )
 
   private companion object {
-    private const val STORED_ENTRIES_LIMIT = 25
-    private const val STORED_ENTRIES_LIMIT_PLUS_MARGIN = STORED_ENTRIES_LIMIT + 5
+    private const val MANY_TRACK_ENTRIES_COUNT = 40
   }
 }

@@ -8,8 +8,9 @@ import de.chrgroth.spotify.control.domain.model.playback.aggregation.ActivityEnt
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.ActivityTimeWindow
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationPeriodType
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationRankEntry
-import de.chrgroth.spotify.control.domain.model.playback.aggregation.DailyPlaybackSummary
+import de.chrgroth.spotify.control.domain.model.playback.aggregation.DailyEventCount
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.PlaybackAggregation
+import de.chrgroth.spotify.control.domain.model.playback.aggregation.RollingPlaybackSummary
 import de.chrgroth.spotify.control.domain.port.out.playback.PlaybackAggregationRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 import java.time.DayOfWeek
@@ -46,8 +47,8 @@ class PlaybackAggregationRepositoryAdapter(
     if (periods.isEmpty()) return emptyMap()
     val keyByDocumentId = periods.associateBy { documentId(it.first, it.second) }
     // Callers (StatsResource) only ever render the top N rank entries per period, so the ranked lists - stored
-    // sorted descending by totalSeconds, up to STORED_ENTRIES_LIMIT entries each - are sliced server-side instead
-    // of transferring/deserializing the full stored lists for every requested period.
+    // sorted descending by totalSeconds, uncapped - are sliced server-side instead of transferring/deserializing
+    // the full stored lists for every requested period.
     val projection = Projections.fields(
       Projections.include(
         TYPE_FIELD,
@@ -87,8 +88,8 @@ class PlaybackAggregationRepositoryAdapter(
         .map { it.toDomain() }
     }
 
-  override fun findDailySummaryByPeriodRange(from: LocalDate, to: LocalDate): List<DailyPlaybackSummary> =
-    mongoQueryMetrics.timed("app_playback_aggregation.findDailySummaryByPeriodRange") {
+  override fun findDailyEventCountsByPeriodRange(from: LocalDate, to: LocalDate): List<DailyEventCount> =
+    mongoQueryMetrics.timed("app_playback_aggregation.findDailyEventCountsByPeriodRange") {
       repository.mongoCollection()
         .find(
           Filters.and(
@@ -97,9 +98,37 @@ class PlaybackAggregationRepositoryAdapter(
             Filters.lte(PERIOD_START_FIELD, to.toString()),
           ),
         )
-        .projection(Projections.include(PERIOD_START_FIELD, EVENT_COUNT_FIELD, TOTAL_PLAYBACK_SECONDS_FIELD, ARTIST_ENTRIES_FIELD, TRACK_ENTRIES_FIELD))
+        .projection(Projections.include(PERIOD_START_FIELD, EVENT_COUNT_FIELD))
         .toList()
-        .map { it.toSummary() }
+        .map { DailyEventCount(periodStart = LocalDate.parse(it.periodStart), eventCount = it.eventCount) }
+    }
+
+  override fun saveRollingSummary(summary: RollingPlaybackSummary) {
+    val doc = PlaybackAggregationDocument().apply {
+      id = ROLLING_SUMMARY_ID
+      type = ROLLING_SUMMARY_TYPE
+      periodStart = summary.windowStart.toString()
+      totalPlaybackSeconds = summary.totalPlaybackSeconds
+      eventCount = summary.eventCount
+      artistEntries = summary.artistEntries.map { it.toEntryDocument() }
+      trackEntries = summary.trackEntries.map { it.toEntryDocument() }
+    }
+    mongoQueryMetrics.timed("app_playback_aggregation.saveRollingSummary") {
+      repository.persistOrUpdate(doc)
+    }
+  }
+
+  override fun findRollingSummary(): RollingPlaybackSummary? =
+    mongoQueryMetrics.timed("app_playback_aggregation.findRollingSummary") {
+      repository.findById(ROLLING_SUMMARY_ID)?.let { doc ->
+        RollingPlaybackSummary(
+          windowStart = LocalDate.parse(doc.periodStart),
+          totalPlaybackSeconds = doc.totalPlaybackSeconds,
+          eventCount = doc.eventCount,
+          artistEntries = doc.artistEntries.map { it.toDomain() },
+          trackEntries = doc.trackEntries.map { it.toDomain() },
+        )
+      }
     }
 
   override fun sumEventCount(): Long {
@@ -157,14 +186,6 @@ class PlaybackAggregationRepositoryAdapter(
     activityEntries = activityEntries.map { it.toDomain() },
   )
 
-  private fun PlaybackAggregationDocument.toSummary(): DailyPlaybackSummary = DailyPlaybackSummary(
-    periodStart = LocalDate.parse(periodStart),
-    totalPlaybackSeconds = totalPlaybackSeconds,
-    eventCount = eventCount,
-    artistEntries = artistEntries.map { it.toDomain() },
-    trackEntries = trackEntries.map { it.toDomain() },
-  )
-
   private fun PlaybackAggregationEntryDocument.toDomain(): AggregationRankEntry = AggregationRankEntry(
     id = id,
     name = name,
@@ -189,6 +210,12 @@ class PlaybackAggregationRepositoryAdapter(
     internal const val DISTINCT_ARTIST_COUNT_FIELD = "distinctArtistCount"
     internal const val DISTINCT_TRACK_COUNT_FIELD = "distinctTrackCount"
     internal const val DISTINCT_ALBUM_COUNT_FIELD = "distinctAlbumCount"
+
+    // The rolling 30-day summary is not tied to a calendar period (its window shifts by one day on every
+    // daily aggregation run), so it is stored under a fixed id instead of the type:periodStart composite key
+    // used for DAY/WEEK/MONTH/QUARTER/YEAR, and deliberately kept outside the AggregationPeriodType enum.
+    internal const val ROLLING_SUMMARY_ID = "rolling_30_days"
+    private const val ROLLING_SUMMARY_TYPE = "ROLLING_30_DAYS"
 
     internal fun documentId(type: AggregationPeriodType, periodStart: LocalDate): String =
       "${type.name}:$periodStart"

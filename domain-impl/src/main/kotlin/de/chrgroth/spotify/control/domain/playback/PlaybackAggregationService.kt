@@ -11,6 +11,7 @@ import de.chrgroth.spotify.control.domain.model.playback.aggregation.ActivityTim
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationPeriodType
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationRankEntry
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.PlaybackAggregation
+import de.chrgroth.spotify.control.domain.model.playback.aggregation.RollingPlaybackSummary
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackAggregationPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
@@ -176,7 +177,10 @@ class PlaybackAggregationService(
   override fun handle(event: DomainOutboxEvent.AggregatePlaybackData): Either<DomainError, Unit> {
     currentUserResolver.userId() ?: return Unit.right()
     when (event.type) {
-      AggregationPeriodType.DAY -> aggregateDay(event.periodStart)
+      AggregationPeriodType.DAY -> {
+        aggregateDay(event.periodStart)
+        updateRollingSummary(event.periodStart)
+      }
       AggregationPeriodType.WEEK -> aggregateFromDailyAggregations(
         AggregationPeriodType.WEEK, event.periodStart, event.periodStart.plusKDays(DAYS_IN_WEEK),
       )
@@ -274,29 +278,16 @@ class PlaybackAggregationService(
       return
     }
 
-    val mergedArtistEntries = dailyAggregations.flatMap { it.artistEntries }
-      .groupBy { it.id }
-      .map { (id, entries) -> AggregationRankEntry(id = id, name = entries.first().name, totalSeconds = entries.sumOf { it.totalSeconds }) }
-      .sortedByDescending { it.totalSeconds }
-
-    val mergedTrackEntries = dailyAggregations.flatMap { it.trackEntries }
-      .groupBy { it.id }
-      .map { (id, entries) -> AggregationRankEntry(id = id, name = entries.first().name, totalSeconds = entries.sumOf { it.totalSeconds }) }
-      .sortedByDescending { it.totalSeconds }
-
-    val mergedAlbumEntries = dailyAggregations.flatMap { it.albumEntries }
-      .groupBy { it.id }
-      .map { (id, entries) -> AggregationRankEntry(id = id, name = entries.first().name, totalSeconds = entries.sumOf { it.totalSeconds }) }
-      .sortedByDescending { it.totalSeconds }
-
+    val mergedArtistEntries = mergeRankEntries(dailyAggregations) { it.artistEntries }
+    val mergedTrackEntries = mergeRankEntries(dailyAggregations) { it.trackEntries }
+    val mergedAlbumEntries = mergeRankEntries(dailyAggregations) { it.albumEntries }
     val mergedActivityEntries = dailyAggregations.flatMap { it.activityEntries }
       .groupBy { it.dayOfWeek to it.timeWindow }
       .map { (key, entries) -> ActivityEntry(dayOfWeek = key.first, timeWindow = key.second, totalSeconds = entries.sumOf { it.totalSeconds }) }
 
-    // WEEK/MONTH/QUARTER/YEAR aggregations are only ever read back as a single document for top-N display
-    // (StatsResource), never merged further, so only the top entries need to be persisted. Without this, merging
-    // a full year of daily entries can produce documents with one rank entry per distinct track/artist/album ever
-    // played in that period, which made a single findByUserAndPeriod lookup of such a document slow.
+    // Rank entries are stored uncapped (findByPeriods slices them server-side for callers like StatsResource
+    // that only ever render the top N), so distinct counts and totals derived from them stay correct for any
+    // future consumer instead of being limited to whatever a fixed persisted top-N happened to cover.
     val aggregation = PlaybackAggregation(
       type = type,
       periodStart = from,
@@ -305,13 +296,38 @@ class PlaybackAggregationService(
       distinctArtistCount = mergedArtistEntries.size,
       distinctTrackCount = mergedTrackEntries.size,
       distinctAlbumCount = mergedAlbumEntries.size,
-      artistEntries = mergedArtistEntries.take(STORED_ENTRIES_LIMIT),
-      albumEntries = mergedAlbumEntries.take(STORED_ENTRIES_LIMIT),
-      trackEntries = mergedTrackEntries.take(STORED_ENTRIES_LIMIT),
+      artistEntries = mergedArtistEntries,
+      albumEntries = mergedAlbumEntries,
+      trackEntries = mergedTrackEntries,
       activityEntries = mergedActivityEntries,
     )
     aggregationRepository.save(aggregation)
   }
+
+  // Recomputed after every daily aggregation run so the dashboard can read a single pre-merged document
+  // instead of merging up to ROLLING_WINDOW_DAYS individual DAY documents on every page view.
+  private fun updateRollingSummary(date: LocalDate) {
+    val from = date.minusKDays(ROLLING_WINDOW_DAYS - 1)
+    val dailyAggregations = aggregationRepository.findByTypeAndPeriodRange(AggregationPeriodType.DAY, from, date)
+    aggregationRepository.saveRollingSummary(
+      RollingPlaybackSummary(
+        windowStart = from,
+        totalPlaybackSeconds = dailyAggregations.sumOf { it.totalPlaybackSeconds },
+        eventCount = dailyAggregations.sumOf { it.eventCount },
+        artistEntries = mergeRankEntries(dailyAggregations) { it.artistEntries },
+        trackEntries = mergeRankEntries(dailyAggregations) { it.trackEntries },
+      ),
+    )
+  }
+
+  private fun mergeRankEntries(
+    dailyAggregations: List<PlaybackAggregation>,
+    entriesOf: (PlaybackAggregation) -> List<AggregationRankEntry>,
+  ): List<AggregationRankEntry> =
+    dailyAggregations.flatMap(entriesOf)
+      .groupBy { it.id }
+      .map { (id, entries) -> AggregationRankEntry(id = id, name = entries.first().name, totalSeconds = entries.sumOf { it.totalSeconds }) }
+      .sortedByDescending { it.totalSeconds }
 
   private fun buildRankings(
     filteredItems: List<de.chrgroth.spotify.control.domain.model.playback.AppPlaybackItem>,
@@ -371,7 +387,7 @@ class PlaybackAggregationService(
     private const val MONTHS_PER_QUARTER = 3L
     private const val MONTHS_PER_YEAR = 12L
     private const val MILLIS_PER_SECOND = 1_000L
-    private const val STORED_ENTRIES_LIMIT = 25
+    private const val ROLLING_WINDOW_DAYS = 30L
   }
 
   private data class Rankings(

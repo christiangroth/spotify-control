@@ -11,7 +11,8 @@ import de.chrgroth.spotify.control.domain.model.catalog.ArtistSyncStatus
 import de.chrgroth.spotify.control.domain.model.catalog.CatalogStats
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationRankEntry
-import de.chrgroth.spotify.control.domain.model.playback.aggregation.DailyPlaybackSummary
+import de.chrgroth.spotify.control.domain.model.playback.aggregation.DailyEventCount
+import de.chrgroth.spotify.control.domain.model.playback.aggregation.RollingPlaybackSummary
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogBrowserPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppAlbumRepositoryPort
@@ -74,17 +75,22 @@ class DashboardServiceTests {
     albumId = AlbumId("album-1"), lastSync = syncTimestamp,
   )
 
-  private fun emptySummary(date: LocalDate = someDate) = DailyPlaybackSummary(
-    periodStart = date,
-    totalPlaybackSeconds = 0L,
+  private fun rollingSummary(
+    totalPlaybackSeconds: Long = 0L,
+    trackEntries: List<AggregationRankEntry> = emptyList(),
+    artistEntries: List<AggregationRankEntry> = emptyList(),
+  ) = RollingPlaybackSummary(
+    windowStart = someDate,
+    totalPlaybackSeconds = totalPlaybackSeconds,
     eventCount = 0L,
-    artistEntries = emptyList(),
-    trackEntries = emptyList(),
+    trackEntries = trackEntries,
+    artistEntries = artistEntries,
   )
 
   private fun setupCommonMocks() {
     every { currentUserResolver.userId() } returns userId
-    every { aggregationRepository.findDailySummaryByPeriodRange(any(), any()) } returns emptyList()
+    every { aggregationRepository.findDailyEventCountsByPeriodRange(any(), any()) } returns emptyList()
+    every { aggregationRepository.findRollingSummary() } returns null
     every { aggregationRepository.sumEventCount() } returns 0L
     every { appPlaybackRepository.findRecentlyPlayed(any()) } returns emptyList()
     every { playlistRepository.findAll() } returns emptyList()
@@ -101,12 +107,12 @@ class DashboardServiceTests {
   fun `listening stats exclude items without tracked duration`() {
     setupCommonMocks()
 
-    val summary = emptySummary().copy(
+    val summary = rollingSummary(
       totalPlaybackSeconds = 180L,
       trackEntries = listOf(AggregationRankEntry(id = "track-1", name = "Track One", totalSeconds = 180L)),
       artistEntries = listOf(AggregationRankEntry(id = "artist-1", name = "Artist One", totalSeconds = 180L)),
     )
-    every { aggregationRepository.findDailySummaryByPeriodRange(any(), any()) } returns listOf(summary)
+    every { aggregationRepository.findRollingSummary() } returns summary
     every { appTrackRepository.findAlbumIdsByTrackIds(setOf(TrackId("track-1"))) } returns mapOf(TrackId("track-1") to AlbumId("album-1"))
     every { appTrackRepository.findByTrackIds(setOf(TrackId("track-1"))) } returns listOf(track1)
     every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns listOf(artist1)
@@ -131,7 +137,7 @@ class DashboardServiceTests {
   }
 
   @Test
-  fun `listening stats aggregate play durations across multiple aggregation days`() {
+  fun `listening stats aggregate play durations across multiple tracks in the rolling summary`() {
     setupCommonMocks()
 
     val track2 = AppTrack(
@@ -139,17 +145,15 @@ class DashboardServiceTests {
       artistId = ArtistId("artist-1"), durationMs = 240_000L,
       lastSync = syncTimestamp,
     )
-    val summary1 = emptySummary(LocalDate(2024, 1, 14)).copy(
-      totalPlaybackSeconds = 120L,
-      trackEntries = listOf(AggregationRankEntry(id = "track-1", name = "Track One", totalSeconds = 120L)),
-      artistEntries = listOf(AggregationRankEntry(id = "artist-1", name = "Artist One", totalSeconds = 120L)),
+    val summary = rollingSummary(
+      totalPlaybackSeconds = 300L,
+      trackEntries = listOf(
+        AggregationRankEntry(id = "track-1", name = "Track One", totalSeconds = 120L),
+        AggregationRankEntry(id = "track-2", name = "Track Two", totalSeconds = 180L),
+      ),
+      artistEntries = listOf(AggregationRankEntry(id = "artist-1", name = "Artist One", totalSeconds = 300L)),
     )
-    val summary2 = emptySummary(LocalDate(2024, 1, 15)).copy(
-      totalPlaybackSeconds = 180L,
-      trackEntries = listOf(AggregationRankEntry(id = "track-2", name = "Track Two", totalSeconds = 180L)),
-      artistEntries = listOf(AggregationRankEntry(id = "artist-1", name = "Artist One", totalSeconds = 180L)),
-    )
-    every { aggregationRepository.findDailySummaryByPeriodRange(any(), any()) } returns listOf(summary1, summary2)
+    every { aggregationRepository.findRollingSummary() } returns summary
     every { appTrackRepository.findAlbumIdsByTrackIds(setOf(TrackId("track-1"), TrackId("track-2"))) } returns
       mapOf(TrackId("track-1") to AlbumId("album-1"), TrackId("track-2") to null)
     every { appTrackRepository.findByTrackIds(setOf(TrackId("track-1"), TrackId("track-2"))) } returns listOf(track1, track2)
@@ -176,7 +180,7 @@ class DashboardServiceTests {
       artistId = ArtistId("artist-1"), durationMs = 120_000L,
       albumId = AlbumId("album-2"), lastSync = syncTimestamp,
     )
-    val summary = emptySummary().copy(
+    val summary = rollingSummary(
       totalPlaybackSeconds = 480L,
       trackEntries = listOf(
         AggregationRankEntry(id = "track-1", name = "Track One", totalSeconds = 300L),
@@ -184,7 +188,7 @@ class DashboardServiceTests {
       ),
       artistEntries = listOf(AggregationRankEntry(id = "artist-1", name = "Artist One", totalSeconds = 480L)),
     )
-    every { aggregationRepository.findDailySummaryByPeriodRange(any(), any()) } returns listOf(summary)
+    every { aggregationRepository.findRollingSummary() } returns summary
     every { appTrackRepository.findAlbumIdsByTrackIds(any()) } returns
       mapOf(TrackId("track-1") to AlbumId("album-1"), TrackId("track-2") to AlbumId("album-2"))
     every { appTrackRepository.findByTrackIds(any()) } returns listOf(track1, track2)
@@ -222,7 +226,7 @@ class DashboardServiceTests {
       artistId = ArtistId("artist-1"), durationMs = 60_000L,
       lastSync = syncTimestamp,
     )
-    val summary = emptySummary().copy(
+    val summary = rollingSummary(
       totalPlaybackSeconds = 600L,
       trackEntries = listOf(
         AggregationRankEntry(id = "track-1", name = "Track One", totalSeconds = 300L),
@@ -231,7 +235,7 @@ class DashboardServiceTests {
         AggregationRankEntry(id = "track-4", name = "Track Four", totalSeconds = 50L),
       ),
     )
-    every { aggregationRepository.findDailySummaryByPeriodRange(any(), any()) } returns listOf(summary)
+    every { aggregationRepository.findRollingSummary() } returns summary
     val allTrackIds = setOf(TrackId("track-1"), TrackId("track-2"), TrackId("track-3"), TrackId("track-4"))
     every { appTrackRepository.findAlbumIdsByTrackIds(allTrackIds) } returns emptyMap()
     val topTrackIds = setOf(TrackId("track-1"), TrackId("track-2"), TrackId("track-3"))
@@ -248,7 +252,8 @@ class DashboardServiceTests {
   @Test
   fun `recently played tracks include duration from secondsPlayed`() {
     every { currentUserResolver.userId() } returns userId
-    every { aggregationRepository.findDailySummaryByPeriodRange(any(), any()) } returns emptyList()
+    every { aggregationRepository.findDailyEventCountsByPeriodRange(any(), any()) } returns emptyList()
+    every { aggregationRepository.findRollingSummary() } returns null
     every { aggregationRepository.sumEventCount() } returns 1L
     every { playlistRepository.findAll() } returns emptyList()
     every { playlistCheckRepository.countAll() } returns 0L
@@ -369,8 +374,7 @@ class DashboardServiceTests {
   @Test
   fun `getPlaybackStats only queries aggregation repository`() {
     every { currentUserResolver.userId() } returns userId
-    val summary = emptySummary().copy(eventCount = 7L)
-    every { aggregationRepository.findDailySummaryByPeriodRange(any(), any()) } returns listOf(summary)
+    every { aggregationRepository.findDailyEventCountsByPeriodRange(any(), any()) } returns listOf(DailyEventCount(periodStart = someDate, eventCount = 7L))
     every { aggregationRepository.sumEventCount() } returns 42L
 
     val stats = adapter.getPlaybackStats()
@@ -378,6 +382,7 @@ class DashboardServiceTests {
     assertThat(stats.totalPlaybackEvents).isEqualTo(42L)
     assertThat(stats.playbackEventsLast30Days).isEqualTo(7L)
     assertThat(stats.playbackEventsPerDay).hasSize(30)
+    verify(exactly = 0) { aggregationRepository.findRollingSummary() }
     verify(exactly = 0) { playlistRepository.findAll() }
     verify(exactly = 0) { playlistCheckRepository.countAll() }
     verify(exactly = 0) { catalogBrowser.getCatalogStats() }
@@ -393,7 +398,8 @@ class DashboardServiceTests {
 
     assertThat(stats.syncedPlaylists).isEqualTo(0L)
     assertThat(stats.totalPlaylists).isEqualTo(0L)
-    verify(exactly = 0) { aggregationRepository.findDailySummaryByPeriodRange(any(), any()) }
+    verify(exactly = 0) { aggregationRepository.findDailyEventCountsByPeriodRange(any(), any()) }
+    verify(exactly = 0) { aggregationRepository.findRollingSummary() }
     verify(exactly = 0) { aggregationRepository.sumEventCount() }
     verify(exactly = 0) { playlistCheckRepository.countAll() }
     verify(exactly = 0) { catalogBrowser.getCatalogStats() }
@@ -410,7 +416,8 @@ class DashboardServiceTests {
     val stats = adapter.getRecentlyPlayed()
 
     assertThat(stats.recentlyPlayedTracks).isEmpty()
-    verify(exactly = 0) { aggregationRepository.findDailySummaryByPeriodRange(any(), any()) }
+    verify(exactly = 0) { aggregationRepository.findDailyEventCountsByPeriodRange(any(), any()) }
+    verify(exactly = 0) { aggregationRepository.findRollingSummary() }
     verify(exactly = 0) { aggregationRepository.sumEventCount() }
     verify(exactly = 0) { playlistRepository.findAll() }
     verify(exactly = 0) { playlistCheckRepository.countAll() }
@@ -420,7 +427,7 @@ class DashboardServiceTests {
   @Test
   fun `getListeningStats only queries aggregation and catalog repositories for stats`() {
     every { currentUserResolver.userId() } returns userId
-    every { aggregationRepository.findDailySummaryByPeriodRange(any(), any()) } returns emptyList()
+    every { aggregationRepository.findRollingSummary() } returns null
     every { appTrackRepository.findByTrackIds(any()) } returns emptyList()
     every { appTrackRepository.findAlbumIdsByTrackIds(any()) } returns emptyMap()
     every { appAlbumRepository.findByAlbumIds(any()) } returns emptyList()
@@ -430,6 +437,7 @@ class DashboardServiceTests {
 
     assertThat(stats.listeningStats.listenedMinutesLast30Days).isEqualTo(0L)
     verify(exactly = 0) { aggregationRepository.sumEventCount() }
+    verify(exactly = 0) { aggregationRepository.findDailyEventCountsByPeriodRange(any(), any()) }
     verify(exactly = 0) { appPlaybackRepository.findRecentlyPlayed(any()) }
     verify(exactly = 0) { playlistRepository.findAll() }
     verify(exactly = 0) { playlistCheckRepository.countAll() }
@@ -446,7 +454,8 @@ class DashboardServiceTests {
     assertThat(stats.playlistCheckStats.totalChecks).isEqualTo(3L)
     assertThat(stats.playlistCheckStats.succeededChecks).isEqualTo(3L)
     assertThat(stats.playlistCheckStats.allSucceeded).isTrue()
-    verify(exactly = 0) { aggregationRepository.findDailySummaryByPeriodRange(any(), any()) }
+    verify(exactly = 0) { aggregationRepository.findDailyEventCountsByPeriodRange(any(), any()) }
+    verify(exactly = 0) { aggregationRepository.findRollingSummary() }
     verify(exactly = 0) { aggregationRepository.sumEventCount() }
     verify(exactly = 0) { playlistRepository.findAll() }
     verify(exactly = 0) { catalogBrowser.getCatalogStats() }
@@ -459,7 +468,8 @@ class DashboardServiceTests {
     val stats = adapter.getStats()
 
     assertThat(stats).isEqualTo(DashboardStats.EMPTY)
-    verify(exactly = 0) { aggregationRepository.findDailySummaryByPeriodRange(any(), any()) }
+    verify(exactly = 0) { aggregationRepository.findDailyEventCountsByPeriodRange(any(), any()) }
+    verify(exactly = 0) { aggregationRepository.findRollingSummary() }
   }
 
   @Test
@@ -471,7 +481,8 @@ class DashboardServiceTests {
     assertThat(stats.catalogStats.artistCount).isEqualTo(10L)
     assertThat(stats.catalogStats.albumCount).isEqualTo(20L)
     assertThat(stats.catalogStats.trackCount).isEqualTo(30L)
-    verify(exactly = 0) { aggregationRepository.findDailySummaryByPeriodRange(any(), any()) }
+    verify(exactly = 0) { aggregationRepository.findDailyEventCountsByPeriodRange(any(), any()) }
+    verify(exactly = 0) { aggregationRepository.findRollingSummary() }
     verify(exactly = 0) { aggregationRepository.sumEventCount() }
     verify(exactly = 0) { playlistRepository.findAll() }
     verify(exactly = 0) { playlistCheckRepository.countAll() }

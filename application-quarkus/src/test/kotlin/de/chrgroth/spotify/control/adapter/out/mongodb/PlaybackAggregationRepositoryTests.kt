@@ -3,6 +3,7 @@ package de.chrgroth.spotify.control.adapter.out.mongodb
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationPeriodType
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationRankEntry
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.PlaybackAggregation
+import de.chrgroth.spotify.control.domain.model.playback.aggregation.RollingPlaybackSummary
 import de.chrgroth.spotify.control.domain.port.out.playback.PlaybackAggregationRepositoryPort
 import io.quarkus.test.junit.QuarkusTest
 import jakarta.inject.Inject
@@ -122,35 +123,78 @@ class PlaybackAggregationRepositoryTests {
   }
 
   @Test
-  fun `findDailySummaryByPeriodRange returns only DAY aggregations within range`() {
+  fun `findDailyEventCountsByPeriodRange returns only DAY aggregations within range`() {
     aggregationRepository.save(aggregation(AggregationPeriodType.DAY, LocalDate(2024, 1, 10)))
     aggregationRepository.save(aggregation(AggregationPeriodType.DAY, LocalDate(2024, 1, 15)))
     aggregationRepository.save(aggregation(AggregationPeriodType.DAY, LocalDate(2024, 2, 1)))
     aggregationRepository.save(aggregation(AggregationPeriodType.WEEK, LocalDate(2024, 1, 15)))
 
-    val result = aggregationRepository.findDailySummaryByPeriodRange(LocalDate(2024, 1, 1), LocalDate(2024, 1, 31))
+    val result = aggregationRepository.findDailyEventCountsByPeriodRange(LocalDate(2024, 1, 1), LocalDate(2024, 1, 31))
 
     assertThat(result.map { it.periodStart }).containsExactlyInAnyOrder(LocalDate(2024, 1, 10), LocalDate(2024, 1, 15))
   }
 
   @Test
-  fun `findDailySummaryByPeriodRange maps event count, playback seconds, track and artist entries`() {
+  fun `findDailyEventCountsByPeriodRange maps event count`() {
     aggregationRepository.save(aggregation(AggregationPeriodType.DAY, LocalDate(2024, 1, 10), eventCount = 5L))
 
-    val result = aggregationRepository.findDailySummaryByPeriodRange(LocalDate(2024, 1, 1), LocalDate(2024, 1, 31))
+    val result = aggregationRepository.findDailyEventCountsByPeriodRange(LocalDate(2024, 1, 1), LocalDate(2024, 1, 31))
 
     assertThat(result).hasSize(1)
-    val summary = result.single()
-    assertThat(summary.eventCount).isEqualTo(5L)
-    assertThat(summary.totalPlaybackSeconds).isEqualTo(5L * SECONDS_PER_EVENT)
-    assertThat(summary.trackEntries).extracting("id").containsExactly("track-1")
-    assertThat(summary.artistEntries).extracting("id").containsExactly("artist-1")
+    assertThat(result.single().eventCount).isEqualTo(5L)
   }
 
   @Test
-  fun `findDailySummaryByPeriodRange returns empty list when nothing matches`() {
-    val result = aggregationRepository.findDailySummaryByPeriodRange(LocalDate(2024, 1, 1), LocalDate(2024, 1, 31))
+  fun `findDailyEventCountsByPeriodRange returns empty list when nothing matches`() {
+    val result = aggregationRepository.findDailyEventCountsByPeriodRange(LocalDate(2024, 1, 1), LocalDate(2024, 1, 31))
     assertThat(result).isEmpty()
+  }
+
+  @Test
+  fun `saveRollingSummary persists summary and findRollingSummary returns it`() {
+    val summary = RollingPlaybackSummary(
+      windowStart = LocalDate(2024, 1, 1),
+      totalPlaybackSeconds = 300L,
+      eventCount = 5L,
+      artistEntries = listOf(AggregationRankEntry(id = "artist-1", name = "Artist One", totalSeconds = 300L)),
+      trackEntries = listOf(AggregationRankEntry(id = "track-1", name = "Track One", totalSeconds = 300L)),
+    )
+
+    aggregationRepository.saveRollingSummary(summary)
+    val result = aggregationRepository.findRollingSummary()
+
+    assertThat(result).isEqualTo(summary)
+  }
+
+  @Test
+  fun `saveRollingSummary overwrites the previous rolling summary instead of creating a new document`() {
+    aggregationRepository.saveRollingSummary(
+      RollingPlaybackSummary(
+        windowStart = LocalDate(2024, 1, 1),
+        totalPlaybackSeconds = 100L,
+        eventCount = 1L,
+        artistEntries = emptyList(),
+        trackEntries = emptyList(),
+      ),
+    )
+    val updated = RollingPlaybackSummary(
+      windowStart = LocalDate(2024, 1, 2),
+      totalPlaybackSeconds = 200L,
+      eventCount = 2L,
+      artistEntries = emptyList(),
+      trackEntries = emptyList(),
+    )
+    aggregationRepository.saveRollingSummary(updated)
+
+    val result = aggregationRepository.findRollingSummary()
+
+    assertThat(result).isEqualTo(updated)
+  }
+
+  @Test
+  fun `findRollingSummary returns null when no rolling summary exists`() {
+    val result = aggregationRepository.findRollingSummary()
+    assertThat(result).isNull()
   }
 
   @Test
