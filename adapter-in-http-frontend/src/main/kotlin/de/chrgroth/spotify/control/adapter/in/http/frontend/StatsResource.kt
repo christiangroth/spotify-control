@@ -53,7 +53,7 @@ class StatsResource(
       if (type == AggregationPeriodType.DAY && requestedDate != null) listOf(requestedDate) else threePeriodStarts(type)
     }
     val requestedPeriods = periodStartsByType.flatMap { (type, periodStarts) -> periodStarts.map { type to it } }
-    val aggregationsByTypeAndPeriod = details.detail("stats.view.aggregations") { aggregationRepository.findByPeriods(requestedPeriods) }
+    val aggregationsByTypeAndPeriod = details.detail("stats.view.aggregations") { aggregationRepository.findByPeriods(requestedPeriods, TOP_ENTRIES_LIMIT) }
     val tabs = AggregationPeriodType.entries.mapIndexed { index, type ->
       val periodStarts = periodStartsByType.getValue(type)
       AggregationTab(

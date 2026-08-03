@@ -42,12 +42,31 @@ class PlaybackAggregationRepositoryAdapter(
     }
   }
 
-  override fun findByPeriods(periods: List<Pair<AggregationPeriodType, LocalDate>>): Map<Pair<AggregationPeriodType, LocalDate>, PlaybackAggregation> {
+  override fun findByPeriods(periods: List<Pair<AggregationPeriodType, LocalDate>>, topEntriesLimit: Int): Map<Pair<AggregationPeriodType, LocalDate>, PlaybackAggregation> {
     if (periods.isEmpty()) return emptyMap()
     val keyByDocumentId = periods.associateBy { documentId(it.first, it.second) }
+    // Callers (StatsResource) only ever render the top N rank entries per period, so the ranked lists - stored
+    // sorted descending by totalSeconds, up to STORED_ENTRIES_LIMIT entries each - are sliced server-side instead
+    // of transferring/deserializing the full stored lists for every requested period.
+    val projection = Projections.fields(
+      Projections.include(
+        TYPE_FIELD,
+        PERIOD_START_FIELD,
+        TOTAL_PLAYBACK_SECONDS_FIELD,
+        EVENT_COUNT_FIELD,
+        DISTINCT_ARTIST_COUNT_FIELD,
+        DISTINCT_TRACK_COUNT_FIELD,
+        DISTINCT_ALBUM_COUNT_FIELD,
+        ACTIVITY_ENTRIES_FIELD,
+      ),
+      Projections.slice(ARTIST_ENTRIES_FIELD, topEntriesLimit),
+      Projections.slice(ALBUM_ENTRIES_FIELD, topEntriesLimit),
+      Projections.slice(TRACK_ENTRIES_FIELD, topEntriesLimit),
+    )
     return mongoQueryMetrics.timed("app_playback_aggregation.findByPeriods") {
       repository.mongoCollection()
         .find(Filters.`in`("_id", keyByDocumentId.keys.toList()))
+        .projection(projection)
         .toList()
         .mapNotNull { doc -> keyByDocumentId[doc.id]?.let { key -> key to doc.toDomain() } }
         .toMap()
@@ -164,7 +183,12 @@ class PlaybackAggregationRepositoryAdapter(
     internal const val EVENT_COUNT_FIELD = "eventCount"
     internal const val TOTAL_PLAYBACK_SECONDS_FIELD = "totalPlaybackSeconds"
     internal const val ARTIST_ENTRIES_FIELD = "artistEntries"
+    internal const val ALBUM_ENTRIES_FIELD = "albumEntries"
     internal const val TRACK_ENTRIES_FIELD = "trackEntries"
+    internal const val ACTIVITY_ENTRIES_FIELD = "activityEntries"
+    internal const val DISTINCT_ARTIST_COUNT_FIELD = "distinctArtistCount"
+    internal const val DISTINCT_TRACK_COUNT_FIELD = "distinctTrackCount"
+    internal const val DISTINCT_ALBUM_COUNT_FIELD = "distinctAlbumCount"
 
     internal fun documentId(type: AggregationPeriodType, periodStart: LocalDate): String =
       "${type.name}:$periodStart"
