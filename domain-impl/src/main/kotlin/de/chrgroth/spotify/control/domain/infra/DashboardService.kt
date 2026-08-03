@@ -218,11 +218,14 @@ class DashboardService(
     val listenedMinutes = dailyAggs.sumOf { it.totalPlaybackSeconds } / SECONDS_PER_MINUTE
 
     // resolving the album for every track played in the period is unavoidable (needed for per-album totals below),
-    // but full track details (title, artists, duration, ...) are only ever displayed for the top-N tracks
+    // but full track details (title, artists, duration, ...) are only ever displayed for the top-N tracks.
+    // The two lookups are independent of each other, so they run concurrently instead of back-to-back.
     val allTrackIds = secondsByTrackId.keys.map { TrackId(it) }.toSet()
-    val albumIdsByTrackId = appTrackRepository.findAlbumIdsByTrackIds(allTrackIds)
     val topTrackIds = secondsByTrackId.entries.sortedByDescending { it.value }.take(topEntriesLimit).map { TrackId(it.key) }.toSet()
-    val statsTrackMap = appTrackRepository.findByTrackIds(topTrackIds).associateBy { it.id.value }
+    val albumIdsByTrackIdFuture = managedExecutor.supplyAsync { appTrackRepository.findAlbumIdsByTrackIds(allTrackIds) }
+    val statsTrackMapFuture = managedExecutor.supplyAsync { appTrackRepository.findByTrackIds(topTrackIds).associateBy { it.id.value } }
+    val albumIdsByTrackId = albumIdsByTrackIdFuture.join()
+    val statsTrackMap = statsTrackMapFuture.join()
 
     val secondsByAlbumId = mutableMapOf<String, Long>()
     secondsByTrackId.forEach { (trackId, seconds) ->
