@@ -1,3 +1,12 @@
+# 0.123.1 (2026.08.03)
+
+## Bugfixes / Chore
+* The dashboard's listening stats now resolve track and album details concurrently instead of one after another, slightly speeding up the dashboard page.
+
+
+
+---
+
 # 0.123.0 (2026.07.31)
 
 ## New Features
