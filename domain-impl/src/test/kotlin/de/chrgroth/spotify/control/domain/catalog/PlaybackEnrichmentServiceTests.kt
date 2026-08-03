@@ -102,11 +102,12 @@ class PlaybackEnrichmentServiceTests {
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyCatalog.getArtist(accessToken, artistId) } returns spotifyArtist.right()
     every { appArtistRepository.upsertAll(any()) } just runs
+    every { outboxPort.enqueue(any()) } just runs
 
     adapter.syncArtistDetails(artistId, fromPlaylist = false)
 
     verify { appArtistRepository.upsertAll(listOf(spotifyArtist.copy(syncStatus = ArtistSyncStatus.SHALLOW_ASSUMPTION))) }
-    verify(exactly = 0) { outboxPort.enqueue(any()) }
+    verify(exactly = 0) { outboxPort.enqueue(any<DomainOutboxEvent.SyncArtistAlbums>()) }
   }
 
   @Test

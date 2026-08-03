@@ -194,6 +194,9 @@ class PlaybackAggregationService(
     if (event.type == AggregationPeriodType.WEEK) {
       aggregationRepository.findByPeriod(AggregationPeriodType.WEEK, event.periodStart)?.let { digestNotification.notifyWeeklyDigest(it) }
     }
+    if (event.type == AggregationPeriodType.DAY) {
+      outboxPort.enqueue(DomainOutboxEvent.RebuildDashboardReadModel())
+    }
     return Unit.right()
   }
 

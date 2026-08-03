@@ -81,6 +81,7 @@ class PlaylistCheckService(
     logger.info { "Ran playlist checks for playlist ${event.playlistId}: $status" }
     dashboardRefresh.notifyUserPlaylistChecks()
     rebuildCheckDashboard()
+    outboxPort.enqueue(DomainOutboxEvent.RebuildDashboardReadModel())
     return Unit.right()
   }
 

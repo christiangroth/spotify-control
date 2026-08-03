@@ -37,19 +37,17 @@ class PlaylistsResource(
   @Path("/settings")
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun settings(): TemplateInstance = httpResponseMetrics.timed("page.playlist.settings-tab") { details ->
+  fun settings(): TemplateInstance = httpResponseMetrics.timed("page.playlist.settings-tab") {
     val displayName = userProfile.getDisplayName() ?: securityIdentity.principal.name
-    val sortedPlaylists = details.detail("playlist.settings-tab.playlists") { playlist.getPlaylists().sortedBy { it.name } }
-    val padWidth = sortedPlaylists.size.toString().length
-    val trackCounts = details.detail("playlist.settings-tab.track-counts") { playlist.getTrackCounts() }
-    val artistStats = details.detail("playlist.settings-tab.artist-stats") { playlist.getArtistStats() }
-    val rows = sortedPlaylists.mapIndexed { index, playlistInfo ->
+    val sortedEntries = playlist.getPlaylistSettingsView().entries.sortedBy { it.playlist.name }
+    val padWidth = sortedEntries.size.toString().length
+    val rows = sortedEntries.mapIndexed { index, entry ->
       PlaylistRow(
         lineNumber = (index + 1).toString().padStart(padWidth, '0'),
-        playlist = playlistInfo,
-        numberOfTracks = trackCounts[playlistInfo.spotifyPlaylistId],
-        numberOfArtists = artistStats[playlistInfo.spotifyPlaylistId]?.total,
-        numberOfMissingArtists = artistStats[playlistInfo.spotifyPlaylistId]?.missingFromCatalog,
+        playlist = entry.playlist,
+        numberOfTracks = entry.numberOfTracks,
+        numberOfArtists = entry.numberOfArtists,
+        numberOfMissingArtists = entry.numberOfMissingArtists,
       )
     }
     playlistTemplate

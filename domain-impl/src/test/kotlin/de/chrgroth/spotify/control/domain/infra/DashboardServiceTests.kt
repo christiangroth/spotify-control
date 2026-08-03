@@ -13,6 +13,7 @@ import de.chrgroth.spotify.control.domain.model.catalog.TrackId
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationRankEntry
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.DailyPlaybackSummary
 import de.chrgroth.spotify.control.domain.model.user.UserId
+import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogBrowserPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppAlbumRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
@@ -21,9 +22,13 @@ import de.chrgroth.spotify.control.domain.port.out.playback.PlaybackAggregationR
 import de.chrgroth.spotify.control.domain.port.out.playlist.AppPlaylistCheckRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.readmodel.DashboardViewRepositoryPort
 import de.chrgroth.spotify.control.domain.user.CurrentUserResolver
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
+import io.mockk.runs
+import io.mockk.slot
 import io.mockk.verify
 import java.util.concurrent.CompletableFuture
 import java.util.function.Supplier
@@ -44,6 +49,7 @@ class DashboardServiceTests {
   private val playlistRepository: PlaylistRepositoryPort = mockk()
   private val playlistCheckRepository: AppPlaylistCheckRepositoryPort = mockk()
   private val currentUserResolver: CurrentUserResolver = mockk()
+  private val dashboardViewRepository: DashboardViewRepositoryPort = mockk()
   private val managedExecutor: ManagedExecutor = mockk {
     every { supplyAsync(any<Supplier<Any>>()) } answers {
       CompletableFuture.completedFuture(firstArg<Supplier<Any>>().get())
@@ -55,9 +61,19 @@ class DashboardServiceTests {
     aggregationRepository, catalogBrowser, playlistRepository, playlistCheckRepository,
     currentUserResolver,
     managedExecutor,
+    dashboardViewRepository,
     recentlyPlayedLimit = 5,
     topEntriesLimit = 3,
   )
+
+  // getStats() now reads the precomputed read model (ADR-0014); this rebuilds it and returns what
+  // was computed, so the existing tests below can keep asserting on the live composition logic.
+  private fun buildStats(): DashboardStats {
+    val slot = slot<DashboardStats>()
+    every { dashboardViewRepository.save(capture(slot)) } just runs
+    adapter.rebuildDashboardView()
+    return slot.captured
+  }
 
   private val userId = UserId("user-1")
   private val syncTimestamp = Instant.fromEpochSeconds(0)
@@ -112,7 +128,7 @@ class DashboardServiceTests {
     every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns listOf(artist1)
     every { appAlbumRepository.findByAlbumIds(any()) } returns emptyList()
 
-    val stats = adapter.getStats()
+    val stats = buildStats()
 
     // 180 seconds = 3 minutes
     assertThat(stats.listeningStats.listenedMinutesLast30Days).isEqualTo(3L)
@@ -122,7 +138,7 @@ class DashboardServiceTests {
   fun `listening stats are zero when aggregations have no track entries`() {
     setupCommonMocks()
 
-    val stats = adapter.getStats()
+    val stats = buildStats()
 
     assertThat(stats.listeningStats.listenedMinutesLast30Days).isEqualTo(0L)
     assertThat(stats.listeningStats.topTracksLast30Days).isEmpty()
@@ -156,7 +172,7 @@ class DashboardServiceTests {
     every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns listOf(artist1)
     every { appAlbumRepository.findByAlbumIds(any()) } returns emptyList()
 
-    val stats = adapter.getStats()
+    val stats = buildStats()
 
     // track-1: 120s, track-2: 180s → total 300s = 5 minutes
     assertThat(stats.listeningStats.listenedMinutesLast30Days).isEqualTo(5L)
@@ -191,7 +207,7 @@ class DashboardServiceTests {
     every { appArtistRepository.findByArtistIds(any()) } returns listOf(artist1)
     every { appAlbumRepository.findByAlbumIds(any()) } returns listOf(album1, album2)
 
-    val stats = adapter.getStats()
+    val stats = buildStats()
 
     assertThat(stats.listeningStats.topAlbumsLast30Days).hasSize(2)
     assertThat(stats.listeningStats.topAlbumsLast30Days[0].name).isEqualTo("Album One")
@@ -237,7 +253,7 @@ class DashboardServiceTests {
     val topTrackIds = setOf(TrackId("track-1"), TrackId("track-2"), TrackId("track-3"))
     every { appTrackRepository.findByTrackIds(topTrackIds) } returns listOf(track1, track2, track3)
 
-    val stats = adapter.getStats()
+    val stats = buildStats()
 
     assertThat(stats.listeningStats.topTracksLast30Days).hasSize(3)
     verify { appTrackRepository.findAlbumIdsByTrackIds(allTrackIds) }
@@ -268,7 +284,7 @@ class DashboardServiceTests {
     every { appTrackRepository.findByTrackIds(setOf(TrackId("track-1"))) } returns listOf(track1)
     every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns listOf(artist1)
 
-    val stats = adapter.getStats()
+    val stats = buildStats()
 
     assertThat(stats.recentlyPlayedTracks).hasSize(1)
     assertThat(stats.recentlyPlayedTracks[0].durationSeconds).isEqualTo(210L)
@@ -294,7 +310,7 @@ class DashboardServiceTests {
       listOf(syncedTrack, shallowTrack)
     every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"), ArtistId("artist-2"))) } returns listOf(shallowArtist, syncedArtist)
 
-    val stats = adapter.getStats()
+    val stats = buildStats()
 
     assertThat(stats.recentlyPlayedTracks).hasSize(1)
     assertThat(stats.recentlyPlayedTracks[0].trackId).isEqualTo(TrackId("track-synced"))
@@ -308,7 +324,7 @@ class DashboardServiceTests {
     every { appPlaybackRepository.findRecentlyPlayed(any()) } returns listOf(playbackItem)
     every { appTrackRepository.findByTrackIds(setOf(TrackId("track-unresolvable"))) } returns emptyList()
 
-    val stats = adapter.getStats()
+    val stats = buildStats()
 
     assertThat(stats.recentlyPlayedTracks).isEmpty()
   }
@@ -341,7 +357,7 @@ class DashboardServiceTests {
     every { appTrackRepository.findByTrackIds(secondPageIds.map { TrackId(it) }.toSet()) } returns
       secondPageIds.map { if (it.startsWith("valid")) validTrack(it) else shallowTrack(it) }
 
-    val stats = adapter.getStats()
+    val stats = buildStats()
 
     assertThat(stats.recentlyPlayedTracks).hasSize(5)
     assertThat(stats.recentlyPlayedTracks.map { it.trackId.value }).containsExactly("valid-1", "valid-2", "valid-3", "valid-4", "valid-5")
@@ -360,7 +376,7 @@ class DashboardServiceTests {
     every { appTrackRepository.findByTrackIds(setOf(TrackId("track-shallow"))) } returns listOf(shallowTrack)
     every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns listOf(shallowArtist)
 
-    val stats = adapter.getStats()
+    val stats = buildStats()
 
     assertThat(stats.recentlyPlayedTracks).isEmpty()
     verify(exactly = 1) { appPlaybackRepository.findRecentlyPlayed(any()) }
@@ -453,13 +469,54 @@ class DashboardServiceTests {
   }
 
   @Test
-  fun `getStats returns empty stats when no user exists`() {
-    every { currentUserResolver.userId() } returns null
+  fun `getStats returns empty stats when nothing has been built yet`() {
+    every { dashboardViewRepository.find() } returns null
 
     val stats = adapter.getStats()
 
     assertThat(stats).isEqualTo(DashboardStats.EMPTY)
+  }
+
+  @Test
+  fun `getStats returns the precomputed dashboard stats`() {
+    val precomputed = DashboardStats.EMPTY.copy(totalPlaylists = 5L, syncedPlaylists = 2L)
+    every { dashboardViewRepository.find() } returns precomputed
+
+    val stats = adapter.getStats()
+
+    assertThat(stats).isEqualTo(precomputed)
+  }
+
+  @Test
+  fun `rebuildDashboardView saves empty stats when no user exists`() {
+    every { currentUserResolver.userId() } returns null
+    every { dashboardViewRepository.save(any()) } just runs
+
+    adapter.rebuildDashboardView()
+
     verify(exactly = 0) { aggregationRepository.findDailySummaryByPeriodRange(any(), any()) }
+    verify(exactly = 1) { dashboardViewRepository.save(DashboardStats.EMPTY) }
+  }
+
+  @Test
+  fun `handle RebuildDashboardReadModel skips when no user exists`() {
+    every { currentUserResolver.userId() } returns null
+
+    val result = adapter.handle(DomainOutboxEvent.RebuildDashboardReadModel())
+
+    assertThat(result.isRight()).isTrue()
+    verify(exactly = 0) { dashboardViewRepository.save(any()) }
+  }
+
+  @Test
+  fun `handle RebuildDashboardReadModel rebuilds the view for the current user`() {
+    setupCommonMocks()
+    every { dashboardViewRepository.save(any()) } just runs
+
+    val result = adapter.handle(DomainOutboxEvent.RebuildDashboardReadModel())
+
+    assertThat(result.isRight()).isTrue()
+    verify(exactly = 1) { dashboardViewRepository.save(any()) }
   }
 
   @Test

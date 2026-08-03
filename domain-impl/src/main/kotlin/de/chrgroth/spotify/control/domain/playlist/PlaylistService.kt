@@ -11,6 +11,8 @@ import de.chrgroth.spotify.control.domain.model.playlist.ArtistStats
 import de.chrgroth.spotify.control.domain.model.playlist.MissingArtist
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.playlist.Playlist
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSettingsEntry
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSettingsView
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistType
 import de.chrgroth.spotify.control.domain.model.catalog.SyncCause
@@ -24,6 +26,7 @@ import de.chrgroth.spotify.control.domain.port.out.infra.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistSyncNotificationPort
+import de.chrgroth.spotify.control.domain.port.out.readmodel.PlaylistSettingsViewRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.catalog.SyncController
 import de.chrgroth.spotify.control.domain.catalog.CatalogSyncRequest
@@ -55,6 +58,7 @@ class PlaylistService(
   private val spotifyCatalog: SpotifyCatalogPort,
   private val meterRegistry: MeterRegistry,
   private val syncNotification: PlaylistSyncNotificationPort,
+  private val playlistSettingsViewRepository: PlaylistSettingsViewRepositoryPort,
 ) : PlaylistPort {
 
   private val lastSyncJobSuccessTimestamp = AtomicLong()
@@ -87,6 +91,28 @@ class PlaylistService(
         missingFromCatalog = artistIds.count { it !in existingArtistIds },
       )
     }
+  }
+
+  override fun getPlaylistSettingsView(): PlaylistSettingsView =
+    playlistSettingsViewRepository.find() ?: EMPTY_SETTINGS_VIEW
+
+  override fun rebuildPlaylistSettingsView() {
+    playlistSettingsViewRepository.save(buildPlaylistSettingsView())
+  }
+
+  private fun buildPlaylistSettingsView(): PlaylistSettingsView {
+    val playlists = getPlaylists()
+    val trackCounts = getTrackCounts()
+    val artistStats = getArtistStats()
+    val entries = playlists.map { playlistInfo ->
+      PlaylistSettingsEntry(
+        playlist = playlistInfo,
+        numberOfTracks = trackCounts[playlistInfo.spotifyPlaylistId],
+        numberOfArtists = artistStats[playlistInfo.spotifyPlaylistId]?.total,
+        numberOfMissingArtists = artistStats[playlistInfo.spotifyPlaylistId]?.missingFromCatalog,
+      )
+    }
+    return PlaylistSettingsView(entries)
   }
 
   override fun getMissingArtists(playlistId: String): List<MissingArtist> {
@@ -152,6 +178,8 @@ class PlaylistService(
         .forEach { playlist ->
           outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(playlist.spotifyPlaylistId))
         }
+      outboxPort.enqueue(DomainOutboxEvent.RebuildPlaylistSettingsView())
+      outboxPort.enqueue(DomainOutboxEvent.RebuildDashboardReadModel())
     }
   }
 
@@ -183,6 +211,7 @@ class PlaylistService(
         logger.info { "Completed all pages for playlist $playlistId" }
         playlistRepository.updateLastSyncTime(playlistId, Clock.System.now())
         outboxPort.enqueue(DomainOutboxEvent.RunPlaylistChecks(playlistId))
+        outboxPort.enqueue(DomainOutboxEvent.RebuildPlaylistSettingsView())
       }
     }
   }
@@ -210,6 +239,8 @@ class PlaylistService(
     logger.info { "Updated sync status for playlist '${playlist.name}' ($playlistId) to $syncStatus" }
     playlistRepository.replaceAll(updatedPlaylists)
     dashboardRefresh.notifyUserPlaylistMetadata()
+    outboxPort.enqueue(DomainOutboxEvent.RebuildPlaylistSettingsView())
+    outboxPort.enqueue(DomainOutboxEvent.RebuildDashboardReadModel())
     if (syncStatus == PlaylistSyncStatus.PASSIVE) {
       logger.info { "Deleting checks for deactivated playlist '${playlist.name}' ($playlistId)" }
       playlistCheckRepository.deleteByPlaylistId(playlistId)
@@ -232,6 +263,7 @@ class PlaylistService(
     logger.info { "Updated type for playlist '$playlistName' ($playlistId) to $type" }
     playlistRepository.replaceAll(updatedPlaylists)
     dashboardRefresh.notifyUserPlaylistMetadata()
+    outboxPort.enqueue(DomainOutboxEvent.RebuildPlaylistSettingsView())
     return Unit.right()
   }
 
@@ -269,8 +301,15 @@ class PlaylistService(
   override fun handle(event: DomainOutboxEvent.SyncPlaylistData): Either<DomainError, Unit> =
     syncPlaylistData(event.playlistId, event.nextUrl, event.snapshotId)
 
+  override fun handle(event: DomainOutboxEvent.RebuildPlaylistSettingsView): Either<DomainError, Unit> {
+    currentUserResolver.userId() ?: return Unit.right()
+    rebuildPlaylistSettingsView()
+    return Unit.right()
+  }
+
   companion object : KLogging() {
     private val YEAR_NAME_REGEX = Regex("\\d{4}")
     private const val MILLIS_PER_SECOND = 1_000L
+    private val EMPTY_SETTINGS_VIEW = PlaylistSettingsView(emptyList())
   }
 }

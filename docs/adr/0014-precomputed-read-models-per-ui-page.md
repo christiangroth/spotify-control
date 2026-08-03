@@ -108,7 +108,12 @@ out of scope.
   MongoDB collection per read model (`app_<page>_view` naming)
 * Rebuild logic lives in the existing domain service already responsible for the underlying data
   (no new service layer); it is invoked wherever that service already handles the outbox event(s)
-  that change the underlying data
+  that change the underlying data. When a read model has a single source event handled by that
+  same service (e.g. the Playlist Checks Tab pilot), the rebuild is called directly, inline — no new
+  outbox event is introduced. When a read model is fed by several unrelated services (e.g. Playlist
+  Settings Tab, Dashboard), each source enqueues a dedicated, deduplicated `domain` outbox event
+  (e.g. `RebuildDashboardReadModel`) instead, so the rebuilding service does not need a direct port
+  dependency on every source service, and bursts of triggers collapse into one rebuild
 * First-time backfill for an existing deployment uses the existing `Starter` mechanism
   (`adapter-in-starter`), calling the same inbound port method the rebuild trigger uses — no
   separate migration logic is duplicated
@@ -118,3 +123,4 @@ out of scope.
 * [Persistent Outbox for Spotify API Operations](0007-persistent-outbox-pattern.md)
 * [Single-User Architecture](0008-single-user-architecture.md)
 * Implements the pilot for this ADR: Playlist Checks Tab read model
+* Also implements this ADR: Playlist Settings Tab and Dashboard read models

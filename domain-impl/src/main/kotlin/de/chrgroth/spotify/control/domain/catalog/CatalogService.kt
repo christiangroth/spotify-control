@@ -108,6 +108,8 @@ class CatalogService(
             outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums(artistId))
           }
           dashboardRefresh.notifyCatalogData()
+          outboxPort.enqueue(DomainOutboxEvent.RebuildPlaylistSettingsView())
+          outboxPort.enqueue(DomainOutboxEvent.RebuildDashboardReadModel())
         } else {
           logger.warn { "No data returned from Spotify for artist $artistId" }
         }
@@ -194,6 +196,7 @@ class CatalogService(
             logger.warn { "Album '${albumResult.album.title ?: albumId}' ($albumId): synced ${albumResult.tracks.size} track(s) but album reports $expectedTracks total" }
           }
           dashboardRefresh.notifyCatalogData()
+          outboxPort.enqueue(DomainOutboxEvent.RebuildDashboardReadModel())
         }
         logger.info { "Synced album '${albumResult.album.title ?: albumId}' ($albumId): ${albumResult.tracks.size} track(s)" }
         1.right()
@@ -219,6 +222,7 @@ class CatalogService(
     appArtistRepository.setSyncStatus(existing.id, ArtistSyncStatus.SYNC)
     outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums(event.artistId))
     playbackAggregation.rebuildAllAggregations()
+    outboxPort.enqueue(DomainOutboxEvent.RebuildPlaylistSettingsView())
     return Unit.right()
   }
 
@@ -230,6 +234,7 @@ class CatalogService(
     appTrackRepository.deleteByArtistId(existing.id)
     appAlbumRepository.deleteByArtistId(existing.id)
     playbackAggregation.rebuildAllAggregations()
+    outboxPort.enqueue(DomainOutboxEvent.RebuildPlaylistSettingsView())
     return Unit.right()
   }
 

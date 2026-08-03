@@ -299,6 +299,7 @@ class PlaybackService(
       .forEach { day ->
         outboxPort.enqueue(DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.DAY, day))
       }
+    outboxPort.enqueue(DomainOutboxEvent.RebuildDashboardReadModel())
 
     val catalogRequests = (
       recentlyPlayed.map { CatalogSyncRequest(it.trackId.value, listOfNotNull(it.artistIds.firstOrNull()?.value), SyncCause.Playback(it.trackId.value)) } +

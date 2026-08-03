@@ -145,6 +145,7 @@ class PlaylistCheckServiceTests {
     every { userRepository.get() } returns null
     every { playlistCheckRepository.findAll() } returns emptyList()
     every { playlistCheckDashboardRepository.save(any()) } just runs
+    every { outboxPort.enqueue(any()) } just runs
     every { notification.notifyViolationsChanged(any(), any(), any()) } just runs
 
     val result = adapter.handle(event)
@@ -167,6 +168,7 @@ class PlaylistCheckServiceTests {
     every { userRepository.get() } returns null
     every { playlistCheckRepository.findAll() } returns emptyList()
     every { playlistCheckDashboardRepository.save(any()) } just runs
+    every { outboxPort.enqueue(any()) } just runs
 
     val result = adapter.handle(event)
 
@@ -174,6 +176,7 @@ class PlaylistCheckServiceTests {
     verify(exactly = 1) { playlistCheckRepository.save(any()) }
     verify(exactly = 0) { notification.notifyCheckPassed(any(), any()) }
     verify(exactly = 0) { notification.notifyViolationsChanged(any(), any(), any()) }
+    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.RebuildDashboardReadModel()) }
   }
 
   @Test
@@ -191,6 +194,7 @@ class PlaylistCheckServiceTests {
     every { userRepository.get() } returns null
     every { playlistCheckRepository.findAll() } returns emptyList()
     every { playlistCheckDashboardRepository.save(any()) } just runs
+    every { outboxPort.enqueue(any()) } just runs
     every { notification.notifyCheckPassed(any(), any()) } just runs
 
     val result = adapter.handle(event)
@@ -218,6 +222,7 @@ class PlaylistCheckServiceTests {
     every { userRepository.get() } returns null
     every { playlistCheckRepository.findAll() } returns emptyList()
     every { playlistCheckDashboardRepository.save(any()) } just runs
+    every { outboxPort.enqueue(any()) } just runs
     every { notification.notifyViolationsChanged(any(), any(), any()) } just runs
 
     val result = adapter.handle(event)
@@ -243,6 +248,7 @@ class PlaylistCheckServiceTests {
     every { userRepository.get() } returns null
     every { playlistCheckRepository.findAll() } returns emptyList()
     every { playlistCheckDashboardRepository.save(any()) } just runs
+    every { outboxPort.enqueue(any()) } just runs
 
     val result = adapter.handle(event)
 
@@ -266,6 +272,7 @@ class PlaylistCheckServiceTests {
     every { userRepository.get() } returns null
     every { playlistCheckRepository.findAll() } returns emptyList()
     every { playlistCheckDashboardRepository.save(any()) } just runs
+    every { outboxPort.enqueue(any()) } just runs
 
     val result = adapter.handle(event)
 
@@ -296,6 +303,7 @@ class PlaylistCheckServiceTests {
     every { userRepository.get() } returns null
     every { playlistCheckRepository.findAll() } returns emptyList()
     every { playlistCheckDashboardRepository.save(any()) } just runs
+    every { outboxPort.enqueue(any()) } just runs
 
     val result = adapter.handle(event)
 
@@ -356,6 +364,7 @@ class PlaylistCheckServiceTests {
     every { playlistRepository.findAll() } returns listOf(playlistInfo)
     every { playlistCheckRepository.findAll() } returns listOf(check)
     every { playlistCheckDashboardRepository.save(any()) } just runs
+    every { outboxPort.enqueue(any()) } just runs
 
     adapter.rebuildCheckDashboard()
 
@@ -378,6 +387,7 @@ class PlaylistCheckServiceTests {
     every { playlistRepository.findAll() } returns listOf(playlistInfo)
     every { playlistCheckRepository.findAll() } returns listOf(check)
     every { playlistCheckDashboardRepository.save(any()) } just runs
+    every { outboxPort.enqueue(any()) } just runs
 
     adapter.rebuildCheckDashboard()
 
@@ -578,6 +588,7 @@ class PlaylistCheckServiceTests {
     every { userRepository.get() } returns null
     every { playlistCheckRepository.findAll() } returns emptyList()
     every { playlistCheckDashboardRepository.save(any()) } just runs
+    every { outboxPort.enqueue(any()) } just runs
 
     val result = adapter.handle(DomainOutboxEvent.RunPlaylistChecks(playlistId, checkId))
 
