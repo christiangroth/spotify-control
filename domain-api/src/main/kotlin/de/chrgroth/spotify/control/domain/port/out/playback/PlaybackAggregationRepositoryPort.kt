@@ -9,7 +9,7 @@ interface PlaybackAggregationRepositoryPort {
   fun save(aggregation: PlaybackAggregation)
   fun deleteAll()
   fun findByPeriod(type: AggregationPeriodType, periodStart: LocalDate): PlaybackAggregation?
-  fun findByPeriods(periods: List<Pair<AggregationPeriodType, LocalDate>>): Map<Pair<AggregationPeriodType, LocalDate>, PlaybackAggregation>
+  fun findByPeriods(periods: List<Pair<AggregationPeriodType, LocalDate>>, topEntriesLimit: Int): Map<Pair<AggregationPeriodType, LocalDate>, PlaybackAggregation>
   fun findByTypeAndPeriodRange(type: AggregationPeriodType, from: LocalDate, to: LocalDate): List<PlaybackAggregation>
   fun findDailySummaryByPeriodRange(from: LocalDate, to: LocalDate): List<DailyPlaybackSummary>
   fun sumEventCount(): Long

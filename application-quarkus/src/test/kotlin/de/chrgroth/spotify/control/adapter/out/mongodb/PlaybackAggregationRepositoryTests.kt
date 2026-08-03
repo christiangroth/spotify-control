@@ -65,6 +65,7 @@ class PlaybackAggregationRepositoryTests {
         AggregationPeriodType.WEEK to LocalDate(2024, 1, 8),
         AggregationPeriodType.MONTH to LocalDate(2024, 1, 1),
       ),
+      topEntriesLimit = 5,
     )
 
     assertThat(result).hasSize(2)
@@ -75,8 +76,31 @@ class PlaybackAggregationRepositoryTests {
 
   @Test
   fun `findByPeriods returns empty map for empty input`() {
-    val result = aggregationRepository.findByPeriods(emptyList())
+    val result = aggregationRepository.findByPeriods(emptyList(), topEntriesLimit = 5)
     assertThat(result).isEmpty()
+  }
+
+  @Test
+  fun `findByPeriods slices rank entries to topEntriesLimit while keeping distinct counts intact`() {
+    val periodStart = LocalDate(2024, 1, 10)
+    aggregationRepository.save(
+      aggregation(AggregationPeriodType.DAY, periodStart).let {
+        it.copy(
+          distinctArtistCount = 3,
+          artistEntries = listOf(
+            AggregationRankEntry(id = "artist-1", name = "Artist One", totalSeconds = 300L),
+            AggregationRankEntry(id = "artist-2", name = "Artist Two", totalSeconds = 200L),
+            AggregationRankEntry(id = "artist-3", name = "Artist Three", totalSeconds = 100L),
+          ),
+        )
+      },
+    )
+
+    val result = aggregationRepository.findByPeriods(listOf(AggregationPeriodType.DAY to periodStart), topEntriesLimit = 2)
+
+    val aggregation = result.getValue(AggregationPeriodType.DAY to periodStart)
+    assertThat(aggregation.distinctArtistCount).isEqualTo(3)
+    assertThat(aggregation.artistEntries).extracting("id").containsExactly("artist-1", "artist-2")
   }
 
   @Test
