@@ -118,9 +118,39 @@ out of scope.
   (`adapter-in-starter`), calling the same inbound port method the rebuild trigger uses — no
   separate migration logic is duplicated
 
+## Stats View: Enriching an Existing Collection Instead of a New One
+
+The Stats View is a deliberate variant of the pattern above, not a new collection:
+`app_playback_aggregation` (one document per period type/start, already written by
+`PlaybackAggregationService`) is extended in place with resolved track/album/artist names and
+cover images at aggregation build time, instead of `StatsResource` resolving them per request via
+`findByTrackIds`/`findByAlbumIds`/`findByArtistIds`. There is no new collection, no new outbox
+event, and no new `Starter`, because the existing daily/weekly/monthly/quarterly/yearly aggregation
+runs already are the rebuild trigger for this data.
+
+This also corrects an architectural straggler: `StatsResource` previously injected repository (out)
+ports directly, skipping the inbound-port layer every other page goes through. It now reads via
+`PlaybackAggregationPort.findByPeriods(...)`, matching the `DashboardPort`/`PlaylistCheckPort`/
+`PlaylistPort` convention.
+
+**Accepted trade-off:** catalog changes (an artist renamed, a new cover synced) do not retroactively
+refresh names/images already stored in past aggregation documents — there is intentionally no new
+re-enrichment trigger on catalog sync for this. Names and cover images rarely change in practice, and
+a full rebuild (`rebuildAllAggregations()`) already exists as a manual escape hatch. Adding a
+catalog-sync-driven re-enrichment trigger would mean rewriting a potentially large number of past
+aggregation documents on every catalog sync for a cosmetic inconsistency that is expected to be rare.
+
+## Cleanup
+
+Steps 3–6 removed their pages' former per-request composition/lookup calls and the sub-timing
+metrics (`ResponseTimingDetails.detail(...)`) that measured them as they were migrated, rather than
+leaving dead code and now-meaningless metrics behind for a later pass — there was no separate
+"old ad-hoc computation path" left over needing removal once each page's `Resource` was migrated to
+read its single precomputed value.
+
 ## Links
 
 * [Persistent Outbox for Spotify API Operations](0007-persistent-outbox-pattern.md)
 * [Single-User Architecture](0008-single-user-architecture.md)
 * Implements the pilot for this ADR: Playlist Checks Tab read model
-* Also implements this ADR: Playlist Settings Tab and Dashboard read models
+* Also implements this ADR: Playlist Settings Tab, Dashboard and Stats View read models

@@ -28,6 +28,10 @@ class PlaybackAggregationEntryDocument {
   lateinit var id: String
   lateinit var name: String
   var totalSeconds: Long = 0L
+  var imageLink: String? = null
+  var artistName: String? = null
+  var albumName: String? = null
+  var trackDurationMs: Long? = null
 }
 
 class PlaybackAggregationActivityEntryDocument {

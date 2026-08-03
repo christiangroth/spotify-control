@@ -553,6 +553,7 @@ method the event-triggered path uses.
 | Playlist Checks Tab  | `PlaylistCheckDashboardRepositoryPort`    | `RunPlaylistChecks` handling                                                                                          |
 | Playlist Settings Tab| `PlaylistSettingsViewRepositoryPort`      | `RebuildPlaylistSettingsView` (enqueued from playlist sync/status/type changes and catalog artist confirm/discovery) |
 | Dashboard            | `DashboardViewRepositoryPort`             | `RebuildDashboardReadModel` (enqueued from playlist sync, playlist checks, daily playback aggregation, playback append, catalog sync) |
+| Stats View           | `PlaybackAggregationPort.findByPeriods`   | daily/weekly/monthly/quarterly/yearly `AggregatePlaybackData` handling (enriches `app_playback_aggregation` in place, see ADR-0014) |
 
 Eventual consistency between a source write and the next page view is accepted, consistent with the
 single-user architecture ([ADR-0008](../adr/0008-single-user-architecture.md)).

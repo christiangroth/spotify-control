@@ -3,9 +3,14 @@ package de.chrgroth.spotify.control.domain.playback
 import arrow.core.Either
 import arrow.core.right
 import de.chrgroth.spotify.control.domain.error.DomainError
+import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
+import de.chrgroth.spotify.control.domain.model.catalog.AppAlbum
+import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
+import de.chrgroth.spotify.control.domain.model.catalog.AppTrack
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistSyncStatus
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
+import de.chrgroth.spotify.control.domain.model.catalog.displayArtistName
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.ActivityEntry
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.ActivityTimeWindow
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationPeriodType
@@ -13,6 +18,7 @@ import de.chrgroth.spotify.control.domain.model.playback.aggregation.Aggregation
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.PlaybackAggregation
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackAggregationPort
+import de.chrgroth.spotify.control.domain.port.out.catalog.AppAlbumRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
@@ -43,6 +49,7 @@ class PlaybackAggregationService(
   private val appPlaybackRepository: AppPlaybackRepositoryPort,
   private val appTrackRepository: AppTrackRepositoryPort,
   private val appArtistRepository: AppArtistRepositoryPort,
+  private val appAlbumRepository: AppAlbumRepositoryPort,
   private val aggregationRepository: PlaybackAggregationRepositoryPort,
   private val outboxPort: OutboxPort,
   private val meterRegistry: MeterRegistry,
@@ -84,6 +91,9 @@ class PlaybackAggregationService(
     currentUserResolver.userId() ?: return
     outboxPort.enqueue(DomainOutboxEvent.RebuildAllAggregations())
   }
+
+  override fun findByPeriods(periods: List<Pair<AggregationPeriodType, LocalDate>>, topEntriesLimit: Int) =
+    aggregationRepository.findByPeriods(periods, topEntriesLimit)
 
   override fun rebuildAllAggregations() {
     val oldestInstant = appPlaybackRepository.findOldestPlayedAt()
@@ -251,7 +261,10 @@ class PlaybackAggregationService(
       return
     }
 
-    val rankings = buildRankings(filteredItems, tracks, artists)
+    val albumIds = tracks.values.mapNotNull { it.albumId }.toSet()
+    val albums = appAlbumRepository.findByAlbumIds(albumIds).associateBy { it.id }
+
+    val rankings = buildRankings(filteredItems, tracks, artists, albums)
     val activityEntries = buildActivityEntries(filteredItems)
 
     val aggregation = PlaybackAggregation(
@@ -277,20 +290,9 @@ class PlaybackAggregationService(
       return
     }
 
-    val mergedArtistEntries = dailyAggregations.flatMap { it.artistEntries }
-      .groupBy { it.id }
-      .map { (id, entries) -> AggregationRankEntry(id = id, name = entries.first().name, totalSeconds = entries.sumOf { it.totalSeconds }) }
-      .sortedByDescending { it.totalSeconds }
-
-    val mergedTrackEntries = dailyAggregations.flatMap { it.trackEntries }
-      .groupBy { it.id }
-      .map { (id, entries) -> AggregationRankEntry(id = id, name = entries.first().name, totalSeconds = entries.sumOf { it.totalSeconds }) }
-      .sortedByDescending { it.totalSeconds }
-
-    val mergedAlbumEntries = dailyAggregations.flatMap { it.albumEntries }
-      .groupBy { it.id }
-      .map { (id, entries) -> AggregationRankEntry(id = id, name = entries.first().name, totalSeconds = entries.sumOf { it.totalSeconds }) }
-      .sortedByDescending { it.totalSeconds }
+    val mergedArtistEntries = mergeRankEntries(dailyAggregations.flatMap { it.artistEntries })
+    val mergedTrackEntries = mergeRankEntries(dailyAggregations.flatMap { it.trackEntries })
+    val mergedAlbumEntries = mergeRankEntries(dailyAggregations.flatMap { it.albumEntries })
 
     val mergedActivityEntries = dailyAggregations.flatMap { it.activityEntries }
       .groupBy { it.dayOfWeek to it.timeWindow }
@@ -318,8 +320,9 @@ class PlaybackAggregationService(
 
   private fun buildRankings(
     filteredItems: List<de.chrgroth.spotify.control.domain.model.playback.AppPlaybackItem>,
-    tracks: Map<TrackId, de.chrgroth.spotify.control.domain.model.catalog.AppTrack>,
-    artists: Map<ArtistId, de.chrgroth.spotify.control.domain.model.catalog.AppArtist>,
+    tracks: Map<TrackId, AppTrack>,
+    artists: Map<ArtistId, AppArtist>,
+    albums: Map<AlbumId, AppAlbum>,
   ): Rankings {
     val durationPerTrackId = filteredItems.groupBy { it.trackId }.mapValues { (_, entries) -> entries.sumOf { it.secondsPlayed } }
     val durationPerArtistId = mutableMapOf<String, Long>()
@@ -335,16 +338,50 @@ class PlaybackAggregationService(
       albumNamesById.putIfAbsent(albumId, albumName)
     }
     val trackEntries = durationPerTrackId.map { (trackId, seconds) ->
-      AggregationRankEntry(id = trackId, name = tracks[TrackId(trackId)]?.title ?: trackId, totalSeconds = seconds)
+      val track = tracks[TrackId(trackId)]
+      val album = track?.albumId?.let { albums[it] }
+      AggregationRankEntry(
+        id = trackId,
+        name = track?.title ?: trackId,
+        totalSeconds = seconds,
+        imageLink = album?.imageLink,
+        artistName = track?.displayArtistName { id -> artists[id]?.artistName },
+        albumName = track?.albumName ?: album?.title,
+        trackDurationMs = track?.durationMs,
+      )
     }.sortedByDescending { it.totalSeconds }
     val artistEntries = durationPerArtistId.map { (artistId, seconds) ->
-      AggregationRankEntry(id = artistId, name = artists[ArtistId(artistId)]?.artistName ?: artistId, totalSeconds = seconds)
+      val artist = artists[ArtistId(artistId)]
+      AggregationRankEntry(id = artistId, name = artist?.artistName ?: artistId, totalSeconds = seconds, imageLink = artist?.imageLink)
     }.sortedByDescending { it.totalSeconds }
     val albumEntries = durationPerAlbumId.map { (albumId, seconds) ->
-      AggregationRankEntry(id = albumId, name = albumNamesById[albumId] ?: albumId, totalSeconds = seconds)
+      val album = albums[AlbumId(albumId)]
+      AggregationRankEntry(
+        id = albumId,
+        name = albumNamesById[albumId] ?: albumId,
+        totalSeconds = seconds,
+        imageLink = album?.imageLink,
+        artistName = album?.artistName,
+      )
     }.sortedByDescending { it.totalSeconds }
     return Rankings(trackEntries = trackEntries, artistEntries = artistEntries, albumEntries = albumEntries)
   }
+
+  private fun mergeRankEntries(entries: List<AggregationRankEntry>): List<AggregationRankEntry> =
+    entries.groupBy { it.id }
+      .map { (id, group) ->
+        val first = group.first()
+        AggregationRankEntry(
+          id = id,
+          name = first.name,
+          totalSeconds = group.sumOf { it.totalSeconds },
+          imageLink = first.imageLink,
+          artistName = first.artistName,
+          albumName = first.albumName,
+          trackDurationMs = first.trackDurationMs,
+        )
+      }
+      .sortedByDescending { it.totalSeconds }
 
   private fun buildActivityEntries(filteredItems: List<de.chrgroth.spotify.control.domain.model.playback.AppPlaybackItem>): List<ActivityEntry> =
     filteredItems.groupBy { item ->
@@ -383,7 +420,7 @@ class PlaybackAggregationService(
     val albumEntries: List<AggregationRankEntry>,
   )
 
-  private fun de.chrgroth.spotify.control.domain.model.catalog.AppTrack?.albumAggregationId(itemTrackId: String): String {
+  private fun AppTrack?.albumAggregationId(itemTrackId: String): String {
     val rawAlbumId = this?.albumId?.value
     if (rawAlbumId != null) {
       return rawAlbumId
