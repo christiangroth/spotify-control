@@ -535,6 +535,22 @@ event's partition until the `Retry-After` duration has elapsed.
 
 The outbox archive is disabled (`outbox.archive.enabled=false`); completed and failed events are removed rather than retained in `outbox_archive`. Internal triggers between services use CDI events (not the outbox).
 
+## Precomputed Read Models per UI Page
+
+Some UI pages read a single precomputed MongoDB document instead of composing several on-demand
+queries per request (see [ADR-0014](../adr/0014-precomputed-read-models-per-ui-page.md)). The
+document is rebuilt in the existing domain service responsible for the underlying data, triggered
+wherever that service already handles the relevant `domain` outbox event(s) — no new event type or
+service layer is added solely for the rebuild. First-time backfill for an existing deployment uses
+the regular `Starter` mechanism, calling the same rebuild method the outbox-triggered path uses.
+
+| Page                        | Read Model Port                          | Rebuilt on                       |
+|-----------------------------|-------------------------------------------|-----------------------------------|
+| Playlist Checks Tab         | `PlaylistCheckDashboardRepositoryPort`    | `RunPlaylistChecks` handling       |
+
+Eventual consistency between a source write and the next page view is accepted, consistent with the
+single-user architecture ([ADR-0008](../adr/0008-single-user-architecture.md)).
+
 ## Server-Sent Events (SSE) and Live Updates
 
 Backend services notify SSE streams via CDI events. The SSE endpoint delivers the initial state on connect, then pushes named update events to connected clients via a single shared reactive stream — there is only ever one possible subscriber, so `DashboardSseAdapter` holds one emitter list rather than a per-user map.
@@ -587,6 +603,7 @@ Architecture documentation (`docs/arc42`), ADRs (`docs/adr`), and release notes 
 - [0011](../adr/0011-playlist-checks-framework.md) – Playlist Checks Framework
 - [0012](../adr/0012-diagram-rendering-mermaid.md) – Diagram Rendering: Mermaid
 - [0013](../adr/0013-selective-playlist-check-violation-fixing.md) – Selective Playlist Check Violation Fixing
+- [0014](../adr/0014-precomputed-read-models-per-ui-page.md) – Precomputed Read Models per UI Page
 
 # Quality Requirements
 

@@ -8,6 +8,7 @@ import de.chrgroth.spotify.control.domain.error.PlaylistFixError
 import de.chrgroth.spotify.control.domain.playlist.check.PlaylistCheckRunner
 import de.chrgroth.spotify.control.domain.model.playlist.AppPlaylistCheck
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistCheckDashboard
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistCheckDashboardSummary
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSyncStatus
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistCheckPort
@@ -15,6 +16,7 @@ import de.chrgroth.spotify.control.domain.port.out.playlist.AppPlaylistCheckRepo
 import de.chrgroth.spotify.control.domain.port.out.infra.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistCheckNotificationPort
+import de.chrgroth.spotify.control.domain.port.out.readmodel.PlaylistCheckDashboardRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
@@ -39,6 +41,7 @@ class PlaylistCheckService(
   private val notification: PlaylistCheckNotificationPort,
   private val spotifyAccessToken: SpotifyAccessTokenPort,
   private val outboxPort: OutboxPort,
+  private val playlistCheckDashboardRepository: PlaylistCheckDashboardRepositoryPort,
   private val meterRegistry: MeterRegistry,
   private val managedExecutor: ManagedExecutor,
 ) : PlaylistCheckPort {
@@ -77,24 +80,35 @@ class PlaylistCheckService(
     val status = if (totalViolations == 0) "all passed" else "$totalViolations violation(s)"
     logger.info { "Ran playlist checks for playlist ${event.playlistId}: $status" }
     dashboardRefresh.notifyUserPlaylistChecks()
+    rebuildCheckDashboard()
     return Unit.right()
   }
 
   override fun getCheckDashboard(): PlaylistCheckDashboard {
+    val summary = playlistCheckDashboardRepository.find() ?: EMPTY_SUMMARY
+    return PlaylistCheckDashboard(
+      displayName = summary.displayName,
+      checks = summary.checks,
+      playlistNameById = summary.playlistNameById,
+      displayNames = getDisplayNames(),
+      fixableCheckIds = getFixableCheckIds(),
+    )
+  }
+
+  override fun rebuildCheckDashboard() {
+    playlistCheckDashboardRepository.save(buildCheckDashboardSummary())
+  }
+
+  private fun buildCheckDashboardSummary(): PlaylistCheckDashboardSummary {
     val displayNameFuture = managedExecutor.supplyAsync { userRepository.get()?.displayName ?: "" }
     val playlistNamesFuture = managedExecutor.supplyAsync {
       playlistRepository.findAll().associateBy({ it.spotifyPlaylistId }, { it.name })
     }
     val checksFuture = managedExecutor.supplyAsync { playlistCheckRepository.findAll() }
-    val displayName = displayNameFuture.join()
-    val playlistNameById = playlistNamesFuture.join()
-    val checks = checksFuture.join()
-    return PlaylistCheckDashboard(
-      displayName = displayName,
-      checks = checks,
-      playlistNameById = playlistNameById,
-      displayNames = getDisplayNames(),
-      fixableCheckIds = getFixableCheckIds(),
+    return PlaylistCheckDashboardSummary(
+      displayName = displayNameFuture.join(),
+      playlistNameById = playlistNamesFuture.join(),
+      checks = checksFuture.join(),
     )
   }
 
@@ -188,5 +202,7 @@ class PlaylistCheckService(
     return result
   }
 
-  companion object : KLogging()
+  companion object : KLogging() {
+    private val EMPTY_SUMMARY = PlaylistCheckDashboardSummary(displayName = "", checks = emptyList(), playlistNameById = emptyMap())
+  }
 }

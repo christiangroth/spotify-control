@@ -6,8 +6,6 @@ import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistCheckPort
 import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistPort
 import de.chrgroth.spotify.control.domain.port.`in`.user.UserProfilePort
 import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
-import de.chrgroth.spotify.control.domain.port.out.playlist.AppPlaylistCheckRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
 import io.quarkus.qute.Location
 import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
@@ -18,9 +16,6 @@ import jakarta.ws.rs.GET
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.Produces
 import jakarta.ws.rs.core.MediaType
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.runBlocking
 import kotlin.time.Instant
 
 @Path("/playlists")
@@ -34,8 +29,6 @@ class PlaylistsResource(
   private val securityIdentity: SecurityIdentity,
   private val userProfile: UserProfilePort,
   private val playlist: PlaylistPort,
-  private val playlistRepository: PlaylistRepositoryPort,
-  private val playlistCheckRepository: AppPlaylistCheckRepositoryPort,
   private val playlistCheckPort: PlaylistCheckPort,
   private val httpResponseMetrics: ResponseTimingPort,
 ) {
@@ -80,36 +73,24 @@ class PlaylistsResource(
   @Path("/checks")
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun checks(): TemplateInstance = httpResponseMetrics.timed("page.playlist.checks-tab") { details ->
-    val (displayName, playlistNameById, checks) = runBlocking {
-      val displayNameAsync = async(Dispatchers.IO) { userProfile.getDisplayName() }
-      val playlistNamesAsync = async(Dispatchers.IO) {
-        playlistRepository.findAll().associateBy({ it.spotifyPlaylistId }, { it.name })
-      }
-      val checksAsync = async(Dispatchers.IO) { playlistCheckRepository.findAll() }
-      val displayName = details.detailSuspend("playlist.checks-tab.display-name") { displayNameAsync.await() }
-      val playlistNameById = details.detailSuspend("playlist.checks-tab.playlist-names") { playlistNamesAsync.await() }
-      val checks = details.detailSuspend("playlist.checks-tab.checks") { checksAsync.await() }
-      Triple(displayName, playlistNameById, checks)
-    }
-    val displayNames = details.detail("playlist.checks-tab.display-names-map") { playlistCheckPort.getDisplayNames() }
-    val fixableCheckIds = details.detail("playlist.checks-tab.fixable-check-ids") { playlistCheckPort.getFixableCheckIds() }
-    val groups = checks
+  fun checks(): TemplateInstance = httpResponseMetrics.timed("page.playlist.checks-tab") {
+    val dashboard = playlistCheckPort.getCheckDashboard()
+    val groups = dashboard.checks
       .map { check ->
         PlaylistChecksResource.PlaylistCheckRow(
           check = check,
-          playlistName = playlistNameById[check.playlistId.value] ?: check.playlistId.value,
-          hasfix = fixableCheckIds.contains(check.checkId.substringAfterLast(":")),
+          playlistName = dashboard.playlistNameById[check.playlistId.value] ?: check.playlistId.value,
+          hasfix = dashboard.fixableCheckIds.contains(check.checkId.substringAfterLast(":")),
         )
       }
       .groupBy { it.check.checkId.substringAfterLast(":") }
       .map { (checkType, rows) ->
-        val name = displayNames[checkType] ?: checkType
+        val name = dashboard.displayNames[checkType] ?: checkType
         PlaylistChecksResource.PlaylistCheckGroup(name, checkType, rows.sortedBy { it.playlistName })
       }
       .sortedBy { it.checkName }
     playlistChecksTemplate
-      .data("displayName", displayName ?: securityIdentity.principal.name)
+      .data("displayName", dashboard.displayName.ifEmpty { securityIdentity.principal.name })
       .data("groups", groups)
   }
 }
