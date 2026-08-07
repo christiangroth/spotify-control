@@ -22,6 +22,7 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Clock
 import java.time.DayOfWeek
+import java.time.temporal.TemporalAdjusters
 
 @Path("/stats")
 @ApplicationScoped
@@ -119,7 +120,7 @@ class StatsResource(
     val javaDate = toJavaLocalDate(today)
     val periodStart = when (type) {
       AggregationPeriodType.DAY -> javaDate
-      AggregationPeriodType.WEEK -> javaDate.minusDays((javaDate.dayOfWeek.value - DayOfWeek.MONDAY.value).toLong())
+      AggregationPeriodType.WEEK -> javaDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY))
       AggregationPeriodType.MONTH -> javaDate.withDayOfMonth(1)
       AggregationPeriodType.QUARTER -> javaDate.withDayOfMonth(1).withMonth(calculateQuarterStartMonth(javaDate.monthValue))
       AggregationPeriodType.YEAR -> javaDate.withDayOfYear(1)
