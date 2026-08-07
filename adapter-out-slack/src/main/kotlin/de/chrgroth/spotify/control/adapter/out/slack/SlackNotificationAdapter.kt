@@ -181,7 +181,7 @@ class SlackNotificationAdapter(
       .fold(0L) { total, entry -> total + entry.totalSeconds }
       .maxByOrNull { it.value }
     val text = buildString {
-      append("Weekly listening digest: $minutes minute(s) played")
+      append("Weekly listening digest (week of ${aggregation.periodStart}): $minutes minute(s) played")
       if (topArtist != null) append(", top artist: $topArtist")
       if (topTrack != null) {
         append(", top track: ${topTrack.name}")
