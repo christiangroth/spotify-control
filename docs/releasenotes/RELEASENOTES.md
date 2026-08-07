@@ -1,3 +1,12 @@
+# 0.125.0 (2026.08.07)
+
+## New Features
+* The weekly listening Slack digest is now sent on Sunday instead of Monday.
+
+
+
+---
+
 # 0.124.0 (2026.08.07)
 
 ## New Features
