@@ -26,10 +26,15 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
+import java.time.DayOfWeek
+import java.time.ZoneOffset
+import java.time.temporal.TemporalAdjusters
 import kotlin.time.Instant
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.toKotlinLocalDate
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import java.time.LocalDate as JLocalDate
 
 class PlaybackAggregationServiceTests {
 
@@ -58,6 +63,10 @@ class PlaybackAggregationServiceTests {
   private val userId = UserId("user-1")
   private val date = LocalDate(2024, 1, 15)
   private val syncTimestamp = Instant.fromEpochSeconds(0)
+  private val mostRecentCompleteWeekStart = JLocalDate.now(ZoneOffset.UTC)
+    .with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+    .minusWeeks(1)
+    .toKotlinLocalDate()
 
   @Test
   fun `aggregate day persists album entries and distinct album count`() {
@@ -300,11 +309,11 @@ class PlaybackAggregationServiceTests {
   }
 
   @Test
-  fun `handle AggregatePlaybackData notifies weekly digest when type is WEEK`() {
+  fun `handle AggregatePlaybackData notifies weekly digest when type is WEEK and week is most recent complete week`() {
     every { currentUserResolver.userId() } returns userId
-    val weekStart = LocalDate(2024, 1, 15)
+    val weekStart = mostRecentCompleteWeekStart
     every {
-      aggregationRepository.findByTypeAndPeriodRange(AggregationPeriodType.DAY, weekStart, LocalDate(2024, 1, 21))
+      aggregationRepository.findByTypeAndPeriodRange(AggregationPeriodType.DAY, weekStart, any())
     } returns emptyList()
     val digestAggregation = PlaybackAggregation(
       type = AggregationPeriodType.WEEK,
@@ -324,6 +333,20 @@ class PlaybackAggregationServiceTests {
     service.handle(DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.WEEK, weekStart))
 
     verify(exactly = 1) { digestNotification.notifyWeeklyDigest(digestAggregation) }
+  }
+
+  @Test
+  fun `handle AggregatePlaybackData does not notify weekly digest for a past week`() {
+    every { currentUserResolver.userId() } returns userId
+    val weekStart = LocalDate(2024, 1, 15)
+    every {
+      aggregationRepository.findByTypeAndPeriodRange(AggregationPeriodType.DAY, weekStart, LocalDate(2024, 1, 21))
+    } returns emptyList()
+
+    service.handle(DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.WEEK, weekStart))
+
+    verify(exactly = 0) { digestNotification.notifyWeeklyDigest(any()) }
+    verify(exactly = 0) { aggregationRepository.findByPeriod(any(), any()) }
   }
 
   @Test

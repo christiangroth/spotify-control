@@ -201,13 +201,20 @@ class PlaybackAggregationService(
       )
     }
     recordAggregationSuccess(event.type)
-    if (event.type == AggregationPeriodType.WEEK) {
+    if (event.type == AggregationPeriodType.WEEK && isMostRecentCompleteWeek(event.periodStart)) {
       aggregationRepository.findByPeriod(AggregationPeriodType.WEEK, event.periodStart)?.let { digestNotification.notifyWeeklyDigest(it) }
     }
     if (event.type == AggregationPeriodType.DAY) {
       outboxPort.enqueue(DomainOutboxEvent.RebuildDashboardReadModel())
     }
     return Unit.right()
+  }
+
+  // only the week that just completed should trigger a digest; a full rebuild also enqueues every past week,
+  // and those must stay silent instead of flooding Slack with one message per historical week
+  private fun isMostRecentCompleteWeek(weekStart: LocalDate): Boolean {
+    val currentWeekStart = JLocalDate.now(ZoneOffset.UTC).with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+    return weekStart.toJavaLocalDate() == currentWeekStart.minusWeeks(1)
   }
 
   override fun handle(event: DomainOutboxEvent.RebuildAllAggregations): Either<DomainError, Unit> {

@@ -19,6 +19,7 @@ import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.time.DayOfWeek
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.Optional
@@ -174,14 +175,24 @@ class SlackNotificationAdapter(
     if (!weeklyDigestEnabled || aggregation.eventCount == 0L) return
     val minutes = aggregation.totalPlaybackSeconds / SECONDS_PER_MINUTE
     val topArtist = aggregation.artistEntries.firstOrNull()?.name
-    val topTrack = aggregation.trackEntries.firstOrNull()?.name
+    val topTrack = aggregation.trackEntries.firstOrNull()
+    val topDay = aggregation.activityEntries
+      .groupingBy { it.dayOfWeek }
+      .fold(0L) { total, entry -> total + entry.totalSeconds }
+      .maxByOrNull { it.value }
     val text = buildString {
       append("Weekly listening digest: $minutes minute(s) played")
       if (topArtist != null) append(", top artist: $topArtist")
-      if (topTrack != null) append(", top track: $topTrack")
+      if (topTrack != null) {
+        append(", top track: ${topTrack.name}")
+        if (topTrack.artistName != null) append(" (${topTrack.artistName})")
+      }
+      if (topDay != null) append(", most active day: ${topDay.key.dayName()} (${topDay.value / SECONDS_PER_MINUTE} minute(s))")
     }
     send(text)
   }
+
+  private fun DayOfWeek.dayName(): String = name.lowercase().replaceFirstChar { it.uppercase() }
 
   private fun send(text: String) {
     if (!enabled) return
