@@ -1,10 +1,13 @@
 package de.chrgroth.spotify.control.adapter.out.slack
 
 import de.chrgroth.spotify.control.domain.model.infra.OutboxPartitionStats
+import de.chrgroth.spotify.control.domain.model.playback.aggregation.ActivityEntry
+import de.chrgroth.spotify.control.domain.model.playback.aggregation.ActivityTimeWindow
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationPeriodType
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationRankEntry
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.PlaybackAggregation
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
+import java.time.DayOfWeek
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -254,6 +257,20 @@ class SlackNotificationAdapterTests {
     adapter(weeklyDigestEnabled = true).notifyWeeklyDigest(buildAggregation(eventCount = 0L, trackEntries = emptyList(), artistEntries = emptyList()))
   }
 
+  @Test
+  fun `weekly digest notification does not throw with top track artist name and activity entries`() {
+    adapter(weeklyDigestEnabled = true).notifyWeeklyDigest(
+      buildAggregation(
+        trackEntries = listOf(AggregationRankEntry("track-1", "Top Track", 300L, artistName = "Top Track Artist")),
+        activityEntries = listOf(
+          ActivityEntry(DayOfWeek.MONDAY, ActivityTimeWindow.H06_12, 120L),
+          ActivityEntry(DayOfWeek.SATURDAY, ActivityTimeWindow.H12_18, 600L),
+          ActivityEntry(DayOfWeek.SATURDAY, ActivityTimeWindow.H18_24, 300L),
+        ),
+      ),
+    )
+  }
+
   private fun buildCheck(
     playlistId: String = "playlist-1",
     checkId: String = "playlist-1:duplicate-tracks",
@@ -271,6 +288,7 @@ class SlackNotificationAdapterTests {
     eventCount: Long = 5L,
     trackEntries: List<AggregationRankEntry> = listOf(AggregationRankEntry("track-1", "Top Track", 300L)),
     artistEntries: List<AggregationRankEntry> = listOf(AggregationRankEntry("artist-1", "Top Artist", 300L)),
+    activityEntries: List<ActivityEntry> = emptyList(),
   ) = PlaybackAggregation(
     type = AggregationPeriodType.WEEK,
     periodStart = LocalDate(2024, 1, 15),
@@ -282,6 +300,6 @@ class SlackNotificationAdapterTests {
     artistEntries = artistEntries,
     albumEntries = emptyList(),
     trackEntries = trackEntries,
-    activityEntries = emptyList(),
+    activityEntries = activityEntries,
   )
 }
