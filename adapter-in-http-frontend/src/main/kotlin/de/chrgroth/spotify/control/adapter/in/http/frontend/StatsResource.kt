@@ -120,7 +120,7 @@ class StatsResource(
     val javaDate = toJavaLocalDate(today)
     val periodStart = when (type) {
       AggregationPeriodType.DAY -> javaDate
-      AggregationPeriodType.WEEK -> javaDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY))
+      AggregationPeriodType.WEEK -> javaDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
       AggregationPeriodType.MONTH -> javaDate.withDayOfMonth(1)
       AggregationPeriodType.QUARTER -> javaDate.withDayOfMonth(1).withMonth(calculateQuarterStartMonth(javaDate.monthValue))
       AggregationPeriodType.YEAR -> javaDate.withDayOfYear(1)

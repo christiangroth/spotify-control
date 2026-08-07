@@ -64,7 +64,7 @@ class PlaybackAggregationServiceTests {
   private val date = LocalDate(2024, 1, 15)
   private val syncTimestamp = Instant.fromEpochSeconds(0)
   private val mostRecentCompleteWeekStart = JLocalDate.now(ZoneOffset.UTC)
-    .with(TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY))
+    .with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
     .minusWeeks(1)
     .toKotlinLocalDate()
 
