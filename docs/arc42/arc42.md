@@ -405,7 +405,7 @@ flowchart LR
 
     subgraph Agg["app_playback_aggregation"]
         Day["DAY<br/>(daily 01:00)"]
-        Week["WEEK<br/>(Mon 01:30)"]
+        Week["WEEK<br/>(Sun 01:30)"]
         Month["MONTH<br/>(1st 02:00)"]
         Quarter["QUARTER<br/>(02:30)"]
         Year["YEAR<br/>(Jan 1 03:00)"]
@@ -572,7 +572,7 @@ Backend services notify SSE streams via CDI events. The SSE endpoint delivers th
 | `PlaylistSyncJob`            | hourly (at :30)                           | `SyncPlaylistInfo`                            |
 | `ArtistCatalogSyncJob`       | daily at 02:00 (rotating 1/14 partition)  | `SyncArtistAlbums`                            |
 | `UserProfileUpdateJob`       | daily at 04:00                            | `UpdateUserProfile`                           |
-| `PlaybackAggregationJob`     | daily 01:00 / weekly Mon 01:30 / monthly 1st 02:00 / quarterly 02:30 / yearly Jan 1 03:00 | `AggregatePlaybackData` (one per period type) |
+| `PlaybackAggregationJob`     | daily 01:00 / weekly Sun 01:30 / monthly 1st 02:00 / quarterly 02:30 / yearly Jan 1 03:00 | `AggregatePlaybackData` (one per period type) |
 
 All scheduler jobs skip execution via `skipExecutionIf = ScheduledSkipPredicate::class` (from `de.chrgroth.quarkus.starters`) until all starters have completed successfully.
 

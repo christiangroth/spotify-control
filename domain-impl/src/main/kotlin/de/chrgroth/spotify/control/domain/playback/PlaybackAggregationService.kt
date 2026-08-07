@@ -129,8 +129,8 @@ class PlaybackAggregationService(
   }
 
   private fun enqueueWeeks(from: JLocalDate, to: JLocalDate) {
-    var weekStart = from.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
-    val lastCompleteWeekStart = to.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+    var weekStart = from.with(TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY))
+    val lastCompleteWeekStart = to.with(TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY))
     var count = 0
     while (!weekStart.isAfter(lastCompleteWeekStart)) {
       enqueueAggregateWeek(weekStart.toKotlin())
@@ -213,7 +213,7 @@ class PlaybackAggregationService(
   // only the week that just completed should trigger a digest; a full rebuild also enqueues every past week,
   // and those must stay silent instead of flooding Slack with one message per historical week
   private fun isMostRecentCompleteWeek(weekStart: LocalDate): Boolean {
-    val currentWeekStart = JLocalDate.now(ZoneOffset.UTC).with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+    val currentWeekStart = JLocalDate.now(ZoneOffset.UTC).with(TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY))
     return weekStart.toJavaLocalDate() == currentWeekStart.minusWeeks(1)
   }
 

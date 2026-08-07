@@ -22,7 +22,7 @@ class PlaybackAggregationJob(
   }
 
   @Timed(value = "scheduler.job", extraTags = ["invoker", "PlaybackAggregationJob.aggregateWeekly"], histogram = true)
-  @Scheduled(cron = "0 30 1 ? * MON", skipExecutionIf = ScheduledSkipPredicate::class)
+  @Scheduled(cron = "0 30 1 ? * SUN", skipExecutionIf = ScheduledSkipPredicate::class)
   fun aggregateWeekly() {
     aggregation.enqueueAggregateWeek(LocalDate.now(ZoneOffset.UTC).minusWeeks(1).toKotlin())
   }
