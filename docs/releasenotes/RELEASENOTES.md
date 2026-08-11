@@ -1,3 +1,12 @@
+# 0.125.2 (2026.08.11)
+
+## Bugfixes / Chore
+* Opening the missing artists modal on the Playlists settings page is now fast, since the artist names are precomputed instead of being resolved from Spotify on every click.
+
+
+
+---
+
 # 0.125.1 (2026.08.07)
 
 ## Bugfixes / Chore
