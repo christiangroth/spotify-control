@@ -126,12 +126,17 @@ class PlaylistService(
 
   private fun resolveMissingArtistNames(missingArtistIds: Set<ArtistId>): Map<ArtistId, String?> {
     if (missingArtistIds.isEmpty()) return emptyMap()
-    val accessToken = spotifyAccessToken.getValidAccessToken()
-    // Resolved once for all playlists combined in as few batched Spotify calls as possible (up to 50 ids per
-    // request), during the read-model rebuild rather than per playlist on every modal open.
-    return spotifyCatalog.getArtists(accessToken, missingArtistIds.map { it.value })
-      .getOrElse { emptyList() }
-      .associate { it.id to it.artistName }
+    return try {
+      val accessToken = spotifyAccessToken.getValidAccessToken()
+      // Resolved once for all playlists combined in as few batched Spotify calls as possible (up to 50 ids per
+      // request), during the read-model rebuild rather than per playlist on every modal open.
+      spotifyCatalog.getArtists(accessToken, missingArtistIds.map { it.value })
+        .getOrElse { emptyList() }
+        .associate { it.id to it.artistName }
+    } catch (e: Exception) {
+      logger.warn(e) { "Failed to resolve missing artist names, playlist settings view will show artist ids only" }
+      emptyMap()
+    }
   }
 
   override fun getMissingArtists(playlistId: String): List<MissingArtist> {
