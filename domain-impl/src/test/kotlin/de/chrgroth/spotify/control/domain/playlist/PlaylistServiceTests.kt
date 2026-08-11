@@ -107,13 +107,6 @@ class PlaylistServiceTests {
 
   // --- getMissingArtists tests ---
 
-  private fun buildPlaylistWithArtists(playlistId: String, vararg artistIds: String) = Playlist(
-    spotifyPlaylistId = playlistId,
-    tracks = artistIds.mapIndexed { index, artistId ->
-      PlaylistTrack(trackId = TrackId("t${index + 1}"), artistIds = listOf(ArtistId(artistId)), albumId = null)
-    },
-  )
-
   @Test
   fun `getMissingArtists returns empty list when no user exists`() {
     every { currentUserResolver.userId() } returns null
@@ -121,13 +114,23 @@ class PlaylistServiceTests {
     val result = adapter.getMissingArtists("p1")
 
     assertThat(result).isEmpty()
-    verify(exactly = 0) { playlistRepository.findByPlaylistId(any()) }
+    verify(exactly = 0) { playlistSettingsViewRepository.find() }
+  }
+
+  @Test
+  fun `getMissingArtists returns empty list when no view has been built yet`() {
+    every { currentUserResolver.userId() } returns userId
+    every { playlistSettingsViewRepository.find() } returns null
+
+    val result = adapter.getMissingArtists("p1")
+
+    assertThat(result).isEmpty()
   }
 
   @Test
   fun `getMissingArtists returns empty list when playlist is unknown`() {
     every { currentUserResolver.userId() } returns userId
-    every { playlistRepository.findByPlaylistId("p2") } returns null
+    every { playlistSettingsViewRepository.find() } returns PlaylistSettingsView(entries = emptyList())
 
     val result = adapter.getMissingArtists("p2")
 
@@ -135,29 +138,22 @@ class PlaylistServiceTests {
   }
 
   @Test
-  fun `getMissingArtists returns empty list when all artists are already in catalog`() {
+  fun `getMissingArtists reads the precomputed missing artists from the settings view`() {
     every { currentUserResolver.userId() } returns userId
-    every { playlistRepository.findByPlaylistId("p1") } returns buildPlaylistWithArtists("p1", "artist-1")
-    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns listOf(
-      AppArtist(id = ArtistId("artist-1"), artistName = "Artist 1", lastSync = now),
+    every { playlistSettingsViewRepository.find() } returns PlaylistSettingsView(
+      entries = listOf(
+        PlaylistSettingsEntry(
+          playlist = buildPlaylistInfo("p1"),
+          numberOfTracks = 5,
+          numberOfArtists = 3,
+          numberOfMissingArtists = 2,
+          missingArtists = listOf(
+            MissingArtist(id = "artist-2", name = "Alpha"),
+            MissingArtist(id = "artist-1", name = "Zeta"),
+          ),
+        ),
+      ),
     )
-
-    val result = adapter.getMissingArtists("p1")
-
-    assertThat(result).isEmpty()
-    verify(exactly = 0) { spotifyAccessToken.getValidAccessToken() }
-  }
-
-  @Test
-  fun `getMissingArtists resolves names for missing artists via Spotify and sorts by name`() {
-    every { currentUserResolver.userId() } returns userId
-    every { playlistRepository.findByPlaylistId("p1") } returns buildPlaylistWithArtists("p1", "artist-1", "artist-2")
-    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"), ArtistId("artist-2"))) } returns emptyList()
-    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
-    every { spotifyCatalog.getArtists(accessToken, listOf("artist-1", "artist-2")) } returns listOf(
-      AppArtist(id = ArtistId("artist-1"), artistName = "Zeta", lastSync = now),
-      AppArtist(id = ArtistId("artist-2"), artistName = "Alpha", lastSync = now),
-    ).right()
 
     val result = adapter.getMissingArtists("p1")
 
@@ -165,38 +161,6 @@ class PlaylistServiceTests {
       MissingArtist(id = "artist-2", name = "Alpha"),
       MissingArtist(id = "artist-1", name = "Zeta"),
     )
-  }
-
-  @Test
-  fun `getMissingArtists only checks the main artist per track, ignoring featured artists`() {
-    every { currentUserResolver.userId() } returns userId
-    every { playlistRepository.findByPlaylistId("p1") } returns Playlist(
-      spotifyPlaylistId = "p1",
-      tracks = listOf(PlaylistTrack(trackId = TrackId("t1"), artistIds = listOf(ArtistId("artist-1"), ArtistId("artist-2")), albumId = null)),
-    )
-    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns emptyList()
-    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
-    every { spotifyCatalog.getArtists(accessToken, listOf("artist-1")) } returns listOf(
-      AppArtist(id = ArtistId("artist-1"), artistName = "Main", lastSync = now),
-    ).right()
-
-    val result = adapter.getMissingArtists("p1")
-
-    assertThat(result).containsExactly(MissingArtist(id = "artist-1", name = "Main"))
-    verify(exactly = 1) { spotifyCatalog.getArtists(accessToken, listOf("artist-1")) }
-  }
-
-  @Test
-  fun `getMissingArtists falls back to null name when Spotify lookup fails`() {
-    every { currentUserResolver.userId() } returns userId
-    every { playlistRepository.findByPlaylistId("p1") } returns buildPlaylistWithArtists("p1", "artist-1")
-    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns emptyList()
-    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
-    every { spotifyCatalog.getArtists(accessToken, listOf("artist-1")) } returns SpotifyRateLimitError(1.seconds).left()
-
-    val result = adapter.getMissingArtists("p1")
-
-    assertThat(result).containsExactly(MissingArtist(id = "artist-1", name = null))
   }
 
   // --- enqueueUpdates tests ---
@@ -936,7 +900,15 @@ class PlaylistServiceTests {
   @Test
   fun `getPlaylistSettingsView returns the precomputed view`() {
     val view = PlaylistSettingsView(
-      entries = listOf(PlaylistSettingsEntry(playlist = buildPlaylistInfo("p1"), numberOfTracks = 5, numberOfArtists = 3, numberOfMissingArtists = 1)),
+      entries = listOf(
+        PlaylistSettingsEntry(
+          playlist = buildPlaylistInfo("p1"),
+          numberOfTracks = 5,
+          numberOfArtists = 3,
+          numberOfMissingArtists = 1,
+          missingArtists = listOf(MissingArtist(id = "artist-1", name = "Artist 1")),
+        ),
+      ),
     )
     every { playlistSettingsViewRepository.find() } returns view
 
@@ -957,6 +929,11 @@ class PlaylistServiceTests {
     every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"), ArtistId("artist-2"), ArtistId("artist-3"))) } returns listOf(
       AppArtist(id = ArtistId("artist-1"), artistName = "Artist 1", lastSync = now),
     )
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
+    every { spotifyCatalog.getArtists(accessToken, listOf("artist-2", "artist-3")) } returns listOf(
+      AppArtist(id = ArtistId("artist-2"), artistName = "Artist 2", lastSync = now),
+      AppArtist(id = ArtistId("artist-3"), artistName = "Artist 3", lastSync = now),
+    ).right()
     val savedSlot = slot<PlaylistSettingsView>()
     every { playlistSettingsViewRepository.save(capture(savedSlot)) } just runs
 
@@ -966,9 +943,31 @@ class PlaylistServiceTests {
     assertThat(entries["p1"]!!.numberOfTracks).isEqualTo(10)
     assertThat(entries["p1"]!!.numberOfArtists).isEqualTo(2)
     assertThat(entries["p1"]!!.numberOfMissingArtists).isEqualTo(1)
+    assertThat(entries["p1"]!!.missingArtists).containsExactly(MissingArtist(id = "artist-2", name = "Artist 2"))
     assertThat(entries["p2"]!!.numberOfTracks).isEqualTo(20)
     assertThat(entries["p2"]!!.numberOfArtists).isEqualTo(2)
     assertThat(entries["p2"]!!.numberOfMissingArtists).isEqualTo(2)
+    assertThat(entries["p2"]!!.missingArtists).containsExactly(
+      MissingArtist(id = "artist-2", name = "Artist 2"),
+      MissingArtist(id = "artist-3", name = "Artist 3"),
+    )
+  }
+
+  @Test
+  fun `rebuildPlaylistSettingsView does not call Spotify when no artists are missing`() {
+    every { currentUserResolver.userId() } returns userId
+    every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1"))
+    every { playlistRepository.findTrackCounts() } returns mapOf("p1" to 10)
+    every { playlistRepository.findDistinctArtistIds() } returns mapOf("p1" to setOf(ArtistId("artist-1")))
+    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns listOf(
+      AppArtist(id = ArtistId("artist-1"), artistName = "Artist 1", lastSync = now),
+    )
+    every { playlistSettingsViewRepository.save(any()) } just runs
+
+    adapter.rebuildPlaylistSettingsView()
+
+    verify(exactly = 0) { spotifyAccessToken.getValidAccessToken() }
+    verify(exactly = 0) { spotifyCatalog.getArtists(any(), any()) }
   }
 
   @Test

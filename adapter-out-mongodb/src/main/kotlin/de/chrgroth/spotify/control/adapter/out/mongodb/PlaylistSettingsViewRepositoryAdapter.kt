@@ -1,6 +1,7 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
 import de.chrgroth.spotify.control.adapter.out.mongodb.MongoQueryMetrics.Companion.SINGLETON_ID
+import de.chrgroth.spotify.control.domain.model.playlist.MissingArtist
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSettingsEntry
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSettingsView
@@ -39,6 +40,7 @@ class PlaylistSettingsViewRepositoryAdapter(
         numberOfTracks = entry.numberOfTracks,
         numberOfArtists = entry.numberOfArtists,
         numberOfMissingArtists = entry.numberOfMissingArtists,
+        missingArtists = entry.missingArtists.map { MissingArtist(id = it.id, name = it.name) },
       )
     },
   )
@@ -57,6 +59,12 @@ class PlaylistSettingsViewRepositoryAdapter(
         numberOfTracks = entry.numberOfTracks
         numberOfArtists = entry.numberOfArtists
         numberOfMissingArtists = entry.numberOfMissingArtists
+        missingArtists = entry.missingArtists.map { missingArtist ->
+          MissingArtistDocument().apply {
+            id = missingArtist.id
+            name = missingArtist.name
+          }
+        }
       }
     }
   }

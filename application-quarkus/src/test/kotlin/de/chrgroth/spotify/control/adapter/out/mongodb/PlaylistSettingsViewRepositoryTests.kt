@@ -1,5 +1,6 @@
 package de.chrgroth.spotify.control.adapter.out.mongodb
 
+import de.chrgroth.spotify.control.domain.model.playlist.MissingArtist
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSettingsEntry
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSettingsView
@@ -42,6 +43,7 @@ class PlaylistSettingsViewRepositoryTests {
         numberOfTracks = 10,
         numberOfArtists = 5,
         numberOfMissingArtists = 1,
+        missingArtists = listOf(MissingArtist(id = "artist-1", name = "Artist One")),
       ),
     ),
   )

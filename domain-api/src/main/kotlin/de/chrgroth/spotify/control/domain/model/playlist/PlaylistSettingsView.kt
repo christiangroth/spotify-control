@@ -5,6 +5,7 @@ data class PlaylistSettingsEntry(
   val numberOfTracks: Int?,
   val numberOfArtists: Int?,
   val numberOfMissingArtists: Int?,
+  val missingArtists: List<MissingArtist>,
 )
 
 data class PlaylistSettingsView(
