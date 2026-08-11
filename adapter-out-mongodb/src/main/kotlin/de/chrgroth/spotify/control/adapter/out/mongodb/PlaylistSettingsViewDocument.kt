@@ -23,4 +23,10 @@ class PlaylistSettingsEntryDocument {
   var numberOfTracks: Int? = null
   var numberOfArtists: Int? = null
   var numberOfMissingArtists: Int? = null
+  var missingArtists: List<MissingArtistDocument> = emptyList()
+}
+
+class MissingArtistDocument {
+  lateinit var id: String
+  var name: String? = null
 }

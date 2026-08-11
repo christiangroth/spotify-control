@@ -7,6 +7,7 @@ import arrow.core.right
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.PlaylistSyncError
 import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
+import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.model.playlist.ArtistStats
 import de.chrgroth.spotify.control.domain.model.playlist.MissingArtist
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistInfo
@@ -86,9 +87,11 @@ class PlaylistService(
     val allArtistIds = artistIdsByPlaylist.values.flatten().toSet()
     val existingArtistIds = appArtistRepository.findByArtistIds(allArtistIds).map { it.id }.toSet()
     return artistIdsByPlaylist.mapValues { (_, artistIds) ->
+      val missingArtistIds = artistIds.filterNot { it in existingArtistIds }
       ArtistStats(
         total = artistIds.size,
-        missingFromCatalog = artistIds.count { it !in existingArtistIds },
+        missingFromCatalog = missingArtistIds.size,
+        missingArtistIds = missingArtistIds,
       )
     }
   }
@@ -104,36 +107,45 @@ class PlaylistService(
     val playlists = getPlaylists()
     val trackCounts = getTrackCounts()
     val artistStats = getArtistStats()
+    val resolvedNamesById = resolveMissingArtistNames(artistStats.values.flatMap { it.missingArtistIds }.toSet())
     val entries = playlists.map { playlistInfo ->
+      val stats = artistStats[playlistInfo.spotifyPlaylistId]
       PlaylistSettingsEntry(
         playlist = playlistInfo,
         numberOfTracks = trackCounts[playlistInfo.spotifyPlaylistId],
-        numberOfArtists = artistStats[playlistInfo.spotifyPlaylistId]?.total,
-        numberOfMissingArtists = artistStats[playlistInfo.spotifyPlaylistId]?.missingFromCatalog,
+        numberOfArtists = stats?.total,
+        numberOfMissingArtists = stats?.missingFromCatalog,
+        missingArtists = stats?.missingArtistIds
+          ?.map { artistId -> MissingArtist(id = artistId.value, name = resolvedNamesById[artistId]) }
+          ?.sortedBy { it.name ?: it.id }
+          ?: emptyList(),
       )
     }
     return PlaylistSettingsView(entries)
   }
 
+  private fun resolveMissingArtistNames(missingArtistIds: Set<ArtistId>): Map<ArtistId, String?> {
+    if (missingArtistIds.isEmpty()) return emptyMap()
+    return try {
+      val accessToken = spotifyAccessToken.getValidAccessToken()
+      // Resolved once for all playlists combined in as few batched Spotify calls as possible (up to 50 ids per
+      // request), during the read-model rebuild rather than per playlist on every modal open.
+      spotifyCatalog.getArtists(accessToken, missingArtistIds.map { it.value })
+        .getOrElse { emptyList() }
+        .associate { it.id to it.artistName }
+    } catch (e: Exception) {
+      logger.warn(e) { "Failed to resolve missing artist names, playlist settings view will show artist ids only" }
+      emptyMap()
+    }
+  }
+
   override fun getMissingArtists(playlistId: String): List<MissingArtist> {
     currentUserResolver.userId() ?: return emptyList()
-    val playlist = playlistRepository.findByPlaylistId(playlistId) ?: return emptyList()
-    // Only the main (first) artist per track is checked against the catalog, matching syncPlaylistData()'s
-    // catalog sync which only ever adds a track's primary artist - featured/additional artists are never added
-    // and would otherwise always be reported as missing.
-    val artistIds = playlist.tracks.map { it.mainArtistId }.toSet()
-    val existingArtistIds = appArtistRepository.findByArtistIds(artistIds).map { it.id }.toSet()
-    val missingArtistIds = artistIds.filterNot { it in existingArtistIds }
-    if (missingArtistIds.isEmpty()) return emptyList()
-    val accessToken = spotifyAccessToken.getValidAccessToken()
-    // Resolved in as few batched Spotify calls as possible (up to 50 ids per request), rather than one
-    // throttled request per missing artist, which made this endpoint take minutes for larger playlists.
-    val resolvedNamesById = spotifyCatalog.getArtists(accessToken, missingArtistIds.map { it.value })
-      .getOrElse { emptyList() }
-      .associate { it.id to it.artistName }
-    return missingArtistIds
-      .map { artistId -> MissingArtist(id = artistId.value, name = resolvedNamesById[artistId]) }
-      .sortedBy { it.name ?: it.id }
+    return playlistSettingsViewRepository.find()
+      ?.entries
+      ?.find { it.playlist.spotifyPlaylistId == playlistId }
+      ?.missingArtists
+      .orEmpty()
   }
 
   override fun enqueueUpdates() {
