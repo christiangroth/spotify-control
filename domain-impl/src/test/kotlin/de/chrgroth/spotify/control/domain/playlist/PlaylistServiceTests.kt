@@ -929,6 +929,7 @@ class PlaylistServiceTests {
     every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"), ArtistId("artist-2"), ArtistId("artist-3"))) } returns listOf(
       AppArtist(id = ArtistId("artist-1"), artistName = "Artist 1", lastSync = now),
     )
+    every { playlistSettingsViewRepository.find() } returns null
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyCatalog.getArtists(accessToken, listOf("artist-2", "artist-3")) } returns listOf(
       AppArtist(id = ArtistId("artist-2"), artistName = "Artist 2", lastSync = now),
@@ -968,6 +969,70 @@ class PlaylistServiceTests {
 
     verify(exactly = 0) { spotifyAccessToken.getValidAccessToken() }
     verify(exactly = 0) { spotifyCatalog.getArtists(any(), any()) }
+    verify(exactly = 0) { playlistSettingsViewRepository.find() }
+  }
+
+  @Test
+  fun `rebuildPlaylistSettingsView reuses previously resolved artist names without calling Spotify again`() {
+    every { currentUserResolver.userId() } returns userId
+    every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1"))
+    every { playlistRepository.findTrackCounts() } returns mapOf("p1" to 10)
+    every { playlistRepository.findDistinctArtistIds() } returns mapOf("p1" to setOf(ArtistId("artist-1")))
+    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns emptyList()
+    every { playlistSettingsViewRepository.find() } returns PlaylistSettingsView(
+      entries = listOf(
+        PlaylistSettingsEntry(
+          playlist = buildPlaylistInfo("p1"),
+          numberOfTracks = 10,
+          numberOfArtists = 1,
+          numberOfMissingArtists = 1,
+          missingArtists = listOf(MissingArtist(id = "artist-1", name = "Artist 1")),
+        ),
+      ),
+    )
+    val savedSlot = slot<PlaylistSettingsView>()
+    every { playlistSettingsViewRepository.save(capture(savedSlot)) } just runs
+
+    adapter.rebuildPlaylistSettingsView()
+
+    verify(exactly = 0) { spotifyAccessToken.getValidAccessToken() }
+    verify(exactly = 0) { spotifyCatalog.getArtists(any(), any()) }
+    val entries = savedSlot.captured.entries.associateBy { it.playlist.spotifyPlaylistId }
+    assertThat(entries["p1"]!!.missingArtists).containsExactly(MissingArtist(id = "artist-1", name = "Artist 1"))
+  }
+
+  @Test
+  fun `rebuildPlaylistSettingsView keeps previously resolved artist names when Spotify resolution fails`() {
+    every { currentUserResolver.userId() } returns userId
+    every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1"))
+    every { playlistRepository.findTrackCounts() } returns mapOf("p1" to 10)
+    every { playlistRepository.findDistinctArtistIds() } returns mapOf(
+      "p1" to setOf(ArtistId("artist-1"), ArtistId("artist-2")),
+    )
+    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"), ArtistId("artist-2"))) } returns emptyList()
+    every { playlistSettingsViewRepository.find() } returns PlaylistSettingsView(
+      entries = listOf(
+        PlaylistSettingsEntry(
+          playlist = buildPlaylistInfo("p1"),
+          numberOfTracks = 10,
+          numberOfArtists = 2,
+          numberOfMissingArtists = 2,
+          missingArtists = listOf(MissingArtist(id = "artist-1", name = "Artist 1"), MissingArtist(id = "artist-2", name = null)),
+        ),
+      ),
+    )
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
+    every { spotifyCatalog.getArtists(accessToken, listOf("artist-2")) } returns SpotifyRateLimitError(1.seconds).left()
+    val savedSlot = slot<PlaylistSettingsView>()
+    every { playlistSettingsViewRepository.save(capture(savedSlot)) } just runs
+
+    adapter.rebuildPlaylistSettingsView()
+
+    val entries = savedSlot.captured.entries.associateBy { it.playlist.spotifyPlaylistId }
+    assertThat(entries["p1"]!!.missingArtists).containsExactly(
+      MissingArtist(id = "artist-1", name = "Artist 1"),
+      MissingArtist(id = "artist-2", name = null),
+    )
   }
 
   @Test
