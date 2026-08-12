@@ -107,7 +107,21 @@ class PlaylistService(
     val playlists = getPlaylists()
     val trackCounts = getTrackCounts()
     val artistStats = getArtistStats()
-    val resolvedNamesById = resolveMissingArtistNames(artistStats.values.flatMap { it.missingArtistIds }.toSet())
+    val missingArtistIds = artistStats.values.flatMap { it.missingArtistIds }.toSet()
+    val previouslyResolvedNames = if (missingArtistIds.isEmpty()) {
+      emptyMap()
+    } else {
+      playlistSettingsViewRepository.find()
+        ?.entries
+        ?.flatMap { it.missingArtists }
+        ?.mapNotNull { artist -> artist.name?.let { ArtistId(artist.id) to it } }
+        ?.toMap()
+        .orEmpty()
+    }
+    // Names resolved by a previous rebuild are kept even if this Spotify call fails or is rate-limited, and
+    // already-resolved artists are not re-requested, so a transient failure never regresses the read model
+    // back to unresolved names and repeated rebuilds don't keep re-fetching the same artists.
+    val resolvedNamesById = previouslyResolvedNames + resolveMissingArtistNames(missingArtistIds - previouslyResolvedNames.keys)
     val entries = playlists.map { playlistInfo ->
       val stats = artistStats[playlistInfo.spotifyPlaylistId]
       PlaylistSettingsEntry(
@@ -131,8 +145,9 @@ class PlaylistService(
       // Resolved once for all playlists combined in as few batched Spotify calls as possible (up to 50 ids per
       // request), during the read-model rebuild rather than per playlist on every modal open.
       spotifyCatalog.getArtists(accessToken, missingArtistIds.map { it.value })
+        .onLeft { logger.warn { "Failed to resolve ${missingArtistIds.size} missing artist name(s): ${it.code}" } }
         .getOrElse { emptyList() }
-        .associate { it.id to it.artistName }
+        .associate { it.id to it.artistName.ifBlank { null } }
     } catch (e: Exception) {
       logger.warn(e) { "Failed to resolve missing artist names, playlist settings view will show artist ids only" }
       emptyMap()
