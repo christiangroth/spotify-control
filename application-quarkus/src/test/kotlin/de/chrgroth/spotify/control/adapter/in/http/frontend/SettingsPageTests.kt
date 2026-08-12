@@ -1,5 +1,6 @@
 package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
+import arrow.core.getOrElse
 import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
@@ -12,12 +13,14 @@ import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.user.TokenEncryptionPort
 import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
 import io.quarkus.test.junit.QuarkusTest
 import io.quarkus.test.security.TestSecurity
 import io.restassured.RestAssured.given
 import jakarta.inject.Inject
 import org.hamcrest.CoreMatchers.containsString
+import org.hamcrest.CoreMatchers.equalTo
 import org.hamcrest.CoreMatchers.not
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -41,6 +44,9 @@ class SettingsPageTests {
   @Inject
   lateinit var playlistPort: PlaylistPort
 
+  @Inject
+  lateinit var tokenEncryption: TokenEncryptionPort
+
   @BeforeEach
   fun ensureCurrentUser() {
     val now = Clock.System.now()
@@ -48,8 +54,8 @@ class SettingsPageTests {
       User(
         spotifyUserId = UserId("test-user-a"),
         displayName = "Test User",
-        encryptedAccessToken = "encrypted-access",
-        encryptedRefreshToken = "encrypted-refresh",
+        encryptedAccessToken = tokenEncryption.encrypt("mock-access-token").getOrElse { error("Failed to encrypt test access token") },
+        encryptedRefreshToken = tokenEncryption.encrypt("mock-refresh-token").getOrElse { error("Failed to encrypt test refresh token") },
         tokenExpiresAt = now + 1.hours,
         lastLoginAt = now,
       ),
@@ -128,6 +134,44 @@ class SettingsPageTests {
       .body(containsString("1 <button"))
       .body(containsString("badge rounded-pill text-bg-secondary"))
       .body(containsString(">1</span></button>"))
+  }
+
+  @Test
+  fun `missing artists endpoint resolves artist names via Spotify instead of returning them unresolved`() {
+    val now = Clock.System.now()
+    val playlistId = "playlist-${UUID.randomUUID()}"
+    playlistRepository.replaceAll(
+      listOf(
+        PlaylistInfo(
+          spotifyPlaylistId = playlistId,
+          snapshotId = "snap-1",
+          lastSnapshotIdSyncTime = now - 1.hours,
+          name = "Playlist For Missing Artist Name Resolution Test",
+          syncStatus = PlaylistSyncStatus.ACTIVE,
+        ),
+      ),
+    )
+    playlistRepository.save(
+      Playlist(
+        spotifyPlaylistId = playlistId,
+        tracks = listOf(
+          PlaylistTrack(
+            trackId = TrackId("t1"),
+            artistIds = listOf(ArtistId("artist-1")),
+            albumId = null,
+          ),
+        ),
+      ),
+    )
+    playlistPort.rebuildPlaylistSettingsView()
+
+    given()
+      .`when`()
+      .get("/settings/playlist/${playlistId}/missing-artists")
+      .then()
+      .statusCode(200)
+      .body("[0].id", equalTo("artist-1"))
+      .body("[0].name", equalTo("Artist One"))
   }
 
   @Test

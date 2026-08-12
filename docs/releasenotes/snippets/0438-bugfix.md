@@ -1,0 +1,1 @@
+* Fixed the local Spotify mock server (used in dev/test) not implementing artist lookups, which made missing artist names in the Playlists settings modal always show as "unknown Artist" and kept artists from ever being added to the catalog locally.

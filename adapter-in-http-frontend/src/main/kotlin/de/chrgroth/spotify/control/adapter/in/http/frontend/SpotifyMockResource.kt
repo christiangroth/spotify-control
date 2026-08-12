@@ -9,6 +9,7 @@ import jakarta.ws.rs.POST
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.Produces
 import jakarta.ws.rs.PathParam
+import jakarta.ws.rs.QueryParam
 import jakarta.ws.rs.core.MediaType
 import org.eclipse.microprofile.config.inject.ConfigProperty
 
@@ -69,7 +70,36 @@ class SpotifyMockResource {
   @Suppress("UnusedParameter")
   fun albumTracks(@PathParam("albumId") albumId: String): String = ALBUM_RESPONSE
 
+  @GET
+  @Path("/v1/artists/{artistId}")
+  @PermitAll
+  @Produces(MediaType.APPLICATION_JSON)
+  fun artist(@PathParam("artistId") artistId: String): String = artistJson(artistId)
+
+  // Mirrors Spotify's "Get Several Artists" endpoint so catalog sync and the missing-artists modal can resolve
+  // artist names in dev/test instead of getting a 404 for every artist not covered by the other mock endpoints.
+  @GET
+  @Path("/v1/artists")
+  @PermitAll
+  @Produces(MediaType.APPLICATION_JSON)
+  fun artists(@QueryParam("ids") ids: String): String =
+    """{"artists":[${ids.split(",").joinToString(",") { artistJson(it) }}]}"""
+
   companion object {
+
+    private val KNOWN_ARTIST_NAMES = mapOf(
+      "artist-1" to "Artist One",
+      "artist-2" to "Artist Two",
+      "artist-3" to "Artist Three",
+      "artist-4" to "Artist Four",
+      "artist-5" to "Artist Five",
+    )
+
+    private fun artistJson(artistId: String): String =
+      """{"id":"$artistId","name":"${mockArtistName(artistId)}","type":"artist"}"""
+
+    private fun mockArtistName(artistId: String): String = KNOWN_ARTIST_NAMES[artistId] ?: "Mock Artist ($artistId)"
+
     private const val TOKEN_RESPONSE =
       """{"access_token":"mock-access-token","refresh_token":"mock-refresh-token","expires_in":3600,"token_type":"Bearer"}"""
     private const val REFRESH_RESPONSE =
