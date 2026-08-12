@@ -40,34 +40,4 @@ class SpotifyApiResponseModelsTests {
     assertThat(album.releaseDatePrecision).isNull()
     assertThat(album.albumType).isNull()
   }
-
-  @Test
-  fun `deserializes several-artists response with real Spotify payload shape`() {
-    val payload = """
-      {
-        "artists": [
-          {
-            "external_urls": { "spotify": "https://open.spotify.com/artist/0oSGxfWSnnOXhD2fKuz2Gy" },
-            "followers": { "href": null, "total": 1000 },
-            "genres": ["art rock", "glam rock"],
-            "href": "https://api.spotify.com/v1/artists/0oSGxfWSnnOXhD2fKuz2Gy",
-            "id": "0oSGxfWSnnOXhD2fKuz2Gy",
-            "images": [],
-            "name": "David Bowie",
-            "popularity": 76,
-            "type": "artist",
-            "uri": "spotify:artist:0oSGxfWSnnOXhD2fKuz2Gy"
-          },
-          null
-        ]
-      }
-    """.trimIndent()
-
-    val result = json.decodeFromString<SeveralArtistsObject>(payload)
-
-    assertThat(result.artists).hasSize(2)
-    assertThat(result.artists[0]?.id).isEqualTo("0oSGxfWSnnOXhD2fKuz2Gy")
-    assertThat(result.artists[0]?.name).isEqualTo("David Bowie")
-    assertThat(result.artists[1]).isNull()
-  }
 }

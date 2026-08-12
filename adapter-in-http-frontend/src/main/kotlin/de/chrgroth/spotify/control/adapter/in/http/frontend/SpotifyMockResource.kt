@@ -9,7 +9,6 @@ import jakarta.ws.rs.POST
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.Produces
 import jakarta.ws.rs.PathParam
-import jakarta.ws.rs.QueryParam
 import jakarta.ws.rs.core.MediaType
 import org.eclipse.microprofile.config.inject.ConfigProperty
 
@@ -70,20 +69,13 @@ class SpotifyMockResource {
   @Suppress("UnusedParameter")
   fun albumTracks(@PathParam("albumId") albumId: String): String = ALBUM_RESPONSE
 
+  // Covers both catalog sync and the missing-artists modal so unknown artist ids resolve in dev/test instead of
+  // getting a 404 for every artist not covered by the other mock endpoints.
   @GET
   @Path("/v1/artists/{artistId}")
   @PermitAll
   @Produces(MediaType.APPLICATION_JSON)
   fun artist(@PathParam("artistId") artistId: String): String = artistJson(artistId)
-
-  // Mirrors Spotify's "Get Several Artists" endpoint so catalog sync and the missing-artists modal can resolve
-  // artist names in dev/test instead of getting a 404 for every artist not covered by the other mock endpoints.
-  @GET
-  @Path("/v1/artists")
-  @PermitAll
-  @Produces(MediaType.APPLICATION_JSON)
-  fun artists(@QueryParam("ids") ids: String): String =
-    """{"artists":[${ids.split(",").joinToString(",") { artistJson(it) }}]}"""
 
   companion object {
 
