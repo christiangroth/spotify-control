@@ -25,6 +25,7 @@ import de.chrgroth.spotify.control.domain.port.out.catalog.SpotifyCatalogPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.AppPlaylistCheckRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.infra.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
+import de.chrgroth.spotify.control.domain.port.out.playback.RecentlyPlayedRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistSyncNotificationPort
 import de.chrgroth.spotify.control.domain.port.out.readmodel.PlaylistSettingsViewRepositoryPort
@@ -56,6 +57,7 @@ class PlaylistService(
   private val syncController: SyncController,
   private val catalogPort: CatalogPort,
   private val appArtistRepository: AppArtistRepositoryPort,
+  private val recentlyPlayedRepository: RecentlyPlayedRepositoryPort,
   private val spotifyCatalog: SpotifyCatalogPort,
   private val meterRegistry: MeterRegistry,
   private val syncNotification: PlaylistSyncNotificationPort,
@@ -140,18 +142,24 @@ class PlaylistService(
 
   private fun resolveMissingArtistNames(missingArtistIds: Set<ArtistId>): Map<ArtistId, String?> {
     if (missingArtistIds.isEmpty()) return emptyMap()
-    return try {
+    // Artist ids seen in local playback history already carry a name, so those are resolved without any Spotify
+    // request; only the ids still unresolved after that are worth spending a Spotify call on.
+    val locallyResolvedNames = recentlyPlayedRepository.findArtistNamesByIds(missingArtistIds)
+    val remainingArtistIds = missingArtistIds - locallyResolvedNames.keys
+    if (remainingArtistIds.isEmpty()) return locallyResolvedNames
+    val spotifyResolvedNames = try {
       val accessToken = spotifyAccessToken.getValidAccessToken()
       // Resolved once for all playlists combined in as few batched Spotify calls as possible (up to 50 ids per
       // request), during the read-model rebuild rather than per playlist on every modal open.
-      spotifyCatalog.getArtists(accessToken, missingArtistIds.map { it.value })
-        .onLeft { logger.warn { "Failed to resolve ${missingArtistIds.size} missing artist name(s): ${it.code}" } }
+      spotifyCatalog.getArtists(accessToken, remainingArtistIds.map { it.value })
+        .onLeft { logger.warn { "Failed to resolve ${remainingArtistIds.size} missing artist name(s): ${it.code}" } }
         .getOrElse { emptyList() }
         .associate { it.id to it.artistName.ifBlank { null } }
     } catch (e: Exception) {
       logger.warn(e) { "Failed to resolve missing artist names, playlist settings view will show artist ids only" }
       emptyMap()
     }
+    return locallyResolvedNames + spotifyResolvedNames
   }
 
   override fun getMissingArtists(playlistId: String): List<MissingArtist> {

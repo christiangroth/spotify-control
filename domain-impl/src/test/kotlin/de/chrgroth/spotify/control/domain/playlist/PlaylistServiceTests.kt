@@ -27,6 +27,7 @@ import de.chrgroth.spotify.control.domain.port.out.catalog.SpotifyCatalogPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.AppPlaylistCheckRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.infra.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
+import de.chrgroth.spotify.control.domain.port.out.playback.RecentlyPlayedRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.readmodel.PlaylistSettingsViewRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistSyncNotificationPort
@@ -62,6 +63,7 @@ class PlaylistServiceTests {
   private val syncController: SyncController = mockk(relaxed = true)
   private val catalogPort: CatalogPort = mockk(relaxed = true)
   private val appArtistRepository: AppArtistRepositoryPort = mockk()
+  private val recentlyPlayedRepository: RecentlyPlayedRepositoryPort = mockk()
   private val spotifyCatalog: SpotifyCatalogPort = mockk()
   private val meterRegistry = SimpleMeterRegistry()
   private val syncNotification: PlaylistSyncNotificationPort = mockk(relaxed = true)
@@ -75,6 +77,7 @@ class PlaylistServiceTests {
     syncController,
     catalogPort,
     appArtistRepository,
+    recentlyPlayedRepository,
     spotifyCatalog,
     meterRegistry,
     syncNotification,
@@ -930,6 +933,7 @@ class PlaylistServiceTests {
       AppArtist(id = ArtistId("artist-1"), artistName = "Artist 1", lastSync = now),
     )
     every { playlistSettingsViewRepository.find() } returns null
+    every { recentlyPlayedRepository.findArtistNamesByIds(setOf(ArtistId("artist-2"), ArtistId("artist-3"))) } returns emptyMap()
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyCatalog.getArtists(accessToken, listOf("artist-2", "artist-3")) } returns listOf(
       AppArtist(id = ArtistId("artist-2"), artistName = "Artist 2", lastSync = now),
@@ -1002,6 +1006,54 @@ class PlaylistServiceTests {
   }
 
   @Test
+  fun `rebuildPlaylistSettingsView resolves missing artist names from local playback history without calling Spotify`() {
+    every { currentUserResolver.userId() } returns userId
+    every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1"))
+    every { playlistRepository.findTrackCounts() } returns mapOf("p1" to 10)
+    every { playlistRepository.findDistinctArtistIds() } returns mapOf("p1" to setOf(ArtistId("artist-1")))
+    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns emptyList()
+    every { playlistSettingsViewRepository.find() } returns null
+    every { recentlyPlayedRepository.findArtistNamesByIds(setOf(ArtistId("artist-1"))) } returns mapOf(ArtistId("artist-1") to "Artist 1")
+    val savedSlot = slot<PlaylistSettingsView>()
+    every { playlistSettingsViewRepository.save(capture(savedSlot)) } just runs
+
+    adapter.rebuildPlaylistSettingsView()
+
+    verify(exactly = 0) { spotifyAccessToken.getValidAccessToken() }
+    verify(exactly = 0) { spotifyCatalog.getArtists(any(), any()) }
+    val entries = savedSlot.captured.entries.associateBy { it.playlist.spotifyPlaylistId }
+    assertThat(entries["p1"]!!.missingArtists).containsExactly(MissingArtist(id = "artist-1", name = "Artist 1"))
+  }
+
+  @Test
+  fun `rebuildPlaylistSettingsView only calls Spotify for artist ids not resolvable locally`() {
+    every { currentUserResolver.userId() } returns userId
+    every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1"))
+    every { playlistRepository.findTrackCounts() } returns mapOf("p1" to 10)
+    every { playlistRepository.findDistinctArtistIds() } returns mapOf("p1" to setOf(ArtistId("artist-1"), ArtistId("artist-2")))
+    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"), ArtistId("artist-2"))) } returns emptyList()
+    every { playlistSettingsViewRepository.find() } returns null
+    every {
+      recentlyPlayedRepository.findArtistNamesByIds(setOf(ArtistId("artist-1"), ArtistId("artist-2")))
+    } returns mapOf(ArtistId("artist-1") to "Artist 1")
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
+    every { spotifyCatalog.getArtists(accessToken, listOf("artist-2")) } returns listOf(
+      AppArtist(id = ArtistId("artist-2"), artistName = "Artist 2", lastSync = now),
+    ).right()
+    val savedSlot = slot<PlaylistSettingsView>()
+    every { playlistSettingsViewRepository.save(capture(savedSlot)) } just runs
+
+    adapter.rebuildPlaylistSettingsView()
+
+    verify(exactly = 1) { spotifyCatalog.getArtists(accessToken, listOf("artist-2")) }
+    val entries = savedSlot.captured.entries.associateBy { it.playlist.spotifyPlaylistId }
+    assertThat(entries["p1"]!!.missingArtists).containsExactly(
+      MissingArtist(id = "artist-1", name = "Artist 1"),
+      MissingArtist(id = "artist-2", name = "Artist 2"),
+    )
+  }
+
+  @Test
   fun `rebuildPlaylistSettingsView keeps previously resolved artist names when Spotify resolution fails`() {
     every { currentUserResolver.userId() } returns userId
     every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1"))
@@ -1021,6 +1073,7 @@ class PlaylistServiceTests {
         ),
       ),
     )
+    every { recentlyPlayedRepository.findArtistNamesByIds(setOf(ArtistId("artist-2"))) } returns emptyMap()
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyCatalog.getArtists(accessToken, listOf("artist-2")) } returns SpotifyRateLimitError(1.seconds).left()
     val savedSlot = slot<PlaylistSettingsView>()

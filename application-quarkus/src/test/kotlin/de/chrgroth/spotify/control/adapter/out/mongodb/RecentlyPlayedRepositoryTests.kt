@@ -145,4 +145,35 @@ class RecentlyPlayedRepositoryTests {
     val found = result.first { it.trackId == TrackId("track-noduration") }
     assertThat(found.durationSeconds).isEqualTo(0L)
   }
+
+  @Test
+  fun `findArtistNamesByIds returns names for artist ids found in playback history`() {
+    recentlyPlayedRepository.saveAll(listOf(item(1), item(2)))
+
+    val result = recentlyPlayedRepository.findArtistNamesByIds(setOf(ArtistId("artist-id-1"), ArtistId("artist-id-3")))
+
+    assertThat(result).isEqualTo(mapOf(ArtistId("artist-id-1") to "Artist 1"))
+  }
+
+  @Test
+  fun `findArtistNamesByIds returns empty map for empty input`() {
+    val result = recentlyPlayedRepository.findArtistNamesByIds(emptySet())
+    assertThat(result).isEmpty()
+  }
+
+  @Test
+  fun `findArtistNamesByIds resolves names for multi-artist tracks`() {
+    val multiArtistItem = RecentlyPlayedItem(
+      trackId = TrackId("track-multi"),
+      trackName = "Track Multi",
+      artistIds = listOf(ArtistId("artist-main"), ArtistId("artist-feat")),
+      artistNames = listOf("Main Artist", "Feat Artist"),
+      playedAt = now - 20.hours,
+    )
+    recentlyPlayedRepository.saveAll(listOf(multiArtistItem))
+
+    val result = recentlyPlayedRepository.findArtistNamesByIds(setOf(ArtistId("artist-feat")))
+
+    assertThat(result).isEqualTo(mapOf(ArtistId("artist-feat") to "Feat Artist"))
+  }
 }
