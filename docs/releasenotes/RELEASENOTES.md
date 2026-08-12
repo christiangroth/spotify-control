@@ -1,3 +1,12 @@
+# 0.125.3 (2026.08.12)
+
+## Bugfixes / Chore
+* Fixed the missing artists modal on the Playlists settings page showing "unknown Artist" for every entry: a failed or rate-limited Spotify lookup during a background refresh could wipe out already-resolved artist names, and now previously resolved names are kept instead.
+
+
+
+---
+
 # 0.125.2 (2026.08.11)
 
 ## Bugfixes / Chore
