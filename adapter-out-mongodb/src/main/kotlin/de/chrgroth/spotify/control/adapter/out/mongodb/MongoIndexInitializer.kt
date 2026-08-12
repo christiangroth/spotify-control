@@ -41,6 +41,10 @@ class MongoIndexInitializer(
         .append(CurrentlyPlayingRepositoryAdapter.OBSERVED_AT_FIELD, 1),
       IndexOptions().name("trackId_1_observedAt_1"),
     )
+    recentlyPlayedDocumentRepository.mongoCollection().createIndex(
+      Document("artistIds", 1),
+      IndexOptions().name("spotify_recently_played_artistIds_1"),
+    )
     recentlyPartialPlayedDocumentRepository.mongoCollection().createIndex(
       Document(AppPlaybackRepositoryAdapter.PLAYED_AT_FIELD, 1),
       IndexOptions().name("rpp_playedAt_1"),

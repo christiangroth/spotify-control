@@ -62,39 +62,6 @@ class SpotifyCatalogAdapter(
     }
   }
 
-  override fun getArtists(
-    accessToken: AccessToken,
-    artistIds: List<String>,
-  ): Either<DomainError, List<AppArtist>> {
-    if (artistIds.isEmpty()) return emptyList<AppArtist>().right()
-    try {
-      SpotifyApiAuthContext.set(accessToken)
-      val resolved = mutableListOf<AppArtist>()
-      var lastError: DomainError? = null
-      // Each chunk is resolved independently, so a failure fetching one chunk (e.g. a transient error or rate
-      // limit hit partway through a large batch) does not discard artists already resolved from earlier chunks.
-      artistIds.chunked(SEVERAL_ARTISTS_PAGE_SIZE).forEach { chunk ->
-        throttler.throttle(DomainOutboxPartition.ToSpotifyCatalog.key)
-        try {
-          val response = httpMetrics.timed("/v1/artists") { apiClient.getSeveralArtists(chunk.joinToString(",")) }
-          resolved += response.artists.filterNotNull().map { parseArtist(it) }
-        } catch (e: SpotifyRateLimitException) {
-          lastError = SpotifyRateLimitError(e.retryAfterSeconds.seconds)
-        } catch (e: SpotifyApiException) {
-          logger.error { "Spotify several-artists fetch failed for ${chunk.size} id(s): ${e.statusCode}" }
-          lastError = SyncError.ARTIST_DETAILS_FETCH_FAILED
-        } catch (e: Exception) {
-          logger.error(e) { "Unexpected error fetching several artists (${chunk.size} id(s))" }
-          lastError = SyncError.ARTIST_DETAILS_FETCH_FAILED
-        }
-      }
-      val error = lastError
-      return if (resolved.isNotEmpty() || error == null) resolved.right() else error.left()
-    } finally {
-      SpotifyApiAuthContext.clear()
-    }
-  }
-
   override fun getAlbum(
     accessToken: AccessToken,
     albumId: String,
@@ -298,6 +265,5 @@ class SpotifyCatalogAdapter(
     private const val ALBUM_TRACKS_PAGE_SIZE = 50
     private const val ARTIST_ALBUMS_PAGE_SIZE = 10
     private const val ARTIST_ALBUMS_INCLUDE_GROUPS = "album,single"
-    private const val SEVERAL_ARTISTS_PAGE_SIZE = 50
   }
 }

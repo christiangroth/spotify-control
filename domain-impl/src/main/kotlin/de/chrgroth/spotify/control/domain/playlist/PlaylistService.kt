@@ -7,7 +7,9 @@ import arrow.core.right
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.PlaylistSyncError
 import de.chrgroth.spotify.control.domain.error.SpotifyRateLimitError
+import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
+import de.chrgroth.spotify.control.domain.model.catalog.ArtistSyncStatus
 import de.chrgroth.spotify.control.domain.model.playlist.ArtistStats
 import de.chrgroth.spotify.control.domain.model.playlist.MissingArtist
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistInfo
@@ -25,6 +27,7 @@ import de.chrgroth.spotify.control.domain.port.out.catalog.SpotifyCatalogPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.AppPlaylistCheckRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.infra.DashboardRefreshPort
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
+import de.chrgroth.spotify.control.domain.port.out.playback.RecentlyPlayedRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistSyncNotificationPort
 import de.chrgroth.spotify.control.domain.port.out.readmodel.PlaylistSettingsViewRepositoryPort
@@ -56,6 +59,7 @@ class PlaylistService(
   private val syncController: SyncController,
   private val catalogPort: CatalogPort,
   private val appArtistRepository: AppArtistRepositoryPort,
+  private val recentlyPlayedRepository: RecentlyPlayedRepositoryPort,
   private val spotifyCatalog: SpotifyCatalogPort,
   private val meterRegistry: MeterRegistry,
   private val syncNotification: PlaylistSyncNotificationPort,
@@ -81,12 +85,14 @@ class PlaylistService(
     return playlistRepository.findTrackCounts()
   }
 
-  private fun getArtistStats(): Map<String, ArtistStats> {
-    currentUserResolver.userId() ?: return emptyMap()
+  private fun getArtistStats(playlists: List<PlaylistInfo>): Pair<Map<String, ArtistStats>, Set<ArtistId>> {
+    currentUserResolver.userId() ?: return emptyMap<String, ArtistStats>() to emptySet()
     val artistIdsByPlaylist = playlistRepository.findDistinctArtistIds()
     val allArtistIds = artistIdsByPlaylist.values.flatten().toSet()
     val existingArtistIds = appArtistRepository.findByArtistIds(allArtistIds).map { it.id }.toSet()
-    return artistIdsByPlaylist.mapValues { (_, artistIds) ->
+    val activePlaylistIds = playlists.filter { it.syncStatus == PlaylistSyncStatus.ACTIVE }.map { it.spotifyPlaylistId }.toSet()
+    val artistIdsOnActivePlaylists = artistIdsByPlaylist.filterKeys { it in activePlaylistIds }.values.flatten().toSet()
+    val stats = artistIdsByPlaylist.mapValues { (_, artistIds) ->
       val missingArtistIds = artistIds.filterNot { it in existingArtistIds }
       ArtistStats(
         total = artistIds.size,
@@ -94,6 +100,7 @@ class PlaylistService(
         missingArtistIds = missingArtistIds,
       )
     }
+    return stats to artistIdsOnActivePlaylists
   }
 
   override fun getPlaylistSettingsView(): PlaylistSettingsView =
@@ -106,7 +113,7 @@ class PlaylistService(
   private fun buildPlaylistSettingsView(): PlaylistSettingsView {
     val playlists = getPlaylists()
     val trackCounts = getTrackCounts()
-    val artistStats = getArtistStats()
+    val (artistStats, artistIdsOnActivePlaylists) = getArtistStats(playlists)
     val missingArtistIds = artistStats.values.flatMap { it.missingArtistIds }.toSet()
     val previouslyResolvedNames = if (missingArtistIds.isEmpty()) {
       emptyMap()
@@ -121,7 +128,8 @@ class PlaylistService(
     // Names resolved by a previous rebuild are kept even if this Spotify call fails or is rate-limited, and
     // already-resolved artists are not re-requested, so a transient failure never regresses the read model
     // back to unresolved names and repeated rebuilds don't keep re-fetching the same artists.
-    val resolvedNamesById = previouslyResolvedNames + resolveMissingArtistNames(missingArtistIds - previouslyResolvedNames.keys)
+    val resolvedNamesById = previouslyResolvedNames +
+      resolveMissingArtistNames(missingArtistIds - previouslyResolvedNames.keys, artistIdsOnActivePlaylists)
     val entries = playlists.map { playlistInfo ->
       val stats = artistStats[playlistInfo.spotifyPlaylistId]
       PlaylistSettingsEntry(
@@ -138,19 +146,40 @@ class PlaylistService(
     return PlaylistSettingsView(entries)
   }
 
-  private fun resolveMissingArtistNames(missingArtistIds: Set<ArtistId>): Map<ArtistId, String?> {
+  private fun resolveMissingArtistNames(missingArtistIds: Set<ArtistId>, artistIdsOnActivePlaylists: Set<ArtistId>): Map<ArtistId, String?> {
     if (missingArtistIds.isEmpty()) return emptyMap()
-    return try {
-      val accessToken = spotifyAccessToken.getValidAccessToken()
-      // Resolved once for all playlists combined in as few batched Spotify calls as possible (up to 50 ids per
-      // request), during the read-model rebuild rather than per playlist on every modal open.
-      spotifyCatalog.getArtists(accessToken, missingArtistIds.map { it.value })
-        .onLeft { logger.warn { "Failed to resolve ${missingArtistIds.size} missing artist name(s): ${it.code}" } }
-        .getOrElse { emptyList() }
-        .associate { it.id to it.artistName.ifBlank { null } }
+    // Artist ids seen in local playback history already carry a name, so those are resolved without any Spotify
+    // request; only the ids still unresolved after that are worth spending a Spotify call on.
+    val locallyResolvedNames = recentlyPlayedRepository.findArtistNamesByIds(missingArtistIds)
+    val remainingArtistIds = missingArtistIds - locallyResolvedNames.keys
+    if (remainingArtistIds.isEmpty()) return locallyResolvedNames
+    val accessToken = try {
+      spotifyAccessToken.getValidAccessToken()
     } catch (e: Exception) {
       logger.warn(e) { "Failed to resolve missing artist names, playlist settings view will show artist ids only" }
-      emptyMap()
+      return locallyResolvedNames
+    }
+    // Resolved one throttled single-artist call at a time (GET /v1/artists/{id}) instead of the bulk
+    // GET /v1/artists endpoint, which reliably returns 403 for this app. Every artist resolved this way is
+    // persisted into the local catalog immediately (same SYNC/SHALLOW_ASSUMPTION discovery rule as the regular
+    // catalog sync path), so it is found locally without another Spotify request on every future rebuild.
+    val spotifyResolvedNames = remainingArtistIds.mapNotNull { artistId ->
+      spotifyCatalog.getArtist(accessToken, artistId.value)
+        .onLeft { logger.warn { "Failed to resolve missing artist name for ${artistId.value}: ${it.code}" } }
+        .getOrElse { null }
+        ?.takeIf { it.artistName.isNotBlank() }
+        ?.also { storeNewlyResolvedArtist(it, fromPlaylist = artistId in artistIdsOnActivePlaylists) }
+        ?.let { artistId to it.artistName }
+    }.toMap()
+    return locallyResolvedNames + spotifyResolvedNames
+  }
+
+  private fun storeNewlyResolvedArtist(artist: AppArtist, fromPlaylist: Boolean) {
+    val discoveryStatus = if (fromPlaylist) ArtistSyncStatus.SYNC else ArtistSyncStatus.SHALLOW_ASSUMPTION
+    appArtistRepository.upsertAll(listOf(artist.copy(syncStatus = discoveryStatus)))
+    if (discoveryStatus == ArtistSyncStatus.SYNC) {
+      logger.info { "Newly discovered artist '${artist.artistName}' (${artist.id.value}) found on synced playlist, set to ${ArtistSyncStatus.SYNC}" }
+      outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums(artist.id.value))
     }
   }
 

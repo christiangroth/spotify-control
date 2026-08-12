@@ -57,6 +57,20 @@ class RecentlyPlayedRepositoryAdapter(
       }
     }
 
+  override fun findArtistNamesByIds(artistIds: Set<ArtistId>): Map<ArtistId, String> {
+    if (artistIds.isEmpty()) return emptyMap()
+    val ids = artistIds.map { it.value }.toSet()
+    return mongoQueryMetrics.timed("spotify_recently_played.findArtistNamesByIds") {
+      recentlyPlayedDocumentRepository
+        .list("artistIds in ?1", ids.toList())
+        .asSequence()
+        .flatMap { doc -> doc.artistIds.zip(doc.artistNames).asSequence() }
+        .filter { (id, name) -> id in ids && name.isNotBlank() }
+        .distinctBy { it.first }
+        .associate { (id, name) -> ArtistId(id) to name }
+    }
+  }
+
   override fun saveAll(items: List<RecentlyPlayedItem>) {
     if (items.isEmpty()) return
     val documents = items.map { item ->
