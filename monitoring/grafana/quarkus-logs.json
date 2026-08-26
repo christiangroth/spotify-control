@@ -198,7 +198,7 @@
           },
           "direction": "backward",
           "editorMode": "code",
-          "expr": "{service_name=\"$app\"} |~ \"$contains\" !~ \"$notContains\" | json | level=~\"${loglevel:pipe}\" | line_format \"{{.message}}\"",
+          "expr": "{service_name=\"$app\"} |~ \"$contains\" !~ \"$notContains\" | json | level=~\"${loglevel:pipe}\" | line_format \"{{if .message}}{{.message}}{{else}}{{__line__}}{{end}}\"",
           "queryType": "range",
           "refId": "A"
         }
@@ -235,15 +235,20 @@
           "type": 1
         },
         "refresh": 1,
-        "regex": "",
+        "regex": "/^spotify-control_.*/",
         "regexApplyTo": "value",
         "sort": 1,
         "type": "query"
       },
       {
+        "allValue": ".*",
         "current": {
-          "text": ["All"],
-          "value": ["$__all"]
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "includeAll": true,
         "label": "Log Level",
