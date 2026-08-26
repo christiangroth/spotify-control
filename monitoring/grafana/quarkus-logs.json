@@ -25,7 +25,7 @@
       "targetBlank": true,
       "title": "Overview",
       "type": "link",
-      "url": "/d/spotify-control-overview/overview"
+      "url": "/d/quarkus-spotify-control-overview/overview"
     },
     {
       "icon": "external link",
@@ -33,7 +33,7 @@
       "targetBlank": true,
       "title": "Technical",
       "type": "link",
-      "url": "/d/quarkus-spotify-control/technical-overview"
+      "url": "/d/quarkus-spotify-control-technical-overview/technical-overview"
     },
     {
       "icon": "external link",
@@ -41,7 +41,7 @@
       "targetBlank": true,
       "title": "Domain",
       "type": "link",
-      "url": "/d/spotify-control-domain-metrics/domain-overview"
+      "url": "/d/quarkus-spotify-control-domain-overview/domain-overview"
     },
     {
       "icon": "bolt",
@@ -343,6 +343,6 @@
   "title": "Quarkus Logs",
   "weekStart": "",
   "version": 6,
-  "uid": "sadlil-loki-apps-dashboard",
+  "uid": "quarkus-spotify-control-logs",
   "id": 2240415473623040
 }

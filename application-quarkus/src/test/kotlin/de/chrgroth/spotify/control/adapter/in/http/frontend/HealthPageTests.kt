@@ -92,7 +92,7 @@ class HealthPageTests {
       .then()
       .statusCode(200)
       .body(containsString("""data-testid="grafana-overview-link""""))
-      .body(containsString("https://spotifycontrolprod.grafana.net/d/spotify-control-overview/overview"))
+      .body(containsString("https://test.grafana.net/d/quarkus-spotify-control-overview/overview"))
   }
 
   @Test
@@ -103,7 +103,7 @@ class HealthPageTests {
       .then()
       .statusCode(200)
       .body(containsString("""data-testid="grafana-logs-link""""))
-      .body(containsString("https://spotifycontrolprod.grafana.net/d/sadlil-loki-apps-dashboard/quarkus-logs"))
+      .body(containsString("https://test.grafana.net/d/quarkus-spotify-control-logs/quarkus-logs"))
   }
 
   @Test
@@ -114,7 +114,7 @@ class HealthPageTests {
       .then()
       .statusCode(200)
       .body(containsString("""data-testid="grafana-technical-overview-link""""))
-      .body(containsString("https://spotifycontrolprod.grafana.net/d/quarkus-spotify-control/technical-overview"))
+      .body(containsString("https://test.grafana.net/d/quarkus-spotify-control-technical-overview/technical-overview"))
   }
 
   @Test
@@ -125,7 +125,7 @@ class HealthPageTests {
       .then()
       .statusCode(200)
       .body(containsString("""data-testid="grafana-domain-overview-link""""))
-      .body(containsString("https://spotifycontrolprod.grafana.net/d/spotify-control-domain-metrics/domain-overview"))
+      .body(containsString("https://test.grafana.net/d/quarkus-spotify-control-domain-overview/domain-overview"))
   }
 
   @Test
