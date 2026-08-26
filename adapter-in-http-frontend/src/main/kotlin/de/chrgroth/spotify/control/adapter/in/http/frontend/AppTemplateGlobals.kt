@@ -18,12 +18,16 @@ class AppTemplateGlobals(
   @field:ConfigProperty(name = "quarkus.application.version")
   lateinit var version: String
 
+  @field:ConfigProperty(name = "grafana.cloud.stack-url", defaultValue = "")
+  lateinit var grafanaCloudStackUrl: String
+
   @Inject
   private lateinit var routingContext: RoutingContext
 
   fun onEngineBuilder(@Observes builder: EngineBuilder) {
     builder.addTemplateInstanceInitializer { instance ->
       instance.data("appBuildVersion", version)
+      instance.data("grafanaCloudStackUrl", grafanaCloudStackUrl)
       instance.data("undecidedArtistCount", catalogBrowser.getCatalogStats().undecidedArtistCount)
       val language = currentLanguage()
       instance.setLocale(language.locale)
