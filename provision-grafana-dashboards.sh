@@ -7,6 +7,7 @@ set -euo pipefail
 #
 # Required env vars:
 #   GRAFANA_CLOUD_SA_TOKEN - Grafana Cloud service account token
+#   GRAFANA_CLOUD_STACK_URL - base URL of the Grafana Cloud stack (e.g. https://<slug>.grafana.net)
 # Optional env vars:
 #   COMMIT_SHA - included in the provisioning message (defaults to "unknown")
 
@@ -15,15 +16,20 @@ if [ -z "${GRAFANA_CLOUD_SA_TOKEN:-}" ]; then
   exit 1
 fi
 
+if [ -z "${GRAFANA_CLOUD_STACK_URL:-}" ]; then
+  echo "Error: GRAFANA_CLOUD_STACK_URL secret must be set" >&2
+  exit 1
+fi
+
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 dashboard_dir="$script_dir/monitoring/grafana"
 commit_sha="${COMMIT_SHA:-unknown}"
-folder_uid="spctl"
+folder_uid="spotify-control"
 
 ensure_folder() {
   local status
   status=$(curl -s -o /dev/null -w "%{http_code}" \
-    "https://spotifycontrolprod.grafana.net/api/folders/$folder_uid" \
+    "$GRAFANA_CLOUD_STACK_URL/api/folders/$folder_uid" \
     -H "Authorization: Bearer $GRAFANA_CLOUD_SA_TOKEN")
   if [ "$status" = "200" ]; then
     return 0
@@ -31,10 +37,10 @@ ensure_folder() {
 
   echo "Folder '$folder_uid' not found, creating it..."
   curl --fail-with-body -s -X POST \
-    "https://spotifycontrolprod.grafana.net/api/folders" \
+    "$GRAFANA_CLOUD_STACK_URL/api/folders" \
     -H "Authorization: Bearer $GRAFANA_CLOUD_SA_TOKEN" \
     -H "Content-Type: application/json" \
-    -d "$(jq -n --arg uid "$folder_uid" --arg title "SpCtl" '{uid: $uid, title: $title}')"
+    -d "$(jq -n --arg uid "$folder_uid" --arg title "Spotify Control" '{uid: $uid, title: $title}')"
   echo ""
 }
 
@@ -51,7 +57,7 @@ provision_dashboard() {
   while true; do
     echo "Provisioning $dashboard_file (attempt $((attempt+1)))..."
     if curl --fail-with-body -s -X POST \
-      "https://spotifycontrolprod.grafana.net/api/dashboards/db" \
+      "$GRAFANA_CLOUD_STACK_URL/api/dashboards/db" \
       -H "Authorization: Bearer $GRAFANA_CLOUD_SA_TOKEN" \
       -H "Content-Type: application/json" \
       -d "$payload"; then
