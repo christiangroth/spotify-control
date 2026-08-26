@@ -27,7 +27,7 @@
       "targetBlank": true,
       "title": "Domain",
       "type": "link",
-      "url": "/d/quarkus-spotify-control-domain-overview/domain-overview"
+      "url": "/d/q-spotify-control-domain/domain-overview"
     },
     {
       "icon": "external link",
@@ -35,7 +35,7 @@
       "targetBlank": true,
       "title": "Technical",
       "type": "link",
-      "url": "/d/quarkus-spotify-control-technical-overview/technical-overview"
+      "url": "/d/q-spotify-control-technical/technical-overview"
     },
     {
       "icon": "external link",
@@ -43,7 +43,7 @@
       "targetBlank": true,
       "title": "Logs",
       "type": "link",
-      "url": "/d/quarkus-spotify-control-logs/quarkus-logs"
+      "url": "/d/q-spotify-control-logs/quarkus-logs"
     }
   ],
   "panels": [
@@ -301,7 +301,7 @@
       "links": [
         {
           "title": "View error logs",
-          "url": "/d/quarkus-spotify-control-logs/quarkus-logs?${__url_time_range}&var-search=ERROR"
+          "url": "/d/q-spotify-control-logs/quarkus-logs?${__url_time_range}&var-search=ERROR"
         }
       ],
       "options": {
@@ -961,6 +961,6 @@
   "timepicker": {},
   "timezone": "browser",
   "title": "Overview",
-  "uid": "quarkus-spotify-control-overview",
+  "uid": "q-spotify-control-overview",
   "version": 1
 }
