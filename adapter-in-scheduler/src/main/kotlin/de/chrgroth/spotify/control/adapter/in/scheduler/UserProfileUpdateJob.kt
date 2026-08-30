@@ -13,7 +13,7 @@ class UserProfileUpdateJob(
   private val userProfile: UserProfilePort,
 ) {
 
-  @Timed(value = "scheduler.job", extraTags = ["invoker", "UserProfileUpdateJob"], histogram = true)
+  @Timed(value = "scheduler.job", extraTags = ["invoker", "UserProfileUpdateJob"])
   @Scheduled(cron = "0 0 4 * * ?", skipExecutionIf = ScheduledSkipPredicate::class)
   fun run() {
     logger.info { "Running scheduled user profile update" }

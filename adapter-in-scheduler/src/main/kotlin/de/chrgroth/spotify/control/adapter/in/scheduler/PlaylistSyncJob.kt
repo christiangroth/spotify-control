@@ -13,7 +13,7 @@ class PlaylistSyncJob(
   private val playlist: PlaylistPort,
 ) {
 
-  @Timed(value = "scheduler.job", extraTags = ["invoker", "PlaylistSyncJob"], histogram = true)
+  @Timed(value = "scheduler.job", extraTags = ["invoker", "PlaylistSyncJob"])
   @Scheduled(cron = "0 30 * * * ?", skipExecutionIf = ScheduledSkipPredicate::class)
   fun run() {
     logger.info { "Running scheduled playlist sync" }

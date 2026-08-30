@@ -53,7 +53,6 @@ class SpotifyHttpMetrics(
       Timer.builder("spotify.request")
         .tag("url", urlTemplate)
         .tag("status", statusCode.toString())
-        .publishPercentileHistogram()
         .register(meterRegistry)
     }.record(durationMs, TimeUnit.MILLISECONDS)
 

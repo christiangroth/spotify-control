@@ -65,7 +65,6 @@ class MongoQueryMetrics(
     timers.getOrPut(operation) {
       Timer.builder("mongodb.query")
         .tag("operation", operation)
-        .publishPercentileHistogram()
         .register(meterRegistry)
     }.record(durationMs, TimeUnit.MILLISECONDS)
 

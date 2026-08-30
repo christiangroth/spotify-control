@@ -14,7 +14,7 @@ class ArtistCatalogSyncJob(
   private val catalog: CatalogPort,
 ) {
 
-  @Timed(value = "scheduler.job", extraTags = ["invoker", "ArtistCatalogSyncJob"], histogram = true)
+  @Timed(value = "scheduler.job", extraTags = ["invoker", "ArtistCatalogSyncJob"])
   @Scheduled(cron = "0 0 2 * * ?", skipExecutionIf = ScheduledSkipPredicate::class)
   fun run() {
     val partition = LocalDate.now(ZoneOffset.UTC).dayOfYear % TOTAL_PARTITIONS

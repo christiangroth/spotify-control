@@ -11,7 +11,7 @@ class PlaybackDetectionJob(
   private val playback: PlaybackPort,
 ) {
 
-  @Timed(value = "scheduler.job", extraTags = ["invoker", "PlaybackDetectionJob"], histogram = true)
+  @Timed(value = "scheduler.job", extraTags = ["invoker", "PlaybackDetectionJob"])
   @Scheduled(every = "20s", skipExecutionIf = CurrentlyPlayingSkipPredicate::class)
   fun run() {
     playback.enqueueFetchPlaybackData()

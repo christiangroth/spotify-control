@@ -30,7 +30,6 @@ class HttpResponseMetrics(
     timers.getOrPut(operation) {
       Timer.builder("http.response")
         .tag("operation", operation)
-        .publishPercentileHistogram()
         .register(meterRegistry)
     }.record(durationMs, TimeUnit.MILLISECONDS)
 
