@@ -59,7 +59,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v5
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
-      - run: ./gradlew :application-quarkus:testNative -Dquarkus.native.enabled=true -Dquarkus.native.container-build=true
+      - run: ./gradlew :application-quarkus:testNative -Dquarkus.native.enabled=true -Dquarkus.native.container-build=true -Dquarkus.package.jar.enabled=false
         env:
           GHCR_PAT: ${{ secrets.GHCR_PAT }}
 
