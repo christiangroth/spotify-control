@@ -208,7 +208,7 @@ class SlackNotificationAdapter(
         .header("Content-Type", "application/json")
         .POST(HttpRequest.BodyPublishers.ofString(body))
         .build()
-      val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+      val response = httpClient.value.send(request, HttpResponse.BodyHandlers.ofString())
       if (response.statusCode() != HTTP_OK) {
         logger.warn { "Slack notification failed with status ${response.statusCode()}: ${response.body()}" }
       } else {
@@ -238,7 +238,9 @@ class SlackNotificationAdapter(
     private const val HTTP_OK = 200
     private const val SECONDS_PER_MINUTE = 60L
     private const val ACTIVE_STATUS = "ACTIVE"
-    private val httpClient: HttpClient = HttpClient.newHttpClient()
+    // lazy so the JDK HttpClient (initialize-at-run-time in native-image) is not instantiated during Quarkus's build-time
+    // class initialization of this companion object, which would otherwise embed it in the native-image heap and fail the build
+    private val httpClient: Lazy<HttpClient> = lazy { HttpClient.newHttpClient() }
     private val instantFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm 'UTC'").withZone(ZoneOffset.UTC)
   }
 }

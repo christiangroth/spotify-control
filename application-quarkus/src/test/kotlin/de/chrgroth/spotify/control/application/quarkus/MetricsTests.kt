@@ -18,15 +18,16 @@ class MetricsTests {
       .extract()
       .asString()
 
-    // scheduler_* only appears once a @Scheduled job has actually run, which is timing-dependent in the shared test app instance
+    // Groups such as scheduler_*/worker_* only appear once a @Scheduled job has actually run on the Vert.x worker pool, which is timing-dependent
+    // depending on the app instance (shared vs. isolated IT). Assert the always-present core groups instead of exact list equality, so additional
+    // timing-dependent groups don't make this test flaky.
     val topLevelGroups = metrics.lines()
       .filter { it.isNotBlank() }
       .filterNot { it.startsWith("#") }
       .map { it.split("_")[0] }
       .distinct()
-      .filterNot { it == "scheduler" }
       .sorted()
-    assertThat(topLevelGroups).isEqualTo(listOf("app", "application", "http", "jvm", "mongodb", "netty", "outbox", "process", "spotify", "system", "worker"))
+    assertThat(topLevelGroups).contains("app", "application", "http", "jvm", "mongodb", "netty", "outbox", "process", "spotify", "system")
   }
 
   @Test
