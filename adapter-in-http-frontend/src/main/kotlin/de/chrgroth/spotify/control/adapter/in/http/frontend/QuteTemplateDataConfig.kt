@@ -4,15 +4,22 @@ import de.chrgroth.spotify.control.domain.model.DashboardStats
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumBrowseItem
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistBrowseItem
 import de.chrgroth.spotify.control.domain.model.catalog.CatalogStats
+import de.chrgroth.spotify.control.domain.model.catalog.CatalogSyncEntityType
 import de.chrgroth.spotify.control.domain.model.catalog.CatalogSyncTimelineEntry
 import de.chrgroth.spotify.control.domain.model.catalog.CatalogSyncTimelinePage
 import de.chrgroth.spotify.control.domain.model.catalog.TrackBrowseItem
 import de.chrgroth.spotify.control.domain.model.infra.ConfigEntry
 import de.chrgroth.spotify.control.domain.model.infra.ConfigurationStats
+import de.chrgroth.spotify.control.domain.model.infra.CronjobStats
 import de.chrgroth.spotify.control.domain.model.infra.HealthStats
 import de.chrgroth.spotify.control.domain.model.infra.MongoCollectionStats
+import de.chrgroth.spotify.control.domain.model.infra.MongoQueryStats
+import de.chrgroth.spotify.control.domain.model.infra.OutboxEventTypeCount
+import de.chrgroth.spotify.control.domain.model.infra.OutboxPartitionStats
 import de.chrgroth.spotify.control.domain.model.infra.OutboxTask
 import de.chrgroth.spotify.control.domain.model.infra.OutboxViewerPartition
+import de.chrgroth.spotify.control.domain.model.infra.OutgoingRequestStats
+import de.chrgroth.spotify.control.domain.model.infra.PredicateStats
 import de.chrgroth.spotify.control.domain.model.playback.DayCount
 import de.chrgroth.spotify.control.domain.model.playback.ListeningStats
 import de.chrgroth.spotify.control.domain.model.playback.PlaybackEventEntry
@@ -23,8 +30,10 @@ import de.chrgroth.spotify.control.domain.model.playback.aggregation.PlaybackAgg
 import de.chrgroth.spotify.control.domain.model.playlist.AppPlaylistCheck
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistCheckStats
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistCheckViolation
+import de.chrgroth.spotify.control.domain.model.playlist.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.user.RuntimeConfig
 import de.chrgroth.spotify.control.domain.model.viewer.MongoViewerField
+import de.chrgroth.spotify.control.domain.model.viewer.MongoViewerFieldType
 import de.chrgroth.spotify.control.domain.model.viewer.MongoViewerResult
 import io.quarkus.qute.TemplateData
 import kotlinx.datetime.LocalDate
@@ -69,6 +78,16 @@ import kotlinx.datetime.LocalDate
 @TemplateData(target = PlaybackEventEntry::class)
 @TemplateData(target = CatalogSyncTimelinePage::class)
 @TemplateData(target = CatalogSyncTimelineEntry::class)
+@TemplateData(target = CatalogSyncEntityType::class)
+@TemplateData(target = CronjobStats::class)
+@TemplateData(target = OutboxPartitionStats::class)
+@TemplateData(target = OutboxEventTypeCount::class)
+@TemplateData(target = OutgoingRequestStats::class)
+@TemplateData(target = MongoQueryStats::class)
+@TemplateData(target = PredicateStats::class)
+@TemplateData(target = LogUiEntry::class)
+@TemplateData(target = PlaylistInfo::class)
+@TemplateData(target = MongoViewerFieldType::class)
 // external type, reached via `.toString` path expressions like `result.date.toString` (e.g. playback-event-viewer.html,
 // dashboard.html) - same reflection gap as above, just on a class we don't own
 @TemplateData(target = LocalDate::class)
