@@ -1,3 +1,12 @@
+# 0.126.0 (2026.09.04)
+
+## New Features
+* Fixed the native container image failing to start in production with `GLIBC_2.3x not found` errors, caused by a mismatch between the native build environment and the runtime base image.
+
+
+
+---
+
 # 0.125.15 (2026.09.04)
 
 ## Bugfixes / Chore
