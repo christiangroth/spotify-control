@@ -1,3 +1,14 @@
+# 0.126.2 (2026.09.04)
+
+## Bugfixes / Chore
+* Fixed a crash on the dashboard page when running in native mode.
+* Fixed the same kind of crash risk on several other pages when running in native mode: config, catalog, catalog sync, outbox viewer, playlist checks, stats, playback and playback events, and the MongoDB viewer.
+* Added automated checks that render these pages against the packaged native build, so this kind of issue is caught before deployment.
+
+
+
+---
+
 # 0.126.1 (2026.09.04)
 
 ## Bugfixes / Chore
