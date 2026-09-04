@@ -107,7 +107,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - run: ./gradlew release -x test -x testNative
+      - run: ./gradlew release -x test -x testNative -Dquarkus.native.enabled=true -Dquarkus.native.container-build=true
         env:
           GHCR_PAT: ${{ secrets.GHCR_PAT }}
       - run: |
