@@ -1,3 +1,12 @@
+# 0.126.1 (2026.09.04)
+
+## Bugfixes / Chore
+* Fixed several pages (health dashboard, catalog artists, outbox viewer, playlist checks, logs viewer, playlist settings) crashing with a template error in native mode.
+
+
+
+---
+
 # 0.126.0 (2026.09.04)
 
 ## New Features
