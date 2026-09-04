@@ -1,3 +1,12 @@
+# 0.126.3 (2026.09.04)
+
+## Bugfixes / Chore
+* Fixed several dashboard, health, settings, catalog sync, logs and MongoDB viewer pages crashing in native mode.
+
+
+
+---
+
 # 0.126.2 (2026.09.04)
 
 ## Bugfixes / Chore
