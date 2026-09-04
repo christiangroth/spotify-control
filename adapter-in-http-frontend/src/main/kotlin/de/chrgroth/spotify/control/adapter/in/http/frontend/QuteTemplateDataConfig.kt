@@ -27,6 +27,7 @@ import de.chrgroth.spotify.control.domain.model.user.RuntimeConfig
 import de.chrgroth.spotify.control.domain.model.viewer.MongoViewerField
 import de.chrgroth.spotify.control.domain.model.viewer.MongoViewerResult
 import io.quarkus.qute.TemplateData
+import kotlinx.datetime.LocalDate
 
 // Qute resolves properties like `stats.xyz` in templates via reflection (no @CheckedTemplate). Classes bound this
 // way aren't reliably reachable by GraalVM's native-image analysis, which surfaces as "Property not found" only in
@@ -68,4 +69,7 @@ import io.quarkus.qute.TemplateData
 @TemplateData(target = PlaybackEventEntry::class)
 @TemplateData(target = CatalogSyncTimelinePage::class)
 @TemplateData(target = CatalogSyncTimelineEntry::class)
+// external type, reached via `.toString` path expressions like `result.date.toString` (e.g. playback-event-viewer.html,
+// dashboard.html) - same reflection gap as above, just on a class we don't own
+@TemplateData(target = LocalDate::class)
 class QuteTemplateDataConfig
