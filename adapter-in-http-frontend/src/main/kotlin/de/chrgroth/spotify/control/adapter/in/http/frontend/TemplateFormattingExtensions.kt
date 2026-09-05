@@ -36,6 +36,10 @@ object TemplateFormattingExtensions {
   @JvmStatic
   fun formattedShort(instant: Instant): String = DATETIME_SHORT_FORMATTER.format(instant.toJavaInstant())
 
+  /** Exposes Kotlin's `Instant.toEpochMilliseconds()` top-level extension function as a template member (Qute can't see top-level extension functions). */
+  @JvmStatic
+  fun toEpochMilliseconds(instant: Instant): Long = instant.toEpochMilliseconds()
+
   /** Formats a duration given in milliseconds as `h:mm:ss` (e.g. for album total duration). */
   @JvmStatic
   fun formattedAlbumDuration(durationMs: Long): String {
