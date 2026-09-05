@@ -1,3 +1,12 @@
+# 0.126.4 (2026.09.05)
+
+## Bugfixes / Chore
+* Fixed documentation pages (arc42, ADRs, coding guidelines, release notes) returning "not found" in native mode.
+
+
+
+---
+
 # 0.126.3 (2026.09.04)
 
 ## Bugfixes / Chore
