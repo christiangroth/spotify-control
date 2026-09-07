@@ -1,3 +1,12 @@
+# 0.126.5 (2026.09.07)
+
+## Bugfixes / Chore
+* Fixed the MongoDB viewer and catalog sync pages, plus the outbox timers on the health page, crashing with a template error in native mode.
+
+
+
+---
+
 # 0.126.4 (2026.09.05)
 
 ## Bugfixes / Chore
