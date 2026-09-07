@@ -1,3 +1,12 @@
+# 0.126.6 (2026.09.07)
+
+## Bugfixes / Chore
+* Fixed a bug where an interrupted playlist sync could reset all playlists to "not synced", even though catalog data was untouched.
+
+
+
+---
+
 # 0.126.5 (2026.09.07)
 
 ## Bugfixes / Chore
