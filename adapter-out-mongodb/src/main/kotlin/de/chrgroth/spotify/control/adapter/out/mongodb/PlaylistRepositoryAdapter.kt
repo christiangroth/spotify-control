@@ -3,6 +3,8 @@ package de.chrgroth.spotify.control.adapter.out.mongodb
 import com.mongodb.client.model.Aggregates
 import com.mongodb.client.model.Filters
 import com.mongodb.client.model.Projections
+import com.mongodb.client.model.ReplaceOneModel
+import com.mongodb.client.model.ReplaceOptions
 import com.mongodb.client.model.Updates
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
@@ -35,14 +37,20 @@ class PlaylistRepositoryAdapter(
     }
 
   override fun replaceAll(playlists: List<PlaylistInfo>) {
-    mongoQueryMetrics.timed("spotify_playlist_metadata.deleteAll") {
-      playlistMetadataDocumentRepository.deleteAll()
-    }
-    if (playlists.isNotEmpty()) {
-      val documents = playlists.map { it.toDocument() }
-      mongoQueryMetrics.timed("spotify_playlist_metadata.saveAll") {
-        playlistMetadataDocumentRepository.persist(documents)
+    // Upserts the given playlists first and only then deletes the ones no longer present, instead of a
+    // delete-then-insert: a crash/restart between two separate delete-all/insert-all calls would otherwise leave
+    // the collection empty in between, and the next syncPlaylists() run would then re-create every playlist with
+    // no known previous status, resetting all of them to PASSIVE (see #885).
+    mongoQueryMetrics.timed("spotify_playlist_metadata.replaceAll") {
+      val collection = playlistMetadataDocumentRepository.mongoCollection()
+      val currentIds = playlists.map { it.spotifyPlaylistId }
+      if (playlists.isNotEmpty()) {
+        val writes = playlists.map { playlist ->
+          ReplaceOneModel(Filters.eq("_id", playlist.spotifyPlaylistId), playlist.toDocument(), ReplaceOptions().upsert(true))
+        }
+        collection.bulkWrite(writes)
       }
+      collection.deleteMany(Filters.nin("_id", currentIds))
     }
   }
 
