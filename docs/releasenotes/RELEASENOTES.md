@@ -1,3 +1,12 @@
+# 0.126.7 (2026.09.11)
+
+## Bugfixes / Chore
+* Sped up the native-mode CI check so pull requests get faster feedback.
+
+
+
+---
+
 # 0.126.6 (2026.09.07)
 
 ## Bugfixes / Chore
