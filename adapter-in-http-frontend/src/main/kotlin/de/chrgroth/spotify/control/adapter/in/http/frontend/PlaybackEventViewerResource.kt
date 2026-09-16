@@ -2,8 +2,6 @@ package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
 import de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackEventViewerPort
 import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
-import io.quarkus.qute.Location
-import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
 import io.quarkus.security.Authenticated
 import jakarta.enterprise.context.ApplicationScoped
@@ -24,8 +22,6 @@ import kotlinx.datetime.toLocalDateTime
 @ApplicationScoped
 @Suppress("Unused")
 class PlaybackEventViewerResource(
-  @param:Location("playback-event-viewer.html")
-  private val template: Template,
   private val playbackEventViewer: PlaybackEventViewerPort,
   private val httpResponseMetrics: ResponseTimingPort,
 ) {
@@ -41,10 +37,6 @@ class PlaybackEventViewerResource(
 
       val result = playbackEventViewer.getEvents(date)
 
-      template
-        .data("result", result)
-        .data("prevDate", date.minus(DatePeriod(days = 1)))
-        .data("nextDate", date.plus(DatePeriod(days = 1)))
-        .data("today", today)
+      Templates.`playback-event-viewer`(result, date.minus(DatePeriod(days = 1)), date.plus(DatePeriod(days = 1)), today)
     }
 }

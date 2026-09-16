@@ -8,8 +8,6 @@ import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogBrowserPort
 import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogPort
 import de.chrgroth.spotify.control.domain.port.`in`.infra.DashboardPort
 import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
-import io.quarkus.qute.Location
-import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
 import io.quarkus.security.Authenticated
 import jakarta.enterprise.context.ApplicationScoped
@@ -26,12 +24,6 @@ import jakarta.ws.rs.core.Response
 @ApplicationScoped
 @Suppress("Unused")
 class CatalogResource(
-  @param:Location("catalog.html")
-  private val catalogTemplate: Template,
-  @param:Location("catalog-artists-settings.html")
-  private val artistSettingsTemplate: Template,
-  @param:Location("catalog-shallow-artists.html")
-  private val shallowArtistsTemplate: Template,
   private val catalogBrowser: CatalogBrowserPort,
   private val catalog: CatalogPort,
   private val dashboard: DashboardPort,
@@ -46,13 +38,7 @@ class CatalogResource(
     val filterActive = !filter.isNullOrBlank()
     val artists = details.detail("catalog.view.artists") { if (filterActive) catalogBrowser.getArtists(filter) else emptyList<ArtistBrowseItem>() }
     val catalogStats = details.detail("catalog.view.stats") { dashboard.getCatalogStats().catalogStats }
-    catalogTemplate
-      .data("artists", artists)
-      .data("filter", filter ?: "")
-      .data("filterActive", filterActive)
-      .data("albums", emptyList<AlbumBrowseItem>())
-      .data("tracks", emptyList<TrackBrowseItem>())
-      .data("catalogStats", catalogStats)
+    Templates.catalog(artists, filter ?: "", filterActive, emptyList<AlbumBrowseItem>(), emptyList<TrackBrowseItem>(), catalogStats)
   }
 
   @GET
@@ -62,10 +48,7 @@ class CatalogResource(
   fun artistList(@QueryParam("filter") filter: String?): TemplateInstance = httpResponseMetrics.timed("fragment.catalog.artist-list") {
     val filterActive = !filter.isNullOrBlank()
     val artists = if (filterActive) catalogBrowser.getArtists(filter) else emptyList<ArtistBrowseItem>()
-    catalogTemplate.getFragment("snippet_artist_list")
-      .data("artists", artists)
-      .data("filter", filter ?: "")
-      .data("filterActive", filterActive)
+    Templates.`catalog$snippet_artist_list`(artists, filter ?: "", filterActive)
   }
 
   @GET
@@ -75,9 +58,7 @@ class CatalogResource(
   fun artistSettings(): TemplateInstance = httpResponseMetrics.timed("fragment.catalog.artist-settings") { details ->
     val artists = details.detail("catalog.artist-settings.undecided-artists") { catalogBrowser.getUndecidedArtists() }
     val totalUndecidedCount = details.detail("catalog.artist-settings.stats") { catalogBrowser.getCatalogStats().undecidedArtistCount }
-    artistSettingsTemplate
-      .data("artists", artists)
-      .data("truncated", totalUndecidedCount > artists.size)
+    Templates.`catalog-artists-settings`(artists, totalUndecidedCount > artists.size)
   }
 
   @GET
@@ -87,9 +68,7 @@ class CatalogResource(
   fun shallowArtists(): TemplateInstance = httpResponseMetrics.timed("fragment.catalog.shallow-artists") { details ->
     val artists = details.detail("catalog.shallow-artists.artists") { catalogBrowser.getShallowArtists() }
     val totalShallowCount = details.detail("catalog.shallow-artists.stats") { catalogBrowser.getCatalogStats().shallowArtistCount }
-    shallowArtistsTemplate
-      .data("artists", artists)
-      .data("truncated", totalShallowCount > artists.size)
+    Templates.`catalog-shallow-artists`(artists, totalShallowCount > artists.size)
   }
 
   @GET
@@ -97,10 +76,7 @@ class CatalogResource(
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
   fun artistAlbums(@PathParam("artistId") artistId: String): TemplateInstance = httpResponseMetrics.timed("fragment.catalog.artist-albums") {
-    val albums = catalogBrowser.getArtistAlbums(artistId)
-    catalogTemplate.getFragment("snippet_album_list")
-      .data("albums", albums)
-      .data("artistId", artistId)
+    Templates.`catalog$snippet_album_list`(catalogBrowser.getArtistAlbums(artistId), artistId)
   }
 
   @GET
@@ -108,9 +84,7 @@ class CatalogResource(
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
   fun albumTracks(@PathParam("albumId") albumId: String): TemplateInstance = httpResponseMetrics.timed("fragment.catalog.album-tracks") {
-    val tracks = catalogBrowser.getAlbumTracks(albumId)
-    catalogTemplate.getFragment("snippet_track_list")
-      .data("tracks", tracks)
+    Templates.`catalog$snippet_track_list`(catalogBrowser.getAlbumTracks(albumId))
   }
 
   @POST

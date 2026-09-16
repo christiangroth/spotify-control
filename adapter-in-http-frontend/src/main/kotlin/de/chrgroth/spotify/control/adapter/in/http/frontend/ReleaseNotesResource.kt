@@ -2,8 +2,6 @@ package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
 import de.chrgroth.spotify.control.adapter.`in`.http.frontend.i18n.DocsMessages
 import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
-import io.quarkus.qute.Location
-import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
 import io.quarkus.security.Authenticated
 import jakarta.enterprise.context.ApplicationScoped
@@ -26,8 +24,6 @@ data class ReleaseNotesGroupView(
 @ApplicationScoped
 @Suppress("Unused")
 class ReleaseNotesResource(
-  @param:Location("release-notes.html")
-  private val releaseNotesTemplate: Template,
   private val httpResponseMetrics: ResponseTimingPort,
   private val messages: DocsMessages,
 ) {
@@ -39,8 +35,7 @@ class ReleaseNotesResource(
     val content = DocsUtils.readMarkdown("docs/releasenotes/RELEASENOTES.md")
       ?: throw NotFoundException("Release notes not found")
     val groups = ReleaseNotesParser.groupByMinorVersion(ReleaseNotesParser.parse(content))
-    releaseNotesTemplate.instance()
-      .data("groups", groups.mapIndexed { index, group -> toView(group, expanded = index < 3) })
+    Templates.`release-notes`(groups.mapIndexed { index, group -> toView(group, expanded = index < 3) })
   }
 
   private fun toView(group: ReleaseNotesMinorGroup, expanded: Boolean): ReleaseNotesGroupView {

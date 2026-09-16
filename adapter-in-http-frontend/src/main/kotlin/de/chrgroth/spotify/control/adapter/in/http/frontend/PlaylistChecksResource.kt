@@ -5,8 +5,6 @@ import de.chrgroth.spotify.control.domain.model.playlist.AppPlaylistCheck
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistCheckDashboard
 import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistCheckPort
 import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
-import io.quarkus.qute.Location
-import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
 import io.quarkus.security.Authenticated
 import io.quarkus.security.identity.SecurityIdentity
@@ -28,8 +26,6 @@ import kotlin.time.toJavaInstant
 @ApplicationScoped
 @Suppress("Unused")
 class PlaylistChecksResource(
-  @param:Location("playlist-checks.html")
-  private val playlistChecksTemplate: Template,
   private val securityIdentity: SecurityIdentity,
   private val playlistCheckPort: PlaylistCheckPort,
   private val httpResponseMetrics: ResponseTimingPort,
@@ -40,9 +36,7 @@ class PlaylistChecksResource(
   @Produces(MediaType.TEXT_HTML)
   fun playlistChecks(): TemplateInstance = httpResponseMetrics.timed("page.playlist.checks") {
     val dashboard = playlistCheckPort.getCheckDashboard()
-    playlistChecksTemplate
-      .data("displayName", dashboard.displayName.ifEmpty { securityIdentity.principal.name })
-      .data("groups", buildCheckGroups(dashboard))
+    Templates.`playlist-checks`(dashboard.displayName.ifEmpty { securityIdentity.principal.name }, buildCheckGroups(dashboard))
   }
 
   @POST

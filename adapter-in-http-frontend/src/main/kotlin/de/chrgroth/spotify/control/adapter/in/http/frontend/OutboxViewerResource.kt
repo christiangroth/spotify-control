@@ -2,8 +2,6 @@ package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
 import de.chrgroth.spotify.control.domain.port.`in`.infra.OutboxViewerPort
 import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
-import io.quarkus.qute.Location
-import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
 import io.quarkus.security.Authenticated
 import jakarta.enterprise.context.ApplicationScoped
@@ -19,8 +17,6 @@ import jakarta.ws.rs.core.Response
 @ApplicationScoped
 @Suppress("Unused")
 class OutboxViewerResource(
-  @param:Location("outbox-viewer.html")
-  private val template: Template,
   private val outboxViewer: OutboxViewerPort,
   private val httpResponseMetrics: ResponseTimingPort,
 ) {
@@ -29,7 +25,7 @@ class OutboxViewerResource(
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
   fun viewer(): TemplateInstance = httpResponseMetrics.timed("page.outbox.view") {
-    template.data("partitions", outboxViewer.getPartitions())
+    Templates.`outbox-viewer`(outboxViewer.getPartitions())
   }
 
   @GET
@@ -37,7 +33,7 @@ class OutboxViewerResource(
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
   fun snippetTasks(): TemplateInstance = httpResponseMetrics.timed("fragment.outbox.tasks") {
-    template.getFragment("snippet_tasks").data("partitions", outboxViewer.getPartitions())
+    Templates.`outbox-viewer$snippet_tasks`(outboxViewer.getPartitions())
   }
 
   @POST

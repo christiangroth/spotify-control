@@ -1,8 +1,6 @@
 package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
 import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
-import io.quarkus.qute.Location
-import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
 import io.quarkus.security.Authenticated
 import jakarta.enterprise.context.ApplicationScoped
@@ -19,8 +17,6 @@ import java.nio.charset.StandardCharsets
 @ApplicationScoped
 @Suppress("Unused")
 class DocsFileResource(
-  @param:Location("docs.html")
-  private val docsTemplate: Template,
   private val httpResponseMetrics: ResponseTimingPort,
 ) {
 
@@ -39,9 +35,7 @@ class DocsFileResource(
     }
     val content = DocsUtils.readMarkdown("docs/$subdir/$decodedFilename")
       ?: throw NotFoundException("Doc not found: $subdir/$filename")
-    docsTemplate.instance()
-      .data("title", DocsUtils.extractTitle(content, decodedFilename))
-      .data("markdownContent", content)
+    Templates.docs(DocsUtils.extractTitle(content, decodedFilename), content)
   }
 
   private fun isInvalidFilename(filename: String): Boolean =

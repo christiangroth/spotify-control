@@ -1,8 +1,6 @@
 package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
 import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
-import io.quarkus.qute.Location
-import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
 import io.quarkus.security.Authenticated
 import jakarta.enterprise.context.ApplicationScoped
@@ -16,8 +14,6 @@ import jakarta.ws.rs.core.MediaType
 @ApplicationScoped
 @Suppress("Unused")
 class LogsViewerResource(
-  @param:Location("logs-viewer.html")
-  private val template: Template,
   private val logsCollector: LogsCollector,
   private val httpResponseMetrics: ResponseTimingPort,
 ) {
@@ -28,10 +24,7 @@ class LogsViewerResource(
   fun viewer(@QueryParam("view") view: String?): TemplateInstance = httpResponseMetrics.timed("page.logs.view") {
     val logs = logsCollector.getRecentLogs()
     val viewMode = if (view?.equals("grouped", ignoreCase = true) == true) "grouped" else "chronological"
-    template
-      .data("logs", logs)
-      .data("groups", groupLogsByClassAndType(logs))
-      .data("viewMode", viewMode)
+    Templates.`logs-viewer`(logs, groupLogsByClassAndType(logs), viewMode)
   }
 
   internal fun groupLogsByClassAndType(logs: List<LogUiEntry>): List<LogUiGroup> =

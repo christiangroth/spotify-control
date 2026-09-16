@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Test
 class LogsViewerResourceTests {
 
   private val resource = LogsViewerResource(
-    template = mockk(relaxed = true),
     logsCollector = mockk(relaxed = true),
     httpResponseMetrics = mockk(relaxed = true),
   )

@@ -3,8 +3,6 @@ package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 import de.chrgroth.spotify.control.domain.port.`in`.user.RuntimeConfigPort
 import de.chrgroth.spotify.control.domain.port.out.infra.ConfigurationInfoPort
 import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
-import io.quarkus.qute.Location
-import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
 import io.quarkus.security.Authenticated
 import jakarta.enterprise.context.ApplicationScoped
@@ -22,8 +20,6 @@ import kotlin.coroutines.CoroutineContext
 @ApplicationScoped
 @Suppress("Unused")
 class ConfigResource(
-  @param:Location("config.html")
-  private val configTemplate: Template,
   private val configurationInfo: ConfigurationInfoPort,
   private val runtimeConfig: RuntimeConfigPort,
   private val httpResponseMetrics: ResponseTimingPort,
@@ -39,9 +35,7 @@ class ConfigResource(
       val runtimeConfigAsync = async(dispatcher) { runtimeConfig.getRuntimeConfig() }
       val stats = details.detailSuspend("config.view.stats") { statsAsync.await() }
       val runtimeConfigResult = details.detailSuspend("config.view.runtime-config") { runtimeConfigAsync.await() }
-      configTemplate
-        .data("stats", stats)
-        .data("runtimeConfig", runtimeConfigResult)
+      Templates.config(stats, runtimeConfigResult)
     }
   }
 }

@@ -4,8 +4,6 @@ import de.chrgroth.spotify.control.domain.model.viewer.MongoViewerFilter
 import de.chrgroth.spotify.control.domain.model.viewer.MongoViewerFilterOperator
 import de.chrgroth.spotify.control.domain.port.`in`.infra.MongoViewerPort
 import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
-import io.quarkus.qute.Location
-import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
 import io.quarkus.security.Authenticated
 import jakarta.enterprise.context.ApplicationScoped
@@ -21,8 +19,6 @@ import jakarta.ws.rs.core.UriInfo
 @ApplicationScoped
 @Suppress("Unused")
 class MongoViewerResource(
-  @param:Location("mongodb-viewer.html")
-  private val viewerTemplate: Template,
   private val mongoViewer: MongoViewerPort,
   private val httpResponseMetrics: ResponseTimingPort,
 ) {
@@ -75,9 +71,7 @@ class MongoViewerResource(
       pageSize = effectivePageSize,
     )
 
-    viewerTemplate
-      .data("result", result)
-      .data("pageSizes", PAGE_SIZES)
+    Templates.`mongodb-viewer`(result, PAGE_SIZES)
   }
 
   companion object {
