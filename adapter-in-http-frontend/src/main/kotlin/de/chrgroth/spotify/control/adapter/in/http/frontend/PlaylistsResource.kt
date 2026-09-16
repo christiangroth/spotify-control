@@ -6,8 +6,6 @@ import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistCheckPort
 import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistPort
 import de.chrgroth.spotify.control.domain.port.`in`.user.UserProfilePort
 import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
-import io.quarkus.qute.Location
-import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
 import io.quarkus.security.Authenticated
 import io.quarkus.security.identity.SecurityIdentity
@@ -22,10 +20,6 @@ import kotlin.time.Instant
 @ApplicationScoped
 @Suppress("Unused")
 class PlaylistsResource(
-  @param:Location("settings/playlist.html")
-  private val playlistTemplate: Template,
-  @param:Location("playlist-checks.html")
-  private val playlistChecksTemplate: Template,
   private val securityIdentity: SecurityIdentity,
   private val userProfile: UserProfilePort,
   private val playlist: PlaylistPort,
@@ -50,9 +44,7 @@ class PlaylistsResource(
         numberOfMissingArtists = entry.numberOfMissingArtists,
       )
     }
-    playlistTemplate
-      .data("displayName", displayName)
-      .data("rows", rows)
+    SettingsTemplates.playlist(displayName, rows)
   }
 
   data class PlaylistRow(
@@ -73,8 +65,6 @@ class PlaylistsResource(
   @Produces(MediaType.TEXT_HTML)
   fun checks(): TemplateInstance = httpResponseMetrics.timed("page.playlist.checks-tab") {
     val dashboard = playlistCheckPort.getCheckDashboard()
-    playlistChecksTemplate
-      .data("displayName", dashboard.displayName.ifEmpty { securityIdentity.principal.name })
-      .data("groups", PlaylistChecksResource.buildCheckGroups(dashboard))
+    Templates.`playlist-checks`(dashboard.displayName.ifEmpty { securityIdentity.principal.name }, PlaylistChecksResource.buildCheckGroups(dashboard))
   }
 }

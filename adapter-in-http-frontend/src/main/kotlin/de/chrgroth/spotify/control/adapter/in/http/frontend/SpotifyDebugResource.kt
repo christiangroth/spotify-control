@@ -24,8 +24,6 @@ import de.chrgroth.spotify.control.domain.port.out.playback.SpotifyPlaybackPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.SpotifyPlaylistPort
 import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAccessTokenPort
 import de.chrgroth.spotify.control.domain.port.out.user.SpotifyAuthPort
-import io.quarkus.qute.Location
-import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
 import io.quarkus.security.Authenticated
 import jakarta.enterprise.context.ApplicationScoped
@@ -45,8 +43,6 @@ import kotlin.time.Instant
 @ApplicationScoped
 @Suppress("Unused", "TooGenericExceptionCaught", "TooManyFunctions")
 class SpotifyDebugResource(
-  @param:Location("spotify-debug.html")
-  private val spotifyDebugTemplate: Template,
   private val catalogBrowser: CatalogBrowserPort,
   private val playlist: PlaylistPort,
   private val spotifyAccessToken: SpotifyAccessTokenPort,
@@ -61,7 +57,7 @@ class SpotifyDebugResource(
   @GET
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun page(): TemplateInstance = httpResponseMetrics.timed("page.debug.spotify") { spotifyDebugTemplate.instance() }
+  fun page(): TemplateInstance = httpResponseMetrics.timed("page.debug.spotify") { Templates.`spotify-debug`() }
 
   @GET
   @Path("/api/artists")

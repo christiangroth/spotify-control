@@ -5,8 +5,6 @@ import de.chrgroth.spotify.control.domain.error.AuthError
 import de.chrgroth.spotify.control.domain.error.OAuthError
 import de.chrgroth.spotify.control.domain.error.TokenError
 import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
-import io.quarkus.qute.Location
-import io.quarkus.qute.Template
 import io.quarkus.security.identity.SecurityIdentity
 import jakarta.annotation.security.PermitAll
 import jakarta.enterprise.context.ApplicationScoped
@@ -17,16 +15,17 @@ import jakarta.ws.rs.QueryParam
 import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
 import java.net.URI
+import org.eclipse.microprofile.config.inject.ConfigProperty
 
 @Path("/")
 @ApplicationScoped
 @Suppress("Unused")
 class LoginResource(
-  @param:Location("login.html")
-  private val loginTemplate: Template,
   private val securityIdentity: SecurityIdentity,
   private val httpResponseMetrics: ResponseTimingPort,
   private val messages: AppMessages,
+  @param:ConfigProperty(name = "quarkus.application.version")
+  private val appBuildVersion: String,
 ) {
 
   @GET
@@ -36,7 +35,7 @@ class LoginResource(
     if (!securityIdentity.isAnonymous) {
       Response.temporaryRedirect(URI.create("/dashboard")).build()
     } else {
-      Response.ok(loginTemplate.data("errorMessage", error?.let { errorMessage(it) })).build()
+      Response.ok(Templates.login(error?.let { errorMessage(it) }, appBuildVersion)).build()
     }
   }
 

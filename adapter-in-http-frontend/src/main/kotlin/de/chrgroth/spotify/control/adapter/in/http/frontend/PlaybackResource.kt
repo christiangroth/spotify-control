@@ -3,8 +3,6 @@ package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 import de.chrgroth.spotify.control.domain.port.`in`.infra.DashboardPort
 import de.chrgroth.spotify.control.domain.port.`in`.user.UserProfilePort
 import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
-import io.quarkus.qute.Location
-import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
 import io.quarkus.security.Authenticated
 import io.quarkus.security.identity.SecurityIdentity
@@ -23,8 +21,6 @@ import kotlinx.datetime.toLocalDateTime
 @ApplicationScoped
 @Suppress("Unused")
 class PlaybackResource(
-  @param:Location("playback.html")
-  private val playbackTemplate: Template,
   private val securityIdentity: SecurityIdentity,
   private val userProfile: UserProfilePort,
   private val dashboard: DashboardPort,
@@ -40,9 +36,6 @@ class PlaybackResource(
     val today = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
     val requestedDate = dateParam?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
     val eventsDate = requestedDate?.let { if (it > today) today else it }
-    playbackTemplate
-      .data("displayName", displayName)
-      .data("stats", stats)
-      .data("eventsDate", eventsDate)
+    Templates.playback(displayName, stats, eventsDate)
   }
 }

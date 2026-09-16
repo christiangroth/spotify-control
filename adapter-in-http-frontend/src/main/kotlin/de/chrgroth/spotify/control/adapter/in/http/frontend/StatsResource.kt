@@ -7,8 +7,6 @@ import de.chrgroth.spotify.control.domain.model.playback.aggregation.Aggregation
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.PlaybackAggregation
 import de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackAggregationPort
 import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
-import io.quarkus.qute.Location
-import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
 import io.quarkus.security.Authenticated
 import jakarta.enterprise.context.ApplicationScoped
@@ -28,8 +26,6 @@ import java.time.temporal.TemporalAdjusters
 @ApplicationScoped
 @Suppress("Unused")
 class StatsResource(
-  @param:Location("stats.html")
-  private val statsTemplate: Template,
   private val playbackAggregationPort: PlaybackAggregationPort,
   private val httpResponseMetrics: ResponseTimingPort,
   private val messages: StatsMessages,
@@ -66,7 +62,7 @@ class StatsResource(
         },
       )
     }
-    statsTemplate.instance().data("tabs", tabs)
+    Templates.stats(tabs)
   }
 
   private fun topEntries(entries: List<AggregationRankEntry>?): List<RankEntryView> =

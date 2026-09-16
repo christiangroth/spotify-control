@@ -2,8 +2,6 @@ package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
 import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogBrowserPort
 import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
-import io.quarkus.qute.Location
-import io.quarkus.qute.Template
 import io.quarkus.security.Authenticated
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.ws.rs.GET
@@ -17,8 +15,6 @@ import jakarta.ws.rs.core.Response
 @ApplicationScoped
 @Suppress("Unused")
 class CatalogSyncResource(
-  @param:Location("catalog-sync.html")
-  private val template: Template,
   private val catalogBrowser: CatalogBrowserPort,
   private val httpResponseMetrics: ResponseTimingPort,
 ) {
@@ -39,13 +35,13 @@ class CatalogSyncResource(
 
   private fun renderPage(artistOffset: Int, albumOffset: Int): Response {
     val page = catalogBrowser.getSyncTimeline(artistOffset, albumOffset, PAGE_SIZE)
-    val html = template.data("page", page).data("entries", page.entries).render()
+    val html = Templates.`catalog-sync`(page, page.entries).render()
     return Response.ok(html).build()
   }
 
   private fun renderRows(artistOffset: Int, albumOffset: Int): Response {
     val page = catalogBrowser.getSyncTimeline(artistOffset, albumOffset, PAGE_SIZE)
-    val html = template.getFragment("snippet_rows").data("entries", page.entries).render()
+    val html = Templates.`catalog-sync$snippet_rows`(page.entries).render()
     return Response.ok(html)
       .header(NEXT_ARTIST_OFFSET_HEADER, page.nextArtistOffset)
       .header(NEXT_ALBUM_OFFSET_HEADER, page.nextAlbumOffset)
