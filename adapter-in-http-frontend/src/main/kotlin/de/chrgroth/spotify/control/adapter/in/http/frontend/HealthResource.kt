@@ -3,8 +3,6 @@ package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 import de.chrgroth.spotify.control.domain.model.infra.HealthStats
 import de.chrgroth.spotify.control.domain.port.`in`.infra.HealthPort
 import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
-import io.quarkus.qute.Location
-import io.quarkus.qute.Template
 import io.quarkus.qute.TemplateInstance
 import io.quarkus.security.Authenticated
 import jakarta.enterprise.context.ApplicationScoped
@@ -17,8 +15,6 @@ import jakarta.ws.rs.core.MediaType
 @ApplicationScoped
 @Suppress("Unused")
 class HealthResource(
-  @param:Location("health.html")
-  private val healthTemplate: Template,
   private val health: HealthPort,
   private val httpResponseMetrics: ResponseTimingPort,
 ) {
@@ -26,14 +22,14 @@ class HealthResource(
   @GET
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun health(): TemplateInstance = httpResponseMetrics.timed("page.health.view") { healthTemplate.data("stats", health.getStats()) }
+  fun health(): TemplateInstance = httpResponseMetrics.timed("page.health.view") { Templates.health(health.getStats()) }
 
   @GET
   @Path("/snippets/predicates")
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
   fun snippetPredicates(): TemplateInstance = httpResponseMetrics.timed("fragment.health.predicates") {
-    healthTemplate.getFragment("snippet_predicates").data("stats", HealthStats(predicateStats = health.getPredicateStats()))
+    Templates.`health$snippet_predicates`(HealthStats(predicateStats = health.getPredicateStats()))
   }
 
   @GET
@@ -41,7 +37,7 @@ class HealthResource(
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
   fun snippetCronjobs(): TemplateInstance = httpResponseMetrics.timed("fragment.health.cronjobs") {
-    healthTemplate.getFragment("snippet_cronjobs").data("stats", HealthStats(cronjobStats = health.getCronjobStats()))
+    Templates.`health$snippet_cronjobs`(HealthStats(cronjobStats = health.getCronjobStats()))
   }
 
   @GET
@@ -49,7 +45,7 @@ class HealthResource(
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
   fun snippetOutgoingHttpCalls(): TemplateInstance = httpResponseMetrics.timed("fragment.health.outgoing-http-calls") {
-    healthTemplate.getFragment("snippet_outgoing_http_calls").data("stats", HealthStats(outgoingRequestStats = health.getOutgoingRequestStats()))
+    Templates.`health$snippet_outgoing_http_calls`(HealthStats(outgoingRequestStats = health.getOutgoingRequestStats()))
   }
 
   @GET
@@ -57,7 +53,7 @@ class HealthResource(
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
   fun snippetOutboxPartitions(): TemplateInstance = httpResponseMetrics.timed("fragment.health.outbox-partitions") {
-    healthTemplate.getFragment("snippet_outbox_partitions").data("stats", HealthStats(outboxPartitions = health.getOutboxPartitions()))
+    Templates.`health$snippet_outbox_partitions`(HealthStats(outboxPartitions = health.getOutboxPartitions()))
   }
 
   @GET
@@ -65,7 +61,7 @@ class HealthResource(
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
   fun snippetMongoDbCollections(): TemplateInstance = httpResponseMetrics.timed("fragment.health.mongodb-collections") {
-    healthTemplate.getFragment("snippet_mongodb_collections").data("stats", HealthStats(mongoCollectionStats = health.getMongoCollectionStats()))
+    Templates.`health$snippet_mongodb_collections`(HealthStats(mongoCollectionStats = health.getMongoCollectionStats()))
   }
 
   @GET
@@ -73,7 +69,7 @@ class HealthResource(
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
   fun snippetMongoDbQueries(): TemplateInstance = httpResponseMetrics.timed("fragment.health.mongodb-queries") {
-    healthTemplate.getFragment("snippet_mongodb_queries").data("stats", HealthStats(mongoQueryStats = health.getMongoQueryStats()))
+    Templates.`health$snippet_mongodb_queries`(HealthStats(mongoQueryStats = health.getMongoQueryStats()))
   }
 
   @GET
@@ -81,7 +77,7 @@ class HealthResource(
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
   fun snippetNavbarOutboxStatus(): TemplateInstance = httpResponseMetrics.timed("fragment.health.navbar-outbox-status") {
-    healthTemplate.getFragment("snippet_navbar_outbox_status").data("stats", HealthStats(outboxPartitions = health.getOutboxPartitions()))
+    Templates.`health$snippet_navbar_outbox_status`(HealthStats(outboxPartitions = health.getOutboxPartitions()))
   }
 
   @GET
@@ -89,6 +85,6 @@ class HealthResource(
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
   fun snippetNavbarPlaybackStatus(): TemplateInstance = httpResponseMetrics.timed("fragment.health.navbar-playback-status") {
-    healthTemplate.getFragment("snippet_navbar_playback_status").data("stats", HealthStats(predicateStats = health.getPredicateStats()))
+    Templates.`health$snippet_navbar_playback_status`(HealthStats(predicateStats = health.getPredicateStats()))
   }
 }
