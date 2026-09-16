@@ -1,3 +1,12 @@
+# 0.126.8 (2026.09.16)
+
+## Bugfixes / Chore
+* Strengthened build-time checks for page templates so typos are caught before they reach users.
+
+
+
+---
+
 # 0.126.7 (2026.09.11)
 
 ## Bugfixes / Chore
