@@ -1,3 +1,12 @@
+# 0.127.0 (2026.09.21)
+
+## New Features
+* Added a Follow Suggestions page listing artists you might want to follow (heard often recently) and artists you might want to unfollow (followed but rarely played), based on your recent listening activity.
+
+
+
+---
+
 # 0.126.11 (2026.09.21)
 
 ## Bugfixes / Chore
