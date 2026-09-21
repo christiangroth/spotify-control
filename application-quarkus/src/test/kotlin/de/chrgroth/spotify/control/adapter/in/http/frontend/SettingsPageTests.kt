@@ -480,7 +480,7 @@ class SettingsPageTests {
   }
 
   @Test
-  fun `following nav tile links to suggestions and shows badge when suggestions are open`() {
+  fun `following nav tile links to following page and shows badge when suggestions are open`() {
     followSuggestionsViewRepository.save(
       FollowSuggestionsView(
         followCandidates = listOf(
@@ -500,6 +500,6 @@ class SettingsPageTests {
       .then()
       .statusCode(200)
       .body(containsString("""data-testid="nav-tile-following-badge""""))
-      .body(containsString("""href="/following/suggestions""""))
+      .body(containsString("""href="/following" class="text-decoration-none position-relative d-block" data-testid="nav-tile-following""""))
   }
 }
