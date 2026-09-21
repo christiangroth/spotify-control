@@ -3,7 +3,10 @@ package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 import arrow.core.getOrElse
 import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
+import de.chrgroth.spotify.control.domain.model.catalog.FollowCandidate
+import de.chrgroth.spotify.control.domain.model.catalog.FollowSuggestionsView
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
+import de.chrgroth.spotify.control.domain.model.catalog.UnfollowCandidate
 import de.chrgroth.spotify.control.domain.model.playlist.Playlist
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSyncStatus
@@ -13,6 +16,7 @@ import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.readmodel.FollowSuggestionsViewRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.user.TokenEncryptionPort
 import de.chrgroth.spotify.control.domain.port.out.user.UserRepositoryPort
 import io.quarkus.test.junit.QuarkusTest
@@ -26,6 +30,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.hours
+import kotlin.time.Instant
 import java.util.UUID
 
 @QuarkusTest
@@ -46,6 +51,9 @@ class SettingsPageTests {
 
   @Inject
   lateinit var tokenEncryption: TokenEncryptionPort
+
+  @Inject
+  lateinit var followSuggestionsViewRepository: FollowSuggestionsViewRepositoryPort
 
   @BeforeEach
   fun ensureCurrentUser() {
@@ -375,4 +383,77 @@ class SettingsPageTests {
       .body(containsString("/playback/events?date=2026-06-01"))
   }
 
+  @Test
+  fun `follow suggestions page is available and displays heading`() {
+    followSuggestionsViewRepository.save(FollowSuggestionsView())
+
+    given()
+      .`when`()
+      .get("/follow-suggestions")
+      .then()
+      .statusCode(200)
+      .contentType(containsString("text/html"))
+      .body(containsString("Follow Suggestions"))
+  }
+
+  @Test
+  fun `follow suggestions page displays empty states when no candidates are precomputed`() {
+    followSuggestionsViewRepository.save(FollowSuggestionsView())
+
+    given()
+      .`when`()
+      .get("/follow-suggestions")
+      .then()
+      .statusCode(200)
+      .body(containsString("No follow candidates right now."))
+      .body(containsString("No unfollow candidates right now."))
+  }
+
+  @Test
+  fun `follow suggestions page displays follow candidate with top rank weeks`() {
+    followSuggestionsViewRepository.save(
+      FollowSuggestionsView(
+        followCandidates = listOf(
+          FollowCandidate(
+            artistId = ArtistId("follow-candidate-1"),
+            artistName = "Follow Candidate Artist",
+            recentPlaybackSeconds = 600,
+            topRankWeeks = 3,
+          ),
+        ),
+      ),
+    )
+
+    given()
+      .`when`()
+      .get("/follow-suggestions")
+      .then()
+      .statusCode(200)
+      .body(containsString("Follow Candidate Artist"))
+      .body(containsString("3 week(s) among top artists"))
+  }
+
+  @Test
+  fun `follow suggestions page displays unfollow candidate with followed-since date`() {
+    followSuggestionsViewRepository.save(
+      FollowSuggestionsView(
+        unfollowCandidates = listOf(
+          UnfollowCandidate(
+            artistId = ArtistId("unfollow-candidate-1"),
+            artistName = "Unfollow Candidate Artist",
+            followedSince = Instant.fromEpochSeconds(0),
+            lookbackPlaybackSeconds = 0,
+          ),
+        ),
+      ),
+    )
+
+    given()
+      .`when`()
+      .get("/follow-suggestions")
+      .then()
+      .statusCode(200)
+      .body(containsString("Unfollow Candidate Artist"))
+      .body(containsString("Followed since"))
+  }
 }

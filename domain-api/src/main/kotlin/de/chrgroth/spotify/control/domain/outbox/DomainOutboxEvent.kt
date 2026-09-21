@@ -421,6 +421,22 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
     }
   }
 
+  /**
+   * Rebuilds the precomputed Follow Suggestions read model (see ADR-0014). Deduplicated so that bursts of
+   * triggers from its unrelated source services (followed-artists sync, weekly playback aggregation) collapse
+   * into one rebuild.
+   */
+  data class RebuildFollowSuggestions(val placeholder: String = "") : DomainOutboxEvent {
+    override val key = KEY
+    override val deduplicationKey = KEY
+    override val partition = DomainOutboxPartition.Domain
+    override val serializePayload = ""
+
+    companion object {
+      const val KEY = "RebuildFollowSuggestions"
+    }
+  }
+
   companion object {
     val allKeys: List<String> = listOf(
       FetchPlaybackData.KEY,
@@ -444,6 +460,7 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
       RebuildPlaylistChecksDashboard.KEY,
       RebuildPlaylistSettingsView.KEY,
       RebuildDashboardReadModel.KEY,
+      RebuildFollowSuggestions.KEY,
     )
 
     @Suppress("CyclomaticComplexMethod")
@@ -469,6 +486,7 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
       RebuildPlaylistChecksDashboard.KEY -> RebuildPlaylistChecksDashboard()
       RebuildPlaylistSettingsView.KEY -> RebuildPlaylistSettingsView()
       RebuildDashboardReadModel.KEY -> RebuildDashboardReadModel()
+      RebuildFollowSuggestions.KEY -> RebuildFollowSuggestions()
       else -> throw IllegalArgumentException("Unknown outbox event type: $key")
     }
   }

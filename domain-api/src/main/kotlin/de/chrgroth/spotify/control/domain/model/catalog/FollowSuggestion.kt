@@ -24,3 +24,11 @@ data class UnfollowCandidate(
   val followedSince: Instant?,
   val lookbackPlaybackSeconds: Long,
 )
+
+/**
+ * Precomputed read model for the Follow Suggestions settings page (see ADR-0014).
+ */
+data class FollowSuggestionsView(
+  val followCandidates: List<FollowCandidate> = emptyList(),
+  val unfollowCandidates: List<UnfollowCandidate> = emptyList(),
+)

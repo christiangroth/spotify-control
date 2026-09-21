@@ -143,4 +143,10 @@ object SettingsTemplates {
 
   @JvmStatic
   external fun playlist(displayName: String, rows: List<PlaylistsResource.PlaylistRow>): TemplateInstance
+
+  @JvmStatic
+  external fun `follow-suggestions`(
+    followCandidates: List<FollowSuggestionsResource.FollowCandidateRow>,
+    unfollowCandidates: List<FollowSuggestionsResource.UnfollowCandidateRow>,
+  ): TemplateInstance
 }

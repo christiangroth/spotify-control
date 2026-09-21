@@ -2,6 +2,7 @@ package de.chrgroth.spotify.control.domain.outbox
 
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationPeriodType
 import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogPort
+import de.chrgroth.spotify.control.domain.port.`in`.catalog.FollowSuggestionsPort
 import de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackAggregationPort
 import de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackPort
 import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistCheckPort
@@ -41,6 +42,7 @@ class DomainOutboxContractTests {
     DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.QUARTER, LocalDate(2024, 1, 1)),
     DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.YEAR, LocalDate(2024, 1, 1)),
     DomainOutboxEvent.RebuildAllAggregations(),
+    DomainOutboxEvent.RebuildFollowSuggestions(),
   )
 
   @Test
@@ -78,7 +80,7 @@ class DomainOutboxContractTests {
   fun `every DomainOutboxEvent type has a handler method in one of the domain ports`() {
     val allPortMethods = listOf(
       PlaybackPort::class, PlaybackAggregationPort::class, CatalogPort::class,
-      PlaylistPort::class, PlaylistCheckPort::class, UserProfilePort::class,
+      PlaylistPort::class, PlaylistCheckPort::class, UserProfilePort::class, FollowSuggestionsPort::class,
     )
       .flatMap { it.java.methods.toList() }
     allEvents.forEach { event ->

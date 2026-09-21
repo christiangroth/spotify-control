@@ -100,6 +100,9 @@ interface AppMessages {
   fun layoutNavTileChecksLabel(): String
 
   @Message
+  fun layoutNavTileFollowSuggestionsLabel(): String
+
+  @Message
   fun layoutNavTileCatalogLabel(): String
 
   @Message

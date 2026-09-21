@@ -207,6 +207,9 @@ class PlaybackAggregationService(
     if (event.type == AggregationPeriodType.DAY) {
       outboxPort.enqueue(DomainOutboxEvent.RebuildDashboardReadModel())
     }
+    if (event.type == AggregationPeriodType.WEEK) {
+      outboxPort.enqueue(DomainOutboxEvent.RebuildFollowSuggestions())
+    }
     return Unit.right()
   }
 

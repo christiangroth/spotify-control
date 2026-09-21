@@ -187,6 +187,7 @@ class CatalogService(
         val unfollowedIds = previouslyFollowedIds - currentIds
         unfollowedIds.forEach { appArtistRepository.setFollowed(it, followed = false, followedSince = null) }
 
+        outboxPort.enqueue(DomainOutboxEvent.RebuildFollowSuggestions())
         logger.info { "Synced followed artists: ${newlyFollowedIds.size} new follow(s), ${unfollowedIds.size} unfollow(s)" }
       }
   }

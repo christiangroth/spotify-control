@@ -1,0 +1,57 @@
+{#include layout.html}
+    {#title}{msg:commonAppName()} – {followsuggestions:title()}{/title}
+    {#content}
+    <div class="app-page-container py-4 px-3 px-md-4">
+        <div class="d-flex align-items-center mb-4 gap-3">
+            <h1 class="fs-4 fw-semibold mb-0">{followsuggestions:title()}</h1>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-12 col-lg-6">
+                <div class="card h-100 app-card">
+                    <div class="card-body">
+                        <p class="card-subtitle mb-3 app-section-label">{followsuggestions:followSectionTitle()}</p>
+                        {#if followCandidates.empty}
+                        <p class="text-secondary mb-0">{followsuggestions:followSectionEmptyState()}</p>
+                        {#else}
+                        <ul class="list-unstyled mb-0" data-testid="follow-candidates-list">
+                            {#for candidate in followCandidates}
+                            <li class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                                <ul class="list-unstyled mb-0 flex-grow-1">
+                                    {#artist-rank-entry entry=candidate showDuration=true/}
+                                </ul>
+                                <span class="badge text-bg-secondary" style="font-size:.7rem;white-space:nowrap;">{followsuggestions:followTopRankWeeks(candidate.topRankWeeks.formatted)}</span>
+                            </li>
+                            {/for}
+                        </ul>
+                        {/if}
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-lg-6">
+                <div class="card h-100 app-card">
+                    <div class="card-body">
+                        <p class="card-subtitle mb-3 app-section-label">{followsuggestions:unfollowSectionTitle()}</p>
+                        {#if unfollowCandidates.empty}
+                        <p class="text-secondary mb-0">{followsuggestions:unfollowSectionEmptyState()}</p>
+                        {#else}
+                        <ul class="list-unstyled mb-0" data-testid="unfollow-candidates-list">
+                            {#for candidate in unfollowCandidates}
+                            <li class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                                <ul class="list-unstyled mb-0 flex-grow-1">
+                                    {#artist-rank-entry entry=candidate showDuration=true/}
+                                </ul>
+                                {#if candidate.followedSince}
+                                <span class="badge text-bg-secondary" style="font-size:.7rem;white-space:nowrap;">{followsuggestions:unfollowFollowedSince(candidate.followedSince.formattedShort)}</span>
+                                {/if}
+                            </li>
+                            {/for}
+                        </ul>
+                        {/if}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {/content}
+{/include}
