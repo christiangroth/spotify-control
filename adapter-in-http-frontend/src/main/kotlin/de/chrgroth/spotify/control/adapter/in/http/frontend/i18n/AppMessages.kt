@@ -100,7 +100,7 @@ interface AppMessages {
   fun layoutNavTileChecksLabel(): String
 
   @Message
-  fun layoutNavTileFollowSuggestionsLabel(): String
+  fun layoutNavTileFollowingLabel(): String
 
   @Message
   fun layoutNavTileCatalogLabel(): String
@@ -110,6 +110,9 @@ interface AppMessages {
 
   @Message("{count} artist(s) awaiting sync decision")
   fun layoutCatalogBadgeTooltip(count: String): String
+
+  @Message("{count} open follow suggestion(s)")
+  fun layoutFollowingBadgeTooltip(count: String): String
 
   @Message
   fun layoutOutboxCountdownNow(): String

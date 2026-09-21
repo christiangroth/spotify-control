@@ -14,6 +14,9 @@ interface FollowSuggestionsMessages {
   fun title(): String
 
   @Message
+  fun backToFollowingButton(): String
+
+  @Message
   fun followSectionTitle(): String
 
   @Message

@@ -2,6 +2,7 @@ package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
 import de.chrgroth.spotify.control.adapter.`in`.http.frontend.i18n.Language
 import de.chrgroth.spotify.control.domain.port.`in`.catalog.CatalogBrowserPort
+import de.chrgroth.spotify.control.domain.port.`in`.catalog.FollowSuggestionsPort
 import io.quarkus.qute.EngineBuilder
 import io.vertx.ext.web.RoutingContext
 import jakarta.enterprise.context.ApplicationScoped
@@ -13,6 +14,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty
 @Suppress("Unused")
 class AppTemplateGlobals(
   private val catalogBrowser: CatalogBrowserPort,
+  private val followSuggestions: FollowSuggestionsPort,
 ) {
 
   @field:ConfigProperty(name = "quarkus.application.version")
@@ -29,6 +31,8 @@ class AppTemplateGlobals(
       instance.data("appBuildVersion", version)
       instance.data("grafanaCloudStackUrl", grafanaCloudStackUrl)
       instance.data("undecidedArtistCount", catalogBrowser.getCatalogStats().undecidedArtistCount)
+      val followSuggestionsView = followSuggestions.getFollowSuggestionsView()
+      instance.data("followSuggestionCount", followSuggestionsView.followCandidates.size + followSuggestionsView.unfollowCandidates.size)
       val language = currentLanguage()
       instance.setLocale(language.locale)
       instance.data("currentLanguage", language.code)

@@ -6,6 +6,8 @@ import de.chrgroth.spotify.control.domain.model.catalog.ArtistBrowseItem
 import de.chrgroth.spotify.control.domain.model.catalog.CatalogStats
 import de.chrgroth.spotify.control.domain.model.catalog.CatalogSyncTimelineEntry
 import de.chrgroth.spotify.control.domain.model.catalog.CatalogSyncTimelinePage
+import de.chrgroth.spotify.control.domain.model.catalog.FollowedArtistItem
+import de.chrgroth.spotify.control.domain.model.catalog.FollowedArtistsOverview
 import de.chrgroth.spotify.control.domain.model.catalog.TrackBrowseItem
 import de.chrgroth.spotify.control.domain.model.infra.ConfigEntry
 import de.chrgroth.spotify.control.domain.model.infra.ConfigurationStats
@@ -45,6 +47,8 @@ import kotlinx.datetime.LocalDate
 @TemplateData(target = HealthStats::class)
 @TemplateData(target = MongoCollectionStats::class)
 @TemplateData(target = ArtistBrowseItem::class)
+@TemplateData(target = FollowedArtistsOverview::class)
+@TemplateData(target = FollowedArtistItem::class)
 @TemplateData(target = AlbumBrowseItem::class)
 @TemplateData(target = TrackBrowseItem::class)
 @TemplateData(target = OutboxTask::class)

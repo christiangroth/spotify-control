@@ -151,6 +151,17 @@ class AppArtistRepositoryAdapter(
     }
   }
 
+  override fun touchFollowedSync(artistIds: Set<ArtistId>, syncedAt: Instant) {
+    if (artistIds.isEmpty()) return
+    mongoQueryMetrics.timed("app_artist.touchFollowedSync") {
+      appArtistDocumentRepository.mongoCollection()
+        .updateMany(
+          Filters.`in`(ID_FIELD, artistIds.map { it.value }),
+          Updates.set(LAST_FOLLOW_SYNC_FIELD, syncedAt.toJavaInstant()),
+        )
+    }
+  }
+
   override fun deleteAll() {
     mongoQueryMetrics.timed("app_artist.deleteAll") {
       appArtistDocumentRepository.deleteAll()

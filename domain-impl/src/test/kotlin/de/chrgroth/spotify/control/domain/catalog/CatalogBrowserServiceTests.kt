@@ -25,6 +25,7 @@ import de.chrgroth.spotify.control.domain.user.CurrentUserResolver
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -123,6 +124,35 @@ class CatalogBrowserServiceTests {
     assertThat(result).allSatisfy { assertThat(it.isShallow).isTrue() }
     verify(exactly = 0) { appAlbumRepository.findByArtistIds(any()) }
     verify(exactly = 0) { appTrackRepository.findByArtistIds(any()) }
+  }
+
+  @Test
+  fun `getFollowedArtists returns followed artists sorted by name with the most recent lastFollowSync as overview timestamp`() {
+    val bravo = AppArtist(
+      id = ArtistId("artist-2"), artistName = "Bravo", lastSync = triggeredAt, followed = true,
+      followedSince = triggeredAt, lastFollowSync = triggeredAt,
+    )
+    val alpha = AppArtist(
+      id = ArtistId("artist-1"), artistName = "Alpha", lastSync = triggeredAt, followed = true,
+      followedSince = triggeredAt, lastFollowSync = triggeredAt + 10.seconds,
+    )
+    every { appArtistRepository.findFollowed() } returns listOf(bravo, alpha)
+
+    val result = service.getFollowedArtists()
+
+    assertThat(result.artists.map { it.artistId }).containsExactly("artist-1", "artist-2")
+    assertThat(result.lastSyncedAt).isEqualTo(triggeredAt + 10.seconds)
+  }
+
+  @Test
+  fun `getFollowedArtists returns null overview timestamp when no artist has been synced yet`() {
+    every { appArtistRepository.findFollowed() } returns listOf(
+      AppArtist(id = ArtistId("artist-1"), artistName = "Alpha", lastSync = triggeredAt, followed = true),
+    )
+
+    val result = service.getFollowedArtists()
+
+    assertThat(result.lastSyncedAt).isNull()
   }
 
   @Test

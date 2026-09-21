@@ -389,7 +389,7 @@ class SettingsPageTests {
 
     given()
       .`when`()
-      .get("/follow-suggestions")
+      .get("/following/suggestions")
       .then()
       .statusCode(200)
       .contentType(containsString("text/html"))
@@ -402,7 +402,7 @@ class SettingsPageTests {
 
     given()
       .`when`()
-      .get("/follow-suggestions")
+      .get("/following/suggestions")
       .then()
       .statusCode(200)
       .body(containsString("No follow candidates right now."))
@@ -426,7 +426,7 @@ class SettingsPageTests {
 
     given()
       .`when`()
-      .get("/follow-suggestions")
+      .get("/following/suggestions")
       .then()
       .statusCode(200)
       .body(containsString("Follow Candidate Artist"))
@@ -450,10 +450,56 @@ class SettingsPageTests {
 
     given()
       .`when`()
-      .get("/follow-suggestions")
+      .get("/following/suggestions")
       .then()
       .statusCode(200)
       .body(containsString("Unfollow Candidate Artist"))
       .body(containsString("Followed since"))
+  }
+
+  @Test
+  fun `following page displays followed artist with last sync timestamp`() {
+    val now = Clock.System.now()
+    val followedArtistId = "followed-artist-${UUID.randomUUID()}"
+    appArtistRepository.upsertAll(
+      listOf(
+        AppArtist(id = ArtistId(followedArtistId), artistName = "Followed Test Artist", lastSync = now),
+      ),
+    )
+    appArtistRepository.setFollowed(ArtistId(followedArtistId), followed = true, followedSince = now)
+    appArtistRepository.touchFollowedSync(setOf(ArtistId(followedArtistId)), now)
+
+    given()
+      .`when`()
+      .get("/following")
+      .then()
+      .statusCode(200)
+      .contentType(containsString("text/html"))
+      .body(containsString("Followed Test Artist"))
+      .body(containsString("Followed artist data last synced"))
+  }
+
+  @Test
+  fun `following nav tile links to suggestions and shows badge when suggestions are open`() {
+    followSuggestionsViewRepository.save(
+      FollowSuggestionsView(
+        followCandidates = listOf(
+          FollowCandidate(
+            artistId = ArtistId("follow-candidate-badge-${UUID.randomUUID()}"),
+            artistName = "Badge Candidate Artist",
+            recentPlaybackSeconds = 60,
+            topRankWeeks = 1,
+          ),
+        ),
+      ),
+    )
+
+    given()
+      .`when`()
+      .get("/following")
+      .then()
+      .statusCode(200)
+      .body(containsString("""data-testid="nav-tile-following-badge""""))
+      .body(containsString("""href="/following/suggestions""""))
   }
 }

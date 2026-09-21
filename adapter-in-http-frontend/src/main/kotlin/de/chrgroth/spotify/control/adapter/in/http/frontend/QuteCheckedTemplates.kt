@@ -6,6 +6,7 @@ import de.chrgroth.spotify.control.domain.model.catalog.ArtistBrowseItem
 import de.chrgroth.spotify.control.domain.model.catalog.CatalogStats
 import de.chrgroth.spotify.control.domain.model.catalog.CatalogSyncTimelineEntry
 import de.chrgroth.spotify.control.domain.model.catalog.CatalogSyncTimelinePage
+import de.chrgroth.spotify.control.domain.model.catalog.FollowedArtistsOverview
 import de.chrgroth.spotify.control.domain.model.catalog.TrackBrowseItem
 import de.chrgroth.spotify.control.domain.model.infra.ConfigurationStats
 import de.chrgroth.spotify.control.domain.model.infra.HealthStats
@@ -130,6 +131,9 @@ object Templates {
 
   @JvmStatic
   external fun stats(tabs: List<StatsResource.AggregationTab>): TemplateInstance
+
+  @JvmStatic
+  external fun following(overview: FollowedArtistsOverview): TemplateInstance
 
   @JvmStatic
   external fun docs(title: String, markdownContent: String): TemplateInstance

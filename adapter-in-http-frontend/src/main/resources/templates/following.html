@@ -1,0 +1,56 @@
+{#include layout.html}
+    {#title}{msg:commonAppName()} – {following:title()}{/title}
+    {#content}
+    <div class="app-page-container py-4 px-3 px-md-4">
+        <div class="d-flex align-items-center mb-2 gap-3">
+            <h1 class="fs-4 fw-semibold mb-0">{following:title()}</h1>
+            <a href="/following/suggestions" class="btn btn-outline-secondary btn-sm">{following:suggestionsLinkLabel()}</a>
+        </div>
+        <p class="text-secondary small mb-4">
+            {#if overview.lastSyncedAt}
+            {following:lastSyncLabel(overview.lastSyncedAt.formattedShort)}
+            {#else}
+            {following:lastSyncNeverLabel()}
+            {/if}
+        </p>
+
+        {#if overview.artists.empty}
+        <p class="text-secondary">{following:emptyState()}</p>
+        {#else}
+        <table class="table table-dark table-hover align-middle mb-0">
+            <thead>
+                <tr class="app-section-label" style="font-size:.8rem;">
+                    <th style="width:50px;"></th>
+                    <th>{following:tableArtistHeader()}</th>
+                    <th>{following:tableFollowedSinceHeader()}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {#for artist in overview.artists}
+                <tr>
+                    <td style="padding:8px;">
+                        {#if artist.imageLink}
+                        <img src="{artist.imageLink}" alt="{artist.artistName}" width="40" height="40"
+                             style="border-radius:50%;object-fit:cover;">
+                        {#else}
+                        <div style="width:40px;height:40px;border-radius:50%;background:#333;display:flex;align-items:center;justify-content:center;" aria-label="{following:artistImagePlaceholderAriaLabel()}" role="img">
+                            <i class="bi bi-person-circle" style="font-size:20px;color:#888;"></i>
+                        </div>
+                        {/if}
+                    </td>
+                    <td style="color:#fff;font-size:.9rem;">{artist.artistName}</td>
+                    <td class="text-secondary" style="font-size:.85rem;">
+                        {#if artist.followedSince}
+                        {artist.followedSince.formattedShort}
+                        {#else}
+                        {msg:commonNotAvailable()}
+                        {/if}
+                    </td>
+                </tr>
+                {/for}
+            </tbody>
+        </table>
+        {/if}
+    </div>
+    {/content}
+{/include}

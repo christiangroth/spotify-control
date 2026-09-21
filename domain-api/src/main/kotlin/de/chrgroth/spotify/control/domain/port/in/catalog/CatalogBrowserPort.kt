@@ -4,6 +4,7 @@ import de.chrgroth.spotify.control.domain.model.catalog.AlbumBrowseItem
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistBrowseItem
 import de.chrgroth.spotify.control.domain.model.catalog.CatalogStats
 import de.chrgroth.spotify.control.domain.model.catalog.CatalogSyncTimelinePage
+import de.chrgroth.spotify.control.domain.model.catalog.FollowedArtistsOverview
 import de.chrgroth.spotify.control.domain.model.catalog.SyncTraceDisplay
 import de.chrgroth.spotify.control.domain.model.catalog.TrackBrowseItem
 
@@ -12,6 +13,7 @@ interface CatalogBrowserPort {
   fun getArtists(filter: String?): List<ArtistBrowseItem>
   fun getUndecidedArtists(): List<ArtistBrowseItem>
   fun getShallowArtists(): List<ArtistBrowseItem>
+  fun getFollowedArtists(): FollowedArtistsOverview
   fun getAlbums(filter: String?): List<AlbumBrowseItem>
   fun getArtistAlbums(artistId: String): List<AlbumBrowseItem>
   fun getAlbumTracks(albumId: String): List<TrackBrowseItem>
