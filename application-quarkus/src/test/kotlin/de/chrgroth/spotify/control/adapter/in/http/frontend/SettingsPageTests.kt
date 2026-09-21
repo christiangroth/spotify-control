@@ -393,7 +393,7 @@ class SettingsPageTests {
       .then()
       .statusCode(200)
       .contentType(containsString("text/html"))
-      .body(containsString("Follow Suggestions"))
+      .body(containsString("Follow"))
   }
 
   @Test

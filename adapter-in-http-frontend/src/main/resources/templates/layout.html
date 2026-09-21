@@ -59,10 +59,14 @@
             background-color: #1ed760;
             color: #000000;
         }
-        /* Dark card with app border */
+        /* Dark card with app border. Bootstrap's .card sets color: var(--bs-body-color), which this
+           app never overrides (no data-bs-theme), so it defaults to Bootstrap's light-theme near-black
+           text - unreadable on the app's dark card background unless overridden here (same issue as
+           .modal-content above). */
         .app-card {
             background-color: var(--color-bg-card);
             border-color: var(--color-border) !important;
+            color: var(--color-text-primary);
         }
         /* Bootstrap's .modal-content sets color: var(--bs-body-color), which this app never
            overrides (no data-bs-theme), so it defaults to Bootstrap's light-theme near-black
