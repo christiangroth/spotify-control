@@ -12,6 +12,7 @@ import de.chrgroth.spotify.control.domain.model.catalog.ArtistSyncStatus
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 import java.util.regex.Pattern
+import kotlin.time.toJavaInstant
 import kotlin.time.toKotlinInstant
 
 
@@ -36,6 +37,9 @@ class AppArtistRepositoryAdapter(
             Updates.set(TYPE_FIELD, item.type),
             Updates.set(LAST_SYNC_FIELD, now),
             Updates.setOnInsert(SYNC_STATUS_FIELD, item.syncStatus.name),
+            Updates.setOnInsert(FOLLOWED_FIELD, item.followed),
+            Updates.setOnInsert(FOLLOWED_SINCE_FIELD, item.followedSince?.toJavaInstant()),
+            Updates.setOnInsert(LAST_FOLLOW_SYNC_FIELD, item.lastFollowSync?.toJavaInstant()),
           ),
           upsertOptions,
         )
@@ -138,6 +142,9 @@ class AppArtistRepositoryAdapter(
     type = type,
     lastSync = lastSync?.toKotlinInstant() ?: kotlin.time.Instant.DISTANT_PAST,
     syncStatus = ArtistSyncStatus.valueOf(syncStatus),
+    followed = followed,
+    followedSince = followedSince?.toKotlinInstant(),
+    lastFollowSync = lastFollowSync?.toKotlinInstant(),
   )
 
   companion object {
@@ -147,5 +154,8 @@ class AppArtistRepositoryAdapter(
     internal const val TYPE_FIELD = "type"
     internal const val LAST_SYNC_FIELD = "lastSync"
     internal const val SYNC_STATUS_FIELD = "syncStatus"
+    internal const val FOLLOWED_FIELD = "followed"
+    internal const val FOLLOWED_SINCE_FIELD = "followedSince"
+    internal const val LAST_FOLLOW_SYNC_FIELD = "lastFollowSync"
   }
 }
