@@ -1,3 +1,12 @@
+# 0.128.1 (2026.09.21)
+
+## Bugfixes / Chore
+* The top menu's Following tile now always links to the Following page, instead of sometimes linking straight to open follow suggestions.
+
+
+
+---
+
 # 0.128.0 (2026.09.21)
 
 ## New Features
