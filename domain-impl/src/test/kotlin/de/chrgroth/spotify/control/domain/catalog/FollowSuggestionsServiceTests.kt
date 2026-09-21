@@ -2,13 +2,21 @@ package de.chrgroth.spotify.control.domain.catalog
 
 import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
+import de.chrgroth.spotify.control.domain.model.catalog.FollowSuggestionsView
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationPeriodType
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationRankEntry
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.PlaybackAggregation
+import de.chrgroth.spotify.control.domain.model.user.UserId
+import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playback.PlaybackAggregationRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.readmodel.FollowSuggestionsViewRepositoryPort
+import de.chrgroth.spotify.control.domain.user.CurrentUserResolver
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
+import io.mockk.runs
+import io.mockk.verify
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
@@ -20,10 +28,14 @@ class FollowSuggestionsServiceTests {
 
   private val appArtistRepository: AppArtistRepositoryPort = mockk()
   private val aggregationRepository: PlaybackAggregationRepositoryPort = mockk()
+  private val followSuggestionsViewRepository: FollowSuggestionsViewRepositoryPort = mockk()
+  private val currentUserResolver: CurrentUserResolver = mockk()
 
   private val service = FollowSuggestionsService(
     appArtistRepository = appArtistRepository,
     aggregationRepository = aggregationRepository,
+    followSuggestionsViewRepository = followSuggestionsViewRepository,
+    currentUserResolver = currentUserResolver,
     unfollowLookbackDays = 90,
     unfollowMinAgeDays = 30,
     unfollowMaxPlaybackSeconds = 0,
@@ -31,6 +43,8 @@ class FollowSuggestionsServiceTests {
     followTopN = 2,
     followMinOccurrences = 2,
   )
+
+  private val userId = UserId("user-1")
 
   private val syncTimestamp = Instant.fromEpochSeconds(0)
   private val someWeekStart = LocalDate(2024, 1, 1)
@@ -88,6 +102,8 @@ class FollowSuggestionsServiceTests {
     val serviceWithHigherThreshold = FollowSuggestionsService(
       appArtistRepository = appArtistRepository,
       aggregationRepository = aggregationRepository,
+      followSuggestionsViewRepository = followSuggestionsViewRepository,
+      currentUserResolver = currentUserResolver,
       unfollowLookbackDays = 90,
       unfollowMinAgeDays = 30,
       unfollowMaxPlaybackSeconds = 100,
@@ -173,6 +189,61 @@ class FollowSuggestionsServiceTests {
 
     // artist-1 only ranks top-2 (followTopN=2) in the first week, artist-3 only in the second week -> neither reaches followMinOccurrences=2
     assertThat(result.map { it.artistId }).containsExactly(ArtistId("artist-2"))
+  }
+
+  // --- view repository / outbox handler ---
+
+  @Test
+  fun `getFollowSuggestionsView returns empty view when nothing has been precomputed yet`() {
+    every { followSuggestionsViewRepository.find() } returns null
+
+    val result = service.getFollowSuggestionsView()
+
+    assertThat(result).isEqualTo(FollowSuggestionsView())
+  }
+
+  @Test
+  fun `getFollowSuggestionsView returns the precomputed view`() {
+    val precomputed = FollowSuggestionsView(unfollowCandidates = emptyList(), followCandidates = emptyList())
+    every { followSuggestionsViewRepository.find() } returns precomputed
+
+    val result = service.getFollowSuggestionsView()
+
+    assertThat(result).isEqualTo(precomputed)
+  }
+
+  @Test
+  fun `rebuildFollowSuggestionsView saves freshly computed candidates`() {
+    every { appArtistRepository.findFollowed() } returns emptyList()
+    every { aggregationRepository.findByTypeAndPeriodRange(AggregationPeriodType.WEEK, any(), any()) } returns emptyList()
+    every { followSuggestionsViewRepository.save(any()) } just runs
+
+    service.rebuildFollowSuggestionsView()
+
+    verify { followSuggestionsViewRepository.save(FollowSuggestionsView(followCandidates = emptyList(), unfollowCandidates = emptyList())) }
+  }
+
+  @Test
+  fun `handle RebuildFollowSuggestions skips when no user exists`() {
+    every { currentUserResolver.userId() } returns null
+
+    val result = service.handle(DomainOutboxEvent.RebuildFollowSuggestions())
+
+    assertThat(result.isRight()).isTrue()
+    verify(exactly = 0) { followSuggestionsViewRepository.save(any()) }
+  }
+
+  @Test
+  fun `handle RebuildFollowSuggestions rebuilds the view for the current user`() {
+    every { currentUserResolver.userId() } returns userId
+    every { appArtistRepository.findFollowed() } returns emptyList()
+    every { aggregationRepository.findByTypeAndPeriodRange(AggregationPeriodType.WEEK, any(), any()) } returns emptyList()
+    every { followSuggestionsViewRepository.save(any()) } just runs
+
+    val result = service.handle(DomainOutboxEvent.RebuildFollowSuggestions())
+
+    assertThat(result.isRight()).isTrue()
+    verify(exactly = 1) { followSuggestionsViewRepository.save(any()) }
   }
 
   private fun artist(id: String, followedSince: Instant?) = AppArtist(

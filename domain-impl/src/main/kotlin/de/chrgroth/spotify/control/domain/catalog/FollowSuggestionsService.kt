@@ -1,12 +1,19 @@
 package de.chrgroth.spotify.control.domain.catalog
 
+import arrow.core.Either
+import arrow.core.right
+import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.model.catalog.FollowCandidate
+import de.chrgroth.spotify.control.domain.model.catalog.FollowSuggestionsView
 import de.chrgroth.spotify.control.domain.model.catalog.UnfollowCandidate
 import de.chrgroth.spotify.control.domain.model.playback.aggregation.AggregationPeriodType
+import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
 import de.chrgroth.spotify.control.domain.port.`in`.catalog.FollowSuggestionsPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.playback.PlaybackAggregationRepositoryPort
+import de.chrgroth.spotify.control.domain.port.out.readmodel.FollowSuggestionsViewRepositoryPort
+import de.chrgroth.spotify.control.domain.user.CurrentUserResolver
 import jakarta.enterprise.context.ApplicationScoped
 import java.time.DayOfWeek
 import java.time.ZoneOffset
@@ -29,6 +36,8 @@ import java.time.LocalDate as JLocalDate
 class FollowSuggestionsService(
   private val appArtistRepository: AppArtistRepositoryPort,
   private val aggregationRepository: PlaybackAggregationRepositoryPort,
+  private val followSuggestionsViewRepository: FollowSuggestionsViewRepositoryPort,
+  private val currentUserResolver: CurrentUserResolver,
   @param:ConfigProperty(name = "app.followed-artists.unfollow-lookback-days", defaultValue = "90")
   private val unfollowLookbackDays: Long,
   @param:ConfigProperty(name = "app.followed-artists.unfollow-min-age-days", defaultValue = "30")
@@ -42,6 +51,19 @@ class FollowSuggestionsService(
   @param:ConfigProperty(name = "app.followed-artists.follow-min-occurrences", defaultValue = "2")
   private val followMinOccurrences: Int,
 ) : FollowSuggestionsPort {
+
+  override fun getFollowSuggestionsView(): FollowSuggestionsView =
+    followSuggestionsViewRepository.find() ?: FollowSuggestionsView()
+
+  override fun rebuildFollowSuggestionsView() {
+    followSuggestionsViewRepository.save(FollowSuggestionsView(findFollowCandidates(), findUnfollowCandidates()))
+  }
+
+  override fun handle(event: DomainOutboxEvent.RebuildFollowSuggestions): Either<DomainError, Unit> {
+    currentUserResolver.userId() ?: return Unit.right()
+    rebuildFollowSuggestionsView()
+    return Unit.right()
+  }
 
   override fun findUnfollowCandidates(): List<UnfollowCandidate> {
     val maxFollowedSince = Clock.System.now().minus(unfollowMinAgeDays.days)

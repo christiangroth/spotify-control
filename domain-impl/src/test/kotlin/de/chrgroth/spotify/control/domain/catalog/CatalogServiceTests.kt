@@ -786,6 +786,7 @@ class CatalogServiceTests {
 
     assertThat(result.isRight()).isTrue()
     verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails("artist-unknown", fromPlaylist = false)) }
+    verify { outboxPort.enqueue(DomainOutboxEvent.RebuildFollowSuggestions()) }
     verify { appArtistRepository.setFollowed(ArtistId("artist-1"), followed = true, followedSince = any()) }
     verify(exactly = 0) { appArtistRepository.setFollowed(ArtistId("artist-unknown"), any(), any()) }
   }
@@ -805,6 +806,7 @@ class CatalogServiceTests {
     assertThat(result.isRight()).isTrue()
     verify { appArtistRepository.setFollowed(ArtistId("artist-2"), followed = false, followedSince = null) }
     verify(exactly = 0) { appArtistRepository.setFollowed(ArtistId("artist-1"), any(), any()) }
+    verify { outboxPort.enqueue(DomainOutboxEvent.RebuildFollowSuggestions()) }
   }
 
   @Test
