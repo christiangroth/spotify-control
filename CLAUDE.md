@@ -82,6 +82,13 @@ Do not add a database lookup solely to obtain a name for a log message.
 | Batch rebuild summary | `"Enqueued daily aggregations from $from to $to"` |
 | User-visible state change | `"Updated sync status for playlist '${name}' ($id) to $syncStatus"` |
 
+## Creating GitHub Issues
+
+When creating GitHub issues (e.g. when breaking down work or filing follow-ups):
+
+- **Splitting larger work:** When a larger piece of work is broken down into multiple smaller, individually releasable issues, give all of them a shared title prefix and a counter suffix, e.g. `Import UI Redesign (1/4)`, `Import UI Redesign (2/4)`.
+- **Releasable in isolation:** Every issue must be releasable on its own — it must not depend on other open issues being merged first to be safely shippable.
+
 ## Release Note Snippets
 
 **Snippet filename:** `docs/releasenotes/snippets/{branch-last-segment}-{type}.md` where `{type}` is one of `bugfix` or `feature`.
