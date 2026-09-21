@@ -93,6 +93,13 @@
             background-color: #000000;
             border-bottom: 1px solid var(--color-border);
         }
+        /* CSS Grid instead of a fixed 12-column row: tile width adapts to the available space,
+           so the tile count no longer has to divide evenly into 12 columns. */
+        .app-page-nav .nav-tiles {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+            gap: .5rem;
+        }
         .nav-tile-label {
             color: var(--color-text-primary);
         }
@@ -342,8 +349,8 @@
     </nav>
     {#insert pageNav}
     <div class="app-page-nav px-3 py-2">
-        <div class="row g-2 flex-nowrap flex-sm-wrap" data-testid="nav-tiles">
-            <div class="col-2 col-sm">
+        <div class="nav-tiles" data-testid="nav-tiles">
+            <div>
                 <a href="/dashboard" class="text-decoration-none" data-testid="nav-tile-dashboard">
                 <div class="card app-card nav-tile h-100">
                     <div class="card-body py-2 px-1 px-sm-2 px-md-3 d-flex align-items-center justify-content-center gap-2">
@@ -353,7 +360,7 @@
                 </div>
                 </a>
             </div>
-            <div class="col-2 col-sm">
+            <div>
                 <a href="/stats" class="text-decoration-none" data-testid="nav-tile-stats">
                 <div class="card app-card nav-tile h-100">
                     <div class="card-body py-2 px-1 px-sm-2 px-md-3 d-flex align-items-center justify-content-center gap-2">
@@ -363,7 +370,7 @@
                 </div>
                 </a>
             </div>
-            <div class="col-2 col-sm">
+            <div>
                 <a href="/playlists/settings" class="text-decoration-none" data-testid="nav-tile-playlists">
                 <div class="card app-card nav-tile h-100">
                     <div class="card-body py-2 px-1 px-sm-2 px-md-3 d-flex align-items-center justify-content-center gap-2">
@@ -373,7 +380,7 @@
                 </div>
                 </a>
             </div>
-            <div class="col-2 col-sm">
+            <div>
                 <a href="/playlists/checks" class="text-decoration-none" data-testid="nav-tile-checks">
                 <div class="card app-card nav-tile h-100">
                     <div class="card-body py-2 px-1 px-sm-2 px-md-3 d-flex align-items-center justify-content-center gap-2">
@@ -383,7 +390,7 @@
                 </div>
                 </a>
             </div>
-            <div class="col-2 col-sm">
+            <div>
                 <a href="/follow-suggestions" class="text-decoration-none" data-testid="nav-tile-follow-suggestions">
                 <div class="card app-card nav-tile h-100">
                     <div class="card-body py-2 px-1 px-sm-2 px-md-3 d-flex align-items-center justify-content-center gap-2">
@@ -393,7 +400,7 @@
                 </div>
                 </a>
             </div>
-            <div class="col-2 col-sm">
+            <div>
                 <a href="/catalog" class="text-decoration-none position-relative d-block" data-testid="nav-tile-catalog">
                 <div class="card app-card nav-tile h-100">
                     <div class="card-body py-2 px-1 px-sm-2 px-md-3 d-flex align-items-center justify-content-center gap-2">
@@ -406,7 +413,7 @@
                 {/if}
                 </a>
             </div>
-            <div class="col-2 col-sm">
+            <div>
                 <a href="/playback" class="text-decoration-none" data-testid="nav-tile-playback">
                 <div class="card app-card nav-tile h-100">
                     <div class="card-body py-2 px-1 px-sm-2 px-md-3 d-flex align-items-center justify-content-center gap-2">
