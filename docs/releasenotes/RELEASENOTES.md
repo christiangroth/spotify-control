@@ -1,3 +1,12 @@
+# 0.126.9 (2026.09.21)
+
+## Bugfixes / Chore
+* Prepared internal artist data with follow status, as groundwork for upcoming followed-artists features.
+
+
+
+---
+
 # 0.126.8 (2026.09.16)
 
 ## Bugfixes / Chore
