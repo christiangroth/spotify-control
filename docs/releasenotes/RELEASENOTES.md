@@ -1,3 +1,14 @@
+# 0.127.1 (2026.09.21)
+
+## Bugfixes / Chore
+* Fixed unreadable dark-on-dark text on the error page.
+* Fixed a rendering error on the Follow page.
+* Renamed the "Follow Suggestions" page to "Follow".
+
+
+
+---
+
 # 0.127.0 (2026.09.21)
 
 ## New Features
