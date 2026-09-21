@@ -55,6 +55,8 @@ import kotlinx.datetime.LocalDate
 @TemplateData(target = PlaylistCheckViolation::class)
 @TemplateData(target = LogUiGroup::class)
 @TemplateData(target = PlaylistsResource.PlaylistRow::class)
+@TemplateData(target = FollowSuggestionsResource.FollowCandidateRow::class)
+@TemplateData(target = FollowSuggestionsResource.UnfollowCandidateRow::class)
 @TemplateData(target = ReleaseNotesGroupView::class)
 @TemplateData(target = DashboardStats::class)
 @TemplateData(target = DayCount::class)
