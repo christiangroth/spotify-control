@@ -1,3 +1,12 @@
+# 0.126.10 (2026.09.21)
+
+## Bugfixes / Chore
+* Added a daily background sync that keeps the internal record of followed artists up to date with Spotify.
+
+
+
+---
+
 # 0.126.9 (2026.09.21)
 
 ## Bugfixes / Chore
