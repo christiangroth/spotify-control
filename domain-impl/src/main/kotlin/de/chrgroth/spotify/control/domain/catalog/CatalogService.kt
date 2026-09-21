@@ -160,6 +160,37 @@ class CatalogService(
     outboxPort.enqueue(DomainOutboxEvent.WipeCatalog())
   }
 
+  override fun enqueueFollowedArtistsSync() {
+    currentUserResolver.userId() ?: return
+    outboxPort.enqueue(DomainOutboxEvent.SyncFollowedArtists())
+  }
+
+  private fun syncFollowedArtists(): Either<DomainError, Unit> {
+    currentUserResolver.userId() ?: run {
+      logger.warn { "No users available for followed artists sync, skipping" }
+      return Unit.right()
+    }
+    val accessToken = spotifyAccessToken.getValidAccessToken()
+    return spotifyCatalog.getFollowedArtists(accessToken)
+      .map { followedArtists ->
+        val currentIds = followedArtists.map { it.id }.toSet()
+        val knownIds = appArtistRepository.findByArtistIds(currentIds).map { it.id }.toSet()
+        val previouslyFollowedIds = appArtistRepository.findFollowed().map { it.id }.toSet()
+
+        val unknownIds = currentIds - knownIds
+        unknownIds.forEach { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails(it.value, fromPlaylist = false)) }
+
+        val newlyFollowedIds = knownIds - previouslyFollowedIds
+        val now = Clock.System.now()
+        newlyFollowedIds.forEach { appArtistRepository.setFollowed(it, followed = true, followedSince = now) }
+
+        val unfollowedIds = previouslyFollowedIds - currentIds
+        unfollowedIds.forEach { appArtistRepository.setFollowed(it, followed = false, followedSince = null) }
+
+        logger.info { "Synced followed artists: ${newlyFollowedIds.size} new follow(s), ${unfollowedIds.size} unfollow(s)" }
+      }
+  }
+
   private fun syncAlbumDetails(albumId: String): Either<DomainError, Int> {
     currentUserResolver.userId() ?: run {
       logger.debug { "No users available, skipping syncAlbumDetails" }
@@ -243,6 +274,9 @@ class CatalogService(
 
   override fun handle(event: DomainOutboxEvent.WipeCatalog): Either<DomainError, Unit> =
     wipeCatalog()
+
+  override fun handle(event: DomainOutboxEvent.SyncFollowedArtists): Either<DomainError, Unit> =
+    syncFollowedArtists()
 
   override fun enqueueArtistAlbumsSync(partition: Int, totalPartitions: Int) {
     val syncableArtists = appArtistRepository.findAll().filter { it.syncStatus.isSyncable() }

@@ -3,6 +3,7 @@ package de.chrgroth.spotify.control.domain.port.out.catalog
 import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistSyncStatus
+import kotlin.time.Instant
 
 interface AppArtistRepositoryPort {
   fun upsertAll(items: List<AppArtist>)
@@ -12,8 +13,10 @@ interface AppArtistRepositoryPort {
   fun findByStatuses(statuses: Set<ArtistSyncStatus>, limit: Int): List<AppArtist>
   fun searchByName(filter: String, limit: Int): List<AppArtist>
   fun findByArtistIds(artistIds: Set<ArtistId>): List<AppArtist>
+  fun findFollowed(): List<AppArtist>
   fun findWithImageLinkAndBlankName(): List<AppArtist>
   fun findRecentlySynced(offset: Int, limit: Int): List<AppArtist>
   fun setSyncStatus(artistId: ArtistId, status: ArtistSyncStatus)
+  fun setFollowed(artistId: ArtistId, followed: Boolean, followedSince: Instant?)
   fun deleteAll()
 }

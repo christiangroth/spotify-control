@@ -297,4 +297,43 @@ class AppArtistRepositoryTests {
 
     assertThat(after).isEqualTo(before + 1)
   }
+
+  @Test
+  fun `setFollowed marks an artist as followed`() {
+    val item = artist("follow-set")
+    appArtistRepository.upsertAll(listOf(item))
+    val since = kotlin.time.Instant.fromEpochSeconds(300)
+
+    appArtistRepository.setFollowed(item.id, followed = true, followedSince = since)
+
+    val result = appArtistRepository.findByArtistIds(setOf(item.id))
+    assertThat(result).hasSize(1)
+    assertThat(result[0].followed).isTrue()
+    assertThat(result[0].followedSince).isEqualTo(since)
+  }
+
+  @Test
+  fun `setFollowed unfollows an artist`() {
+    val item = artist("follow-unset").copy(followed = true, followedSince = kotlin.time.Instant.fromEpochSeconds(100))
+    appArtistRepository.upsertAll(listOf(item))
+
+    appArtistRepository.setFollowed(item.id, followed = false, followedSince = null)
+
+    val result = appArtistRepository.findByArtistIds(setOf(item.id))
+    assertThat(result).hasSize(1)
+    assertThat(result[0].followed).isFalse()
+    assertThat(result[0].followedSince).isNull()
+  }
+
+  @Test
+  fun `findFollowed returns only followed artists`() {
+    val followed = artist("find-followed").copy(followed = true, followedSince = kotlin.time.Instant.fromEpochSeconds(100))
+    val notFollowed = artist("find-not-followed")
+    appArtistRepository.upsertAll(listOf(followed, notFollowed))
+
+    val result = appArtistRepository.findFollowed()
+
+    assertThat(result.map { it.id }).contains(followed.id)
+    assertThat(result.map { it.id }).doesNotContain(notFollowed.id)
+  }
 }

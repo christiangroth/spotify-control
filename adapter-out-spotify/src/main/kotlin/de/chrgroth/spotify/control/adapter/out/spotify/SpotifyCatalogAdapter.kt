@@ -176,6 +176,39 @@ class SpotifyCatalogAdapter(
     }
   }
 
+  override fun getFollowedArtists(accessToken: AccessToken): Either<DomainError, List<AppArtist>> {
+    return try {
+      SpotifyApiAuthContext.set(accessToken)
+      val allArtists = mutableListOf<AppArtist>()
+      var after: String? = null
+      var hasNext = true
+      while (hasNext) {
+        val response = httpMetrics.timed("/v1/me/following") {
+          apiClient.getFollowedArtists(FOLLOWED_ARTISTS_TYPE, FOLLOWED_ARTISTS_PAGE_SIZE, after)
+        }
+        val page = response.artists
+        page?.items?.mapNotNullTo(allArtists) { parseArtist(it).takeIf { artist -> artist.id.value.isNotBlank() } }
+        val cursorAfter = page?.cursors?.after
+        if (page?.next == null || cursorAfter == null) {
+          hasNext = false
+        } else {
+          after = cursorAfter
+        }
+      }
+      allArtists.right()
+    } catch (e: SpotifyRateLimitException) {
+      SpotifyRateLimitError(e.retryAfterSeconds.seconds).left()
+    } catch (e: SpotifyApiException) {
+      logger.error { "Spotify followed artists fetch failed: status=${e.statusCode}, body=${e.body.take(500)}" }
+      SyncError.FOLLOWED_ARTISTS_FETCH_FAILED.left()
+    } catch (e: Exception) {
+      logger.error(e) { "Unexpected error fetching followed artists" }
+      SyncError.FOLLOWED_ARTISTS_FETCH_FAILED.left()
+    } finally {
+      SpotifyApiAuthContext.clear()
+    }
+  }
+
   private fun parseArtist(artist: ArtistObject): AppArtist =
     AppArtist(
       id = ArtistId(artist.id ?: ""),
@@ -265,5 +298,7 @@ class SpotifyCatalogAdapter(
     private const val ALBUM_TRACKS_PAGE_SIZE = 50
     private const val ARTIST_ALBUMS_PAGE_SIZE = 10
     private const val ARTIST_ALBUMS_INCLUDE_GROUPS = "album,single"
+    private const val FOLLOWED_ARTISTS_TYPE = "artist"
+    private const val FOLLOWED_ARTISTS_PAGE_SIZE = 50
   }
 }

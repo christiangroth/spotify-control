@@ -12,6 +12,7 @@ import de.chrgroth.spotify.control.domain.model.catalog.ArtistSyncStatus
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 import java.util.regex.Pattern
+import kotlin.time.Instant
 import kotlin.time.toJavaInstant
 import kotlin.time.toKotlinInstant
 
@@ -83,6 +84,14 @@ class AppArtistRepositoryAdapter(
     }
   }
 
+  override fun findFollowed(): List<AppArtist> =
+    mongoQueryMetrics.timed("app_artist.findFollowed") {
+      appArtistDocumentRepository.mongoCollection()
+        .find(Filters.eq(FOLLOWED_FIELD, true))
+        .toList()
+        .map { it.toDomain() }
+    }
+
   override fun searchByName(filter: String, limit: Int): List<AppArtist> =
     mongoQueryMetrics.timed("app_artist.searchByName") {
       appArtistDocumentRepository.mongoCollection()
@@ -125,6 +134,19 @@ class AppArtistRepositoryAdapter(
         .updateOne(
           Filters.eq(ID_FIELD, artistId.value),
           Updates.set(SYNC_STATUS_FIELD, status.name),
+        )
+    }
+  }
+
+  override fun setFollowed(artistId: ArtistId, followed: Boolean, followedSince: Instant?) {
+    mongoQueryMetrics.timed("app_artist.setFollowed") {
+      appArtistDocumentRepository.mongoCollection()
+        .updateOne(
+          Filters.eq(ID_FIELD, artistId.value),
+          Updates.combine(
+            Updates.set(FOLLOWED_FIELD, followed),
+            Updates.set(FOLLOWED_SINCE_FIELD, followedSince?.toJavaInstant()),
+          ),
         )
     }
   }
