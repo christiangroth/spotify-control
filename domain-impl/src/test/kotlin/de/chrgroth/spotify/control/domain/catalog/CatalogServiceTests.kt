@@ -780,6 +780,7 @@ class CatalogServiceTests {
     every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"), ArtistId("artist-unknown"))) } returns listOf(artist1)
     every { appArtistRepository.findFollowed() } returns emptyList()
     every { appArtistRepository.setFollowed(any(), any(), any()) } just runs
+    every { appArtistRepository.touchFollowedSync(any(), any()) } just runs
     every { outboxPort.enqueue(any()) } just runs
 
     val result = adapter.handle(DomainOutboxEvent.SyncFollowedArtists())
@@ -789,6 +790,7 @@ class CatalogServiceTests {
     verify { outboxPort.enqueue(DomainOutboxEvent.RebuildFollowSuggestions()) }
     verify { appArtistRepository.setFollowed(ArtistId("artist-1"), followed = true, followedSince = any()) }
     verify(exactly = 0) { appArtistRepository.setFollowed(ArtistId("artist-unknown"), any(), any()) }
+    verify { appArtistRepository.touchFollowedSync(setOf(ArtistId("artist-1"), ArtistId("artist-unknown")), any()) }
   }
 
   @Test
@@ -799,6 +801,7 @@ class CatalogServiceTests {
     every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns listOf(artist1)
     every { appArtistRepository.findFollowed() } returns listOf(artist1.copy(followed = true), artist2.copy(followed = true))
     every { appArtistRepository.setFollowed(any(), any(), any()) } just runs
+    every { appArtistRepository.touchFollowedSync(any(), any()) } just runs
     every { outboxPort.enqueue(any()) } just runs
 
     val result = adapter.handle(DomainOutboxEvent.SyncFollowedArtists())
@@ -807,6 +810,7 @@ class CatalogServiceTests {
     verify { appArtistRepository.setFollowed(ArtistId("artist-2"), followed = false, followedSince = null) }
     verify(exactly = 0) { appArtistRepository.setFollowed(ArtistId("artist-1"), any(), any()) }
     verify { outboxPort.enqueue(DomainOutboxEvent.RebuildFollowSuggestions()) }
+    verify { appArtistRepository.touchFollowedSync(setOf(ArtistId("artist-1")), any()) }
   }
 
   @Test

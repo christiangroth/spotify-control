@@ -11,6 +11,8 @@ import de.chrgroth.spotify.control.domain.model.catalog.CatalogStats
 import de.chrgroth.spotify.control.domain.model.catalog.CatalogSyncEntityType
 import de.chrgroth.spotify.control.domain.model.catalog.CatalogSyncTimelineEntry
 import de.chrgroth.spotify.control.domain.model.catalog.CatalogSyncTimelinePage
+import de.chrgroth.spotify.control.domain.model.catalog.FollowedArtistItem
+import de.chrgroth.spotify.control.domain.model.catalog.FollowedArtistsOverview
 import de.chrgroth.spotify.control.domain.model.catalog.SyncCause
 import de.chrgroth.spotify.control.domain.model.catalog.SyncTraceDisplay
 import de.chrgroth.spotify.control.domain.model.catalog.SyncTraceEntityType
@@ -73,6 +75,20 @@ class CatalogBrowserService(
           syncStatus = artist.syncStatus,
         )
       }
+
+  override fun getFollowedArtists(): FollowedArtistsOverview {
+    val followed = appArtistRepository.findFollowed().sortedBy { it.artistName.lowercase() }
+    val items = followed.map { artist ->
+      FollowedArtistItem(
+        artistId = artist.id.value,
+        artistName = artist.artistName,
+        imageLink = artist.imageLink,
+        followedSince = artist.followedSince,
+      )
+    }
+    val lastSyncedAt = followed.mapNotNull { it.lastFollowSync }.maxOrNull()
+    return FollowedArtistsOverview(items, lastSyncedAt)
+  }
 
   private fun toBrowseItems(artists: List<AppArtist>): List<ArtistBrowseItem> {
     val artistIds = artists.map { it.id }.toSet()

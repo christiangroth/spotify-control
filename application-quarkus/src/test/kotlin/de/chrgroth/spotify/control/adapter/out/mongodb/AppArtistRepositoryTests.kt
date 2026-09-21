@@ -336,4 +336,18 @@ class AppArtistRepositoryTests {
     assertThat(result.map { it.id }).contains(followed.id)
     assertThat(result.map { it.id }).doesNotContain(notFollowed.id)
   }
+
+  @Test
+  fun `touchFollowedSync stamps lastFollowSync on the given artists only`() {
+    val touched = artist("touch-sync-included")
+    val untouched = artist("touch-sync-excluded")
+    appArtistRepository.upsertAll(listOf(touched, untouched))
+    val syncedAt = kotlin.time.Instant.fromEpochSeconds(500)
+
+    appArtistRepository.touchFollowedSync(setOf(touched.id), syncedAt)
+
+    val result = appArtistRepository.findByArtistIds(setOf(touched.id, untouched.id))
+    assertThat(result.first { it.id == touched.id }.lastFollowSync).isEqualTo(syncedAt)
+    assertThat(result.first { it.id == untouched.id }.lastFollowSync).isNull()
+  }
 }

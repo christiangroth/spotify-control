@@ -18,5 +18,6 @@ interface AppArtistRepositoryPort {
   fun findRecentlySynced(offset: Int, limit: Int): List<AppArtist>
   fun setSyncStatus(artistId: ArtistId, status: ArtistSyncStatus)
   fun setFollowed(artistId: ArtistId, followed: Boolean, followedSince: Instant?)
+  fun touchFollowedSync(artistIds: Set<ArtistId>, syncedAt: Instant)
   fun deleteAll()
 }

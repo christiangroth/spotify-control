@@ -11,7 +11,7 @@ import jakarta.ws.rs.Produces
 import jakarta.ws.rs.core.MediaType
 import kotlin.time.Instant
 
-@Path("/follow-suggestions")
+@Path("/following/suggestions")
 @ApplicationScoped
 @Suppress("Unused")
 class FollowSuggestionsResource(
