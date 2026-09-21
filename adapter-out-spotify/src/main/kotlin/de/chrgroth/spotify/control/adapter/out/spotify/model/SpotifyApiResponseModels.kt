@@ -95,3 +95,12 @@ data class PagingArtistDiscographyAlbumObject(
   val items: List<ArtistDiscographyAlbumObject> = emptyList(),
   val next: String? = null,
 )
+
+/**
+ * Wraps the response of GET /v1/me/following?type=artist, which nests the cursor-paged
+ * artist list under an "artists" key instead of returning it directly.
+ */
+@Serializable
+data class FollowedArtistsObject(
+  val artists: CursorPagingSimplifiedArtistObject? = null,
+)

@@ -4,6 +4,7 @@ import de.chrgroth.spotify.control.adapter.out.spotify.model.AlbumObject
 import de.chrgroth.spotify.control.adapter.out.spotify.model.ArtistObject
 import de.chrgroth.spotify.control.adapter.out.spotify.model.CurrentlyPlayingContextObject
 import de.chrgroth.spotify.control.adapter.out.spotify.model.CursorPagingPlayHistoryObject
+import de.chrgroth.spotify.control.adapter.out.spotify.model.FollowedArtistsObject
 import de.chrgroth.spotify.control.adapter.out.spotify.model.PagingArtistDiscographyAlbumObject
 import de.chrgroth.spotify.control.adapter.out.spotify.model.PagingPlaylistObject
 import de.chrgroth.spotify.control.adapter.out.spotify.model.PagingPlaylistTrackObject
@@ -44,6 +45,15 @@ interface SpotifyApiRestClient {
     @QueryParam("limit") limit: Int,
     @QueryParam("after") after: Long?,
   ): CursorPagingPlayHistoryObject
+
+  @GET
+  @Path("/v1/me/following")
+  @Produces(MediaType.APPLICATION_JSON)
+  fun getFollowedArtists(
+    @QueryParam("type") type: String,
+    @QueryParam("limit") limit: Int,
+    @QueryParam("after") after: String?,
+  ): FollowedArtistsObject
 
   @GET
   @Path("/v1/artists/{artistId}")

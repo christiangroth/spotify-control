@@ -192,6 +192,21 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
   }
 
   /**
+   * Syncs the current user's followed artists from the Spotify API (GET /v1/me/following?type=artist)
+   * and diffs the result against AppArtist.followed to update follow status.
+   */
+  data class SyncFollowedArtists(val placeholder: String = "") : DomainOutboxEvent {
+    override val key = KEY
+    override val deduplicationKey = KEY
+    override val partition = DomainOutboxPartition.ToSpotifyUser
+    override val serializePayload = ""
+
+    companion object {
+      const val KEY = "SyncFollowedArtists"
+    }
+  }
+
+  /**
    * Confirms an artist's guessed sync status as SYNC, re-enqueues its album sync and
    * rebuilds playback aggregations.
    * payload = artistId
@@ -417,6 +432,7 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
       SyncArtistDetails.KEY,
       SyncArtistAlbums.KEY,
       SyncAlbumDetails.KEY,
+      SyncFollowedArtists.KEY,
       ConfirmArtistSync.KEY,
       ConfirmArtistShallow.KEY,
       ResyncCatalog.KEY,
@@ -441,6 +457,7 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
       SyncArtistDetails.KEY, SyncArtistDetails.LEGACY_KEY -> SyncArtistDetails.fromPayload(payload)
       SyncArtistAlbums.KEY -> SyncArtistAlbums.fromPayload(payload)
       SyncAlbumDetails.KEY -> SyncAlbumDetails.fromPayload(payload)
+      SyncFollowedArtists.KEY -> SyncFollowedArtists()
       ConfirmArtistSync.KEY -> ConfirmArtistSync.fromPayload(payload)
       ConfirmArtistShallow.KEY -> ConfirmArtistShallow.fromPayload(payload)
       ResyncCatalog.KEY -> ResyncCatalog()

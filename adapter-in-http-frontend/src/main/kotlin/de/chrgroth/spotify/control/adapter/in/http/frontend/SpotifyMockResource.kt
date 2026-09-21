@@ -52,6 +52,12 @@ class SpotifyMockResource {
   fun recentlyPlayed(): String = RECENTLY_PLAYED_RESPONSE
 
   @GET
+  @Path("/v1/me/following")
+  @PermitAll
+  @Produces(MediaType.APPLICATION_JSON)
+  fun followedArtists(): String = FOLLOWED_ARTISTS_RESPONSE
+
+  @GET
   @Path("/v1/playlists/{playlistId}/items")
   @PermitAll
   @Produces(MediaType.APPLICATION_JSON)
@@ -100,6 +106,8 @@ class SpotifyMockResource {
       """{"is_playing":true,"progress_ms":45000,"item":{"id":"track-2","name":"Track Two","type":"track","is_local":false,"duration_ms":200000,"artists":[{"id":"artist-2","name":"Artist Two"}],"album":{"id":"album-2","name":"Album Two","album_type":"album","total_tracks":1,"artists":[{"id":"artist-2","name":"Artist Two"}],"images":[],"release_date":"2024-01-01","release_date_precision":"day"}}}"""
     private const val RECENTLY_PLAYED_RESPONSE =
       """{"items":[{"track":{"id":"track-1","name":"Track One","type":"track","is_local":false,"duration_ms":210000,"artists":[{"id":"artist-1","name":"Artist One"}],"album":{"id":"album-1","name":"Album One","album_type":"album","total_tracks":1,"artists":[{"id":"artist-1","name":"Artist One"}],"images":[],"release_date":"2024-01-01","release_date_precision":"day"}},"played_at":"2024-01-01T12:00:00.000Z"},{"track":{"id":"episode-1","name":"Podcast Episode One","type":"episode"},"played_at":"2024-01-01T11:00:00.000Z"},{"track":{"id":"local-1","name":"Local Track","type":"track","is_local":true,"artists":[{"id":"","name":"Local Artist"}]},"played_at":"2024-01-01T10:00:00.000Z"}],"next":null}"""
+    private const val FOLLOWED_ARTISTS_RESPONSE =
+      """{"artists":{"items":[{"id":"artist-1","name":"Artist One","type":"artist"},{"id":"artist-2","name":"Artist Two","type":"artist"}],"next":null,"cursors":{"after":null},"total":2,"limit":50}}"""
     private const val PLAYLIST_TRACKS_RESPONSE =
       """{"snapshot_id":"mock-snapshot-1","items":[{"item":{"id":"track-1","name":"Track One","type":"track","artists":[{"id":"artist-1","name":"Artist One"}],"album":{"id":"album-1","name":"Album One","album_type":"album","total_tracks":1,"artists":[{"id":"artist-1","name":"Artist One"}],"images":[],"release_date":"2024-01-01","release_date_precision":"day"}}},{"item":{"id":"episode-1","name":"Podcast Episode One","type":"episode"}},{"item":null},null],"next":null}"""
     private const val PLAYLIST_TRACKS_NULL_ALBUM_RESPONSE =

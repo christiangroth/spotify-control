@@ -24,4 +24,10 @@ interface SpotifyCatalogPort {
    */
   fun getAlbumTracks(accessToken: AccessToken, album: AppAlbum): Either<DomainError, List<AppTrack>>
   fun getArtistAlbumsPage(accessToken: AccessToken, artistId: String, nextUrl: String?): Either<DomainError, ArtistAlbumsPage>
+
+  /**
+   * Fetches all of the current user's followed artists via GET /v1/me/following?type=artist,
+   * draining the cursor pagination internally.
+   */
+  fun getFollowedArtists(accessToken: AccessToken): Either<DomainError, List<AppArtist>>
 }

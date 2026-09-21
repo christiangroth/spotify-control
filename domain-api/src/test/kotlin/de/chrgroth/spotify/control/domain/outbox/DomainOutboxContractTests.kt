@@ -26,6 +26,7 @@ class DomainOutboxContractTests {
     DomainOutboxEvent.SyncArtistAlbums("artist-1"),
     DomainOutboxEvent.SyncArtistAlbums("artist-1", "https://api.spotify.com/v1/artists/artist-1/albums?offset=50&limit=50"),
     DomainOutboxEvent.SyncAlbumDetails("album-1"),
+    DomainOutboxEvent.SyncFollowedArtists(),
     DomainOutboxEvent.ConfirmArtistSync("artist-1"),
     DomainOutboxEvent.ConfirmArtistShallow("artist-1"),
     DomainOutboxEvent.ResyncCatalog(),

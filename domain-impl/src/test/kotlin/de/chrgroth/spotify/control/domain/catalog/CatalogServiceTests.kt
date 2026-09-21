@@ -739,4 +739,84 @@ class CatalogServiceTests {
       )
     }
   }
+
+  // --- SyncFollowedArtists tests ---
+
+  @Test
+  fun `enqueueFollowedArtistsSync enqueues SyncFollowedArtists when a user is available`() {
+    every { currentUserResolver.userId() } returns userId
+    every { outboxPort.enqueue(any()) } just runs
+
+    adapter.enqueueFollowedArtistsSync()
+
+    verify { outboxPort.enqueue(DomainOutboxEvent.SyncFollowedArtists()) }
+  }
+
+  @Test
+  fun `enqueueFollowedArtistsSync does nothing when no users available`() {
+    every { currentUserResolver.userId() } returns null
+
+    adapter.enqueueFollowedArtistsSync()
+
+    verify(exactly = 0) { outboxPort.enqueue(any()) }
+  }
+
+  @Test
+  fun `handle SyncFollowedArtists returns success when no users available`() {
+    every { currentUserResolver.userId() } returns null
+
+    val result = adapter.handle(DomainOutboxEvent.SyncFollowedArtists())
+
+    assertThat(result.isRight()).isTrue()
+    verify(exactly = 0) { spotifyCatalog.getFollowedArtists(any()) }
+  }
+
+  @Test
+  fun `handle SyncFollowedArtists triggers shallow sync for unknown artists and marks known artists as followed`() {
+    val unknownArtist = AppArtist(id = ArtistId("artist-unknown"), artistName = "Unknown Artist", lastSync = syncTimestamp)
+    every { currentUserResolver.userId() } returns userId
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
+    every { spotifyCatalog.getFollowedArtists(accessToken) } returns listOf(artist1, unknownArtist).right()
+    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"), ArtistId("artist-unknown"))) } returns listOf(artist1)
+    every { appArtistRepository.findFollowed() } returns emptyList()
+    every { appArtistRepository.setFollowed(any(), any(), any()) } just runs
+    every { outboxPort.enqueue(any()) } just runs
+
+    val result = adapter.handle(DomainOutboxEvent.SyncFollowedArtists())
+
+    assertThat(result.isRight()).isTrue()
+    verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistDetails("artist-unknown", fromPlaylist = false)) }
+    verify { appArtistRepository.setFollowed(ArtistId("artist-1"), followed = true, followedSince = any()) }
+    verify(exactly = 0) { appArtistRepository.setFollowed(ArtistId("artist-unknown"), any(), any()) }
+  }
+
+  @Test
+  fun `handle SyncFollowedArtists unfollows artists no longer in the followed list`() {
+    every { currentUserResolver.userId() } returns userId
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
+    every { spotifyCatalog.getFollowedArtists(accessToken) } returns listOf(artist1).right()
+    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"))) } returns listOf(artist1)
+    every { appArtistRepository.findFollowed() } returns listOf(artist1.copy(followed = true), artist2.copy(followed = true))
+    every { appArtistRepository.setFollowed(any(), any(), any()) } just runs
+    every { outboxPort.enqueue(any()) } just runs
+
+    val result = adapter.handle(DomainOutboxEvent.SyncFollowedArtists())
+
+    assertThat(result.isRight()).isTrue()
+    verify { appArtistRepository.setFollowed(ArtistId("artist-2"), followed = false, followedSince = null) }
+    verify(exactly = 0) { appArtistRepository.setFollowed(ArtistId("artist-1"), any(), any()) }
+  }
+
+  @Test
+  fun `handle SyncFollowedArtists returns rate limited when endpoint returns rate limit error`() {
+    val rateLimitError = SpotifyRateLimitError(30.seconds)
+    every { currentUserResolver.userId() } returns userId
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
+    every { spotifyCatalog.getFollowedArtists(accessToken) } returns rateLimitError.left()
+
+    val result = adapter.handle(DomainOutboxEvent.SyncFollowedArtists())
+
+    assertThat(result).isEqualTo(rateLimitError.left())
+    verify(exactly = 0) { appArtistRepository.setFollowed(any(), any(), any()) }
+  }
 }

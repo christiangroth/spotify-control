@@ -59,6 +59,7 @@ class DomainOutboxTaskDispatcher(
         is DomainOutboxEvent.ConfirmArtistShallow -> catalog.handle(event)
         is DomainOutboxEvent.ResyncCatalog -> catalog.handle(event)
         is DomainOutboxEvent.WipeCatalog -> catalog.handle(event)
+        is DomainOutboxEvent.SyncFollowedArtists -> catalog.handle(event)
         is DomainOutboxEvent.RunPlaylistChecks -> playlistCheck.handle(event)
         is DomainOutboxEvent.FixPlaylistCheck -> playlistCheck.handle(event)
         is DomainOutboxEvent.RebuildPlaylistChecksDashboard -> playlistCheck.handle(event)
