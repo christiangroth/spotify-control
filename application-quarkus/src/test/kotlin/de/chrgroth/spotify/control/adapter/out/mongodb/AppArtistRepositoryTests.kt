@@ -242,6 +242,51 @@ class AppArtistRepositoryTests {
   }
 
   @Test
+  fun `upsertAll defaults follow fields to unfollowed for new artists`() {
+    val item = artist("follow-default")
+    appArtistRepository.upsertAll(listOf(item))
+
+    val result = appArtistRepository.findByArtistIds(setOf(item.id))
+
+    assertThat(result).hasSize(1)
+    assertThat(result[0].followed).isFalse()
+    assertThat(result[0].followedSince).isNull()
+    assertThat(result[0].lastFollowSync).isNull()
+  }
+
+  @Test
+  fun `new artist inserted via upsertAll keeps its given follow status`() {
+    val item = artist("follow-given").copy(
+      followed = true,
+      followedSince = kotlin.time.Instant.fromEpochSeconds(100),
+      lastFollowSync = kotlin.time.Instant.fromEpochSeconds(200),
+    )
+    appArtistRepository.upsertAll(listOf(item))
+
+    val result = appArtistRepository.findByArtistIds(setOf(item.id))
+
+    assertThat(result).hasSize(1)
+    assertThat(result[0].followed).isTrue()
+    assertThat(result[0].followedSince).isEqualTo(item.followedSince)
+    assertThat(result[0].lastFollowSync).isEqualTo(item.lastFollowSync)
+  }
+
+  @Test
+  fun `upsertAll does not reset follow status`() {
+    val item = artist("follow-preserve").copy(followed = true, followedSince = kotlin.time.Instant.fromEpochSeconds(100))
+    appArtistRepository.upsertAll(listOf(item))
+
+    val updated = item.copy(artistName = "Updated Name", followed = false, followedSince = null)
+    appArtistRepository.upsertAll(listOf(updated))
+
+    val result = appArtistRepository.findByArtistIds(setOf(item.id))
+    assertThat(result).hasSize(1)
+    assertThat(result[0].artistName).isEqualTo("Updated Name")
+    assertThat(result[0].followed).isTrue()
+    assertThat(result[0].followedSince).isEqualTo(item.followedSince)
+  }
+
+  @Test
   fun `countByStatuses counts only artists matching the given statuses`() {
     val before = appArtistRepository.countByStatuses(setOf(ArtistSyncStatus.SYNC_ASSUMPTION))
     val syncAssumption = artist("count-sync-assumption").copy(syncStatus = ArtistSyncStatus.SYNC_ASSUMPTION)

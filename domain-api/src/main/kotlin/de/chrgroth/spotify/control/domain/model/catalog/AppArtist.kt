@@ -13,4 +13,7 @@ data class AppArtist(
   val type: String? = null,
   val lastSync: Instant,
   val syncStatus: ArtistSyncStatus = ArtistSyncStatus.SYNC,
+  val followed: Boolean = false,
+  val followedSince: Instant? = null,
+  val lastFollowSync: Instant? = null,
 )

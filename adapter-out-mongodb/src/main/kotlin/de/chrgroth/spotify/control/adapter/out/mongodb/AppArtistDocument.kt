@@ -15,4 +15,7 @@ class AppArtistDocument {
   var type: String? = null
   var lastSync: Instant? = null
   var syncStatus: String = ArtistSyncStatus.SYNC.name
+  var followed: Boolean = false
+  var followedSince: Instant? = null
+  var lastFollowSync: Instant? = null
 }
