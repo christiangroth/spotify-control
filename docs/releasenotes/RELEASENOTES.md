@@ -1,3 +1,12 @@
+# 0.126.11 (2026.09.21)
+
+## Bugfixes / Chore
+* Added internal scoring logic that identifies followed artists with little recent listening activity and not-yet-followed artists heard repeatedly, as a basis for upcoming follow/unfollow suggestions.
+
+
+
+---
+
 # 0.126.10 (2026.09.21)
 
 ## Bugfixes / Chore
