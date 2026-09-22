@@ -1,3 +1,14 @@
+# 0.128.7 (2026.09.22)
+
+## Bugfixes / Chore
+* Fixed followed-artists sync never picking up any artists because the required Spotify permission was never requested during login.
+* You need to log in again once after this update for the fix to take effect.
+* Added internal timing breakdown to the stats page to help diagnose its occasional very slow loads.
+
+
+
+---
+
 # 0.128.6 (2026.09.22)
 
 ## Bugfixes / Chore
