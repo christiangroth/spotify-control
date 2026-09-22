@@ -46,6 +46,9 @@ class PlaylistCheckService(
   private val managedExecutor: ManagedExecutor,
 ) : PlaylistCheckPort {
 
+  @Volatile
+  private var cachedPendingAlbumUpgradeCount = 0
+
   override fun handle(event: DomainOutboxEvent.RunPlaylistChecks): Either<DomainError, Unit> {
     currentUserResolver.userId() ?: return Unit.right()
     val playlist = playlistRepository.findByPlaylistId(event.playlistId)
@@ -103,8 +106,14 @@ class PlaylistCheckService(
   }
 
   override fun rebuildCheckDashboard() {
-    playlistCheckDashboardRepository.save(buildCheckDashboardSummary())
+    val summary = buildCheckDashboardSummary()
+    playlistCheckDashboardRepository.save(summary)
+    cachedPendingAlbumUpgradeCount = summary.checks.count { !it.succeeded && it.checkId.endsWith(":$ALBUM_UPGRADE_CHECK_ID") }
   }
+
+  // Kept in memory and refreshed only when checks actually run (see rebuildCheckDashboard), instead of
+  // re-reading the (potentially large) dashboard document from MongoDB on every PlaylistStatsCache tick.
+  override fun pendingAlbumUpgradeCount(): Int = cachedPendingAlbumUpgradeCount
 
   private fun buildCheckDashboardSummary(): PlaylistCheckDashboardSummary {
     val displayNameFuture = managedExecutor.supplyAsync { userRepository.get()?.displayName ?: "" }
@@ -211,5 +220,6 @@ class PlaylistCheckService(
 
   companion object : KLogging() {
     private val EMPTY_SUMMARY = PlaylistCheckDashboardSummary(displayName = "", checks = emptyList(), playlistNameById = emptyMap())
+    private const val ALBUM_UPGRADE_CHECK_ID = "track-from-latest-release"
   }
 }
