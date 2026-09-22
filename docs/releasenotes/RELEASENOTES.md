@@ -1,3 +1,12 @@
+# 0.128.5 (2026.09.22)
+
+## Bugfixes / Chore
+* Fixed a follow-up cause of the recent app-wide slowdown: the same background job now reads a small in-memory counter instead of re-reading the entire playlist-checks document every 15 seconds.
+
+
+
+---
+
 # 0.128.4 (2026.09.22)
 
 ## Bugfixes / Chore
