@@ -1,3 +1,14 @@
+# 0.128.2 (2026.09.22)
+
+## Bugfixes / Chore
+* Upgraded quarkus-one-time-starters to 0.7.0.
+* Updated quarkus-outbox dependency to 0.8.5.
+* Updated the gradle-release-notes-plugin dependency to 1.0.2, fixing a Windows bug where release notes generation could delete the tracked output file and then crash.
+
+
+
+---
+
 # 0.128.1 (2026.09.21)
 
 ## Bugfixes / Chore
