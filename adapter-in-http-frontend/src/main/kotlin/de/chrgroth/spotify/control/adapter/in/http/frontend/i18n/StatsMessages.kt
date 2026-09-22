@@ -96,9 +96,6 @@ interface StatsMessages {
   @Message
   fun statsActivityHeading(): String
 
-  @Message("{day} {window} • {duration}")
-  fun statsActivityTooltip(day: String, window: String, duration: String): String
-
   @Message
   fun statsWeekdayMonday(): String
 

@@ -41,10 +41,8 @@ class StatsResource(
       if (type == AggregationPeriodType.DAY && requestedDate != null) listOf(requestedDate) else threePeriodStarts(type)
     }
     val requestedPeriods = periodStartsByType.flatMap { (type, periodStarts) -> periodStarts.map { type to it } }
-    // Temporary diagnostics: mongoQueryMetrics shows the find-by-periods query itself completes in well under
-    // a second, yet page.stats.view has been logged taking 20s+ end to end with no other slow-query log line
-    // in between - this pinpoints whether the remaining time is spent building the view models (incl. the many
-    // per-activity-bar messages.statsActivityTooltip() i18n calls) or in template construction/rendering.
+    // Sub-step timing kept in place after diagnosing a production slowdown here (see activityBars() below) so
+    // a regression shows up immediately in the details=[...] breakdown instead of as an unexplained total.
     val aggregationsByTypeAndPeriod = details.detail("stats.find-by-periods") {
       playbackAggregationPort.findByPeriods(requestedPeriods, TOP_ENTRIES_LIMIT)
     }
@@ -100,7 +98,12 @@ class StatsResource(
         val totalSeconds = byKey[day to window] ?: 0L
         ActivityBarEntryView(
           label = "${dayName.take(WEEKDAY_SHORT_LABEL_LENGTH)} ${window.label}",
-          tooltip = messages.statsActivityTooltip(dayName, window.label, TemplateFormattingExtensions.formattedDuration(totalSeconds)),
+          // Plain string interpolation instead of a parameterized messages.statsActivityTooltip() call: that
+          // Qute message-bundle call, run once per (day, window) cell across up to 15 aggregation views (~420
+          // calls/request), was the entire cost of page.stats.view's 20s+ production slowness - parameterized
+          // @Message methods route through Qute's template engine per call, unlike the plain string lookups
+          // used by e.g. weekdayName(), which cost nothing comparable at the same call volume.
+          tooltip = "$dayName ${window.label} • ${TemplateFormattingExtensions.formattedDuration(totalSeconds)}",
           totalSeconds = totalSeconds,
         )
       }
