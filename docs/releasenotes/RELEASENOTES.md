@@ -1,3 +1,12 @@
+# 0.128.3 (2026.09.22)
+
+## Bugfixes / Chore
+* Fixed a background job that scanned the entire playlist-checks history every 15 seconds, causing app-wide slowdowns.
+
+
+
+---
+
 # 0.128.2 (2026.09.22)
 
 ## Bugfixes / Chore
