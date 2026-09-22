@@ -14,21 +14,10 @@ import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
 @ApplicationScoped
-class CurrentlyPlayingSkipPredicate : Scheduled.SkipPredicate {
-
-  private val playbackActivity: PlaybackActivityPort
-  private val starterSkipPredicate: ScheduledSkipPredicate
-
-  @Inject
-  constructor(playbackActivity: PlaybackActivityPort) : this(playbackActivity, ScheduledSkipPredicate())
-
-  internal constructor(
-    playbackActivity: PlaybackActivityPort,
-    starterSkipPredicate: ScheduledSkipPredicate,
-  ) {
-    this.playbackActivity = playbackActivity
-    this.starterSkipPredicate = starterSkipPredicate
-  }
+class CurrentlyPlayingSkipPredicate @Inject constructor(
+  private val playbackActivity: PlaybackActivityPort,
+  private val starterSkipPredicate: ScheduledSkipPredicate,
+) : Scheduled.SkipPredicate {
 
   private val lastExecutedAtRef = AtomicReference<Instant>(Instant.fromEpochMilliseconds(0))
 
