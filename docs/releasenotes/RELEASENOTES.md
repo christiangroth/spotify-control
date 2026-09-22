@@ -1,3 +1,13 @@
+# 0.128.10 (2026.09.22)
+
+## Bugfixes / Chore
+* Fixed the stats page taking 20+ seconds to load; a translated tooltip text was being rebuilt hundreds of times per page view far more expensively than necessary.
+* Fixed the top-menu tile grid on narrow screens to always show exactly 3 icon-only tiles per row instead of a width-dependent count.
+
+
+
+---
+
 # 0.128.8 (2026.09.22)
 
 ## Bugfixes / Chore
