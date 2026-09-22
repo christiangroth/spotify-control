@@ -92,6 +92,7 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
     override val key = KEY
     override val deduplicationKey = KEY
     override val partition = DomainOutboxPartition.Domain
+    override val groupId = KEY
     override val serializePayload = ""
 
     companion object {
@@ -103,6 +104,7 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
     override val key = KEY
     override val deduplicationKey = KEY
     override val partition = DomainOutboxPartition.Domain
+    override val groupId = KEY
     override val serializePayload = ""
 
     companion object {
@@ -121,6 +123,7 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
     override val key = KEY
     override val deduplicationKey = "$KEY:$artistId"
     override val partition = DomainOutboxPartition.ToSpotifyCatalog
+    override val groupId = artistId
     override val serializePayload = "$artistId\n$fromPlaylist"
 
     companion object {
@@ -150,6 +153,7 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
     override val key = KEY
     override val deduplicationKey = "$KEY:$albumId"
     override val partition = DomainOutboxPartition.ToSpotifyCatalog
+    override val groupId = albumId
     override val serializePayload = albumId
 
     companion object {
@@ -170,6 +174,7 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
     override val key = KEY
     override val deduplicationKey = "$KEY:$artistId:${nextUrl ?: ""}"
     override val partition = DomainOutboxPartition.ToSpotifyCatalog
+    override val groupId = artistId
     override val serializePayload = when {
       nextUrl == null -> artistId
       else -> "$artistId\n$nextUrl"
@@ -215,6 +220,7 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
     override val key = KEY
     override val deduplicationKey = "$KEY:$artistId"
     override val partition = DomainOutboxPartition.Domain
+    override val groupId = artistId
     override val serializePayload = artistId
 
     companion object {
@@ -232,6 +238,7 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
     override val key = KEY
     override val deduplicationKey = "$KEY:$artistId"
     override val partition = DomainOutboxPartition.Domain
+    override val groupId = artistId
     override val serializePayload = artistId
 
     companion object {
@@ -249,6 +256,7 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
     override val key = KEY
     override val deduplicationKey = KEY
     override val partition = DomainOutboxPartition.Domain
+    override val groupId = KEY
     override val serializePayload = ""
 
     companion object {
@@ -264,6 +272,7 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
     override val key = KEY
     override val deduplicationKey = KEY
     override val partition = DomainOutboxPartition.Domain
+    override val groupId = KEY
     override val serializePayload = ""
 
     companion object {
@@ -280,6 +289,7 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
     override val key = KEY
     override val deduplicationKey = "$KEY:$playlistId:${checkType ?: ""}"
     override val partition = DomainOutboxPartition.Domain
+    override val groupId = playlistId
     override val serializePayload = if (checkType == null) playlistId else "$playlistId\n$checkType"
 
     companion object {
@@ -335,6 +345,7 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
     override val key = KEY
     override val deduplicationKey = "$KEY:${type.name}:$periodStart"
     override val partition = DomainOutboxPartition.Domain
+    override val groupId = KEY
     override val serializePayload = "${type.name}:$periodStart"
 
     companion object {
@@ -367,6 +378,7 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
     override val key = KEY
     override val deduplicationKey = KEY
     override val partition = DomainOutboxPartition.Domain
+    override val groupId = KEY
     override val serializePayload = ""
 
     companion object {
@@ -383,6 +395,7 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
     override val key = KEY
     override val deduplicationKey = KEY
     override val partition = DomainOutboxPartition.Domain
+    override val groupId = KEY
     override val serializePayload = ""
 
     companion object {
@@ -398,6 +411,7 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
     override val key = KEY
     override val deduplicationKey = KEY
     override val partition = DomainOutboxPartition.Domain
+    override val groupId = KEY
     override val serializePayload = ""
 
     companion object {
@@ -414,6 +428,7 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
     override val key = KEY
     override val deduplicationKey = KEY
     override val partition = DomainOutboxPartition.Domain
+    override val groupId = KEY
     override val serializePayload = ""
 
     companion object {
@@ -430,6 +445,7 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
     override val key = KEY
     override val deduplicationKey = KEY
     override val partition = DomainOutboxPartition.Domain
+    override val groupId = KEY
     override val serializePayload = ""
 
     companion object {
