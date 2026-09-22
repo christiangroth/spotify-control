@@ -77,6 +77,43 @@ class DomainOutboxContractTests {
   }
 
   @Test
+  fun `every DomainOutboxEvent in a multi-worker partition carries a non-blank groupId`() {
+    allEvents
+      .filter { it.partition.workerCount > 1 }
+      .forEach { event ->
+        assertThat(event.groupId)
+          .describedAs("groupId for ${event::class.simpleName} in partition '${event.partition.key}'")
+          .isNotNull()
+          .isNotBlank()
+      }
+  }
+
+  @Test
+  fun `entity-scoped DomainOutboxEvents use the entity id as groupId`() {
+    assertThat(DomainOutboxEvent.SyncArtistDetails("artist-1").groupId).isEqualTo("artist-1")
+    assertThat(DomainOutboxEvent.SyncArtistAlbums("artist-1").groupId).isEqualTo("artist-1")
+    assertThat(DomainOutboxEvent.SyncAlbumDetails("album-1").groupId).isEqualTo("album-1")
+    assertThat(DomainOutboxEvent.ConfirmArtistSync("artist-1").groupId).isEqualTo("artist-1")
+    assertThat(DomainOutboxEvent.ConfirmArtistShallow("artist-1").groupId).isEqualTo("artist-1")
+    assertThat(DomainOutboxEvent.RunPlaylistChecks("playlist-1").groupId).isEqualTo("playlist-1")
+  }
+
+  @Test
+  fun `non-entity-scoped domain events in a multi-worker partition fall back to their own key as groupId`() {
+    assertThat(DomainOutboxEvent.RebuildPlaybackData().groupId).isEqualTo(DomainOutboxEvent.RebuildPlaybackData.KEY)
+    assertThat(DomainOutboxEvent.AppendPlaybackData().groupId).isEqualTo(DomainOutboxEvent.AppendPlaybackData.KEY)
+    assertThat(DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.DAY, LocalDate(2024, 1, 15)).groupId)
+      .isEqualTo(DomainOutboxEvent.AggregatePlaybackData.KEY)
+    assertThat(DomainOutboxEvent.RebuildAllAggregations().groupId).isEqualTo(DomainOutboxEvent.RebuildAllAggregations.KEY)
+    assertThat(DomainOutboxEvent.ResyncCatalog().groupId).isEqualTo(DomainOutboxEvent.ResyncCatalog.KEY)
+    assertThat(DomainOutboxEvent.WipeCatalog().groupId).isEqualTo(DomainOutboxEvent.WipeCatalog.KEY)
+    assertThat(DomainOutboxEvent.RebuildPlaylistChecksDashboard().groupId).isEqualTo(DomainOutboxEvent.RebuildPlaylistChecksDashboard.KEY)
+    assertThat(DomainOutboxEvent.RebuildPlaylistSettingsView().groupId).isEqualTo(DomainOutboxEvent.RebuildPlaylistSettingsView.KEY)
+    assertThat(DomainOutboxEvent.RebuildDashboardReadModel().groupId).isEqualTo(DomainOutboxEvent.RebuildDashboardReadModel.KEY)
+    assertThat(DomainOutboxEvent.RebuildFollowSuggestions().groupId).isEqualTo(DomainOutboxEvent.RebuildFollowSuggestions.KEY)
+  }
+
+  @Test
   fun `every DomainOutboxEvent type has a handler method in one of the domain ports`() {
     val allPortMethods = listOf(
       PlaybackPort::class, PlaybackAggregationPort::class, CatalogPort::class,
