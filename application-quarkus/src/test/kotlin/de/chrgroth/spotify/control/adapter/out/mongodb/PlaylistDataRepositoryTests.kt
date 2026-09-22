@@ -55,6 +55,22 @@ class PlaylistDataRepositoryTests {
   }
 
   @Test
+  fun `findExistingIds returns empty set for empty input without querying MongoDB`() {
+    assertThat(playlistRepository.findExistingIds(emptyList())).isEmpty()
+  }
+
+  @Test
+  fun `findExistingIds returns only the ids that actually exist`() {
+    val existingId = "playlist-existing-${UUID.randomUUID()}"
+    val missingId = "playlist-missing-${UUID.randomUUID()}"
+    playlistRepository.save(buildPlaylist(existingId))
+
+    val found = playlistRepository.findExistingIds(listOf(existingId, missingId))
+
+    assertThat(found).containsExactly(existingId)
+  }
+
+  @Test
   fun `numberOfTracks returns correct size after save`() {
     val playlistId = "playlist-ntracks-${UUID.randomUUID()}"
     val playlist = Playlist(

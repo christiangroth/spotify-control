@@ -9,6 +9,7 @@ interface PlaylistRepositoryPort {
   fun findAll(): List<PlaylistInfo>
   fun replaceAll(playlists: List<PlaylistInfo>)
   fun findByPlaylistId(playlistId: String): Playlist?
+  fun findExistingIds(playlistIds: Collection<String>): Set<String>
   fun findTrackCounts(): Map<String, Int>
   fun findDistinctArtistIds(): Map<String, Set<ArtistId>>
   fun save(playlist: Playlist)

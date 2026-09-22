@@ -209,6 +209,7 @@ class PlaylistServiceTests {
       buildSpotifyItem("p2", ownerId = "other-user"),
     ).right()
     every { playlistRepository.findAll() } returns emptyList()
+    every { playlistRepository.findExistingIds(any()) } returns emptySet()
     every { playlistRepository.replaceAll(any()) } just runs
     every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
     every { outboxPort.enqueue(any()) } just runs
@@ -228,6 +229,7 @@ class PlaylistServiceTests {
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1")).right()
     every { playlistRepository.findAll() } returns emptyList()
+    every { playlistRepository.findExistingIds(any()) } returns emptySet()
     every { playlistRepository.replaceAll(any()) } just runs
     every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
     every { outboxPort.enqueue(any()) } just runs
@@ -248,6 +250,7 @@ class PlaylistServiceTests {
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1")).right()
     every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE))
+    every { playlistRepository.findExistingIds(any()) } returns emptySet()
     every { playlistRepository.replaceAll(any()) } just runs
     every { outboxPort.enqueue(any()) } just runs
 
@@ -265,7 +268,7 @@ class PlaylistServiceTests {
     every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1")).right()
     every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.ACTIVE))
     every { playlistRepository.replaceAll(any()) } just runs
-    every { playlistRepository.findByPlaylistId("p1") } returns mockk()
+    every { playlistRepository.findExistingIds(any()) } returns setOf("p1")
     every { outboxPort.enqueue(any()) } just runs
 
     adapter.syncPlaylists()
@@ -282,7 +285,7 @@ class PlaylistServiceTests {
     every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1", snapshotId = "snap-1")).right()
     every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1", snapshotId = "snap-1"))
     every { playlistRepository.replaceAll(any()) } just runs
-    every { playlistRepository.findByPlaylistId("p1") } returns mockk()
+    every { playlistRepository.findExistingIds(any()) } returns setOf("p1")
     every { outboxPort.enqueue(any()) } just runs
 
     adapter.syncPlaylists()
@@ -298,6 +301,7 @@ class PlaylistServiceTests {
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1", snapshotId = "snap-2")).right()
     every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1", snapshotId = "snap-1"))
+    every { playlistRepository.findExistingIds(any()) } returns emptySet()
     every { playlistRepository.replaceAll(any()) } just runs
     every { outboxPort.enqueue(any()) } just runs
 
@@ -315,7 +319,7 @@ class PlaylistServiceTests {
     every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1"), buildSpotifyItem("p2")).right()
     every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1"))
     every { playlistRepository.replaceAll(any()) } just runs
-    every { playlistRepository.findByPlaylistId("p1") } returns mockk()
+    every { playlistRepository.findExistingIds(any()) } returns setOf("p1")
     every { outboxPort.enqueue(any()) } just runs
     every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
 
@@ -332,7 +336,7 @@ class PlaylistServiceTests {
     every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1")).right()
     every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1"), buildPlaylistInfo("p2"))
     every { playlistRepository.replaceAll(any()) } just runs
-    every { playlistRepository.findByPlaylistId("p1") } returns mockk()
+    every { playlistRepository.findExistingIds(any()) } returns setOf("p1")
     every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
     every { outboxPort.enqueue(any()) } just runs
 
@@ -349,7 +353,7 @@ class PlaylistServiceTests {
     every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1")).right()
     every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1"))
     every { playlistRepository.replaceAll(any()) } just runs
-    every { playlistRepository.findByPlaylistId("p1") } returns mockk()
+    every { playlistRepository.findExistingIds(any()) } returns setOf("p1")
     every { outboxPort.enqueue(any()) } just runs
 
     val result = adapter.syncPlaylists()
@@ -435,7 +439,7 @@ class PlaylistServiceTests {
       buildPlaylistInfo("p2", syncStatus = PlaylistSyncStatus.ACTIVE),
     )
     every { playlistRepository.replaceAll(any()) } just runs
-    every { playlistRepository.findByPlaylistId("p1") } returns mockk()
+    every { playlistRepository.findExistingIds(any()) } returns setOf("p1")
     every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
     every { playlistCheckRepository.deleteByPlaylistId("p1") } just runs
     every { outboxPort.enqueue(any()) } just runs
@@ -456,6 +460,7 @@ class PlaylistServiceTests {
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1", snapshotId = "snap-2")).right()
     every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1", snapshotId = "snap-1"))
+    every { playlistRepository.findExistingIds(any()) } returns emptySet()
     every { playlistRepository.replaceAll(any()) } just runs
     every { outboxPort.enqueue(any()) } just runs
 
@@ -471,7 +476,7 @@ class PlaylistServiceTests {
     every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1")).right()
     every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1"))
     every { playlistRepository.replaceAll(any()) } just runs
-    every { playlistRepository.findByPlaylistId("p1") } returns null
+    every { playlistRepository.findExistingIds(any()) } returns emptySet()
     every { outboxPort.enqueue(any()) } just runs
 
     adapter.syncPlaylists()
@@ -485,6 +490,7 @@ class PlaylistServiceTests {
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1")).right()
     every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE))
+    every { playlistRepository.findExistingIds(any()) } returns emptySet()
     every { playlistRepository.replaceAll(any()) } just runs
     every { outboxPort.enqueue(any()) } just runs
 
@@ -500,7 +506,7 @@ class PlaylistServiceTests {
     every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1")).right()
     every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1"))
     every { playlistRepository.replaceAll(any()) } just runs
-    every { playlistRepository.findByPlaylistId("p1") } returns mockk()
+    every { playlistRepository.findExistingIds(any()) } returns setOf("p1")
     every { outboxPort.enqueue(any()) } just runs
 
     adapter.syncPlaylists()
@@ -752,7 +758,7 @@ class PlaylistServiceTests {
     every { currentUserResolver.userId() } returns userId
     every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.ACTIVE))
     every { playlistRepository.replaceAll(any()) } just runs
-    every { playlistRepository.findByPlaylistId("p1") } returns mockk()
+    every { playlistRepository.findExistingIds(any()) } returns setOf("p1")
     every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
     every { playlistCheckRepository.deleteByPlaylistId("p1") } just runs
     every { outboxPort.enqueue(any()) } just runs
@@ -768,7 +774,7 @@ class PlaylistServiceTests {
     every { currentUserResolver.userId() } returns userId
     every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE))
     every { playlistRepository.replaceAll(any()) } just runs
-    every { playlistRepository.findByPlaylistId("p1") } returns mockk()
+    every { playlistRepository.findExistingIds(any()) } returns setOf("p1")
     every { outboxPort.enqueue(any()) } just runs
     every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
 
@@ -783,7 +789,7 @@ class PlaylistServiceTests {
     every { currentUserResolver.userId() } returns userId
     every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.ACTIVE))
     every { playlistRepository.replaceAll(any()) } just runs
-    every { playlistRepository.findByPlaylistId("p1") } returns mockk()
+    every { playlistRepository.findExistingIds(any()) } returns setOf("p1")
     every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
     every { playlistCheckRepository.deleteByPlaylistId("p1") } just runs
     every { outboxPort.enqueue(any()) } just runs
@@ -799,7 +805,7 @@ class PlaylistServiceTests {
     every { currentUserResolver.userId() } returns userId
     every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE))
     every { playlistRepository.replaceAll(any()) } just runs
-    every { playlistRepository.findByPlaylistId("p1") } returns mockk()
+    every { playlistRepository.findExistingIds(any()) } returns setOf("p1")
     every { outboxPort.enqueue(any()) } just runs
     every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
 
@@ -1153,6 +1159,7 @@ class PlaylistServiceTests {
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1")).right()
     every { playlistRepository.findAll() } returns emptyList()
+    every { playlistRepository.findExistingIds(any()) } returns emptySet()
     every { playlistRepository.replaceAll(any()) } just runs
     every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
     every { outboxPort.enqueue(any()) } just runs
@@ -1183,7 +1190,7 @@ class PlaylistServiceTests {
     every { currentUserResolver.userId() } returns userId
     every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.ACTIVE))
     every { playlistRepository.replaceAll(any()) } just runs
-    every { playlistRepository.findByPlaylistId("p1") } returns mockk()
+    every { playlistRepository.findExistingIds(any()) } returns setOf("p1")
     every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
     every { playlistCheckRepository.deleteByPlaylistId("p1") } just runs
     every { outboxPort.enqueue(any()) } just runs
