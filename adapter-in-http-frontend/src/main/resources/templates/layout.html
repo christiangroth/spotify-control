@@ -100,6 +100,14 @@
             grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
             gap: .5rem;
         }
+        /* Below the sm breakpoint tiles show icons only (see .nav-tile-label/.nav-tile-icon below), so the
+           110px minimum sized for icon+label tiles no longer applies - fix the grid at 3 columns instead of
+           letting auto-fit pick an inconsistent count based on the exact viewport width. */
+        @media (max-width: 575.98px) {
+            .app-page-nav .nav-tiles {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
         .nav-tile-label {
             color: var(--color-text-primary);
         }
