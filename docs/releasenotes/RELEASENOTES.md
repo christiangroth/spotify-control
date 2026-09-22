@@ -1,3 +1,12 @@
+# 0.128.6 (2026.09.22)
+
+## Bugfixes / Chore
+* Fixed the hourly playlist sync doing one MongoDB round-trip per playlist just to check for missing data; it now does a single batched lookup instead.
+
+
+
+---
+
 # 0.128.5 (2026.09.22)
 
 ## Bugfixes / Chore
