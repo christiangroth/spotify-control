@@ -1,14 +1,10 @@
 package de.chrgroth.spotify.control.domain.infra
 
-import de.chrgroth.spotify.control.domain.model.playlist.AppPlaylistCheck
-import de.chrgroth.spotify.control.domain.model.playlist.PlaylistCheckDashboardSummary
-import de.chrgroth.spotify.control.domain.model.playlist.PlaylistCheckViolation
-import de.chrgroth.spotify.control.domain.model.playlist.PlaylistId
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistStats
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistSyncStatus
+import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistCheckPort
 import de.chrgroth.spotify.control.domain.port.out.playlist.PlaylistRepositoryPort
-import de.chrgroth.spotify.control.domain.port.out.readmodel.PlaylistCheckDashboardRepositoryPort
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -20,8 +16,8 @@ import org.junit.jupiter.api.Test
 class PlaylistStatsCacheTests {
 
   private val playlistRepository: PlaylistRepositoryPort = mockk()
-  private val playlistCheckDashboardRepository: PlaylistCheckDashboardRepositoryPort = mockk()
-  private val cache = PlaylistStatsCache(playlistRepository, playlistCheckDashboardRepository)
+  private val playlistCheckPort: PlaylistCheckPort = mockk()
+  private val cache = PlaylistStatsCache(playlistRepository, playlistCheckPort)
 
   private val now = Clock.System.now()
 
@@ -56,26 +52,7 @@ class PlaylistStatsCacheTests {
       syncStatus = PlaylistSyncStatus.PASSIVE,
     )
     every { playlistRepository.findAll() } returns listOf(outOfSync, inSync, passive)
-    every { playlistCheckDashboardRepository.find() } returns PlaylistCheckDashboardSummary(
-      displayName = "",
-      playlistNameById = emptyMap(),
-      checks = listOf(
-        AppPlaylistCheck(
-          checkId = "in-sync:track-from-latest-release",
-          playlistId = PlaylistId("in-sync"),
-          lastCheck = now,
-          succeeded = false,
-          violations = listOf(PlaylistCheckViolation("v", "v")),
-        ),
-        AppPlaylistCheck(
-          checkId = "in-sync:other-check",
-          playlistId = PlaylistId("in-sync"),
-          lastCheck = now,
-          succeeded = false,
-          violations = listOf(PlaylistCheckViolation("v", "v")),
-        ),
-      ),
-    )
+    every { playlistCheckPort.pendingAlbumUpgradeCount() } returns 1
 
     cache.refresh()
 
@@ -85,7 +62,7 @@ class PlaylistStatsCacheTests {
   @Test
   fun `a failed refresh keeps the previously cached values instead of propagating`() {
     every { playlistRepository.findAll() } returns emptyList()
-    every { playlistCheckDashboardRepository.find() } returns null
+    every { playlistCheckPort.pendingAlbumUpgradeCount() } returns 0
     cache.refresh()
 
     every { playlistRepository.findAll() } throws IllegalStateException("mongo unreachable")
@@ -97,7 +74,7 @@ class PlaylistStatsCacheTests {
   @Test
   fun `current can be read repeatedly without re-querying the playlist repositories`() {
     every { playlistRepository.findAll() } returns emptyList()
-    every { playlistCheckDashboardRepository.find() } returns null
+    every { playlistCheckPort.pendingAlbumUpgradeCount() } returns 0
     cache.refresh()
 
     repeat(5) { cache.current() }

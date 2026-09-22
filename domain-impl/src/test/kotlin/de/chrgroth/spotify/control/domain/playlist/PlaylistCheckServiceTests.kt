@@ -382,6 +382,36 @@ class PlaylistCheckServiceTests {
   }
 
   @Test
+  fun `rebuildCheckDashboard updates the in-memory pendingAlbumUpgradeCount from the freshly built checks`() {
+    val user = User(
+      spotifyUserId = userId,
+      displayName = "John Doe",
+      encryptedAccessToken = "",
+      encryptedRefreshToken = "",
+      tokenExpiresAt = Clock.System.now(),
+      lastLoginAt = Clock.System.now(),
+    )
+    val albumUpgradeCheck = AppPlaylistCheck(
+      checkId = "$playlistId:track-from-latest-release",
+      playlistId = PlaylistId(playlistId),
+      lastCheck = Clock.System.now(),
+      succeeded = false,
+      violations = listOf(PlaylistCheckViolation("v", "v")),
+    )
+    val otherCheck = buildCheck(succeeded = false, violations = listOf(PlaylistCheckViolation("v", "v")))
+    every { userRepository.get() } returns user
+    every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo())
+    every { playlistCheckRepository.findAll() } returns listOf(albumUpgradeCheck, otherCheck)
+    every { playlistCheckDashboardRepository.save(any()) } just runs
+
+    assertThat(adapter.pendingAlbumUpgradeCount()).isEqualTo(0)
+
+    adapter.rebuildCheckDashboard()
+
+    assertThat(adapter.pendingAlbumUpgradeCount()).isEqualTo(1)
+  }
+
+  @Test
   fun `rebuildCheckDashboard falls back to empty display name when no user exists`() {
     val check = buildCheck(succeeded = true)
     val playlistInfo = buildPlaylistInfo()
