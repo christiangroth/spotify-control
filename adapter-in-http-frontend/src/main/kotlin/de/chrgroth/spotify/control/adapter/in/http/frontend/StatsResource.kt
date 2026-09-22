@@ -34,35 +34,43 @@ class StatsResource(
   @GET
   @Authenticated
   @Produces(MediaType.TEXT_HTML)
-  fun stats(@QueryParam("date") dateParam: String?): TemplateInstance = httpResponseMetrics.timed("page.stats.view") {
+  fun stats(@QueryParam("date") dateParam: String?): TemplateInstance = httpResponseMetrics.timed("page.stats.view") { details ->
     val today = currentPeriodStart(AggregationPeriodType.DAY)
     val requestedDate = dateParam?.let { runCatching { LocalDate.parse(it) }.getOrNull() }?.let { if (it > today) today else it }
     val periodStartsByType = AggregationPeriodType.entries.associateWith { type ->
       if (type == AggregationPeriodType.DAY && requestedDate != null) listOf(requestedDate) else threePeriodStarts(type)
     }
     val requestedPeriods = periodStartsByType.flatMap { (type, periodStarts) -> periodStarts.map { type to it } }
-    val aggregationsByTypeAndPeriod = playbackAggregationPort.findByPeriods(requestedPeriods, TOP_ENTRIES_LIMIT)
-    val tabs = AggregationPeriodType.entries.mapIndexed { index, type ->
-      val periodStarts = periodStartsByType.getValue(type)
-      AggregationTab(
-        id = type.name.lowercase(),
-        label = tabLabel(type),
-        first = index == 0,
-        aggregations = periodStarts.mapIndexed { periodIndex, periodStart ->
-          val data = aggregationsByTypeAndPeriod[type to periodStart]
-          AggregationView(
-            periodLabel = periodLabel(periodIndex, periodStart, singleSelected = periodStarts.size == 1),
-            periodStart = periodStart.toString(),
-            data = data,
-            topArtists = topEntries(data?.artistEntries),
-            topAlbums = topEntries(data?.albumEntries),
-            topTracks = topEntries(data?.trackEntries),
-            activityBars = activityBars(data),
-          )
-        },
-      )
+    // Temporary diagnostics: mongoQueryMetrics shows the find-by-periods query itself completes in well under
+    // a second, yet page.stats.view has been logged taking 20s+ end to end with no other slow-query log line
+    // in between - this pinpoints whether the remaining time is spent building the view models (incl. the many
+    // per-activity-bar messages.statsActivityTooltip() i18n calls) or in template construction/rendering.
+    val aggregationsByTypeAndPeriod = details.detail("stats.find-by-periods") {
+      playbackAggregationPort.findByPeriods(requestedPeriods, TOP_ENTRIES_LIMIT)
     }
-    Templates.stats(tabs)
+    val tabs = details.detail("stats.build-tabs") {
+      AggregationPeriodType.entries.mapIndexed { index, type ->
+        val periodStarts = periodStartsByType.getValue(type)
+        AggregationTab(
+          id = type.name.lowercase(),
+          label = tabLabel(type),
+          first = index == 0,
+          aggregations = periodStarts.mapIndexed { periodIndex, periodStart ->
+            val data = aggregationsByTypeAndPeriod[type to periodStart]
+            AggregationView(
+              periodLabel = periodLabel(periodIndex, periodStart, singleSelected = periodStarts.size == 1),
+              periodStart = periodStart.toString(),
+              data = data,
+              topArtists = topEntries(data?.artistEntries),
+              topAlbums = topEntries(data?.albumEntries),
+              topTracks = topEntries(data?.trackEntries),
+              activityBars = activityBars(data),
+            )
+          },
+        )
+      }
+    }
+    details.detail("stats.build-template") { Templates.stats(tabs) }
   }
 
   private fun topEntries(entries: List<AggregationRankEntry>?): List<RankEntryView> =
