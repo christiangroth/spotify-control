@@ -43,6 +43,7 @@ class OAuthResource(
     "playlist-modify-public",
     "playlist-modify-private",
     "user-read-private",
+    "user-follow-read",
   ).joinToString(" ")
 
   @GET
