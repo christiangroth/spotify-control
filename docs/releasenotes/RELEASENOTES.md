@@ -1,3 +1,14 @@
+# 0.128.8 (2026.09.22)
+
+## Bugfixes / Chore
+* Updated the internal outbox library to 0.10.0.
+* Background sync tasks for unrelated artists, albums, and playlists no longer queue behind each other and now process concurrently.
+* Fixed the stats page redundantly re-resolving weekday names on every activity-bar cell instead of once per weekday, cutting a large share of its slow load times.
+
+
+
+---
+
 # 0.128.7 (2026.09.22)
 
 ## Bugfixes / Chore
