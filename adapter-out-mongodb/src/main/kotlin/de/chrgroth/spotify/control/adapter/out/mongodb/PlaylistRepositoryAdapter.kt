@@ -59,6 +59,18 @@ class PlaylistRepositoryAdapter(
       playlistDocumentRepository.findById(playlistId)?.toDomain()
     }
 
+  override fun findExistingIds(playlistIds: Collection<String>): Set<String> {
+    if (playlistIds.isEmpty()) return emptySet()
+    return mongoQueryMetrics.timed("spotify_playlist.findExistingIds") {
+      playlistDocumentRepository.mongoCollection()
+        .find(Filters.`in`("_id", playlistIds))
+        .projection(Projections.include("_id"))
+        .toList()
+        .map { it.id }
+        .toSet()
+    }
+  }
+
   override fun findTrackCounts(): Map<String, Int> {
     // $size errors out entirely (aborting the whole aggregation, for every playlist) if $tracks is missing
     // on any single document, so it is wrapped in $ifNull to default to an empty array first.

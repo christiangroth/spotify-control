@@ -223,13 +223,16 @@ class PlaylistService(
       if (updatedPlaylists.size != existingById.size) {
         dashboardRefresh.notifyUserPlaylistMetadata()
       }
-      updatedPlaylists
-        .filter { it.syncStatus == PlaylistSyncStatus.ACTIVE }
+      val activePlaylists = updatedPlaylists.filter { it.syncStatus == PlaylistSyncStatus.ACTIVE }
+      // Single batched existence check instead of one findByPlaylistId round-trip per active playlist -
+      // that sequential loop showed recurring multi-second-plus stalls per call in production.
+      val existingFullPlaylistIds = playlistRepository.findExistingIds(activePlaylists.map { it.spotifyPlaylistId })
+      activePlaylists
         .filter { playlist ->
           val existing = existingById[playlist.spotifyPlaylistId]
           existing == null ||
             existing.snapshotId != playlist.snapshotId ||
-            playlistRepository.findByPlaylistId(playlist.spotifyPlaylistId) == null
+            playlist.spotifyPlaylistId !in existingFullPlaylistIds
         }
         .forEach { playlist ->
           outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(playlist.spotifyPlaylistId))
