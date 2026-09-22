@@ -39,27 +39,37 @@ jobs:
       - uses: gradle/actions/setup-gradle@v5
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
-      - run: ./gradlew build
+      # testNative is already covered by the dedicated build-native job (or by release itself on main) - running it
+      # here too was redundant, and (see james-platform#684) can actively break: this job has no local
+      # GraalVM/Mandrel, so it silently relies on Quarkus's container-build auto-fallback, and the shared Gradle
+      # build cache doesn't key native tasks by the -Dquarkus.native.container-build flag, so it can pick up a
+      # container-build=false native binary produced by build-native/release and fail to launch it in a container.
+      - run: ./gradlew build -x testNative
         env:
           GHCR_PAT: ${{ secrets.GHCR_PAT }}
 
   build-native:
     runs-on: ubuntu-latest
     needs: changes
-    if: ${{ needs.changes.outputs.code == 'true' }}
+    # Skipped on main: the release job below builds native from scratch anyway (it's the one actually deployed),
+    # so this quick validation build would just compile natively twice in a row for no extra safety. It still runs
+    # on every other branch/PR push to catch native-image breakage before merge.
+    if: ${{ needs.changes.outputs.code == 'true' && github.ref != 'refs/heads/main' }}
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-build-native
       cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: graalvm/setup-graalvm@v1
         with:
           java-version: '25'
-          distribution: 'temurin'
+          distribution: 'mandrel'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          cache: 'gradle'
       - uses: gradle/actions/setup-gradle@v5
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
-      - run: ./gradlew :application-quarkus:testNative -Dquarkus.native.enabled=true -Dquarkus.native.container-build=true -Dquarkus.package.jar.enabled=false -Dquarkus.container-image.build=false -Dquarkus.native.additional-build-args=-Ob
+      - run: ./gradlew :application-quarkus:testNative -Dquarkus.native.enabled=true -Dquarkus.native.container-build=false -Dquarkus.package.jar.enabled=false -Dquarkus.container-image.build=false -Dquarkus.native.additional-build-args=-Ob
         env:
           GHCR_PAT: ${{ secrets.GHCR_PAT }}
 
@@ -81,7 +91,15 @@ jobs:
 
   release:
     runs-on: ubuntu-latest
-    if: ${{ needs.changes.outputs.code == 'true' && github.ref == 'refs/heads/main' }}
+    # GitHub Actions skips a job by default if any of its `needs` were skipped, not just if they failed - since
+    # build-native is intentionally skipped on main (see above), that default would skip release too. `always()`
+    # plus explicit per-job result checks (treating build-native's 'skipped' as fine) restores the intended gate.
+    if: |
+      always() &&
+      needs.changes.outputs.code == 'true' &&
+      github.ref == 'refs/heads/main' &&
+      needs.build.result == 'success' &&
+      (needs.build-native.result == 'success' || needs.build-native.result == 'skipped')
     needs: [changes, build, build-native]
     permissions:
       contents: write
@@ -91,10 +109,12 @@ jobs:
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: graalvm/setup-graalvm@v1
         with:
           java-version: '25'
-          distribution: 'temurin'
+          distribution: 'mandrel'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          cache: 'gradle'
       - uses: gradle/actions/setup-gradle@v5
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
@@ -107,7 +127,9 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - run: ./gradlew release -x test -x testNative -Dquarkus.native.enabled=true -Dquarkus.native.container-build=true -Dquarkus.package.jar.enabled=false
+      # On main this is the only native build in the pipeline (build-native above is skipped there) - it doubles as
+      # validation and the one actually deployed. testNative still runs with the quick build (-Ob) on other branches.
+      - run: ./gradlew release -x test -x testNative -Dquarkus.native.enabled=true -Dquarkus.native.container-build=false -Dquarkus.package.jar.enabled=false
         env:
           GHCR_PAT: ${{ secrets.GHCR_PAT }}
       - run: |
