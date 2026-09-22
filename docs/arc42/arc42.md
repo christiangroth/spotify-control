@@ -614,6 +614,7 @@ Architecture documentation (`docs/arc42`), ADRs (`docs/adr`), and release notes 
 - [0012](../adr/0012-diagram-rendering-mermaid.md) – Diagram Rendering: Mermaid
 - [0013](../adr/0013-selective-playlist-check-violation-fixing.md) – Selective Playlist Check Violation Fixing
 - [0014](../adr/0014-precomputed-read-models-per-ui-page.md) – Precomputed Read Models per UI Page
+- [0015](../adr/0015-outbox-groupid-and-delayed-dispatch.md) – Outbox groupId Adoption and Delayed Dispatch Evaluation
 
 # Quality Requirements
 
