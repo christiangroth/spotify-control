@@ -48,6 +48,10 @@ class StatsResource(
     val aggregationsByTypeAndPeriod = details.detail("stats.find-by-periods") {
       playbackAggregationPort.findByPeriods(requestedPeriods, TOP_ENTRIES_LIMIT)
     }
+    // Resolved once per request instead of once per (day, window) pair per aggregation view (up to 15 views x
+    // 4 windows = 60x redundant calls otherwise) - each messages.* call goes through Qute's message-bundle
+    // resolution, which showed up as the dominant cost of page.stats.view in production (~20s of a ~21s request).
+    val dayNames = DayOfWeek.values().associateWith { weekdayName(it) }
     val tabs = details.detail("stats.build-tabs") {
       AggregationPeriodType.entries.mapIndexed { index, type ->
         val periodStarts = periodStartsByType.getValue(type)
@@ -64,7 +68,7 @@ class StatsResource(
               topArtists = topEntries(data?.artistEntries),
               topAlbums = topEntries(data?.albumEntries),
               topTracks = topEntries(data?.trackEntries),
-              activityBars = activityBars(data),
+              activityBars = activityBars(data, dayNames),
             )
           },
         )
@@ -85,15 +89,15 @@ class StatsResource(
       )
     }
 
-  private fun activityBars(aggregation: PlaybackAggregation?): List<ActivityBarEntryView> {
+  private fun activityBars(aggregation: PlaybackAggregation?, dayNames: Map<DayOfWeek, String>): List<ActivityBarEntryView> {
     if (aggregation == null) {
       return emptyList()
     }
     val byKey = aggregation.activityEntries.associate { (it.dayOfWeek to it.timeWindow) to it.totalSeconds }
     val orderedEntries = DayOfWeek.values().flatMap { day ->
+      val dayName = dayNames.getValue(day)
       ActivityTimeWindow.entries.map { window ->
         val totalSeconds = byKey[day to window] ?: 0L
-        val dayName = weekdayName(day)
         ActivityBarEntryView(
           label = "${dayName.take(WEEKDAY_SHORT_LABEL_LENGTH)} ${window.label}",
           tooltip = messages.statsActivityTooltip(dayName, window.label, TemplateFormattingExtensions.formattedDuration(totalSeconds)),
