@@ -41,6 +41,8 @@ class AppArtistRepositoryAdapter(
             Updates.setOnInsert(FOLLOWED_FIELD, item.followed),
             Updates.setOnInsert(FOLLOWED_SINCE_FIELD, item.followedSince?.toJavaInstant()),
             Updates.setOnInsert(LAST_FOLLOW_SYNC_FIELD, item.lastFollowSync?.toJavaInstant()),
+            Updates.setOnInsert(SINGULARITY_CURRENT_TRACK_ADDED_AT_FIELD, item.singularityCurrentTrackAddedAt?.toJavaInstant()),
+            Updates.setOnInsert(SINGULARITY_REVIEWED_UNTIL_FIELD, item.singularityReviewedUntil?.toJavaInstant()),
           ),
           upsertOptions,
         )
@@ -162,6 +164,19 @@ class AppArtistRepositoryAdapter(
     }
   }
 
+  override fun initializeSingularityTracking(artistId: ArtistId, addedAt: Instant) {
+    mongoQueryMetrics.timed("app_artist.initializeSingularityTracking") {
+      appArtistDocumentRepository.mongoCollection()
+        .updateOne(
+          Filters.eq(ID_FIELD, artistId.value),
+          Updates.combine(
+            Updates.set(SINGULARITY_CURRENT_TRACK_ADDED_AT_FIELD, addedAt.toJavaInstant()),
+            Updates.set(SINGULARITY_REVIEWED_UNTIL_FIELD, addedAt.toJavaInstant()),
+          ),
+        )
+    }
+  }
+
   override fun deleteAll() {
     mongoQueryMetrics.timed("app_artist.deleteAll") {
       appArtistDocumentRepository.deleteAll()
@@ -178,6 +193,8 @@ class AppArtistRepositoryAdapter(
     followed = followed,
     followedSince = followedSince?.toKotlinInstant(),
     lastFollowSync = lastFollowSync?.toKotlinInstant(),
+    singularityCurrentTrackAddedAt = singularityCurrentTrackAddedAt?.toKotlinInstant(),
+    singularityReviewedUntil = singularityReviewedUntil?.toKotlinInstant(),
   )
 
   companion object {
@@ -190,5 +207,7 @@ class AppArtistRepositoryAdapter(
     internal const val FOLLOWED_FIELD = "followed"
     internal const val FOLLOWED_SINCE_FIELD = "followedSince"
     internal const val LAST_FOLLOW_SYNC_FIELD = "lastFollowSync"
+    internal const val SINGULARITY_CURRENT_TRACK_ADDED_AT_FIELD = "singularityCurrentTrackAddedAt"
+    internal const val SINGULARITY_REVIEWED_UNTIL_FIELD = "singularityReviewedUntil"
   }
 }

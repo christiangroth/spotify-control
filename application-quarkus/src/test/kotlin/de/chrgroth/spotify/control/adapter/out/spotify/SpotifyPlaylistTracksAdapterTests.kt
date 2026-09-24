@@ -11,7 +11,9 @@ import io.micrometer.core.instrument.MeterRegistry
 import io.quarkus.test.junit.QuarkusTest
 import jakarta.inject.Inject
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.entry
 import org.junit.jupiter.api.Test
+import kotlin.time.Instant
 
 @QuarkusTest
 class SpotifyPlaylistTracksAdapterTests {
@@ -134,5 +136,23 @@ class SpotifyPlaylistTracksAdapterTests {
     val stats = outgoingRequestStats.current()
     assertThat(stats).isNotEmpty
     assertThat(stats.any { it.requestCountLast24h > 0 }).isTrue
+  }
+
+  @Test
+  fun `getPlaylistTrackAddedAtByArtist returns added_at per main artist`() {
+    val result = spotifyPlaylist.getPlaylistTrackAddedAtByArtist(AccessToken("mock-access-token"), "mock-playlist-1")
+
+    assertThat(result).isInstanceOf(Either.Right::class.java)
+    val addedAtByArtist = (result as Either.Right).value
+    assertThat(addedAtByArtist).containsExactly(entry(ArtistId("artist-1"), Instant.parse("2024-02-01T00:00:00Z")))
+  }
+
+  @Test
+  fun `getPlaylistTrackAddedAtByArtist skips non-track items`() {
+    val result = spotifyPlaylist.getPlaylistTrackAddedAtByArtist(AccessToken("mock-access-token"), "mock-playlist-1")
+
+    assertThat(result).isInstanceOf(Either.Right::class.java)
+    val addedAtByArtist = (result as Either.Right).value
+    assertThat(addedAtByArtist).doesNotContainKey(ArtistId("episode-1"))
   }
 }

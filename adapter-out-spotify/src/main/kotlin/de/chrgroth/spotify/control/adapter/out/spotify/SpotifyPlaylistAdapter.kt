@@ -31,6 +31,7 @@ import kotlinx.serialization.json.JsonElement
 import mu.KLogging
 import org.eclipse.microprofile.rest.client.inject.RestClient
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 
 @ApplicationScoped
 @Suppress("Unused", "TooGenericExceptionCaught")
@@ -141,6 +142,51 @@ class SpotifyPlaylistAdapter(
       SpotifyApiAuthContext.clear()
     }
   }
+
+  override fun getPlaylistTrackAddedAtByArtist(accessToken: AccessToken, playlistId: String): Either<DomainError, Map<ArtistId, Instant>> {
+    return try {
+      SpotifyApiAuthContext.set(accessToken)
+      val addedAtByArtist = mutableMapOf<ArtistId, Instant>()
+      var offset: Int? = null
+      var hasNext = true
+      while (hasNext) {
+        throttler.throttle(DomainOutboxPartition.ToSpotifyPlaylist.key)
+        val tracksResponse = httpMetrics.timed("/v1/playlists/{id}/items") {
+          apiClient.getPlaylistItems(playlistId, PLAYLIST_TRACKS_PAGE_SIZE, offset)
+        }
+        addedAtByArtist += parsePlaylistTrackAddedAtByArtist(tracksResponse.items)
+        val nextUrl = tracksResponse.next
+        if (nextUrl == null) {
+          hasNext = false
+        } else {
+          offset = nextUrl.queryParamInt("offset")
+          if (offset == null) hasNext = false
+        }
+      }
+      addedAtByArtist.right()
+    } catch (e: SpotifyRateLimitException) {
+      SpotifyRateLimitError(e.retryAfterSeconds.seconds).left()
+    } catch (e: SpotifyApiException) {
+      logger.error { "Spotify playlist track added_at fetch failed for $playlistId: ${e.statusCode}" }
+      PlaylistSyncError.PLAYLIST_TRACKS_FETCH_FAILED.left()
+    } catch (e: Exception) {
+      logger.error(e) { "Unexpected error during playlist track added_at fetch for playlist $playlistId" }
+      PlaylistSyncError.PLAYLIST_TRACKS_FETCH_FAILED.left()
+    } finally {
+      SpotifyApiAuthContext.clear()
+    }
+  }
+
+  private fun parsePlaylistTrackAddedAtByArtist(items: List<PlaylistTrackObject?>): Map<ArtistId, Instant> =
+    items.mapNotNull { item ->
+      if (item == null) return@mapNotNull null
+      val addedAt = item.addedAt ?: return@mapNotNull null
+      val itemElement = item.item ?: return@mapNotNull null
+      val track = decodeTrack(itemElement) ?: return@mapNotNull null
+      if (track.type != TrackObject.Type.TRACK || track.id == null) return@mapNotNull null
+      val mainArtistId = (track.artists ?: emptyList()).firstNotNullOfOrNull { artist -> artist.id?.let { ArtistId(it) } } ?: return@mapNotNull null
+      mainArtistId to Instant.parse(addedAt)
+    }.toMap()
 
   private fun parsePlaylistTracks(items: List<PlaylistTrackObject?>): List<PlaylistTrack> =
     items.mapNotNull { item ->

@@ -16,4 +16,6 @@ data class AppArtist(
   val followed: Boolean = false,
   val followedSince: Instant? = null,
   val lastFollowSync: Instant? = null,
+  val singularityCurrentTrackAddedAt: Instant? = null,
+  val singularityReviewedUntil: Instant? = null,
 )
