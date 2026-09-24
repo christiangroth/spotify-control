@@ -14,6 +14,7 @@ data class CurrentlyPlayingContextObject(
 @Serializable
 data class PlaylistTrackObject(
   val item: JsonElement? = null,
+  @SerialName("added_at") val addedAt: String? = null,
 )
 
 @Serializable

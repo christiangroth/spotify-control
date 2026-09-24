@@ -350,4 +350,30 @@ class AppArtistRepositoryTests {
     assertThat(result.first { it.id == touched.id }.lastFollowSync).isEqualTo(syncedAt)
     assertThat(result.first { it.id == untouched.id }.lastFollowSync).isNull()
   }
+
+  @Test
+  fun `upsertAll defaults singularity tracking fields to null for new artists`() {
+    val item = artist("singularity-default")
+    appArtistRepository.upsertAll(listOf(item))
+
+    val result = appArtistRepository.findByArtistIds(setOf(item.id))
+
+    assertThat(result).hasSize(1)
+    assertThat(result[0].singularityCurrentTrackAddedAt).isNull()
+    assertThat(result[0].singularityReviewedUntil).isNull()
+  }
+
+  @Test
+  fun `initializeSingularityTracking sets both fields to the given timestamp`() {
+    val item = artist("singularity-init")
+    appArtistRepository.upsertAll(listOf(item))
+    val addedAt = kotlin.time.Instant.fromEpochSeconds(600)
+
+    appArtistRepository.initializeSingularityTracking(item.id, addedAt)
+
+    val result = appArtistRepository.findByArtistIds(setOf(item.id))
+    assertThat(result).hasSize(1)
+    assertThat(result[0].singularityCurrentTrackAddedAt).isEqualTo(addedAt)
+    assertThat(result[0].singularityReviewedUntil).isEqualTo(addedAt)
+  }
 }
