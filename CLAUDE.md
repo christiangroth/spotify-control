@@ -91,6 +91,8 @@ When creating GitHub issues (e.g. when breaking down work or filing follow-ups):
 
 ## Release Note Snippets
 
+**A snippet is mandatory for every PR/branch, with no exceptions — even for changes with no user-visible effect.** The `releasenotesGenerate` Gradle task (part of `./gradlew build`) fails the build with `Missing release notes snippets, failing build!` if the current branch has no snippet file. "Only include user-facing or dependency changes in release notes" (below) governs the *content* you write inside the snippet, not whether the file itself exists — it is never a reason to skip creating it. For a change with no user-visible effect, still add a `bugfix`-type snippet with a short, generic description (e.g. "Added internal groundwork for an upcoming feature. No visible changes yet.").
+
 **Snippet filename:** `docs/releasenotes/snippets/{branch-last-segment}-{type}.md` where `{type}` is one of `bugfix` or `feature`.
 
 **Snippet content:** Briefly describe what was changed or added on the branch. Each line should follow the pattern `* Description of the change.` Feel free to use multiple short lines, describing the change without technical detail. Only include **user-facing or dependency changes** in release notes. Do not add implementation details, refactoring notes, or internal structural changes (e.g. package renames, build task additions).
