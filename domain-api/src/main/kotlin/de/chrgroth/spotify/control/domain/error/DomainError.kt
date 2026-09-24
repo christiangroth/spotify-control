@@ -63,6 +63,12 @@ enum class PlaylistFixError(override val code: String) : DomainError {
   ;
 }
 
+enum class SingularityError(override val code: String) : DomainError {
+  CHALLENGER_NOT_FOUND("SINGULARITY-001"),
+  PLAYLISTS_NOT_CONFIGURED("SINGULARITY-002"),
+  ;
+}
+
 data class SpotifyRateLimitError(val retryAfter: kotlin.time.Duration) : DomainError {
   override val code: String = "SPOTIFY-429"
 }

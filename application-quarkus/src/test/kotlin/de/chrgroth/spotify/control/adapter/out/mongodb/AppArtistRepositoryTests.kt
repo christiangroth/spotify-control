@@ -3,6 +3,7 @@ package de.chrgroth.spotify.control.adapter.out.mongodb
 import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistSyncStatus
+import de.chrgroth.spotify.control.domain.model.catalog.TrackId
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
 import io.quarkus.test.junit.QuarkusTest
 import jakarta.inject.Inject
@@ -375,5 +376,22 @@ class AppArtistRepositoryTests {
     assertThat(result).hasSize(1)
     assertThat(result[0].singularityCurrentTrackAddedAt).isEqualTo(addedAt)
     assertThat(result[0].singularityReviewedUntil).isEqualTo(addedAt)
+  }
+
+  @Test
+  fun `updateSingularityCurrentTrack sets trackId and addedAt without touching reviewedUntil`() {
+    val item = artist("singularity-current-track")
+    appArtistRepository.upsertAll(listOf(item))
+    val initialAddedAt = kotlin.time.Instant.fromEpochSeconds(600)
+    appArtistRepository.initializeSingularityTracking(item.id, initialAddedAt)
+
+    val newAddedAt = kotlin.time.Instant.fromEpochSeconds(1200)
+    appArtistRepository.updateSingularityCurrentTrack(item.id, TrackId("track-1"), newAddedAt)
+
+    val result = appArtistRepository.findByArtistIds(setOf(item.id))
+    assertThat(result).hasSize(1)
+    assertThat(result[0].singularityCurrentTrackId).isEqualTo(TrackId("track-1"))
+    assertThat(result[0].singularityCurrentTrackAddedAt).isEqualTo(newAddedAt)
+    assertThat(result[0].singularityReviewedUntil).isEqualTo(initialAddedAt)
   }
 }

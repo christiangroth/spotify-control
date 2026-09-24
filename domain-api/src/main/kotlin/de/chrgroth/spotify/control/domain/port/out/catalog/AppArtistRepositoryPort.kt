@@ -3,6 +3,7 @@ package de.chrgroth.spotify.control.domain.port.out.catalog
 import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistSyncStatus
+import de.chrgroth.spotify.control.domain.model.catalog.TrackId
 import kotlin.time.Instant
 
 interface AppArtistRepositoryPort {
@@ -20,5 +21,6 @@ interface AppArtistRepositoryPort {
   fun setFollowed(artistId: ArtistId, followed: Boolean, followedSince: Instant?)
   fun touchFollowedSync(artistIds: Set<ArtistId>, syncedAt: Instant)
   fun initializeSingularityTracking(artistId: ArtistId, addedAt: Instant)
+  fun updateSingularityCurrentTrack(artistId: ArtistId, trackId: TrackId, addedAt: Instant)
   fun deleteAll()
 }

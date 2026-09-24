@@ -16,6 +16,7 @@ import de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackAggregation
 import de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackPort
 import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistCheckPort
 import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistPort
+import de.chrgroth.spotify.control.domain.port.`in`.playlist.SingularityPort
 import de.chrgroth.spotify.control.domain.port.`in`.user.UserProfilePort
 import jakarta.enterprise.context.ApplicationScoped
 import mu.KLogging
@@ -33,6 +34,7 @@ class DomainOutboxTaskDispatcher(
   private val userProfile: UserProfilePort,
   private val dashboard: DashboardPort,
   private val followSuggestions: FollowSuggestionsPort,
+  private val singularity: SingularityPort,
 ) : ApplicationOutboxDispatcher {
 
   override fun getAllPartitions(): List<ApplicationOutboxPartition> = DomainOutboxPartition.all
@@ -68,6 +70,9 @@ class DomainOutboxTaskDispatcher(
         is DomainOutboxEvent.RebuildPlaylistSettingsView -> playlist.handle(event)
         is DomainOutboxEvent.RebuildDashboardReadModel -> dashboard.handle(event)
         is DomainOutboxEvent.RebuildFollowSuggestions -> followSuggestions.handle(event)
+        is DomainOutboxEvent.AcceptSingularityChallenger -> singularity.handle(event)
+        is DomainOutboxEvent.DiscardSingularityChallenger -> singularity.handle(event)
+        is DomainOutboxEvent.ReconcileSingularityTracking -> singularity.handle(event)
       }
     }
 

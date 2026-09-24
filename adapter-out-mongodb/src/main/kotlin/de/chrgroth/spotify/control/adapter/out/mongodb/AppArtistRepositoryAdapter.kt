@@ -9,6 +9,7 @@ import com.mongodb.client.model.Updates
 import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistSyncStatus
+import de.chrgroth.spotify.control.domain.model.catalog.TrackId
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
 import jakarta.enterprise.context.ApplicationScoped
 import java.util.regex.Pattern
@@ -43,6 +44,7 @@ class AppArtistRepositoryAdapter(
             Updates.setOnInsert(LAST_FOLLOW_SYNC_FIELD, item.lastFollowSync?.toJavaInstant()),
             Updates.setOnInsert(SINGULARITY_CURRENT_TRACK_ADDED_AT_FIELD, item.singularityCurrentTrackAddedAt?.toJavaInstant()),
             Updates.setOnInsert(SINGULARITY_REVIEWED_UNTIL_FIELD, item.singularityReviewedUntil?.toJavaInstant()),
+            Updates.setOnInsert(SINGULARITY_CURRENT_TRACK_ID_FIELD, item.singularityCurrentTrackId?.value),
           ),
           upsertOptions,
         )
@@ -177,6 +179,19 @@ class AppArtistRepositoryAdapter(
     }
   }
 
+  override fun updateSingularityCurrentTrack(artistId: ArtistId, trackId: TrackId, addedAt: Instant) {
+    mongoQueryMetrics.timed("app_artist.updateSingularityCurrentTrack") {
+      appArtistDocumentRepository.mongoCollection()
+        .updateOne(
+          Filters.eq(ID_FIELD, artistId.value),
+          Updates.combine(
+            Updates.set(SINGULARITY_CURRENT_TRACK_ADDED_AT_FIELD, addedAt.toJavaInstant()),
+            Updates.set(SINGULARITY_CURRENT_TRACK_ID_FIELD, trackId.value),
+          ),
+        )
+    }
+  }
+
   override fun deleteAll() {
     mongoQueryMetrics.timed("app_artist.deleteAll") {
       appArtistDocumentRepository.deleteAll()
@@ -195,6 +210,7 @@ class AppArtistRepositoryAdapter(
     lastFollowSync = lastFollowSync?.toKotlinInstant(),
     singularityCurrentTrackAddedAt = singularityCurrentTrackAddedAt?.toKotlinInstant(),
     singularityReviewedUntil = singularityReviewedUntil?.toKotlinInstant(),
+    singularityCurrentTrackId = singularityCurrentTrackId?.let { TrackId(it) },
   )
 
   companion object {
@@ -209,5 +225,6 @@ class AppArtistRepositoryAdapter(
     internal const val LAST_FOLLOW_SYNC_FIELD = "lastFollowSync"
     internal const val SINGULARITY_CURRENT_TRACK_ADDED_AT_FIELD = "singularityCurrentTrackAddedAt"
     internal const val SINGULARITY_REVIEWED_UNTIL_FIELD = "singularityReviewedUntil"
+    internal const val SINGULARITY_CURRENT_TRACK_ID_FIELD = "singularityCurrentTrackId"
   }
 }
