@@ -192,6 +192,16 @@ class AppArtistRepositoryAdapter(
     }
   }
 
+  override fun advanceSingularityReviewedUntil(artistId: ArtistId, reviewedUntil: Instant) {
+    mongoQueryMetrics.timed("app_artist.advanceSingularityReviewedUntil") {
+      appArtistDocumentRepository.mongoCollection()
+        .updateOne(
+          Filters.eq(ID_FIELD, artistId.value),
+          Updates.max(SINGULARITY_REVIEWED_UNTIL_FIELD, reviewedUntil.toJavaInstant()),
+        )
+    }
+  }
+
   override fun deleteAll() {
     mongoQueryMetrics.timed("app_artist.deleteAll") {
       appArtistDocumentRepository.deleteAll()

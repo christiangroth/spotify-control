@@ -73,6 +73,7 @@ class DomainOutboxTaskDispatcher(
         is DomainOutboxEvent.AcceptSingularityChallenger -> singularity.handle(event)
         is DomainOutboxEvent.DiscardSingularityChallenger -> singularity.handle(event)
         is DomainOutboxEvent.ReconcileSingularityTracking -> singularity.handle(event)
+        is DomainOutboxEvent.DetectSingularityChallenger -> singularity.handle(event)
       }
     }
 

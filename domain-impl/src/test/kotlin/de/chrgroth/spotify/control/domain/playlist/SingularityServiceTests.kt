@@ -1,10 +1,14 @@
 package de.chrgroth.spotify.control.domain.playlist
 
 import arrow.core.right
+import de.chrgroth.spotify.control.domain.catalog.release.ReleaseClassifier
 import de.chrgroth.spotify.control.domain.error.SingularityError
+import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
+import de.chrgroth.spotify.control.domain.model.catalog.AppAlbum
 import de.chrgroth.spotify.control.domain.model.catalog.AppArtist
 import de.chrgroth.spotify.control.domain.model.catalog.AppTrack
 import de.chrgroth.spotify.control.domain.model.catalog.ArtistId
+import de.chrgroth.spotify.control.domain.model.catalog.ArtistSyncStatus
 import de.chrgroth.spotify.control.domain.model.catalog.TrackId
 import de.chrgroth.spotify.control.domain.model.playlist.Playlist
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistInfo
@@ -14,6 +18,7 @@ import de.chrgroth.spotify.control.domain.model.playlist.PlaylistType
 import de.chrgroth.spotify.control.domain.model.user.AccessToken
 import de.chrgroth.spotify.control.domain.model.user.UserId
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
+import de.chrgroth.spotify.control.domain.port.out.catalog.AppAlbumRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppArtistRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.catalog.AppTrackRepositoryPort
 import de.chrgroth.spotify.control.domain.port.out.infra.OutboxPort
@@ -36,6 +41,7 @@ class SingularityServiceTests {
   private val currentUserResolver: CurrentUserResolver = mockk()
   private val playlistRepository: PlaylistRepositoryPort = mockk()
   private val appTrackRepository: AppTrackRepositoryPort = mockk()
+  private val appAlbumRepository: AppAlbumRepositoryPort = mockk()
   private val appArtistRepository: AppArtistRepositoryPort = mockk()
   private val spotifyPlaylist: SpotifyPlaylistPort = mockk()
   private val spotifyAccessToken: SpotifyAccessTokenPort = mockk()
@@ -45,6 +51,7 @@ class SingularityServiceTests {
     currentUserResolver,
     playlistRepository,
     appTrackRepository,
+    appAlbumRepository,
     appArtistRepository,
     spotifyPlaylist,
     spotifyAccessToken,
@@ -85,12 +92,24 @@ class SingularityServiceTests {
     name: String,
     currentTrackId: TrackId? = null,
     currentTrackAddedAt: Instant? = null,
+    syncStatus: ArtistSyncStatus = ArtistSyncStatus.SYNC,
+    reviewedUntil: Instant? = null,
   ) = AppArtist(
     id = id,
     artistName = name,
     lastSync = Instant.fromEpochMilliseconds(0),
+    syncStatus = syncStatus,
     singularityCurrentTrackId = currentTrackId,
     singularityCurrentTrackAddedAt = currentTrackAddedAt,
+    singularityReviewedUntil = reviewedUntil,
+  )
+
+  private fun buildAppAlbum(albumId: String, title: String, artistId: String, releaseDate: String?) = AppAlbum(
+    id = AlbumId(albumId),
+    title = title,
+    artistId = ArtistId(artistId),
+    releaseDate = releaseDate,
+    lastSync = Instant.fromEpochMilliseconds(0),
   )
 
   private fun mockPlaylists(endTracks: List<PlaylistTrack>, stagingTracks: List<PlaylistTrack>) {
@@ -310,5 +329,130 @@ class SingularityServiceTests {
 
     assertThat(result.isRight()).isTrue()
     verify(exactly = 0) { appArtistRepository.updateSingularityCurrentTrack(any(), any(), any()) }
+  }
+
+  @Test
+  fun `handle DetectSingularityChallenger is a no-op for an unknown album`() {
+    every { currentUserResolver.userId() } returns userId
+    every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"))) } returns emptyList()
+
+    val result = service.handle(DomainOutboxEvent.DetectSingularityChallenger("album-1"))
+
+    assertThat(result.isRight()).isTrue()
+    verify(exactly = 0) { spotifyPlaylist.addPlaylistTracks(any(), any(), any()) }
+  }
+
+  @Test
+  fun `handle DetectSingularityChallenger is a no-op when the artist is not fully synced`() {
+    every { currentUserResolver.userId() } returns userId
+    every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"))) } returns
+      listOf(buildAppAlbum("album-1", "New Album", "artist-1", "2024-06-01"))
+    every { appArtistRepository.findByArtistIds(setOf(artistId)) } returns listOf(
+      buildAppArtist(artistId, "Artist One", currentTrackId = TrackId("current-1"), syncStatus = ArtistSyncStatus.SHALLOW),
+    )
+
+    val result = service.handle(DomainOutboxEvent.DetectSingularityChallenger("album-1"))
+
+    assertThat(result.isRight()).isTrue()
+    verify(exactly = 0) { spotifyPlaylist.addPlaylistTracks(any(), any(), any()) }
+  }
+
+  @Test
+  fun `handle DetectSingularityChallenger is a no-op when the artist has no current track on End of the Road`() {
+    every { currentUserResolver.userId() } returns userId
+    every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"))) } returns
+      listOf(buildAppAlbum("album-1", "New Album", "artist-1", "2024-06-01"))
+    every { appArtistRepository.findByArtistIds(setOf(artistId)) } returns listOf(
+      buildAppArtist(artistId, "Artist One", currentTrackId = null),
+    )
+
+    val result = service.handle(DomainOutboxEvent.DetectSingularityChallenger("album-1"))
+
+    assertThat(result.isRight()).isTrue()
+    verify(exactly = 0) { spotifyPlaylist.addPlaylistTracks(any(), any(), any()) }
+  }
+
+  @Test
+  fun `handle DetectSingularityChallenger is a no-op when the release is not after the reviewed watermark`() {
+    every { currentUserResolver.userId() } returns userId
+    every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-1"))) } returns
+      listOf(buildAppAlbum("album-1", "Old Album", "artist-1", "2020-01-01"))
+    every { appArtistRepository.findByArtistIds(setOf(artistId)) } returns listOf(
+      buildAppArtist(artistId, "Artist One", currentTrackId = TrackId("current-1"), reviewedUntil = Instant.fromEpochSeconds(2000000000)),
+    )
+
+    val result = service.handle(DomainOutboxEvent.DetectSingularityChallenger("album-1"))
+
+    assertThat(result.isRight()).isTrue()
+    verify(exactly = 0) { spotifyPlaylist.addPlaylistTracks(any(), any(), any()) }
+  }
+
+  @Test
+  fun `handle DetectSingularityChallenger is a no-op for a reissue of an already known album`() {
+    every { currentUserResolver.userId() } returns userId
+    val newAlbum = buildAppAlbum("album-2", "Greatest Hits (Deluxe Edition)", "artist-1", "2024-06-01")
+    every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-2"))) } returns listOf(newAlbum)
+    every { appArtistRepository.findByArtistIds(setOf(artistId)) } returns listOf(
+      buildAppArtist(artistId, "Artist One", currentTrackId = TrackId("current-1"), reviewedUntil = Instant.fromEpochSeconds(0)),
+    )
+    every { appAlbumRepository.findByArtistId(artistId) } returns listOf(
+      newAlbum,
+      buildAppAlbum("album-1", "Greatest Hits", "artist-1", "2019-01-01"),
+    )
+
+    val result = service.handle(DomainOutboxEvent.DetectSingularityChallenger("album-2"))
+
+    assertThat(result.isRight()).isTrue()
+    verify(exactly = 0) { spotifyPlaylist.addPlaylistTracks(any(), any(), any()) }
+  }
+
+  @Test
+  fun `handle DetectSingularityChallenger stages the artist's own tracks and advances the reviewed watermark`() {
+    every { currentUserResolver.userId() } returns userId
+    val newAlbum = buildAppAlbum("album-2", "New Album", "artist-1", "2024-06-01")
+    every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-2"))) } returns listOf(newAlbum)
+    every { appArtistRepository.findByArtistIds(setOf(artistId)) } returns listOf(
+      buildAppArtist(artistId, "Artist One", currentTrackId = TrackId("current-1"), reviewedUntil = Instant.fromEpochSeconds(0)),
+    )
+    every { appAlbumRepository.findByArtistId(artistId) } returns listOf(newAlbum)
+    every { appTrackRepository.findByAlbumId(AlbumId("album-2")) } returns listOf(
+      buildAppTrack("new-track-1", "New Song", "artist-1", "Artist One"),
+      buildAppTrack("guest-track-1", "Feature by someone else", "artist-2", "Someone Else"),
+    )
+    every { playlistRepository.findAll() } returns listOf(
+      buildPlaylistInfo(endPlaylistId, PlaylistType.SINGULARITY),
+      buildPlaylistInfo(stagingPlaylistId, PlaylistType.SINGULARITY_STAGING),
+    )
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
+    every { spotifyPlaylist.addPlaylistTracks(accessToken, stagingPlaylistId, listOf("new-track-1")) } returns Unit.right()
+    every { appArtistRepository.advanceSingularityReviewedUntil(any(), any()) } just runs
+    every { outboxPort.enqueue(any()) } just runs
+
+    val result = service.handle(DomainOutboxEvent.DetectSingularityChallenger("album-2"))
+
+    assertThat(result.isRight()).isTrue()
+    val expectedReleaseInstant = ReleaseClassifier.parseReleaseDate("2024-06-01")
+    verify { appArtistRepository.advanceSingularityReviewedUntil(artistId, expectedReleaseInstant!!) }
+    verify { outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(stagingPlaylistId)) }
+  }
+
+  @Test
+  fun `handle DetectSingularityChallenger returns error when the staging playlist is not configured`() {
+    every { currentUserResolver.userId() } returns userId
+    val newAlbum = buildAppAlbum("album-2", "New Album", "artist-1", "2024-06-01")
+    every { appAlbumRepository.findByAlbumIds(setOf(AlbumId("album-2"))) } returns listOf(newAlbum)
+    every { appArtistRepository.findByArtistIds(setOf(artistId)) } returns listOf(
+      buildAppArtist(artistId, "Artist One", currentTrackId = TrackId("current-1"), reviewedUntil = Instant.fromEpochSeconds(0)),
+    )
+    every { appAlbumRepository.findByArtistId(artistId) } returns listOf(newAlbum)
+    every { appTrackRepository.findByAlbumId(AlbumId("album-2")) } returns listOf(
+      buildAppTrack("new-track-1", "New Song", "artist-1", "Artist One"),
+    )
+    every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo(endPlaylistId, PlaylistType.SINGULARITY))
+
+    val result = service.handle(DomainOutboxEvent.DetectSingularityChallenger("album-2"))
+
+    assertThat(result.isLeft()).isTrue()
+    result.mapLeft { assertThat(it).isEqualTo(SingularityError.PLAYLISTS_NOT_CONFIGURED) }
   }
 }

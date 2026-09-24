@@ -231,6 +231,7 @@ class CatalogService(
           }
           dashboardRefresh.notifyCatalogData()
           outboxPort.enqueue(DomainOutboxEvent.RebuildDashboardReadModel())
+          outboxPort.enqueue(DomainOutboxEvent.DetectSingularityChallenger(albumId))
         }
         logger.info { "Synced album '${albumResult.album.title ?: albumId}' ($albumId): ${albumResult.tracks.size} track(s)" }
         1.right()
