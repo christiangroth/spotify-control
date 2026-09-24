@@ -847,6 +847,41 @@ class PlaylistServiceTests {
     assertThat(savedSlot.captured.find { it.spotifyPlaylistId == "p1" }!!.type).isEqualTo(PlaylistType.ALL)
   }
 
+  @Test
+  fun `updateSyncStatus sets type SINGULARITY_STAGING when activating playlist named Start of the Road`() {
+    every { currentUserResolver.userId() } returns userId
+    every { playlistRepository.findAll() } returns listOf(
+      buildPlaylistInfo("p1", syncStatus = PlaylistSyncStatus.PASSIVE, name = PlaylistType.SINGULARITY_STAGING_PLAYLIST_NAME),
+    )
+    every { playlistRepository.replaceAll(any()) } just runs
+    every { outboxPort.enqueue(any()) } just runs
+    every { dashboardRefresh.notifyUserPlaylistMetadata() } just runs
+
+    val result = adapter.updateSyncStatus("p1", PlaylistSyncStatus.ACTIVE)
+
+    assertThat(result.isRight()).isTrue()
+    val savedSlot = slot<List<PlaylistInfo>>()
+    verify { playlistRepository.replaceAll(capture(savedSlot)) }
+    assertThat(savedSlot.captured.find { it.spotifyPlaylistId == "p1" }!!.type).isEqualTo(PlaylistType.SINGULARITY_STAGING)
+  }
+
+  // --- updatePlaylistType tests ---
+
+  @Test
+  fun `updatePlaylistType rejects second active playlist with type SINGULARITY_STAGING`() {
+    every { currentUserResolver.userId() } returns userId
+    every { playlistRepository.findAll() } returns listOf(
+      buildPlaylistInfo("p1", name = "Start of the Road").copy(type = PlaylistType.SINGULARITY_STAGING),
+      buildPlaylistInfo("p2", name = "Another Playlist"),
+    )
+
+    val result = adapter.updatePlaylistType("p2", PlaylistType.SINGULARITY_STAGING)
+
+    assertThat(result.isLeft()).isTrue()
+    assertThat(result.leftOrNull()).isEqualTo(PlaylistSyncError.PLAYLIST_TYPE_CONFLICT)
+    verify(exactly = 0) { playlistRepository.replaceAll(any()) }
+  }
+
   // --- enqueueSyncPlaylistData tests ---
 
   @Test

@@ -58,6 +58,7 @@ class SingleArtistTrackCheckRunnerTests {
     assertThat(runner.isApplicable(buildPlaylistInfo(PlaylistType.SINGULARITY))).isTrue()
     assertThat(runner.isApplicable(buildPlaylistInfo(PlaylistType.ALL))).isFalse()
     assertThat(runner.isApplicable(buildPlaylistInfo(PlaylistType.YEAR))).isFalse()
+    assertThat(runner.isApplicable(buildPlaylistInfo(PlaylistType.SINGULARITY_STAGING))).isFalse()
     assertThat(runner.isApplicable(buildPlaylistInfo(PlaylistType.UNKNOWN))).isFalse()
   }
 

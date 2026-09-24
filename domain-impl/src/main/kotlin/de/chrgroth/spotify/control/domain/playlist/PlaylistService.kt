@@ -288,6 +288,7 @@ class PlaylistService(
           it.name.equals("all", ignoreCase = true) -> PlaylistType.ALL
           it.name.matches(YEAR_NAME_REGEX) -> PlaylistType.YEAR
           it.name.equals(PlaylistType.SINGULARITY_PLAYLIST_NAME, ignoreCase = true) -> PlaylistType.SINGULARITY
+          it.name.equals(PlaylistType.SINGULARITY_STAGING_PLAYLIST_NAME, ignoreCase = true) -> PlaylistType.SINGULARITY_STAGING
           else -> PlaylistType.UNKNOWN
         }
         it.copy(syncStatus = syncStatus, type = newType)
@@ -335,6 +336,8 @@ class PlaylistService(
       type == PlaylistType.ALL && playlists.any { it.type == PlaylistType.ALL && it.spotifyPlaylistId != playlistId } ->
         PlaylistSyncError.PLAYLIST_TYPE_CONFLICT
       type == PlaylistType.SINGULARITY && playlists.any { it.type == PlaylistType.SINGULARITY && it.spotifyPlaylistId != playlistId } ->
+        PlaylistSyncError.PLAYLIST_TYPE_CONFLICT
+      type == PlaylistType.SINGULARITY_STAGING && playlists.any { it.type == PlaylistType.SINGULARITY_STAGING && it.spotifyPlaylistId != playlistId } ->
         PlaylistSyncError.PLAYLIST_TYPE_CONFLICT
       else -> null
     }
