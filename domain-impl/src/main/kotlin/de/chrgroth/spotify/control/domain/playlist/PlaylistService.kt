@@ -270,6 +270,7 @@ class PlaylistService(
         logger.info { "Completed all pages for playlist $playlistId" }
         playlistRepository.updateLastSyncTime(playlistId, Clock.System.now())
         outboxPort.enqueue(DomainOutboxEvent.RunPlaylistChecks(playlistId))
+        outboxPort.enqueue(DomainOutboxEvent.ReconcileSingularityTracking(playlistId))
         outboxPort.enqueue(DomainOutboxEvent.RebuildPlaylistSettingsView())
       }
     }

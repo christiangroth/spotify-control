@@ -1,0 +1,66 @@
+{#include layout.html}
+    {#title}{msg:commonAppName()} – {singularity:challengersTitle()}{/title}
+    {#content}
+    <div class="app-page-container py-4 px-3 px-md-4">
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="fs-4 fw-semibold mb-0">{singularity:challengersTitle()}</h1>
+        </div>
+        <div id="status-banner" class="alert d-none mb-3" role="alert"></div>
+
+        {#if groups.empty}
+        <p class="text-secondary">{singularity:challengersEmptyState()}</p>
+        {#else}
+        {#for group in groups}
+        <div class="mb-4">
+            <h2 class="fs-5 fw-semibold mb-2" style="color:#ccc;">{group.artistName}</h2>
+            <p class="mb-2" style="color:#888;font-size:.82rem;">{singularity:challengersCurrentTrackLabel()}: {group.currentTrack.title}</p>
+            <ul class="list-unstyled mb-0" data-testid="challenger-list-{group.artistId}">
+                {#for challenger in group.challengers}
+                <li class="d-flex align-items-center justify-content-between gap-2 mb-2 p-2 app-card" data-testid="challenger-row-{challenger.trackId}">
+                    <span style="color:var(--color-text-primary);font-size:.9rem;">{challenger.title}</span>
+                    <span class="d-flex gap-2">
+                        <button type="button" class="btn btn-spotify btn-sm challenger-accept-btn"
+                            data-artist-id="{group.artistId}" data-track-id="{challenger.trackId}"
+                            aria-label="{singularity:challengersAcceptAriaLabel(challenger.title, group.artistName)}">
+                            {singularity:challengersAcceptButton()}
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm challenger-discard-btn"
+                            data-artist-id="{group.artistId}" data-track-id="{challenger.trackId}"
+                            aria-label="{singularity:challengersDiscardAriaLabel(challenger.title, group.artistName)}">
+                            {singularity:challengersDiscardButton()}
+                        </button>
+                    </span>
+                </li>
+                {/for}
+            </ul>
+        </div>
+        {/for}
+        {/if}
+    </div>
+    <script src="/settings-utils.js"></script>
+    <script>
+        function challengerActionUrl(action, artistId, trackId) {
+            return '/playlists/challengers/' + encodeURIComponent(artistId) + '/' + action + '/' + encodeURIComponent(trackId);
+        }
+
+        document.querySelectorAll('.challenger-accept-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                const url = challengerActionUrl('accept', this.getAttribute('data-artist-id'), this.getAttribute('data-track-id'));
+                postWithButton(this, url, '{singularity:challengersAcceptSuccess()}', '{singularity:challengersAcceptErrorPrefix()}', function() {
+                    setTimeout(function() { location.reload(); }, 1000);
+                });
+            });
+        });
+
+        document.querySelectorAll('.challenger-discard-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                const url = challengerActionUrl('discard', this.getAttribute('data-artist-id'), this.getAttribute('data-track-id'));
+                postWithButton(this, url, '{singularity:challengersDiscardSuccess()}', '{singularity:challengersDiscardErrorPrefix()}', function() {
+                    setTimeout(function() { location.reload(); }, 1000);
+                });
+            });
+        });
+    </script>
+    {/content}
+{/include}

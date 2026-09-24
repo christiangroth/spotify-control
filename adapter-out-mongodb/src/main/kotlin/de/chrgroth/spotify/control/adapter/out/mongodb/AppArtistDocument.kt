@@ -20,4 +20,5 @@ class AppArtistDocument {
   var lastFollowSync: Instant? = null
   var singularityCurrentTrackAddedAt: Instant? = null
   var singularityReviewedUntil: Instant? = null
+  var singularityCurrentTrackId: String? = null
 }

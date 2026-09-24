@@ -453,6 +453,66 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
     }
   }
 
+  /**
+   * Accepts an open singularity challenger: replaces the artist's current track on "End of the Road" with
+   * [trackId], removes [trackId] from "Start of the Road", and sets AppArtist.singularityCurrentTrackAddedAt
+   * to now. payload = "$artistId\n$trackId"
+   */
+  data class AcceptSingularityChallenger(val artistId: String, val trackId: String) : DomainOutboxEvent {
+    override val key = KEY
+    override val deduplicationKey = "$KEY:$artistId:$trackId"
+    override val partition = DomainOutboxPartition.ToSpotifyPlaylist
+    override val serializePayload = "$artistId\n$trackId"
+
+    companion object {
+      const val KEY = "AcceptSingularityChallenger"
+      fun fromPayload(payload: String): AcceptSingularityChallenger {
+        val newlineIndex = payload.indexOf('\n')
+        return AcceptSingularityChallenger(payload.substring(0, newlineIndex), payload.substring(newlineIndex + 1))
+      }
+    }
+  }
+
+  /**
+   * Discards an open singularity challenger: removes [trackId] from "Start of the Road" only.
+   * payload = "$artistId\n$trackId"
+   */
+  data class DiscardSingularityChallenger(val artistId: String, val trackId: String) : DomainOutboxEvent {
+    override val key = KEY
+    override val deduplicationKey = "$KEY:$artistId:$trackId"
+    override val partition = DomainOutboxPartition.ToSpotifyPlaylist
+    override val serializePayload = "$artistId\n$trackId"
+
+    companion object {
+      const val KEY = "DiscardSingularityChallenger"
+      fun fromPayload(payload: String): DiscardSingularityChallenger {
+        val newlineIndex = payload.indexOf('\n')
+        return DiscardSingularityChallenger(payload.substring(0, newlineIndex), payload.substring(newlineIndex + 1))
+      }
+    }
+  }
+
+  /**
+   * Enqueued after every playlist sync completes (see PlaylistService.syncPlaylistData); a no-op unless
+   * [playlistId] is the "End of the Road" or "Start of the Road" playlist. Detects a full manual swap done
+   * directly in Spotify (artist track on "End of the Road" replaced by a track that is no longer staged on
+   * "Start of the Road") and reconciles AppArtist.singularityCurrentTrackAddedAt/singularityCurrentTrackId
+   * accordingly, equivalent to what accepting the challenger through the app would have done.
+   * payload = playlistId
+   */
+  data class ReconcileSingularityTracking(val playlistId: String) : DomainOutboxEvent {
+    override val key = KEY
+    override val deduplicationKey = "$KEY:$playlistId"
+    override val partition = DomainOutboxPartition.Domain
+    override val groupId = playlistId
+    override val serializePayload = playlistId
+
+    companion object {
+      const val KEY = "ReconcileSingularityTracking"
+      fun fromPayload(payload: String): ReconcileSingularityTracking = ReconcileSingularityTracking(payload)
+    }
+  }
+
   companion object {
     val allKeys: List<String> = listOf(
       FetchPlaybackData.KEY,
@@ -477,6 +537,9 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
       RebuildPlaylistSettingsView.KEY,
       RebuildDashboardReadModel.KEY,
       RebuildFollowSuggestions.KEY,
+      AcceptSingularityChallenger.KEY,
+      DiscardSingularityChallenger.KEY,
+      ReconcileSingularityTracking.KEY,
     )
 
     @Suppress("CyclomaticComplexMethod")
@@ -503,6 +566,9 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
       RebuildPlaylistSettingsView.KEY -> RebuildPlaylistSettingsView()
       RebuildDashboardReadModel.KEY -> RebuildDashboardReadModel()
       RebuildFollowSuggestions.KEY -> RebuildFollowSuggestions()
+      AcceptSingularityChallenger.KEY -> AcceptSingularityChallenger.fromPayload(payload)
+      DiscardSingularityChallenger.KEY -> DiscardSingularityChallenger.fromPayload(payload)
+      ReconcileSingularityTracking.KEY -> ReconcileSingularityTracking.fromPayload(payload)
       else -> throw IllegalArgumentException("Unknown outbox event type: $key")
     }
   }

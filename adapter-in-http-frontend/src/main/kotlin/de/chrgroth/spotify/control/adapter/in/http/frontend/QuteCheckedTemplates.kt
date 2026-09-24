@@ -12,6 +12,7 @@ import de.chrgroth.spotify.control.domain.model.infra.ConfigurationStats
 import de.chrgroth.spotify.control.domain.model.infra.HealthStats
 import de.chrgroth.spotify.control.domain.model.infra.OutboxViewerPartition
 import de.chrgroth.spotify.control.domain.model.playback.PlaybackEventViewerResult
+import de.chrgroth.spotify.control.domain.model.playlist.SingularityChallengerGroup
 import de.chrgroth.spotify.control.domain.model.user.RuntimeConfig
 import de.chrgroth.spotify.control.domain.model.viewer.MongoViewerResult
 import io.quarkus.qute.CheckedTemplate
@@ -122,6 +123,9 @@ object Templates {
 
   @JvmStatic
   external fun `playlist-checks`(displayName: String, groups: List<PlaylistChecksResource.PlaylistCheckGroup>): TemplateInstance
+
+  @JvmStatic
+  external fun `singularity-challengers`(displayName: String, groups: List<SingularityChallengerGroup>): TemplateInstance
 
   @JvmStatic
   external fun `release-notes`(groups: List<ReleaseNotesGroupView>): TemplateInstance
