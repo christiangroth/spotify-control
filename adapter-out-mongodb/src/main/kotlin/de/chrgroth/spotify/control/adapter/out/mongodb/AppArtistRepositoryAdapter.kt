@@ -42,6 +42,7 @@ class AppArtistRepositoryAdapter(
             Updates.setOnInsert(FOLLOWED_FIELD, item.followed),
             Updates.setOnInsert(FOLLOWED_SINCE_FIELD, item.followedSince?.toJavaInstant()),
             Updates.setOnInsert(LAST_FOLLOW_SYNC_FIELD, item.lastFollowSync?.toJavaInstant()),
+            Updates.setOnInsert(SINGULARITY_INCLUDED_FIELD, item.singularityIncluded),
             Updates.setOnInsert(SINGULARITY_CURRENT_TRACK_ADDED_AT_FIELD, item.singularityCurrentTrackAddedAt?.toJavaInstant()),
             Updates.setOnInsert(SINGULARITY_REVIEWED_UNTIL_FIELD, item.singularityReviewedUntil?.toJavaInstant()),
             Updates.setOnInsert(SINGULARITY_CURRENT_TRACK_ID_FIELD, item.singularityCurrentTrackId?.value),
@@ -166,6 +167,15 @@ class AppArtistRepositoryAdapter(
     }
   }
 
+  override fun initializeSingularityIncluded(includedArtistIds: Set<ArtistId>) {
+    mongoQueryMetrics.timed("app_artist.initializeSingularityIncluded") {
+      val collection = appArtistDocumentRepository.mongoCollection()
+      val includedIds = includedArtistIds.map { it.value }
+      collection.updateMany(Filters.`in`(ID_FIELD, includedIds), Updates.set(SINGULARITY_INCLUDED_FIELD, true))
+      collection.updateMany(Filters.nin(ID_FIELD, includedIds), Updates.set(SINGULARITY_INCLUDED_FIELD, false))
+    }
+  }
+
   override fun initializeSingularityTracking(artistId: ArtistId, addedAt: Instant) {
     mongoQueryMetrics.timed("app_artist.initializeSingularityTracking") {
       appArtistDocumentRepository.mongoCollection()
@@ -218,6 +228,7 @@ class AppArtistRepositoryAdapter(
     followed = followed,
     followedSince = followedSince?.toKotlinInstant(),
     lastFollowSync = lastFollowSync?.toKotlinInstant(),
+    singularityIncluded = singularityIncluded,
     singularityCurrentTrackAddedAt = singularityCurrentTrackAddedAt?.toKotlinInstant(),
     singularityReviewedUntil = singularityReviewedUntil?.toKotlinInstant(),
     singularityCurrentTrackId = singularityCurrentTrackId?.let { TrackId(it) },
@@ -233,6 +244,7 @@ class AppArtistRepositoryAdapter(
     internal const val FOLLOWED_FIELD = "followed"
     internal const val FOLLOWED_SINCE_FIELD = "followedSince"
     internal const val LAST_FOLLOW_SYNC_FIELD = "lastFollowSync"
+    internal const val SINGULARITY_INCLUDED_FIELD = "singularityIncluded"
     internal const val SINGULARITY_CURRENT_TRACK_ADDED_AT_FIELD = "singularityCurrentTrackAddedAt"
     internal const val SINGULARITY_REVIEWED_UNTIL_FIELD = "singularityReviewedUntil"
     internal const val SINGULARITY_CURRENT_TRACK_ID_FIELD = "singularityCurrentTrackId"
