@@ -353,6 +353,55 @@ class AppArtistRepositoryTests {
   }
 
   @Test
+  fun `upsertAll defaults singularityIncluded to false for new artists`() {
+    val item = artist("singularity-included-default")
+    appArtistRepository.upsertAll(listOf(item))
+
+    val result = appArtistRepository.findByArtistIds(setOf(item.id))
+
+    assertThat(result).hasSize(1)
+    assertThat(result[0].singularityIncluded).isFalse()
+  }
+
+  @Test
+  fun `new artist inserted via upsertAll keeps its given singularityIncluded status`() {
+    val item = artist("singularity-included-given").copy(singularityIncluded = true)
+    appArtistRepository.upsertAll(listOf(item))
+
+    val result = appArtistRepository.findByArtistIds(setOf(item.id))
+
+    assertThat(result).hasSize(1)
+    assertThat(result[0].singularityIncluded).isTrue()
+  }
+
+  @Test
+  fun `upsertAll does not reset singularityIncluded`() {
+    val item = artist("singularity-included-preserve").copy(singularityIncluded = true)
+    appArtistRepository.upsertAll(listOf(item))
+
+    val updated = item.copy(artistName = "Updated Name", singularityIncluded = false)
+    appArtistRepository.upsertAll(listOf(updated))
+
+    val result = appArtistRepository.findByArtistIds(setOf(item.id))
+    assertThat(result).hasSize(1)
+    assertThat(result[0].artistName).isEqualTo("Updated Name")
+    assertThat(result[0].singularityIncluded).isTrue()
+  }
+
+  @Test
+  fun `initializeSingularityIncluded marks given artists as included and all others as not included`() {
+    val included = artist("singularity-included-init-included")
+    val notIncluded = artist("singularity-included-init-not-included").copy(singularityIncluded = true)
+    appArtistRepository.upsertAll(listOf(included, notIncluded))
+
+    appArtistRepository.initializeSingularityIncluded(setOf(included.id))
+
+    val result = appArtistRepository.findByArtistIds(setOf(included.id, notIncluded.id))
+    assertThat(result.first { it.id == included.id }.singularityIncluded).isTrue()
+    assertThat(result.first { it.id == notIncluded.id }.singularityIncluded).isFalse()
+  }
+
+  @Test
   fun `upsertAll defaults singularity tracking fields to null for new artists`() {
     val item = artist("singularity-default")
     appArtistRepository.upsertAll(listOf(item))

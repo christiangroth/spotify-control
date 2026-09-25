@@ -18,6 +18,7 @@ class AppArtistDocument {
   var followed: Boolean = false
   var followedSince: Instant? = null
   var lastFollowSync: Instant? = null
+  var singularityIncluded: Boolean = false
   var singularityCurrentTrackAddedAt: Instant? = null
   var singularityReviewedUntil: Instant? = null
   var singularityCurrentTrackId: String? = null
