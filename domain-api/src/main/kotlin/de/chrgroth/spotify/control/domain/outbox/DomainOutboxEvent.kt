@@ -493,6 +493,28 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
   }
 
   /**
+   * Enqueued after an album's tracks are synced (see CatalogService.syncAlbumDetails); a no-op unless the
+   * album's main artist is fully synced ([de.chrgroth.spotify.control.domain.model.catalog.ArtistSyncStatus.SYNC])
+   * and already has a current track on "End of the Road". Stages the artist's own track(s) from the album on
+   * "Start of the Road" as challengers when the album's release date is after the artist's
+   * singularityReviewedUntil watermark and the album does not classify as a reissue (see
+   * [de.chrgroth.spotify.control.domain.catalog.release.ReleaseClassifier], shared with issue #824). Advances
+   * singularityReviewedUntil to the release date once staged, so the same release is not staged again.
+   * payload = albumId
+   */
+  data class DetectSingularityChallenger(val albumId: String) : DomainOutboxEvent {
+    override val key = KEY
+    override val deduplicationKey = "$KEY:$albumId"
+    override val partition = DomainOutboxPartition.ToSpotifyPlaylist
+    override val serializePayload = albumId
+
+    companion object {
+      const val KEY = "DetectSingularityChallenger"
+      fun fromPayload(payload: String): DetectSingularityChallenger = DetectSingularityChallenger(payload)
+    }
+  }
+
+  /**
    * Enqueued after every playlist sync completes (see PlaylistService.syncPlaylistData); a no-op unless
    * [playlistId] is the "End of the Road" or "Start of the Road" playlist. Detects a full manual swap done
    * directly in Spotify (artist track on "End of the Road" replaced by a track that is no longer staged on
@@ -540,6 +562,7 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
       AcceptSingularityChallenger.KEY,
       DiscardSingularityChallenger.KEY,
       ReconcileSingularityTracking.KEY,
+      DetectSingularityChallenger.KEY,
     )
 
     @Suppress("CyclomaticComplexMethod")
@@ -569,6 +592,7 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
       AcceptSingularityChallenger.KEY -> AcceptSingularityChallenger.fromPayload(payload)
       DiscardSingularityChallenger.KEY -> DiscardSingularityChallenger.fromPayload(payload)
       ReconcileSingularityTracking.KEY -> ReconcileSingularityTracking.fromPayload(payload)
+      DetectSingularityChallenger.KEY -> DetectSingularityChallenger.fromPayload(payload)
       else -> throw IllegalArgumentException("Unknown outbox event type: $key")
     }
   }

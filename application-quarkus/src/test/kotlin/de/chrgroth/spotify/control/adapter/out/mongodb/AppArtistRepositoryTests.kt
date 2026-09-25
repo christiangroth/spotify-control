@@ -394,4 +394,34 @@ class AppArtistRepositoryTests {
     assertThat(result[0].singularityCurrentTrackAddedAt).isEqualTo(newAddedAt)
     assertThat(result[0].singularityReviewedUntil).isEqualTo(initialAddedAt)
   }
+
+  @Test
+  fun `advanceSingularityReviewedUntil moves the watermark forward`() {
+    val item = artist("singularity-advance")
+    appArtistRepository.upsertAll(listOf(item))
+    val initialAddedAt = kotlin.time.Instant.fromEpochSeconds(600)
+    appArtistRepository.initializeSingularityTracking(item.id, initialAddedAt)
+
+    val laterReleaseDate = kotlin.time.Instant.fromEpochSeconds(1200)
+    appArtistRepository.advanceSingularityReviewedUntil(item.id, laterReleaseDate)
+
+    val result = appArtistRepository.findByArtistIds(setOf(item.id))
+    assertThat(result).hasSize(1)
+    assertThat(result[0].singularityReviewedUntil).isEqualTo(laterReleaseDate)
+  }
+
+  @Test
+  fun `advanceSingularityReviewedUntil never moves the watermark backward`() {
+    val item = artist("singularity-advance-no-regress")
+    appArtistRepository.upsertAll(listOf(item))
+    val initialAddedAt = kotlin.time.Instant.fromEpochSeconds(1200)
+    appArtistRepository.initializeSingularityTracking(item.id, initialAddedAt)
+
+    val earlierReleaseDate = kotlin.time.Instant.fromEpochSeconds(600)
+    appArtistRepository.advanceSingularityReviewedUntil(item.id, earlierReleaseDate)
+
+    val result = appArtistRepository.findByArtistIds(setOf(item.id))
+    assertThat(result).hasSize(1)
+    assertThat(result[0].singularityReviewedUntil).isEqualTo(initialAddedAt)
+  }
 }

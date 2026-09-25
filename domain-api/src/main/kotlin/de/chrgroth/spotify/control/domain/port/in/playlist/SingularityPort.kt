@@ -12,4 +12,5 @@ interface SingularityPort {
   fun handle(event: DomainOutboxEvent.AcceptSingularityChallenger): Either<DomainError, Unit>
   fun handle(event: DomainOutboxEvent.DiscardSingularityChallenger): Either<DomainError, Unit>
   fun handle(event: DomainOutboxEvent.ReconcileSingularityTracking): Either<DomainError, Unit>
+  fun handle(event: DomainOutboxEvent.DetectSingularityChallenger): Either<DomainError, Unit>
 }

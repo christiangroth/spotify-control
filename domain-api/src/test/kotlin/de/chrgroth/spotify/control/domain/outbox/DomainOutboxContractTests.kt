@@ -47,6 +47,7 @@ class DomainOutboxContractTests {
     DomainOutboxEvent.AcceptSingularityChallenger("artist-1", "track-1"),
     DomainOutboxEvent.DiscardSingularityChallenger("artist-1", "track-1"),
     DomainOutboxEvent.ReconcileSingularityTracking("playlist-1"),
+    DomainOutboxEvent.DetectSingularityChallenger("album-1"),
   )
 
   @Test
