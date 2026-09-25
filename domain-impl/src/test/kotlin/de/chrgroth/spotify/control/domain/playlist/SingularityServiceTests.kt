@@ -2,6 +2,7 @@ package de.chrgroth.spotify.control.domain.playlist
 
 import arrow.core.right
 import de.chrgroth.spotify.control.domain.catalog.release.ReleaseClassifier
+import de.chrgroth.spotify.control.domain.error.ArtistSettingsError
 import de.chrgroth.spotify.control.domain.error.SingularityError
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
 import de.chrgroth.spotify.control.domain.model.catalog.AppAlbum
@@ -329,6 +330,44 @@ class SingularityServiceTests {
 
     assertThat(result.isRight()).isTrue()
     verify(exactly = 0) { appArtistRepository.updateSingularityCurrentTrack(any(), any(), any()) }
+  }
+
+  @Test
+  fun `getArtistsForReview returns all artists sorted by name with their singularityIncluded status`() {
+    every { appArtistRepository.findAll() } returns listOf(
+      buildAppArtist(ArtistId("artist-2"), "Zeta").copy(singularityIncluded = false),
+      buildAppArtist(ArtistId("artist-1"), "Alpha").copy(singularityIncluded = true, imageLink = "img"),
+    )
+
+    val result = service.getArtistsForReview()
+
+    assertThat(result.map { it.artistId }).containsExactly("artist-1", "artist-2")
+    assertThat(result[0].artistName).isEqualTo("Alpha")
+    assertThat(result[0].singularityIncluded).isTrue()
+    assertThat(result[0].imageLink).isEqualTo("img")
+    assertThat(result[1].singularityIncluded).isFalse()
+  }
+
+  @Test
+  fun `setArtistIncluded returns error when artist is not found`() {
+    every { appArtistRepository.findByArtistIds(setOf(artistId)) } returns emptyList()
+
+    val result = service.setArtistIncluded("artist-1", true)
+
+    assertThat(result.isLeft()).isTrue()
+    result.mapLeft { assertThat(it).isEqualTo(ArtistSettingsError.ARTIST_NOT_FOUND) }
+    verify(exactly = 0) { appArtistRepository.setSingularityIncluded(any(), any()) }
+  }
+
+  @Test
+  fun `setArtistIncluded persists the new singularityIncluded status`() {
+    every { appArtistRepository.findByArtistIds(setOf(artistId)) } returns listOf(buildAppArtist(artistId, "Artist One"))
+    every { appArtistRepository.setSingularityIncluded(artistId, true) } just runs
+
+    val result = service.setArtistIncluded("artist-1", true)
+
+    assertThat(result.isRight()).isTrue()
+    verify { appArtistRepository.setSingularityIncluded(artistId, true) }
   }
 
   @Test

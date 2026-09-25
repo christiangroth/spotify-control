@@ -1,4 +1,4 @@
-function postWithButton(btn, url, successMsg, errorPrefix, onSuccess) {
+function postWithButton(btn, url, successMsg, errorPrefix, onSuccess, onError) {
     btn.disabled = true;
     fetch(url, { method: 'POST' })
     .then(function(response) {
@@ -13,11 +13,13 @@ function postWithButton(btn, url, successMsg, errorPrefix, onSuccess) {
         } else {
             var unknownError = (typeof SPCTL_I18N !== 'undefined' && SPCTL_I18N.unknownError) || 'Unknown error';
             showBanner(errorPrefix + ': ' + (result.data.error || unknownError), 'danger');
+            if (onError) onError();
         }
     })
     .catch(function(err) {
         var requestFailed = (typeof SPCTL_I18N !== 'undefined' && SPCTL_I18N.requestFailed) || 'Request failed';
         showBanner(requestFailed + ': ' + err.message, 'danger');
+        if (onError) onError();
     })
     .finally(function() {
         btn.disabled = false;

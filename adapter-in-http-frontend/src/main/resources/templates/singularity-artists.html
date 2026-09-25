@@ -1,0 +1,70 @@
+{#include layout.html}
+    {#title}{msg:commonAppName()} – {singularity:singularityArtistsTitle()}{/title}
+    {#scripts}<script src="/settings-utils.js"></script>{/scripts}
+    {#content}
+    <div class="app-page-container py-4 px-3 px-md-4">
+        <div class="d-flex align-items-center mb-2 gap-3">
+            <h1 class="fs-4 fw-semibold mb-0">{singularity:singularityArtistsTitle()}</h1>
+            <a href="/playlists/challengers" class="btn btn-outline-secondary btn-sm">{singularity:singularityArtistsBackToChallengersButton()}</a>
+        </div>
+        <p class="text-secondary small mb-4">
+            {singularity:singularityArtistsDescription()}
+        </p>
+
+        <div id="status-banner" class="alert d-none mb-3" role="alert"></div>
+
+        {#if artists.empty}
+        <p class="text-secondary">{singularity:singularityArtistsEmptyState()}</p>
+        {#else}
+        <table class="table table-dark table-hover align-middle mb-0">
+            <thead>
+                <tr class="app-section-label" style="font-size:.8rem;">
+                    <th style="width:50px;"></th>
+                    <th>{singularity:singularityArtistsArtistHeader()}</th>
+                    <th>{singularity:singularityArtistsIncludedLabel()}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {#for artist in artists}
+                <tr id="singularity-artist-row-{artist.artistId}">
+                    <td style="padding:8px;">
+                        {#if artist.imageLink}
+                        <img src="{artist.imageLink}" alt="{artist.artistName}" width="40" height="40"
+                             style="border-radius:50%;object-fit:cover;">
+                        {#else}
+                        <div style="width:40px;height:40px;border-radius:50%;background:#333;display:flex;align-items:center;justify-content:center;" aria-label="{singularity:singularityArtistsImagePlaceholderAriaLabel()}" role="img">
+                            <i class="bi bi-person-circle" style="font-size:20px;color:#888;"></i>
+                        </div>
+                        {/if}
+                    </td>
+                    <td style="color:#fff;font-size:.9rem;">{artist.artistName}</td>
+                    <td>
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input singularity-included-toggle" type="checkbox" role="switch"
+                                data-artist-id="{artist.artistId}"
+                                aria-label="{singularity:singularityArtistsToggleAriaLabel(artist.artistName)}"
+                                {#if artist.singularityIncluded}checked{/if}>
+                        </div>
+                    </td>
+                </tr>
+                {/for}
+            </tbody>
+        </table>
+        {/if}
+    </div>
+
+    <script>
+        document.querySelector('.app-page-container').addEventListener('change', function(e) {
+            const toggle = e.target.closest('.singularity-included-toggle');
+            if (!toggle) return;
+            const artistId = toggle.dataset.artistId;
+            const included = toggle.checked;
+            const action = included ? 'include' : 'exclude';
+            const successMsg = included ? '{singularity:singularityArtistsIncludedSuccess()}' : '{singularity:singularityArtistsExcludedSuccess()}';
+            postWithButton(toggle, '/playlists/singularity-artists/' + encodeURIComponent(artistId) + '/' + action, successMsg, '{singularity:singularityArtistsErrorPrefix()}', null, function() {
+                toggle.checked = !included;
+            });
+        });
+    </script>
+    {/content}
+{/include}

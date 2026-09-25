@@ -176,6 +176,13 @@ class AppArtistRepositoryAdapter(
     }
   }
 
+  override fun setSingularityIncluded(artistId: ArtistId, included: Boolean) {
+    mongoQueryMetrics.timed("app_artist.setSingularityIncluded") {
+      appArtistDocumentRepository.mongoCollection()
+        .updateOne(Filters.eq(ID_FIELD, artistId.value), Updates.set(SINGULARITY_INCLUDED_FIELD, included))
+    }
+  }
+
   override fun initializeSingularityTracking(artistId: ArtistId, addedAt: Instant) {
     mongoQueryMetrics.timed("app_artist.initializeSingularityTracking") {
       appArtistDocumentRepository.mongoCollection()
