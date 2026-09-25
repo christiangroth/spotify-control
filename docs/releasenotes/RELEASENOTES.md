@@ -1,3 +1,12 @@
+# 0.133.3 (2026.09.25)
+
+## Bugfixes / Chore
+* Der stündliche Playlist-Sync setzt bei einer leeren Antwort von Spotify nicht mehr alle Playlists auf inaktiv zurück.
+
+
+
+---
+
 # 0.133.2 (2026.09.25)
 
 ## Bugfixes / Chore
