@@ -389,6 +389,31 @@ class AppArtistRepositoryTests {
   }
 
   @Test
+  fun `setSingularityIncluded updates the flag for the given artist only`() {
+    val included = artist("singularity-included-set-true")
+    val other = artist("singularity-included-set-other")
+    appArtistRepository.upsertAll(listOf(included, other))
+
+    appArtistRepository.setSingularityIncluded(included.id, true)
+
+    val result = appArtistRepository.findByArtistIds(setOf(included.id, other.id))
+    assertThat(result.first { it.id == included.id }.singularityIncluded).isTrue()
+    assertThat(result.first { it.id == other.id }.singularityIncluded).isFalse()
+  }
+
+  @Test
+  fun `setSingularityIncluded can unset a previously included artist`() {
+    val item = artist("singularity-included-set-false").copy(singularityIncluded = true)
+    appArtistRepository.upsertAll(listOf(item))
+
+    appArtistRepository.setSingularityIncluded(item.id, false)
+
+    val result = appArtistRepository.findByArtistIds(setOf(item.id))
+    assertThat(result).hasSize(1)
+    assertThat(result[0].singularityIncluded).isFalse()
+  }
+
+  @Test
   fun `initializeSingularityIncluded marks given artists as included and all others as not included`() {
     val included = artist("singularity-included-init-included")
     val notIncluded = artist("singularity-included-init-not-included").copy(singularityIncluded = true)

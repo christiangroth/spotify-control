@@ -5,6 +5,7 @@ import arrow.core.flatMap
 import arrow.core.left
 import arrow.core.right
 import de.chrgroth.spotify.control.domain.catalog.release.ReleaseClassifier
+import de.chrgroth.spotify.control.domain.error.ArtistSettingsError
 import de.chrgroth.spotify.control.domain.error.DomainError
 import de.chrgroth.spotify.control.domain.error.SingularityError
 import de.chrgroth.spotify.control.domain.model.catalog.AlbumId
@@ -15,6 +16,7 @@ import de.chrgroth.spotify.control.domain.model.catalog.TrackId
 import de.chrgroth.spotify.control.domain.model.playlist.Playlist
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistInfo
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistType
+import de.chrgroth.spotify.control.domain.model.playlist.SingularityArtistReview
 import de.chrgroth.spotify.control.domain.model.playlist.SingularityChallengerGroup
 import de.chrgroth.spotify.control.domain.model.playlist.SingularityTrackInfo
 import de.chrgroth.spotify.control.domain.outbox.DomainOutboxEvent
@@ -194,6 +196,26 @@ class SingularityService(
       logger.info { "Staged new release '${album.title ?: albumId.value}' (${albumId.value}) by '${artist.artistName}' (${artistId.value}) as challenger(s) on '${PlaylistType.SINGULARITY_STAGING_PLAYLIST_NAME}'" }
       outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(stagingInfo.spotifyPlaylistId))
     }
+  }
+
+  override fun getArtistsForReview(): List<SingularityArtistReview> =
+    appArtistRepository.findAll()
+      .sortedBy { it.artistName.lowercase() }
+      .map {
+        SingularityArtistReview(
+          artistId = it.id.value,
+          artistName = it.artistName,
+          imageLink = it.imageLink,
+          singularityIncluded = it.singularityIncluded,
+        )
+      }
+
+  override fun setArtistIncluded(artistId: String, included: Boolean): Either<DomainError, Unit> {
+    val id = ArtistId(artistId)
+    val artist = appArtistRepository.findByArtistIds(setOf(id)).firstOrNull() ?: return ArtistSettingsError.ARTIST_NOT_FOUND.left()
+    appArtistRepository.setSingularityIncluded(id, included)
+    logger.info { "Set singularityIncluded=$included for artist '${artist.artistName}' (${id.value})" }
+    return Unit.right()
   }
 
   private fun isOpenChallenger(artistId: ArtistId, trackId: TrackId): Boolean {

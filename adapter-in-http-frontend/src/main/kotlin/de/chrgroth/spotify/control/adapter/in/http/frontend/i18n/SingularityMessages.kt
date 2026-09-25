@@ -42,4 +42,46 @@ interface SingularityMessages {
 
   @Message
   fun challengersDiscardErrorPrefix(): String
+
+  @Message
+  fun challengersReviewArtistsButton(): String
+
+  @Message
+  fun singularityArtistsTitle(): String
+
+  @Message
+  fun singularityArtistsDescription(): String
+
+  @Message
+  fun singularityArtistsBackToChallengersButton(): String
+
+  @Message
+  fun singularityArtistsEmptyState(): String
+
+  @Message
+  fun singularityArtistsArtistHeader(): String
+
+  @Message
+  fun singularityArtistsImagePlaceholderAriaLabel(): String
+
+  @Message
+  fun singularityArtistsIncludedLabel(): String
+
+  @Message("Toggle \"End of the Road\" inclusion for {artistName}")
+  fun singularityArtistsToggleAriaLabel(artistName: String): String
+
+  @Message
+  fun singularityArtistsIncludedSuccess(): String
+
+  @Message
+  fun singularityArtistsExcludedSuccess(): String
+
+  @Message
+  fun singularityArtistsErrorPrefix(): String
+
+  @Message("Artist {artistId} not found")
+  fun singularityArtistsErrorArtistNotFound(artistId: String): String
+
+  @Message("Update failed ({errorCode})")
+  fun singularityArtistsErrorUpdateFailed(errorCode: String): String
 }

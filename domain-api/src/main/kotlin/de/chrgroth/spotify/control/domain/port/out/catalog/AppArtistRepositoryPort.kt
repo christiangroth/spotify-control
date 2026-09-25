@@ -21,6 +21,7 @@ interface AppArtistRepositoryPort {
   fun setFollowed(artistId: ArtistId, followed: Boolean, followedSince: Instant?)
   fun touchFollowedSync(artistIds: Set<ArtistId>, syncedAt: Instant)
   fun initializeSingularityIncluded(includedArtistIds: Set<ArtistId>)
+  fun setSingularityIncluded(artistId: ArtistId, included: Boolean)
   fun initializeSingularityTracking(artistId: ArtistId, addedAt: Instant)
   fun updateSingularityCurrentTrack(artistId: ArtistId, trackId: TrackId, addedAt: Instant)
   fun advanceSingularityReviewedUntil(artistId: ArtistId, reviewedUntil: Instant)
