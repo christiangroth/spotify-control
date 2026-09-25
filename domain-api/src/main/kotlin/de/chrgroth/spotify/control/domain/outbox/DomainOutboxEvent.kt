@@ -454,6 +454,23 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
   }
 
   /**
+   * Rebuilds the precomputed Singularity Suggestions read model (see ADR-0014). Deduplicated so that bursts of
+   * triggers from its unrelated source services (weekly playback aggregation, manual singularityIncluded changes)
+   * collapse into one rebuild.
+   */
+  data class RebuildSingularitySuggestions(val placeholder: String = "") : DomainOutboxEvent {
+    override val key = KEY
+    override val deduplicationKey = KEY
+    override val partition = DomainOutboxPartition.Domain
+    override val groupId = KEY
+    override val serializePayload = ""
+
+    companion object {
+      const val KEY = "RebuildSingularitySuggestions"
+    }
+  }
+
+  /**
    * Accepts an open singularity challenger: replaces the artist's current track on "End of the Road" with
    * [trackId], removes [trackId] from "Start of the Road", and sets AppArtist.singularityCurrentTrackAddedAt
    * to now. payload = "$artistId\n$trackId"
@@ -559,6 +576,7 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
       RebuildPlaylistSettingsView.KEY,
       RebuildDashboardReadModel.KEY,
       RebuildFollowSuggestions.KEY,
+      RebuildSingularitySuggestions.KEY,
       AcceptSingularityChallenger.KEY,
       DiscardSingularityChallenger.KEY,
       ReconcileSingularityTracking.KEY,
@@ -589,6 +607,7 @@ sealed interface DomainOutboxEvent : ApplicationOutboxEvent {
       RebuildPlaylistSettingsView.KEY -> RebuildPlaylistSettingsView()
       RebuildDashboardReadModel.KEY -> RebuildDashboardReadModel()
       RebuildFollowSuggestions.KEY -> RebuildFollowSuggestions()
+      RebuildSingularitySuggestions.KEY -> RebuildSingularitySuggestions()
       AcceptSingularityChallenger.KEY -> AcceptSingularityChallenger.fromPayload(payload)
       DiscardSingularityChallenger.KEY -> DiscardSingularityChallenger.fromPayload(payload)
       ReconcileSingularityTracking.KEY -> ReconcileSingularityTracking.fromPayload(payload)

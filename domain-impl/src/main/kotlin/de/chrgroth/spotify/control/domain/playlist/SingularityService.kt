@@ -215,6 +215,7 @@ class SingularityService(
     val artist = appArtistRepository.findByArtistIds(setOf(id)).firstOrNull() ?: return ArtistSettingsError.ARTIST_NOT_FOUND.left()
     appArtistRepository.setSingularityIncluded(id, included)
     logger.info { "Set singularityIncluded=$included for artist '${artist.artistName}' (${id.value})" }
+    outboxPort.enqueue(DomainOutboxEvent.RebuildSingularitySuggestions())
     return Unit.right()
   }
 
