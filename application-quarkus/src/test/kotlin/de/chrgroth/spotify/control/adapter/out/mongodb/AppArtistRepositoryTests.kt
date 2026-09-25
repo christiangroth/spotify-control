@@ -427,6 +427,55 @@ class AppArtistRepositoryTests {
   }
 
   @Test
+  fun `upsertAll defaults singularityReviewPending to false for new artists`() {
+    val item = artist("singularity-review-pending-default")
+    appArtistRepository.upsertAll(listOf(item))
+
+    val result = appArtistRepository.findByArtistIds(setOf(item.id))
+
+    assertThat(result).hasSize(1)
+    assertThat(result[0].singularityReviewPending).isFalse()
+  }
+
+  @Test
+  fun `new artist inserted via upsertAll keeps its given singularityReviewPending status`() {
+    val item = artist("singularity-review-pending-given").copy(singularityReviewPending = true)
+    appArtistRepository.upsertAll(listOf(item))
+
+    val result = appArtistRepository.findByArtistIds(setOf(item.id))
+
+    assertThat(result).hasSize(1)
+    assertThat(result[0].singularityReviewPending).isTrue()
+  }
+
+  @Test
+  fun `upsertAll does not reset singularityReviewPending`() {
+    val item = artist("singularity-review-pending-preserve").copy(singularityReviewPending = true)
+    appArtistRepository.upsertAll(listOf(item))
+
+    val updated = item.copy(artistName = "Updated Name", singularityReviewPending = false)
+    appArtistRepository.upsertAll(listOf(updated))
+
+    val result = appArtistRepository.findByArtistIds(setOf(item.id))
+    assertThat(result).hasSize(1)
+    assertThat(result[0].artistName).isEqualTo("Updated Name")
+    assertThat(result[0].singularityReviewPending).isTrue()
+  }
+
+  @Test
+  fun `setSingularityIncluded clears singularityReviewPending for the given artist only`() {
+    val pending = artist("singularity-review-pending-clear").copy(singularityReviewPending = true)
+    val otherPending = artist("singularity-review-pending-other").copy(singularityReviewPending = true)
+    appArtistRepository.upsertAll(listOf(pending, otherPending))
+
+    appArtistRepository.setSingularityIncluded(pending.id, false)
+
+    val result = appArtistRepository.findByArtistIds(setOf(pending.id, otherPending.id))
+    assertThat(result.first { it.id == pending.id }.singularityReviewPending).isFalse()
+    assertThat(result.first { it.id == otherPending.id }.singularityReviewPending).isTrue()
+  }
+
+  @Test
   fun `upsertAll defaults singularity tracking fields to null for new artists`() {
     val item = artist("singularity-default")
     appArtistRepository.upsertAll(listOf(item))

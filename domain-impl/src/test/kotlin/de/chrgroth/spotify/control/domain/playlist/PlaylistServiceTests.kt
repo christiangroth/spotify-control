@@ -1029,8 +1029,16 @@ class PlaylistServiceTests {
       MissingArtist(id = "artist-2", name = "Artist 2"),
       MissingArtist(id = "artist-3", name = "Artist 3"),
     )
-    verify { appArtistRepository.upsertAll(listOf(AppArtist(id = ArtistId("artist-2"), artistName = "Artist 2", lastSync = now, syncStatus = ArtistSyncStatus.SYNC))) }
-    verify { appArtistRepository.upsertAll(listOf(AppArtist(id = ArtistId("artist-3"), artistName = "Artist 3", lastSync = now, syncStatus = ArtistSyncStatus.SYNC))) }
+    verify {
+      appArtistRepository.upsertAll(
+        listOf(AppArtist(id = ArtistId("artist-2"), artistName = "Artist 2", lastSync = now, syncStatus = ArtistSyncStatus.SYNC, singularityReviewPending = true)),
+      )
+    }
+    verify {
+      appArtistRepository.upsertAll(
+        listOf(AppArtist(id = ArtistId("artist-3"), artistName = "Artist 3", lastSync = now, syncStatus = ArtistSyncStatus.SYNC, singularityReviewPending = true)),
+      )
+    }
     verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums("artist-2")) }
     verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums("artist-3")) }
   }
@@ -1054,7 +1062,7 @@ class PlaylistServiceTests {
 
     verify {
       appArtistRepository.upsertAll(
-        listOf(AppArtist(id = ArtistId("artist-1"), artistName = "Artist 1", lastSync = now, syncStatus = ArtistSyncStatus.SHALLOW_ASSUMPTION)),
+        listOf(AppArtist(id = ArtistId("artist-1"), artistName = "Artist 1", lastSync = now, syncStatus = ArtistSyncStatus.SHALLOW_ASSUMPTION, singularityReviewPending = true)),
       )
     }
     verify(exactly = 0) { outboxPort.enqueue(any<DomainOutboxEvent.SyncArtistAlbums>()) }

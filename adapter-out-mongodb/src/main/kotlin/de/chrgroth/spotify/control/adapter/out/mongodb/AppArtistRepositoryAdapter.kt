@@ -43,6 +43,7 @@ class AppArtistRepositoryAdapter(
             Updates.setOnInsert(FOLLOWED_SINCE_FIELD, item.followedSince?.toJavaInstant()),
             Updates.setOnInsert(LAST_FOLLOW_SYNC_FIELD, item.lastFollowSync?.toJavaInstant()),
             Updates.setOnInsert(SINGULARITY_INCLUDED_FIELD, item.singularityIncluded),
+            Updates.setOnInsert(SINGULARITY_REVIEW_PENDING_FIELD, item.singularityReviewPending),
             Updates.setOnInsert(SINGULARITY_CURRENT_TRACK_ADDED_AT_FIELD, item.singularityCurrentTrackAddedAt?.toJavaInstant()),
             Updates.setOnInsert(SINGULARITY_REVIEWED_UNTIL_FIELD, item.singularityReviewedUntil?.toJavaInstant()),
             Updates.setOnInsert(SINGULARITY_CURRENT_TRACK_ID_FIELD, item.singularityCurrentTrackId?.value),
@@ -179,7 +180,13 @@ class AppArtistRepositoryAdapter(
   override fun setSingularityIncluded(artistId: ArtistId, included: Boolean) {
     mongoQueryMetrics.timed("app_artist.setSingularityIncluded") {
       appArtistDocumentRepository.mongoCollection()
-        .updateOne(Filters.eq(ID_FIELD, artistId.value), Updates.set(SINGULARITY_INCLUDED_FIELD, included))
+        .updateOne(
+          Filters.eq(ID_FIELD, artistId.value),
+          Updates.combine(
+            Updates.set(SINGULARITY_INCLUDED_FIELD, included),
+            Updates.set(SINGULARITY_REVIEW_PENDING_FIELD, false),
+          ),
+        )
     }
   }
 
@@ -236,6 +243,7 @@ class AppArtistRepositoryAdapter(
     followedSince = followedSince?.toKotlinInstant(),
     lastFollowSync = lastFollowSync?.toKotlinInstant(),
     singularityIncluded = singularityIncluded,
+    singularityReviewPending = singularityReviewPending,
     singularityCurrentTrackAddedAt = singularityCurrentTrackAddedAt?.toKotlinInstant(),
     singularityReviewedUntil = singularityReviewedUntil?.toKotlinInstant(),
     singularityCurrentTrackId = singularityCurrentTrackId?.let { TrackId(it) },
@@ -252,6 +260,7 @@ class AppArtistRepositoryAdapter(
     internal const val FOLLOWED_SINCE_FIELD = "followedSince"
     internal const val LAST_FOLLOW_SYNC_FIELD = "lastFollowSync"
     internal const val SINGULARITY_INCLUDED_FIELD = "singularityIncluded"
+    internal const val SINGULARITY_REVIEW_PENDING_FIELD = "singularityReviewPending"
     internal const val SINGULARITY_CURRENT_TRACK_ADDED_AT_FIELD = "singularityCurrentTrackAddedAt"
     internal const val SINGULARITY_REVIEWED_UNTIL_FIELD = "singularityReviewedUntil"
     internal const val SINGULARITY_CURRENT_TRACK_ID_FIELD = "singularityCurrentTrackId"
