@@ -1,3 +1,12 @@
+# 0.133.1 (2026.09.25)
+
+## Bugfixes / Chore
+* Fixed an error when opening the "End of the Road" artist review page.
+
+
+
+---
+
 # 0.133.0 (2026.09.25)
 
 ## New Features
