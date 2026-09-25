@@ -27,4 +27,5 @@ interface CatalogPort {
   fun enqueueArtistAlbumsSync(partition: Int, totalPartitions: Int)
   fun enqueuePlaybackArtistsForSync()
   fun promoteAssumptionArtistsFoundOnPlaylist(artistIds: Set<String>)
+  fun promoteArtistsFoundOnStagingPlaylist(artistIds: Set<String>)
 }

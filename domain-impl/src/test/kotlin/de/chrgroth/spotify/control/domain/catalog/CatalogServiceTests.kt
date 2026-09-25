@@ -256,6 +256,48 @@ class CatalogServiceTests {
     verify(exactly = 0) { playbackAggregation.rebuildAllAggregations() }
   }
 
+  // --- promoteArtistsFoundOnStagingPlaylist tests ---
+
+  @Test
+  fun `promoteArtistsFoundOnStagingPlaylist does nothing for empty artist set`() {
+    adapter.promoteArtistsFoundOnStagingPlaylist(emptySet())
+
+    verify(exactly = 0) { appArtistRepository.findByArtistIds(any()) }
+    verify(exactly = 0) { appArtistRepository.setSyncStatus(any(), any()) }
+  }
+
+  @Test
+  fun `promoteArtistsFoundOnStagingPlaylist promotes shallow-status artists to SYNC_ASSUMPTION and rebuilds aggregations once`() {
+    val shallowArtist = artist1.copy(syncStatus = ArtistSyncStatus.SHALLOW)
+    val shallowAssumptionArtist = artist2.copy(syncStatus = ArtistSyncStatus.SHALLOW_ASSUMPTION)
+    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"), ArtistId("artist-2"))) } returns
+      listOf(shallowArtist, shallowAssumptionArtist)
+    every { appArtistRepository.setSyncStatus(any(), any()) } just runs
+    every { outboxPort.enqueue(any()) } just runs
+
+    adapter.promoteArtistsFoundOnStagingPlaylist(setOf("artist-1", "artist-2"))
+
+    verify { appArtistRepository.setSyncStatus(ArtistId("artist-1"), ArtistSyncStatus.SYNC_ASSUMPTION) }
+    verify { appArtistRepository.setSyncStatus(ArtistId("artist-2"), ArtistSyncStatus.SYNC_ASSUMPTION) }
+    verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums("artist-1")) }
+    verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums("artist-2")) }
+    verify(exactly = 1) { playbackAggregation.rebuildAllAggregations() }
+  }
+
+  @Test
+  fun `promoteArtistsFoundOnStagingPlaylist leaves already-syncable artists untouched`() {
+    val syncArtist = artist1.copy(syncStatus = ArtistSyncStatus.SYNC)
+    val syncAssumptionArtist = artist2.copy(syncStatus = ArtistSyncStatus.SYNC_ASSUMPTION)
+    every { appArtistRepository.findByArtistIds(setOf(ArtistId("artist-1"), ArtistId("artist-2"))) } returns
+      listOf(syncArtist, syncAssumptionArtist)
+
+    adapter.promoteArtistsFoundOnStagingPlaylist(setOf("artist-1", "artist-2"))
+
+    verify(exactly = 0) { appArtistRepository.setSyncStatus(any(), any()) }
+    verify(exactly = 0) { outboxPort.enqueue(any()) }
+    verify(exactly = 0) { playbackAggregation.rebuildAllAggregations() }
+  }
+
   // --- resyncArtist tests ---
 
   @Test
