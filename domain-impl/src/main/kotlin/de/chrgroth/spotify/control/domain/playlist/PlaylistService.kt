@@ -1,6 +1,7 @@
 package de.chrgroth.spotify.control.domain.playlist
 
 import arrow.core.Either
+import arrow.core.flatMap
 import arrow.core.getOrElse
 import arrow.core.left
 import arrow.core.right
@@ -205,7 +206,7 @@ class PlaylistService(
     if (playlistsResult is Either.Left && playlistsResult.value !is SpotifyRateLimitError) {
       syncNotification.notifySyncFailed(playlistsResult.value.code)
     }
-    return playlistsResult.map { spotifyPlaylists ->
+    return playlistsResult.flatMap { spotifyPlaylists ->
       val now = Clock.System.now()
       val existingById = playlistRepository.findAll().associateBy { it.spotifyPlaylistId }
       val updatedPlaylists = spotifyPlaylists.filter { it.ownerId == userId.value }.map { item ->
@@ -218,6 +219,14 @@ class PlaylistService(
           syncStatus = existing?.syncStatus ?: PlaylistSyncStatus.PASSIVE,
           type = existing?.type,
         )
+      }
+      // An empty own-playlist result while playlists are known is almost certainly a bogus Spotify response (empty page or
+      // missing owner data). Persisting it would delete all playlist metadata, and the next run would re-create every
+      // playlist as PASSIVE, silently losing all sync settings (see #955).
+      if (updatedPlaylists.isEmpty() && existingById.isNotEmpty()) {
+        logger.warn { "Spotify returned no own playlists (${spotifyPlaylists.size} total) while ${existingById.size} are known, skipping playlist sync" }
+        syncNotification.notifySyncFailed(PlaylistSyncError.PLAYLIST_FETCH_EMPTY.code)
+        return@flatMap PlaylistSyncError.PLAYLIST_FETCH_EMPTY.left()
       }
       playlistRepository.replaceAll(updatedPlaylists)
       if (updatedPlaylists.size != existingById.size) {
@@ -239,6 +248,7 @@ class PlaylistService(
         }
       outboxPort.enqueue(DomainOutboxEvent.RebuildPlaylistSettingsView())
       outboxPort.enqueue(DomainOutboxEvent.RebuildDashboardReadModel())
+      Unit.right()
     }
   }
 

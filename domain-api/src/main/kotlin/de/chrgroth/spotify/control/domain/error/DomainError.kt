@@ -47,6 +47,7 @@ enum class PlaylistSyncError(override val code: String) : DomainError {
   PLAYLIST_SYNC_INACTIVE("PLAYLIST-004"),
   PLAYLIST_NOT_ACTIVE("PLAYLIST-005"),
   PLAYLIST_TYPE_CONFLICT("PLAYLIST-006"),
+  PLAYLIST_FETCH_EMPTY("PLAYLIST-007"),
   ;
 }
 
