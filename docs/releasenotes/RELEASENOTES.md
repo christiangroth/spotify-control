@@ -1,3 +1,13 @@
+# 0.133.2 (2026.09.25)
+
+## Bugfixes / Chore
+* Sped up loading the "End of the Road" artist review page by only loading artist images as they scroll into view.
+* The "End of the Road" artist review page now only lists newly discovered artists still awaiting a one-time include/exclude decision, instead of the entire artist catalog. Deciding an artist removes it from the list for good.
+
+
+
+---
+
 # 0.133.1 (2026.09.25)
 
 ## Bugfixes / Chore

@@ -1,1 +1,0 @@
-* The "End of the Road" artist review page now only lists newly discovered artists still awaiting a one-time include/exclude decision, instead of the entire artist catalog. Deciding an artist removes it from the list for good.
