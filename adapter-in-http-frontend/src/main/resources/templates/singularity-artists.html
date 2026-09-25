@@ -14,6 +14,7 @@
 
         <div id="status-banner" class="alert d-none mb-3" role="alert"></div>
 
+        <div id="pending-artist-list">
         {#if artists.empty}
         <p class="text-secondary">{singularity:singularityArtistsEmptyState()}</p>
         {#else}
@@ -22,7 +23,7 @@
                 <tr class="app-section-label" style="font-size:.8rem;">
                     <th style="width:50px;"></th>
                     <th>{singularity:singularityArtistsArtistHeader()}</th>
-                    <th>{singularity:singularityArtistsIncludedLabel()}</th>
+                    <th>{singularity:singularityArtistsActionsHeader()}</th>
                 </tr>
             </thead>
             <tbody>
@@ -39,32 +40,42 @@
                         {/if}
                     </td>
                     <td style="color:#fff;font-size:.9rem;">{artist.artistName}</td>
-                    <td>
-                        <div class="form-check form-switch mb-0">
-                            <input class="form-check-input singularity-included-toggle" type="checkbox" role="switch"
-                                data-artist-id="{artist.artistId}"
-                                aria-label="{singularity:singularityArtistsToggleAriaLabel(artist.artistName)}"
-                                {#if artist.singularityIncluded}checked{/if}>
-                        </div>
+                    <td style="padding:8px;">
+                        <button class="btn btn-sm btn-outline-success py-0 px-2 confirm-include-artist-btn"
+                            data-artist-id="{artist.artistId}"
+                            aria-label="{singularity:singularityArtistsConfirmIncludeAriaLabel(artist.artistName)}">{singularity:singularityArtistsIncludeButton()}</button>
+                        <button class="btn btn-sm py-0 px-2 ms-1 confirm-exclude-artist-btn"
+                            style="border-color:var(--color-danger);color:var(--color-danger);"
+                            data-artist-id="{artist.artistId}"
+                            aria-label="{singularity:singularityArtistsConfirmExcludeAriaLabel(artist.artistName)}">{singularity:singularityArtistsExcludeButton()}</button>
                     </td>
                 </tr>
                 {/for}
             </tbody>
         </table>
         {/if}
+        </div>
     </div>
 
     <script>
-        document.querySelector('.app-page-container').addEventListener('change', function(e) {
-            const toggle = e.target.closest('.singularity-included-toggle');
-            if (!toggle) return;
-            const artistId = toggle.dataset.artistId;
-            const included = toggle.checked;
-            const action = included ? 'include' : 'exclude';
-            const successMsg = included ? '{singularity:singularityArtistsIncludedSuccess()}' : '{singularity:singularityArtistsExcludedSuccess()}';
-            postWithButton(toggle, '/playlists/singularity-artists/' + encodeURIComponent(artistId) + '/' + action, successMsg, '{singularity:singularityArtistsErrorPrefix()}', null, function() {
-                toggle.checked = !included;
-            });
+        document.querySelector('.app-page-container').addEventListener('click', function(e) {
+            const includeBtn = e.target.closest('.confirm-include-artist-btn');
+            if (includeBtn) {
+                const artistId = includeBtn.dataset.artistId;
+                postWithButton(includeBtn, '/playlists/singularity-artists/' + encodeURIComponent(artistId) + '/include', '{singularity:singularityArtistsIncludedSuccess()}', '{singularity:singularityArtistsErrorPrefix()}', function() {
+                    const row = document.getElementById('singularity-artist-row-' + artistId);
+                    if (row) row.remove();
+                });
+                return;
+            }
+            const excludeBtn = e.target.closest('.confirm-exclude-artist-btn');
+            if (excludeBtn) {
+                const artistId = excludeBtn.dataset.artistId;
+                postWithButton(excludeBtn, '/playlists/singularity-artists/' + encodeURIComponent(artistId) + '/exclude', '{singularity:singularityArtistsExcludedSuccess()}', '{singularity:singularityArtistsErrorPrefix()}', function() {
+                    const row = document.getElementById('singularity-artist-row-' + artistId);
+                    if (row) row.remove();
+                });
+            }
         });
     </script>
     {/content}

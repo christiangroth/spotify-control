@@ -65,13 +65,22 @@ interface SingularityMessages {
   fun singularityArtistsArtistHeader(): String
 
   @Message
+  fun singularityArtistsActionsHeader(): String
+
+  @Message
   fun singularityArtistsImagePlaceholderAriaLabel(): String
 
   @Message
-  fun singularityArtistsIncludedLabel(): String
+  fun singularityArtistsIncludeButton(): String
 
-  @Message("Toggle \"End of the Road\" inclusion for {artistName}")
-  fun singularityArtistsToggleAriaLabel(artistName: String): String
+  @Message
+  fun singularityArtistsExcludeButton(): String
+
+  @Message("Confirm {artistName} as included")
+  fun singularityArtistsConfirmIncludeAriaLabel(artistName: String): String
+
+  @Message("Confirm {artistName} as excluded")
+  fun singularityArtistsConfirmExcludeAriaLabel(artistName: String): String
 
   @Message
   fun singularityArtistsIncludedSuccess(): String

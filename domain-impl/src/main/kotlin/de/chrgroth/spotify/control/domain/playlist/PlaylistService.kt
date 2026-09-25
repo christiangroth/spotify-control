@@ -176,7 +176,7 @@ class PlaylistService(
 
   private fun storeNewlyResolvedArtist(artist: AppArtist, fromPlaylist: Boolean) {
     val discoveryStatus = if (fromPlaylist) ArtistSyncStatus.SYNC else ArtistSyncStatus.SHALLOW_ASSUMPTION
-    appArtistRepository.upsertAll(listOf(artist.copy(syncStatus = discoveryStatus)))
+    appArtistRepository.upsertAll(listOf(artist.copy(syncStatus = discoveryStatus, singularityReviewPending = true)))
     if (discoveryStatus == ArtistSyncStatus.SYNC) {
       logger.info { "Newly discovered artist '${artist.artistName}' (${artist.id.value}) found on synced playlist, set to ${ArtistSyncStatus.SYNC}" }
       outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums(artist.id.value))

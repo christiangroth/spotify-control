@@ -115,7 +115,7 @@ class CatalogService(
     return spotifyCatalog.getArtist(accessToken, artistId)
       .flatMap { detail ->
         if (detail != null) {
-          appArtistRepository.upsertAll(listOf(detail.copy(syncStatus = discoveryStatus)))
+          appArtistRepository.upsertAll(listOf(detail.copy(syncStatus = discoveryStatus, singularityReviewPending = true)))
           if (discoveryStatus == ArtistSyncStatus.SYNC) {
             logger.info { "Newly discovered artist '${detail.artistName}' ($artistId) found on synced playlist, set to ${ArtistSyncStatus.SYNC}" }
             outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums(artistId))

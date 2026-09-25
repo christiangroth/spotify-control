@@ -200,13 +200,13 @@ class SingularityService(
 
   override fun getArtistsForReview(): List<SingularityArtistReview> =
     appArtistRepository.findAll()
+      .filter { it.singularityReviewPending }
       .sortedBy { it.artistName.lowercase() }
       .map {
         SingularityArtistReview(
           artistId = it.id.value,
           artistName = it.artistName,
           imageLink = it.imageLink,
-          singularityIncluded = it.singularityIncluded,
         )
       }
 

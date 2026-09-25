@@ -333,19 +333,18 @@ class SingularityServiceTests {
   }
 
   @Test
-  fun `getArtistsForReview returns all artists sorted by name with their singularityIncluded status`() {
+  fun `getArtistsForReview returns only review-pending artists sorted by name`() {
     every { appArtistRepository.findAll() } returns listOf(
-      buildAppArtist(ArtistId("artist-2"), "Zeta").copy(singularityIncluded = false),
-      buildAppArtist(ArtistId("artist-1"), "Alpha").copy(singularityIncluded = true, imageLink = "img"),
+      buildAppArtist(ArtistId("artist-2"), "Zeta").copy(singularityReviewPending = true),
+      buildAppArtist(ArtistId("artist-1"), "Alpha").copy(singularityReviewPending = true, imageLink = "img"),
+      buildAppArtist(ArtistId("artist-3"), "Beta").copy(singularityReviewPending = false),
     )
 
     val result = service.getArtistsForReview()
 
     assertThat(result.map { it.artistId }).containsExactly("artist-1", "artist-2")
     assertThat(result[0].artistName).isEqualTo("Alpha")
-    assertThat(result[0].singularityIncluded).isTrue()
     assertThat(result[0].imageLink).isEqualTo("img")
-    assertThat(result[1].singularityIncluded).isFalse()
   }
 
   @Test

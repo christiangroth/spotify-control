@@ -85,7 +85,7 @@ class PlaybackEnrichmentServiceTests {
 
     adapter.syncArtistDetails(artistId, fromPlaylist = true)
 
-    verify { appArtistRepository.upsertAll(listOf(spotifyArtist.copy(syncStatus = ArtistSyncStatus.SYNC))) }
+    verify { appArtistRepository.upsertAll(listOf(spotifyArtist.copy(syncStatus = ArtistSyncStatus.SYNC, singularityReviewPending = true))) }
     verify { outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums(artistId)) }
   }
 
@@ -106,7 +106,7 @@ class PlaybackEnrichmentServiceTests {
 
     adapter.syncArtistDetails(artistId, fromPlaylist = false)
 
-    verify { appArtistRepository.upsertAll(listOf(spotifyArtist.copy(syncStatus = ArtistSyncStatus.SHALLOW_ASSUMPTION))) }
+    verify { appArtistRepository.upsertAll(listOf(spotifyArtist.copy(syncStatus = ArtistSyncStatus.SHALLOW_ASSUMPTION, singularityReviewPending = true))) }
     verify(exactly = 0) { outboxPort.enqueue(any<DomainOutboxEvent.SyncArtistAlbums>()) }
   }
 
