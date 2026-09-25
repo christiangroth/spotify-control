@@ -388,6 +388,36 @@ class PlaylistServiceTests {
   }
 
   @Test
+  fun `syncPlaylists keeps known playlists and notifies when spotify returns no own playlists`() {
+    every { currentUserResolver.userId() } returns userId
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
+    every { spotifyPlaylist.getPlaylists(accessToken) } returns emptyList<SpotifyPlaylistItem>().right()
+    every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1"))
+
+    val result = adapter.syncPlaylists()
+
+    assertThat(result.leftOrNull()).isEqualTo(PlaylistSyncError.PLAYLIST_FETCH_EMPTY)
+    verify(exactly = 0) { playlistRepository.replaceAll(any()) }
+    verify(exactly = 1) { syncNotification.notifySyncFailed(PlaylistSyncError.PLAYLIST_FETCH_EMPTY.code) }
+  }
+
+  @Test
+  fun `syncPlaylists accepts empty spotify result when no playlists are known`() {
+    every { currentUserResolver.userId() } returns userId
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
+    every { spotifyPlaylist.getPlaylists(accessToken) } returns emptyList<SpotifyPlaylistItem>().right()
+    every { playlistRepository.findAll() } returns emptyList()
+    every { playlistRepository.replaceAll(any()) } just runs
+    every { playlistRepository.findExistingIds(any()) } returns emptySet()
+    every { outboxPort.enqueue(any()) } just runs
+
+    val result = adapter.syncPlaylists()
+
+    assertThat(result.isRight()).isTrue()
+    verify(exactly = 0) { syncNotification.notifySyncFailed(any()) }
+  }
+
+  @Test
   fun `syncPlaylists returns Left with SpotifyRateLimitError when rate limited`() {
     every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
