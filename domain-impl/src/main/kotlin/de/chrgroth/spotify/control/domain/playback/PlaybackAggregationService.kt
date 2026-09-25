@@ -209,6 +209,7 @@ class PlaybackAggregationService(
     }
     if (event.type == AggregationPeriodType.WEEK) {
       outboxPort.enqueue(DomainOutboxEvent.RebuildFollowSuggestions())
+      outboxPort.enqueue(DomainOutboxEvent.RebuildSingularitySuggestions())
     }
     return Unit.right()
   }

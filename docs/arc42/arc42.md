@@ -525,7 +525,7 @@ producers from consumers.
 | `to-spotify-playlist` | 10s (shared, runtime-adjustable) | yes | `SyncPlaylistInfo`, `SyncPlaylistData`, `FixPlaylistCheck`   |
 | `to-spotify-user`     | none     | yes               | `UpdateUserProfile`                                                          |
 | `to-spotify-playback` | none     | yes               | `FetchPlaybackData`                                                          |
-| `domain`              | none     | n/a (no Spotify calls) | `RebuildPlaybackData`, `AppendPlaybackData`, `ResyncCatalog`, `WipeCatalog`, `RunPlaylistChecks`, `AggregatePlaybackData`, `RebuildAllAggregations`, `ConfirmArtistSync`, `ConfirmArtistShallow`, `RebuildPlaylistChecksDashboard`, `RebuildPlaylistSettingsView`, `RebuildDashboardReadModel`, `RebuildFollowSuggestions` |
+| `domain`              | none     | n/a (no Spotify calls) | `RebuildPlaybackData`, `AppendPlaybackData`, `ResyncCatalog`, `WipeCatalog`, `RunPlaylistChecks`, `AggregatePlaybackData`, `RebuildAllAggregations`, `ConfirmArtistSync`, `ConfirmArtistShallow`, `RebuildPlaylistChecksDashboard`, `RebuildPlaylistSettingsView`, `RebuildDashboardReadModel`, `RebuildFollowSuggestions`, `RebuildSingularitySuggestions` |
 
 `to-spotify-catalog` and `to-spotify-playlist` share one runtime-adjustable throttle interval
 (`spotify.throttle.default-interval-ms`, default 10s) — there is no per-partition distinct value.
@@ -557,6 +557,7 @@ mechanism, calling the same rebuild method the event-triggered path uses.
 | Dashboard            | `DashboardViewRepositoryPort`             | `RebuildDashboardReadModel` (enqueued from playlist sync, playlist checks, daily playback aggregation, playback append, catalog sync) |
 | Stats View           | `PlaybackAggregationPort.findByPeriods`   | daily/weekly/monthly/quarterly/yearly `AggregatePlaybackData` handling (enriches `app_playback_aggregation` in place, see ADR-0014) |
 | Follow Suggestions   | `FollowSuggestionsViewRepositoryPort`     | `RebuildFollowSuggestions` (enqueued from followed-artists sync and weekly playback aggregation) |
+| Singularity Suggestions | `SingularitySuggestionsViewRepositoryPort` | `RebuildSingularitySuggestions` (enqueued from weekly playback aggregation and manual `singularityIncluded` changes) |
 
 Eventual consistency between a source write and the next page view is accepted, consistent with the
 single-user architecture ([ADR-0008](../adr/0008-single-user-architecture.md)).

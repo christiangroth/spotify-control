@@ -1,0 +1,58 @@
+{#include layout.html}
+    {#title}{msg:commonAppName()} – {singularitysuggestions:title()}{/title}
+    {#content}
+    <div class="app-page-container py-4 px-3 px-md-4">
+        <div class="d-flex align-items-center mb-4 gap-3">
+            <h1 class="fs-4 fw-semibold mb-0">{singularitysuggestions:title()}</h1>
+            <a href="/playlists/singularity-artists" class="btn btn-outline-secondary btn-sm">{singularitysuggestions:backToArtistsButton()}</a>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-12 col-lg-6">
+                <div class="card h-100 app-card">
+                    <div class="card-body">
+                        <p class="card-subtitle mb-3 app-section-label">{singularitysuggestions:includeSectionTitle()}</p>
+                        {#if includeCandidates.empty}
+                        <p class="text-secondary mb-0">{singularitysuggestions:includeSectionEmptyState()}</p>
+                        {#else}
+                        <ul class="list-unstyled mb-0" data-testid="include-candidates-list">
+                            {#for candidate in includeCandidates}
+                            <li class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                                <ul class="list-unstyled mb-0 flex-grow-1">
+                                    {#artist-rank-entry entry=candidate showDuration=true/}
+                                </ul>
+                                <span class="badge text-bg-secondary" style="font-size:.7rem;white-space:nowrap;">{singularitysuggestions:includeTopRankWeeks(candidate.topRankWeeks.formatted)}</span>
+                            </li>
+                            {/for}
+                        </ul>
+                        {/if}
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-lg-6">
+                <div class="card h-100 app-card">
+                    <div class="card-body">
+                        <p class="card-subtitle mb-3 app-section-label">{singularitysuggestions:excludeSectionTitle()}</p>
+                        {#if excludeCandidates.empty}
+                        <p class="text-secondary mb-0">{singularitysuggestions:excludeSectionEmptyState()}</p>
+                        {#else}
+                        <ul class="list-unstyled mb-0" data-testid="exclude-candidates-list">
+                            {#for candidate in excludeCandidates}
+                            <li class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                                <ul class="list-unstyled mb-0 flex-grow-1">
+                                    {#artist-rank-entry entry=candidate showDuration=true/}
+                                </ul>
+                                {#if candidate.currentTrackAddedAt}
+                                <span class="badge text-bg-secondary" style="font-size:.7rem;white-space:nowrap;">{singularitysuggestions:excludeCurrentTrackAddedAt(candidate.currentTrackAddedAt.formattedShort)}</span>
+                                {/if}
+                            </li>
+                            {/for}
+                        </ul>
+                        {/if}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {/content}
+{/include}

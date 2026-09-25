@@ -229,6 +229,21 @@ class PlaybackAggregationServiceTests {
   }
 
   @Test
+  fun `aggregate week enqueues RebuildSingularitySuggestions`() {
+    every { currentUserResolver.userId() } returns userId
+    val weekStart = LocalDate(2024, 1, 15)
+    every { aggregationRepository.save(any()) } returns Unit
+    every {
+      aggregationRepository.findByTypeAndPeriodRange(AggregationPeriodType.DAY, weekStart, LocalDate(2024, 1, 21))
+    } returns emptyList()
+
+    val result = service.handle(DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.WEEK, weekStart))
+
+    assertThat(result.isRight()).isTrue()
+    verify { outboxPort.enqueue(DomainOutboxEvent.RebuildSingularitySuggestions()) }
+  }
+
+  @Test
   fun `aggregate day does not enqueue RebuildFollowSuggestions`() {
     every { currentUserResolver.userId() } returns userId
     every { aggregationRepository.save(any()) } returns Unit
@@ -238,6 +253,7 @@ class PlaybackAggregationServiceTests {
 
     assertThat(result.isRight()).isTrue()
     verify(exactly = 0) { outboxPort.enqueue(DomainOutboxEvent.RebuildFollowSuggestions()) }
+    verify(exactly = 0) { outboxPort.enqueue(DomainOutboxEvent.RebuildSingularitySuggestions()) }
   }
 
   @Test

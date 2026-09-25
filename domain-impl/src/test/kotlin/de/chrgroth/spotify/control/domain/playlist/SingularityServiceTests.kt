@@ -363,11 +363,13 @@ class SingularityServiceTests {
   fun `setArtistIncluded persists the new singularityIncluded status`() {
     every { appArtistRepository.findByArtistIds(setOf(artistId)) } returns listOf(buildAppArtist(artistId, "Artist One"))
     every { appArtistRepository.setSingularityIncluded(artistId, true) } just runs
+    every { outboxPort.enqueue(any()) } just runs
 
     val result = service.setArtistIncluded("artist-1", true)
 
     assertThat(result.isRight()).isTrue()
     verify { appArtistRepository.setSingularityIncluded(artistId, true) }
+    verify { outboxPort.enqueue(DomainOutboxEvent.RebuildSingularitySuggestions()) }
   }
 
   @Test

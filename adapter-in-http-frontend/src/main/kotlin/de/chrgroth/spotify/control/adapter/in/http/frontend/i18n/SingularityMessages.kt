@@ -56,6 +56,9 @@ interface SingularityMessages {
   fun singularityArtistsBackToChallengersButton(): String
 
   @Message
+  fun singularityArtistsSuggestionsButton(): String
+
+  @Message
   fun singularityArtistsEmptyState(): String
 
   @Message

@@ -132,6 +132,12 @@ object Templates {
   external fun `singularity-artists`(artists: List<SingularityArtistReview>): TemplateInstance
 
   @JvmStatic
+  external fun `singularity-suggestions`(
+    includeCandidates: List<SingularitySuggestionsResource.IncludeCandidateRow>,
+    excludeCandidates: List<SingularitySuggestionsResource.ExcludeCandidateRow>,
+  ): TemplateInstance
+
+  @JvmStatic
   external fun `release-notes`(groups: List<ReleaseNotesGroupView>): TemplateInstance
 
   @JvmStatic
