@@ -32,6 +32,9 @@ import de.chrgroth.spotify.control.domain.model.playlist.AppPlaylistCheck
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistCheckStats
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistCheckViolation
 import de.chrgroth.spotify.control.domain.model.playlist.PlaylistInfo
+import de.chrgroth.spotify.control.domain.model.playlist.SingularityArtistReview
+import de.chrgroth.spotify.control.domain.model.playlist.SingularityChallengerGroup
+import de.chrgroth.spotify.control.domain.model.playlist.SingularityTrackInfo
 import de.chrgroth.spotify.control.domain.model.user.RuntimeConfig
 import de.chrgroth.spotify.control.domain.model.viewer.MongoViewerField
 import de.chrgroth.spotify.control.domain.model.viewer.MongoViewerResult
@@ -91,6 +94,11 @@ import kotlinx.datetime.LocalDate
 @TemplateData(target = PredicateStats::class)
 @TemplateData(target = LogUiEntry::class)
 @TemplateData(target = PlaylistInfo::class)
+@TemplateData(target = SingularityArtistReview::class)
+@TemplateData(target = SingularityChallengerGroup::class)
+@TemplateData(target = SingularityTrackInfo::class)
+@TemplateData(target = SingularitySuggestionsResource.IncludeCandidateRow::class)
+@TemplateData(target = SingularitySuggestionsResource.ExcludeCandidateRow::class)
 // external type, reached via `.toString` path expressions like `result.date.toString` (e.g. playback-event-viewer.html,
 // dashboard.html) - same reflection gap as above, just on a class we don't own
 @TemplateData(target = LocalDate::class)
