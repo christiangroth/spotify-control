@@ -1,3 +1,12 @@
+# 0.130.1 (2026.09.25)
+
+## Bugfixes / Chore
+* Added internal groundwork for upcoming "End of the Road" artist status management. No visible changes yet.
+
+
+
+---
+
 # 0.130.0 (2026.09.25)
 
 ## New Features
