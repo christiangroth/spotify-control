@@ -8,6 +8,7 @@ import de.chrgroth.spotify.control.domain.port.`in`.playback.PlaybackPort
 import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistCheckPort
 import de.chrgroth.spotify.control.domain.port.`in`.playlist.PlaylistPort
 import de.chrgroth.spotify.control.domain.port.`in`.playlist.SingularityPort
+import de.chrgroth.spotify.control.domain.port.`in`.playlist.SingularitySuggestionsPort
 import de.chrgroth.spotify.control.domain.port.`in`.user.UserProfilePort
 import kotlinx.datetime.LocalDate
 import org.assertj.core.api.Assertions.assertThat
@@ -44,6 +45,7 @@ class DomainOutboxContractTests {
     DomainOutboxEvent.AggregatePlaybackData(AggregationPeriodType.YEAR, LocalDate(2024, 1, 1)),
     DomainOutboxEvent.RebuildAllAggregations(),
     DomainOutboxEvent.RebuildFollowSuggestions(),
+    DomainOutboxEvent.RebuildSingularitySuggestions(),
     DomainOutboxEvent.AcceptSingularityChallenger("artist-1", "track-1"),
     DomainOutboxEvent.DiscardSingularityChallenger("artist-1", "track-1"),
     DomainOutboxEvent.ReconcileSingularityTracking("playlist-1"),
@@ -116,6 +118,7 @@ class DomainOutboxContractTests {
     assertThat(DomainOutboxEvent.RebuildPlaylistSettingsView().groupId).isEqualTo(DomainOutboxEvent.RebuildPlaylistSettingsView.KEY)
     assertThat(DomainOutboxEvent.RebuildDashboardReadModel().groupId).isEqualTo(DomainOutboxEvent.RebuildDashboardReadModel.KEY)
     assertThat(DomainOutboxEvent.RebuildFollowSuggestions().groupId).isEqualTo(DomainOutboxEvent.RebuildFollowSuggestions.KEY)
+    assertThat(DomainOutboxEvent.RebuildSingularitySuggestions().groupId).isEqualTo(DomainOutboxEvent.RebuildSingularitySuggestions.KEY)
   }
 
   @Test
@@ -123,6 +126,7 @@ class DomainOutboxContractTests {
     val allPortMethods = listOf(
       PlaybackPort::class, PlaybackAggregationPort::class, CatalogPort::class,
       PlaylistPort::class, PlaylistCheckPort::class, UserProfilePort::class, FollowSuggestionsPort::class, SingularityPort::class,
+      SingularitySuggestionsPort::class,
     )
       .flatMap { it.java.methods.toList() }
     allEvents.forEach { event ->
