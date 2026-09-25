@@ -94,12 +94,14 @@ class PlaylistServiceTests {
     snapshotId: String = "snap-1",
     syncStatus: PlaylistSyncStatus = PlaylistSyncStatus.ACTIVE,
     name: String = "Playlist $id",
+    type: PlaylistType? = null,
   ) = PlaylistInfo(
     spotifyPlaylistId = id,
     snapshotId = snapshotId,
     lastSnapshotIdSyncTime = now - 1.hours,
     name = name,
     syncStatus = syncStatus,
+    type = type,
   )
 
   private fun buildSpotifyItem(id: String, snapshotId: String = "snap-1", ownerId: String = "user-1") = SpotifyPlaylistItem(
@@ -551,6 +553,7 @@ class PlaylistServiceTests {
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylistTracksPage(accessToken, "p1", null) } returns page.right()
     every { playlistRepository.save(buildPlaylist("p1")) } just runs
+    every { playlistRepository.findAll() } returns emptyList()
     every { outboxPort.enqueue(any()) } just runs
     every { playlistRepository.updateLastSyncTime("p1", any()) } just runs
 
@@ -567,6 +570,7 @@ class PlaylistServiceTests {
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylistTracksPage(accessToken, "p1", null) } returns page.right()
     every { playlistRepository.save(any()) } just runs
+    every { playlistRepository.findAll() } returns emptyList()
     every { outboxPort.enqueue(any()) } just runs
     every { playlistRepository.updateLastSyncTime("p1", any()) } just runs
 
@@ -586,12 +590,31 @@ class PlaylistServiceTests {
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylistTracksPage(accessToken, "p1", null) } returns page.right()
     every { playlistRepository.save(any()) } just runs
+    every { playlistRepository.findAll() } returns emptyList()
     every { outboxPort.enqueue(any()) } just runs
     every { playlistRepository.updateLastSyncTime("p1", any()) } just runs
 
     adapter.syncPlaylistData("p1")
 
     verify { catalogPort.promoteAssumptionArtistsFoundOnPlaylist(setOf("artist-1")) }
+    verify(exactly = 0) { catalogPort.promoteArtistsFoundOnStagingPlaylist(any()) }
+  }
+
+  @Test
+  fun `syncPlaylistData delegates found artists to catalogPort for staging promotion when playlist is SINGULARITY_STAGING`() {
+    val page = buildTracksPage()
+    every { currentUserResolver.userId() } returns userId
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
+    every { spotifyPlaylist.getPlaylistTracksPage(accessToken, "p1", null) } returns page.right()
+    every { playlistRepository.save(any()) } just runs
+    every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1", type = PlaylistType.SINGULARITY_STAGING))
+    every { outboxPort.enqueue(any()) } just runs
+    every { playlistRepository.updateLastSyncTime("p1", any()) } just runs
+
+    adapter.syncPlaylistData("p1")
+
+    verify { catalogPort.promoteArtistsFoundOnStagingPlaylist(setOf("artist-1")) }
+    verify(exactly = 0) { catalogPort.promoteAssumptionArtistsFoundOnPlaylist(any()) }
   }
 
   @Test
@@ -601,6 +624,7 @@ class PlaylistServiceTests {
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylistTracksPage(accessToken, "p1", null) } returns page.right()
     every { playlistRepository.save(any()) } just runs
+    every { playlistRepository.findAll() } returns emptyList()
     every { outboxPort.enqueue(any()) } just runs
     every { playlistRepository.updateLastSyncTime("p1", any()) } just runs
 
@@ -617,6 +641,7 @@ class PlaylistServiceTests {
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylistTracksPage(accessToken, "p1", null) } returns page.right()
     every { playlistRepository.save(any()) } just runs
+    every { playlistRepository.findAll() } returns emptyList()
     every { outboxPort.enqueue(any()) } just runs
 
     adapter.syncPlaylistData("p1")
@@ -632,6 +657,7 @@ class PlaylistServiceTests {
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylistTracksPage(accessToken, "p1", null) } returns page.right()
     every { playlistRepository.save(any()) } just runs
+    every { playlistRepository.findAll() } returns emptyList()
     every { outboxPort.enqueue(any()) } just runs
 
     adapter.syncPlaylistData("p1")
@@ -647,6 +673,7 @@ class PlaylistServiceTests {
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylistTracksPage(accessToken, "p1", null) } returns page.right()
     every { playlistRepository.save(any()) } just runs
+    every { playlistRepository.findAll() } returns emptyList()
     every { outboxPort.enqueue(any()) } just runs
     every { playlistRepository.updateLastSyncTime("p1", any()) } just runs
 
@@ -664,6 +691,7 @@ class PlaylistServiceTests {
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylistTracksPage(accessToken, "p1", nextPageUrl) } returns page.right()
     every { playlistRepository.appendTracks("p1", page.tracks) } just runs
+    every { playlistRepository.findAll() } returns emptyList()
     every { outboxPort.enqueue(any()) } just runs
     every { playlistRepository.updateLastSyncTime("p1", any()) } just runs
 
@@ -699,6 +727,7 @@ class PlaylistServiceTests {
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylistTracksPage(accessToken, "p1", nextPageUrl) } returns page.right()
     every { playlistRepository.appendTracks("p1", page.tracks) } just runs
+    every { playlistRepository.findAll() } returns emptyList()
     every { outboxPort.enqueue(any()) } just runs
     every { playlistRepository.updateLastSyncTime("p1", any()) } just runs
 
@@ -1212,6 +1241,7 @@ class PlaylistServiceTests {
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylistTracksPage(accessToken, "p1", null) } returns page.right()
     every { playlistRepository.save(any()) } just runs
+    every { playlistRepository.findAll() } returns emptyList()
     every { outboxPort.enqueue(any()) } just runs
     every { playlistRepository.updateLastSyncTime("p1", any()) } just runs
 

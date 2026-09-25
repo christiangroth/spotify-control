@@ -262,7 +262,13 @@ class PlaylistService(
         CatalogSyncRequest(it.trackId.value, listOf(it.mainArtistId.value), SyncCause.Playlist(playlistId, it.trackId.value))
       }
       syncController.syncForTracks(catalogRequests)
-      catalogPort.promoteAssumptionArtistsFoundOnPlaylist(catalogRequests.flatMap { it.artistIds }.toSet())
+      val discoveredArtistIds = catalogRequests.flatMap { it.artistIds }.toSet()
+      val playlistType = playlistRepository.findAll().find { it.spotifyPlaylistId == playlistId }?.type
+      if (playlistType == PlaylistType.SINGULARITY_STAGING) {
+        catalogPort.promoteArtistsFoundOnStagingPlaylist(discoveredArtistIds)
+      } else {
+        catalogPort.promoteAssumptionArtistsFoundOnPlaylist(discoveredArtistIds)
+      }
 
       if (page.nextUrl != null) {
         outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData(playlistId, page.nextUrl, page.snapshotId))

@@ -85,6 +85,19 @@ class CatalogService(
     playbackAggregation.rebuildAllAggregations()
   }
 
+  override fun promoteArtistsFoundOnStagingPlaylist(artistIds: Set<String>) {
+    if (artistIds.isEmpty()) return
+    val toPromote = appArtistRepository.findByArtistIds(artistIds.map { ArtistId(it) }.toSet())
+      .filter { it.syncStatus == ArtistSyncStatus.SHALLOW || it.syncStatus == ArtistSyncStatus.SHALLOW_ASSUMPTION }
+    if (toPromote.isEmpty()) return
+    toPromote.forEach { artist ->
+      logger.info { "Updated sync status for artist '${artist.artistName}' (${artist.id.value}) to ${ArtistSyncStatus.SYNC_ASSUMPTION}" }
+      appArtistRepository.setSyncStatus(artist.id, ArtistSyncStatus.SYNC_ASSUMPTION)
+      outboxPort.enqueue(DomainOutboxEvent.SyncArtistAlbums(artist.id.value))
+    }
+    playbackAggregation.rebuildAllAggregations()
+  }
+
   // --- Catalog Sync ---
 
   override fun syncArtistDetails(artistId: String, fromPlaylist: Boolean): Either<DomainError, Unit> {
