@@ -251,8 +251,10 @@ class PlaylistService(
       activePlaylists
         .filter { playlist ->
           val existing = existingById[playlist.spotifyPlaylistId]
+          // A missing lastSyncTime means the playlist was never fully synced (or lost it, see #957), so resync it even if the snapshot is unchanged.
           existing == null ||
             existing.snapshotId != playlist.snapshotId ||
+            existing.lastSyncTime == null ||
             playlist.spotifyPlaylistId !in existingFullPlaylistIds
         }
         .forEach { playlist ->
