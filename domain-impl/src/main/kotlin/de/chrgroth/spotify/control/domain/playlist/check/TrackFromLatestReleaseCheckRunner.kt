@@ -88,11 +88,15 @@ class TrackFromLatestReleaseCheckRunner(
     val currentTracksById = appTrackRepository.findByTrackIds(playlistTrackIds).associateBy { it.id }
 
     val artistIds = playlist.tracks.mapNotNull { currentTracksById[it.trackId]?.artistId }.toSet()
-    val albumsByArtistId: Map<ArtistId, List<AppAlbum>> = artistIds.associateWith { appAlbumRepository.findByArtistId(it) }
+    // One batched query per collection instead of one findByArtistId/findByAlbumId round-trip per artist/album: the
+    // per-album loop issued thousands of queries per check run (~7.5k app_track.findByAlbumId calls in 3h in production).
+    val albumsGroupedByArtistId = appAlbumRepository.findByArtistIds(artistIds).filter { it.artistId != null }.groupBy { it.artistId!! }
+    val albumsByArtistId: Map<ArtistId, List<AppAlbum>> = artistIds.associateWith { albumsGroupedByArtistId[it].orEmpty() }
 
     val allAlbumIds = albumsByArtistId.values.flatten().map { it.id }.toSet()
     val albumById: Map<AlbumId, AppAlbum> = albumsByArtistId.values.flatten().associateBy { it.id }
-    val tracksByAlbumId: Map<AlbumId, List<AppTrack>> = allAlbumIds.associateWith { appTrackRepository.findByAlbumId(it) }
+    val tracksGroupedByAlbumId = appTrackRepository.findByAlbumIds(allAlbumIds).filter { it.albumId != null }.groupBy { it.albumId!! }
+    val tracksByAlbumId: Map<AlbumId, List<AppTrack>> = allAlbumIds.associateWith { tracksGroupedByAlbumId[it].orEmpty() }
 
     return playlist.tracks
       .withIndex()
