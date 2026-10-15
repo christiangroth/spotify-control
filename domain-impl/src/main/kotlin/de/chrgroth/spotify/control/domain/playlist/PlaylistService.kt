@@ -44,6 +44,7 @@ import io.quarkus.runtime.StartupEvent
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.enterprise.event.Observes
 import mu.KLogging
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.time.Clock
 
@@ -68,6 +69,7 @@ class PlaylistService(
 ) : PlaylistPort {
 
   private val lastSyncJobSuccessTimestamp = AtomicLong()
+  private val consecutiveEmptyPlaylistFetches = AtomicInteger()
 
   @Suppress("UnusedParameter")
   fun onStartup(@Observes event: StartupEvent) {
@@ -218,16 +220,26 @@ class PlaylistService(
           name = item.name,
           syncStatus = existing?.syncStatus ?: PlaylistSyncStatus.PASSIVE,
           type = existing?.type,
+          lastSyncTime = existing?.lastSyncTime,
         )
       }
       // An empty own-playlist result while playlists are known is almost certainly a bogus Spotify response (empty page or
       // missing owner data). Persisting it would delete all playlist metadata, and the next run would re-create every
       // playlist as PASSIVE, silently losing all sync settings (see #955).
+      // Spotify returns such empty pages sporadically for several minutes, so failing the task would only burn through all
+      // outbox retries (each one notifying). Skip this run instead and let the next scheduled run pick up; only notify once
+      // the problem persists across several scheduled runs.
       if (updatedPlaylists.isEmpty() && existingById.isNotEmpty()) {
-        logger.warn { "Spotify returned no own playlists (${spotifyPlaylists.size} total) while ${existingById.size} are known, skipping playlist sync" }
-        syncNotification.notifySyncFailed(PlaylistSyncError.PLAYLIST_FETCH_EMPTY.code)
-        return@flatMap PlaylistSyncError.PLAYLIST_FETCH_EMPTY.left()
+        val consecutiveEmptyFetches = consecutiveEmptyPlaylistFetches.incrementAndGet()
+        logger.warn {
+          "Spotify returned no own playlists (${spotifyPlaylists.size} total) while ${existingById.size} are known, skipping playlist sync ($consecutiveEmptyFetches in a row)"
+        }
+        if (consecutiveEmptyFetches == EMPTY_PLAYLIST_FETCH_NOTIFICATION_THRESHOLD) {
+          syncNotification.notifySyncFailed(PlaylistSyncError.PLAYLIST_FETCH_EMPTY.code)
+        }
+        return@flatMap Unit.right()
       }
+      consecutiveEmptyPlaylistFetches.set(0)
       playlistRepository.replaceAll(updatedPlaylists)
       if (updatedPlaylists.size != existingById.size) {
         dashboardRefresh.notifyUserPlaylistMetadata()
@@ -389,6 +401,7 @@ class PlaylistService(
   companion object : KLogging() {
     private val YEAR_NAME_REGEX = Regex("\\d{4}")
     private const val MILLIS_PER_SECOND = 1_000L
+    private const val EMPTY_PLAYLIST_FETCH_NOTIFICATION_THRESHOLD = 3
     private val EMPTY_SETTINGS_VIEW = PlaylistSettingsView(emptyList())
   }
 }

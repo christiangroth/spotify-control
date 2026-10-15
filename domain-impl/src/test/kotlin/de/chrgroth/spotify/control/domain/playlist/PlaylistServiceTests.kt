@@ -49,6 +49,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 @Suppress("LargeClass")
@@ -388,7 +389,7 @@ class PlaylistServiceTests {
   }
 
   @Test
-  fun `syncPlaylists keeps known playlists and notifies when spotify returns no own playlists`() {
+  fun `syncPlaylists keeps known playlists and skips the run without failing when spotify returns no own playlists`() {
     every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylists(accessToken) } returns emptyList<SpotifyPlaylistItem>().right()
@@ -396,9 +397,39 @@ class PlaylistServiceTests {
 
     val result = adapter.syncPlaylists()
 
-    assertThat(result.leftOrNull()).isEqualTo(PlaylistSyncError.PLAYLIST_FETCH_EMPTY)
+    assertThat(result.isRight()).isTrue()
+    verify(exactly = 0) { playlistRepository.replaceAll(any()) }
+    verify(exactly = 0) { syncNotification.notifySyncFailed(any()) }
+  }
+
+  @Test
+  fun `syncPlaylists notifies once when spotify keeps returning no own playlists for several runs`() {
+    every { currentUserResolver.userId() } returns userId
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
+    every { spotifyPlaylist.getPlaylists(accessToken) } returns emptyList<SpotifyPlaylistItem>().right()
+    every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1"))
+
+    repeat(5) { adapter.syncPlaylists() }
+
     verify(exactly = 0) { playlistRepository.replaceAll(any()) }
     verify(exactly = 1) { syncNotification.notifySyncFailed(PlaylistSyncError.PLAYLIST_FETCH_EMPTY.code) }
+  }
+
+  @Test
+  fun `syncPlaylists preserves lastSyncTime of existing playlists`() {
+    every { currentUserResolver.userId() } returns userId
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
+    every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1")).right()
+    every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1").copy(lastSyncTime = now - 30.minutes))
+    every { playlistRepository.replaceAll(any()) } just runs
+    every { playlistRepository.findExistingIds(any()) } returns setOf("p1")
+    every { outboxPort.enqueue(any()) } just runs
+
+    adapter.syncPlaylists()
+
+    val savedSlot = slot<List<PlaylistInfo>>()
+    verify { playlistRepository.replaceAll(capture(savedSlot)) }
+    assertThat(savedSlot.captured[0].lastSyncTime).isEqualTo(now - 30.minutes)
   }
 
   @Test

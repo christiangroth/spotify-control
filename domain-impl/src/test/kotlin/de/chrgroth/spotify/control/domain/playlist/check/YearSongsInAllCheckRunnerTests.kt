@@ -183,6 +183,24 @@ class YearSongsInAllCheckRunnerTests {
   }
 
   @Test
+  fun `run falls back to track id when track is not in catalog yet`() {
+    val playlist = buildPlaylist(tracks = listOf(buildTrack("t1"), buildTrack("t2")))
+    val allPlaylist = buildPlaylist(spotifyPlaylistId = allPlaylistId, tracks = listOf(buildTrack("t1")))
+    val currentPlaylistInfo = buildPlaylistInfo(type = PlaylistType.YEAR)
+    val playlistInfos = listOf(
+      currentPlaylistInfo,
+      buildPlaylistInfo(spotifyPlaylistId = allPlaylistId, type = PlaylistType.ALL),
+    )
+    every { playlistRepository.findByPlaylistId(allPlaylistId) } returns allPlaylist
+    every { appTrackRepository.findByTrackIds(setOf(TrackId("t2"))) } returns emptyList()
+
+    val result = runner.run(playlistId, playlist, currentPlaylistInfo, playlistInfos)
+
+    assertThat(result.succeeded).isFalse()
+    assertThat(result.violations.map { it.message }).containsExactly("Unknown Artist – t2")
+  }
+
+  @Test
   fun `canFix returns true`() {
     assertThat(runner.canFix()).isTrue()
   }
