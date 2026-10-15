@@ -1,3 +1,12 @@
+# 0.133.5 (2026.10.15)
+
+## Bugfixes / Chore
+* Playlists that were shown as out of sync are synchronized again automatically.
+
+
+
+---
+
 # 0.133.4 (2026.10.15)
 
 ## Bugfixes / Chore
