@@ -1,3 +1,12 @@
+# 0.133.7 (2026.10.15)
+
+## Bugfixes / Chore
+* Applications are no longer restarted when the database is briefly unreachable.
+
+
+
+---
+
 # 0.133.6 (2026.10.15)
 
 ## Bugfixes / Chore
