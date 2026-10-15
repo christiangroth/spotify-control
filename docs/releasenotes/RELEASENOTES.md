@@ -1,3 +1,12 @@
+# 0.133.8 (2026.10.15)
+
+## Bugfixes / Chore
+* Reduced database load of playlist checks and collection statistics.
+
+
+
+---
+
 # 0.133.7 (2026.10.15)
 
 ## Bugfixes / Chore
