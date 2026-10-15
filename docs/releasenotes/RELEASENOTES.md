@@ -1,3 +1,14 @@
+# 0.133.4 (2026.10.15)
+
+## Bugfixes / Chore
+* Fixed playlist checks failing for tracks that are not yet in the catalog.
+* Fixed playlists always being shown as out of sync.
+* Fixed repeated "playlist sync failed" notifications when Spotify temporarily returns no playlists.
+
+
+
+---
+
 # 0.133.3 (2026.09.25)
 
 ## Bugfixes / Chore
