@@ -567,7 +567,7 @@ class PlaylistServiceTests {
     every { currentUserResolver.userId() } returns userId
     every { spotifyAccessToken.getValidAccessToken() } returns accessToken
     every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1")).right()
-    every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1"))
+    every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1").copy(lastSyncTime = now))
     every { playlistRepository.replaceAll(any()) } just runs
     every { playlistRepository.findExistingIds(any()) } returns setOf("p1")
     every { outboxPort.enqueue(any()) } just runs
@@ -576,6 +576,21 @@ class PlaylistServiceTests {
 
     verify(exactly = 0) { outboxPort.enqueue(any<DomainOutboxEvent.SyncPlaylistData>()) }
   }
+  @Test
+  fun `syncPlaylists enqueues SyncPlaylistData for active playlist without lastSyncTime even if snapshotId is unchanged`() {
+    every { currentUserResolver.userId() } returns userId
+    every { spotifyAccessToken.getValidAccessToken() } returns accessToken
+    every { spotifyPlaylist.getPlaylists(accessToken) } returns listOf(buildSpotifyItem("p1")).right()
+    every { playlistRepository.findAll() } returns listOf(buildPlaylistInfo("p1"))
+    every { playlistRepository.replaceAll(any()) } just runs
+    every { playlistRepository.findExistingIds(any()) } returns setOf("p1")
+    every { outboxPort.enqueue(any()) } just runs
+
+    adapter.syncPlaylists()
+
+    verify(exactly = 1) { outboxPort.enqueue(DomainOutboxEvent.SyncPlaylistData("p1")) }
+  }
+
 
   // --- syncPlaylistData tests ---
 
