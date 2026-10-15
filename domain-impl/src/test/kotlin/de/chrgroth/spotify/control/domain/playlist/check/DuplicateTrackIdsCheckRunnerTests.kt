@@ -125,6 +125,17 @@ class DuplicateTrackIdsCheckRunnerTests {
   }
 
   @Test
+  fun `run falls back to track id when track is not in catalog yet`() {
+    val playlist = buildPlaylist(listOf(buildTrack("t1"), buildTrack("t1")))
+    every { appTrackRepository.findByTrackIds(setOf(TrackId("t1"))) } returns emptyList()
+
+    val result = runner.run(playlistId, playlist, null, emptyList())
+
+    assertThat(result.succeeded).isFalse()
+    assertThat(result.violations.map { it.message }).containsExactly("Unknown Artist – t1")
+  }
+
+  @Test
   fun `canFix returns true`() {
     assertThat(runner.canFix()).isTrue()
   }

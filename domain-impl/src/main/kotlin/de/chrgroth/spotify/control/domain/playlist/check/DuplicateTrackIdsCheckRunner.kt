@@ -40,9 +40,10 @@ class DuplicateTrackIdsCheckRunner(
       emptyMap()
     }
     val violations = duplicateTrackIds.map { trackId ->
-      val appTrack = requireNotNull(appTrackById[trackId.value]) { "Track ${trackId.value} not found in catalog" }
-      val artistName = appTrack.artistName ?: "Unknown Artist"
-      PlaylistCheckViolation(id = trackId.value, message = "$artistName – ${appTrack.title}")
+      // The track may not be in the app catalog yet (catalog sync runs asynchronously), so fall back to the id instead of failing the whole check run.
+      val appTrack = appTrackById[trackId.value]
+      val artistName = appTrack?.artistName ?: "Unknown Artist"
+      PlaylistCheckViolation(id = trackId.value, message = "$artistName – ${appTrack?.title ?: trackId.value}")
     }
     return AppPlaylistCheck(
       checkId = "$playlistId:$checkId",
