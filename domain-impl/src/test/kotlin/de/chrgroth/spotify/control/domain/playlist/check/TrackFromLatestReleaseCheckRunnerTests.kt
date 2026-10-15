@@ -36,6 +36,14 @@ class TrackFromLatestReleaseCheckRunnerTests {
   private val playlistId = "playlist-1"
   private val artistId = ArtistId("artist-1")
 
+  private val albumsByArtist = mutableMapOf<ArtistId, List<AppAlbum>>()
+  private val tracksByAlbum = mutableMapOf<AlbumId, List<AppTrack>>()
+
+  init {
+    every { appAlbumRepository.findByArtistIds(any()) } answers { firstArg<Set<ArtistId>>().flatMap { albumsByArtist[it].orEmpty() } }
+    every { appTrackRepository.findByAlbumIds(any()) } answers { firstArg<Set<AlbumId>>().flatMap { tracksByAlbum[it].orEmpty() } }
+  }
+
   private fun buildPlaylistTrack(trackId: String, albumId: String? = null) = PlaylistTrack(
     trackId = TrackId(trackId),
     artistIds = listOf(artistId),
@@ -56,6 +64,7 @@ class TrackFromLatestReleaseCheckRunnerTests {
     type = type,
     releaseDate = releaseDate,
     title = title,
+    artistId = artistId,
     lastSync = Instant.fromEpochMilliseconds(0),
   )
 
@@ -79,8 +88,8 @@ class TrackFromLatestReleaseCheckRunnerTests {
     val album = buildAppAlbum("album-1")
 
     every { appTrackRepository.findByTrackIds(setOf(TrackId("t1"))) } returns listOf(appTrack)
-    every { appAlbumRepository.findByArtistId(artistId) } returns listOf(album)
-    every { appTrackRepository.findByAlbumId(AlbumId("album-1")) } returns listOf(appTrack)
+    albumsByArtist[artistId] = listOf(album)
+    tracksByAlbum[AlbumId("album-1")] = listOf(appTrack)
 
     val result = runner.run(playlistId, buildPlaylist(track), null, emptyList())
 
@@ -97,9 +106,9 @@ class TrackFromLatestReleaseCheckRunnerTests {
     val albumNew = buildAppAlbum("album-new", releaseDate = "2021-01-01", title = "New Album")
 
     every { appTrackRepository.findByTrackIds(setOf(TrackId("t1"))) } returns listOf(appTrackNew)
-    every { appAlbumRepository.findByArtistId(artistId) } returns listOf(albumOld, albumNew)
-    every { appTrackRepository.findByAlbumId(AlbumId("album-old")) } returns listOf(appTrackOld)
-    every { appTrackRepository.findByAlbumId(AlbumId("album-new")) } returns listOf(appTrackNew)
+    albumsByArtist[artistId] = listOf(albumOld, albumNew)
+    tracksByAlbum[AlbumId("album-old")] = listOf(appTrackOld)
+    tracksByAlbum[AlbumId("album-new")] = listOf(appTrackNew)
 
     val result = runner.run(playlistId, buildPlaylist(track), null, emptyList())
 
@@ -116,9 +125,9 @@ class TrackFromLatestReleaseCheckRunnerTests {
     val albumNew = buildAppAlbum("album-new", releaseDate = "2021-01-01", title = "New Album")
 
     every { appTrackRepository.findByTrackIds(setOf(TrackId("t1"))) } returns listOf(appTrackOld)
-    every { appAlbumRepository.findByArtistId(artistId) } returns listOf(albumOld, albumNew)
-    every { appTrackRepository.findByAlbumId(AlbumId("album-old")) } returns listOf(appTrackOld)
-    every { appTrackRepository.findByAlbumId(AlbumId("album-new")) } returns listOf(appTrackNew)
+    albumsByArtist[artistId] = listOf(albumOld, albumNew)
+    tracksByAlbum[AlbumId("album-old")] = listOf(appTrackOld)
+    tracksByAlbum[AlbumId("album-new")] = listOf(appTrackNew)
 
     val result = runner.run(playlistId, buildPlaylist(track), null, emptyList())
 
@@ -136,9 +145,9 @@ class TrackFromLatestReleaseCheckRunnerTests {
     val fullAlbum = buildAppAlbum("full-album", type = "album", releaseDate = "2020-01-01", title = "Full Album")
 
     every { appTrackRepository.findByTrackIds(setOf(TrackId("t1"))) } returns listOf(appTrackOnSingle)
-    every { appAlbumRepository.findByArtistId(artistId) } returns listOf(singleAlbum, fullAlbum)
-    every { appTrackRepository.findByAlbumId(AlbumId("single-album")) } returns listOf(appTrackOnSingle)
-    every { appTrackRepository.findByAlbumId(AlbumId("full-album")) } returns listOf(appTrackOnAlbum)
+    albumsByArtist[artistId] = listOf(singleAlbum, fullAlbum)
+    tracksByAlbum[AlbumId("single-album")] = listOf(appTrackOnSingle)
+    tracksByAlbum[AlbumId("full-album")] = listOf(appTrackOnAlbum)
 
     val result = runner.run(playlistId, buildPlaylist(track), null, emptyList())
 
@@ -155,9 +164,9 @@ class TrackFromLatestReleaseCheckRunnerTests {
     val albumDeluxe = buildAppAlbum("album-deluxe", releaseDate = "2022-01-01", title = "Album (Deluxe Edition)")
 
     every { appTrackRepository.findByTrackIds(setOf(TrackId("t1"))) } returns listOf(appTrackOriginal)
-    every { appAlbumRepository.findByArtistId(artistId) } returns listOf(albumOriginal, albumDeluxe)
-    every { appTrackRepository.findByAlbumId(AlbumId("album-original")) } returns listOf(appTrackOriginal)
-    every { appTrackRepository.findByAlbumId(AlbumId("album-deluxe")) } returns listOf(appTrackReissue)
+    albumsByArtist[artistId] = listOf(albumOriginal, albumDeluxe)
+    tracksByAlbum[AlbumId("album-original")] = listOf(appTrackOriginal)
+    tracksByAlbum[AlbumId("album-deluxe")] = listOf(appTrackReissue)
 
     val result = runner.run(playlistId, buildPlaylist(track), null, emptyList())
 
@@ -176,10 +185,10 @@ class TrackFromLatestReleaseCheckRunnerTests {
     val albumReissue = buildAppAlbum("album-live", releaseDate = "2023-01-01", title = "Old Album (Live)")
 
     every { appTrackRepository.findByTrackIds(setOf(TrackId("t1"))) } returns listOf(appTrackOld)
-    every { appAlbumRepository.findByArtistId(artistId) } returns listOf(albumOld, albumNew, albumReissue)
-    every { appTrackRepository.findByAlbumId(AlbumId("album-old")) } returns listOf(appTrackOld)
-    every { appTrackRepository.findByAlbumId(AlbumId("album-new")) } returns listOf(appTrackNew)
-    every { appTrackRepository.findByAlbumId(AlbumId("album-live")) } returns listOf(appTrackReissue)
+    albumsByArtist[artistId] = listOf(albumOld, albumNew, albumReissue)
+    tracksByAlbum[AlbumId("album-old")] = listOf(appTrackOld)
+    tracksByAlbum[AlbumId("album-new")] = listOf(appTrackNew)
+    tracksByAlbum[AlbumId("album-live")] = listOf(appTrackReissue)
 
     val result = runner.run(playlistId, buildPlaylist(track), null, emptyList())
 
@@ -196,10 +205,10 @@ class TrackFromLatestReleaseCheckRunnerTests {
     val albumDeluxe = buildAppAlbum("album-deluxe", releaseDate = "2015-11-06", title = "Meliora (Deluxe Edition)")
 
     every { appTrackRepository.findByTrackIds(setOf(TrackId("t1"))) } returns listOf(appTrackOriginal)
-    every { appAlbumRepository.findByArtistId(artistId) } returns listOf(albumOriginal, albumDeluxe)
+    albumsByArtist[artistId] = listOf(albumOriginal, albumDeluxe)
     // Simulates the original album's track listing not (yet) containing the current track itself.
-    every { appTrackRepository.findByAlbumId(AlbumId("album-original")) } returns emptyList()
-    every { appTrackRepository.findByAlbumId(AlbumId("album-deluxe")) } returns listOf(appTrackReissue)
+    tracksByAlbum[AlbumId("album-original")] = emptyList()
+    tracksByAlbum[AlbumId("album-deluxe")] = listOf(appTrackReissue)
 
     val result = runner.run(playlistId, buildPlaylist(track), null, emptyList())
 
@@ -216,9 +225,9 @@ class TrackFromLatestReleaseCheckRunnerTests {
     val albumB = buildAppAlbum("album-b", releaseDate = "2020-06-15", title = "Album B")
 
     every { appTrackRepository.findByTrackIds(setOf(TrackId("t1"))) } returns listOf(appTrackA)
-    every { appAlbumRepository.findByArtistId(artistId) } returns listOf(albumA, albumB)
-    every { appTrackRepository.findByAlbumId(AlbumId("album-a")) } returns listOf(appTrackA)
-    every { appTrackRepository.findByAlbumId(AlbumId("album-b")) } returns listOf(appTrackB)
+    albumsByArtist[artistId] = listOf(albumA, albumB)
+    tracksByAlbum[AlbumId("album-a")] = listOf(appTrackA)
+    tracksByAlbum[AlbumId("album-b")] = listOf(appTrackB)
 
     val result = runner.run(playlistId, buildPlaylist(track), null, emptyList())
 
@@ -235,9 +244,9 @@ class TrackFromLatestReleaseCheckRunnerTests {
     val albumB = buildAppAlbum("album-b", releaseDate = "2020-01-15", title = "Album B")
 
     every { appTrackRepository.findByTrackIds(setOf(TrackId("t1"))) } returns listOf(appTrackA)
-    every { appAlbumRepository.findByArtistId(artistId) } returns listOf(albumA, albumB)
-    every { appTrackRepository.findByAlbumId(AlbumId("album-a")) } returns listOf(appTrackA)
-    every { appTrackRepository.findByAlbumId(AlbumId("album-b")) } returns listOf(appTrackB)
+    albumsByArtist[artistId] = listOf(albumA, albumB)
+    tracksByAlbum[AlbumId("album-a")] = listOf(appTrackA)
+    tracksByAlbum[AlbumId("album-b")] = listOf(appTrackB)
 
     val result = runner.run(playlistId, buildPlaylist(track), null, emptyList())
 
@@ -254,9 +263,9 @@ class TrackFromLatestReleaseCheckRunnerTests {
     val albumNew = buildAppAlbum("album-new", releaseDate = "2021-01-01", title = null)
 
     every { appTrackRepository.findByTrackIds(setOf(TrackId("t1"))) } returns listOf(appTrackOld)
-    every { appAlbumRepository.findByArtistId(artistId) } returns listOf(albumOld, albumNew)
-    every { appTrackRepository.findByAlbumId(AlbumId("album-old")) } returns listOf(appTrackOld)
-    every { appTrackRepository.findByAlbumId(AlbumId("album-new")) } returns listOf(appTrackNew)
+    albumsByArtist[artistId] = listOf(albumOld, albumNew)
+    tracksByAlbum[AlbumId("album-old")] = listOf(appTrackOld)
+    tracksByAlbum[AlbumId("album-new")] = listOf(appTrackNew)
 
     val result = runner.run(playlistId, buildPlaylist(track), null, emptyList())
 
@@ -276,8 +285,8 @@ class TrackFromLatestReleaseCheckRunnerTests {
     val album = buildAppAlbum("album-1")
 
     every { appTrackRepository.findByTrackIds(setOf(TrackId("t1"))) } returns listOf(appTrack)
-    every { appAlbumRepository.findByArtistId(artistId) } returns listOf(album)
-    every { appTrackRepository.findByAlbumId(AlbumId("album-1")) } returns listOf(appTrack)
+    albumsByArtist[artistId] = listOf(album)
+    tracksByAlbum[AlbumId("album-1")] = listOf(appTrack)
 
     val result = runner.fix(accessToken, playlistId, buildPlaylist(track), null, emptyList(), emptySet())
 
@@ -294,9 +303,9 @@ class TrackFromLatestReleaseCheckRunnerTests {
     val albumNew = buildAppAlbum("album-new", releaseDate = "2021-01-01")
 
     every { appTrackRepository.findByTrackIds(setOf(TrackId("t1"))) } returns listOf(appTrackOld)
-    every { appAlbumRepository.findByArtistId(artistId) } returns listOf(albumOld, albumNew)
-    every { appTrackRepository.findByAlbumId(AlbumId("album-old")) } returns listOf(appTrackOld)
-    every { appTrackRepository.findByAlbumId(AlbumId("album-new")) } returns listOf(appTrackNew)
+    albumsByArtist[artistId] = listOf(albumOld, albumNew)
+    tracksByAlbum[AlbumId("album-old")] = listOf(appTrackOld)
+    tracksByAlbum[AlbumId("album-new")] = listOf(appTrackNew)
     every { spotifyPlaylist.replacePlaylistTrack(accessToken, playlistId, "t1", "t2", 0) } returns Unit.right()
 
     val result = runner.fix(accessToken, playlistId, buildPlaylist(track), null, emptyList(), setOf("t1@0"))
@@ -321,10 +330,10 @@ class TrackFromLatestReleaseCheckRunnerTests {
 
     every { appTrackRepository.findByTrackIds(setOf(TrackId("t1"), TrackId("t3"), TrackId("t5"))) } returns
       listOf(appTrackOld1, appTrackCurrent, appTrackOld2)
-    every { appAlbumRepository.findByArtistId(artistId) } returns listOf(albumOld, albumNew, albumCurrent)
-    every { appTrackRepository.findByAlbumId(AlbumId("album-old")) } returns listOf(appTrackOld1, appTrackOld2)
-    every { appTrackRepository.findByAlbumId(AlbumId("album-new")) } returns listOf(appTrackNew1, appTrackNew2)
-    every { appTrackRepository.findByAlbumId(AlbumId("album-current")) } returns listOf(appTrackCurrent)
+    albumsByArtist[artistId] = listOf(albumOld, albumNew, albumCurrent)
+    tracksByAlbum[AlbumId("album-old")] = listOf(appTrackOld1, appTrackOld2)
+    tracksByAlbum[AlbumId("album-new")] = listOf(appTrackNew1, appTrackNew2)
+    tracksByAlbum[AlbumId("album-current")] = listOf(appTrackCurrent)
     every { spotifyPlaylist.replacePlaylistTrack(accessToken, playlistId, "t5", "t6", 2) } returns Unit.right()
     every { spotifyPlaylist.replacePlaylistTrack(accessToken, playlistId, "t1", "t2", 0) } returns Unit.right()
 
@@ -353,10 +362,10 @@ class TrackFromLatestReleaseCheckRunnerTests {
 
     every { appTrackRepository.findByTrackIds(setOf(TrackId("t1"), TrackId("t3"), TrackId("t5"))) } returns
       listOf(appTrackOld1, appTrackCurrent, appTrackOld2)
-    every { appAlbumRepository.findByArtistId(artistId) } returns listOf(albumOld, albumNew, albumCurrent)
-    every { appTrackRepository.findByAlbumId(AlbumId("album-old")) } returns listOf(appTrackOld1, appTrackOld2)
-    every { appTrackRepository.findByAlbumId(AlbumId("album-new")) } returns listOf(appTrackNew1, appTrackNew2)
-    every { appTrackRepository.findByAlbumId(AlbumId("album-current")) } returns listOf(appTrackCurrent)
+    albumsByArtist[artistId] = listOf(albumOld, albumNew, albumCurrent)
+    tracksByAlbum[AlbumId("album-old")] = listOf(appTrackOld1, appTrackOld2)
+    tracksByAlbum[AlbumId("album-new")] = listOf(appTrackNew1, appTrackNew2)
+    tracksByAlbum[AlbumId("album-current")] = listOf(appTrackCurrent)
     every { spotifyPlaylist.replacePlaylistTrack(accessToken, playlistId, "t1", "t2", 0) } returns Unit.right()
 
     val result = runner.fix(accessToken, playlistId, buildPlaylist(track0, track1, track2), null, emptyList(), setOf("t1@0"))
@@ -378,9 +387,9 @@ class TrackFromLatestReleaseCheckRunnerTests {
     val albumNew = buildAppAlbum("album-new", releaseDate = "2021-01-01")
 
     every { appTrackRepository.findByTrackIds(setOf(TrackId("t1"), TrackId("t3"))) } returns listOf(appTrackOld1, appTrackOld2)
-    every { appAlbumRepository.findByArtistId(artistId) } returns listOf(albumOld, albumNew)
-    every { appTrackRepository.findByAlbumId(AlbumId("album-old")) } returns listOf(appTrackOld1, appTrackOld2)
-    every { appTrackRepository.findByAlbumId(AlbumId("album-new")) } returns listOf(appTrackNew1, appTrackNew2)
+    albumsByArtist[artistId] = listOf(albumOld, albumNew)
+    tracksByAlbum[AlbumId("album-old")] = listOf(appTrackOld1, appTrackOld2)
+    tracksByAlbum[AlbumId("album-new")] = listOf(appTrackNew1, appTrackNew2)
     every { spotifyPlaylist.replacePlaylistTrack(accessToken, playlistId, "t3", "t4", 1) } returns PlaylistFixError.FIX_FAILED.left()
 
     val result = runner.fix(accessToken, playlistId, buildPlaylist(track0, track1), null, emptyList(), setOf("t1@0", "t3@1"))

@@ -29,9 +29,9 @@ class MongoStatsAdapter(
 
   override fun current(): List<MongoCollectionStats> = cachedStats ?: refresh()
 
-  // Collection sizes change slowly; refreshing every 15s issued one collStats per collection each time and caused
-  // roughly 4x more MongoDB commands than all real queries combined.
-  @Scheduled(every = "5m", delayed = "12s")
+  // Collection sizes change slowly, and on our Atlas tier each collStats takes ~0.7s (one per collection per refresh), so
+  // refreshing every 15s (later 5m) made collStats the single largest consumer of MongoDB time.
+  @Scheduled(every = "30m", delayed = "12s")
   fun scheduledRefresh() {
     refresh()
   }
