@@ -28,10 +28,11 @@ class MongoQueryMetrics(
 
   fun <T> timed(operation: String, block: () -> T): T {
     val startMs = System.currentTimeMillis()
-    val result = block()
-    val durationMs = System.currentTimeMillis() - startMs
-    recordMetrics(operation, durationMs)
-    return result
+    try {
+      return block()
+    } finally {
+      recordMetrics(operation, System.currentTimeMillis() - startMs)
+    }
   }
 
   // Shared by the single-document read-model adapters (see ADR-0014): each collection holds exactly one

@@ -21,6 +21,7 @@ class MongoStatsAdapter(
   private val mongoClient: MongoClient,
   @param:ConfigProperty(name = "quarkus.mongodb.database")
   private val databaseName: String,
+  private val mongoQueryMetrics: MongoQueryMetrics,
 ) : MongoCollectionStatsPort {
 
   @Volatile
@@ -28,7 +29,9 @@ class MongoStatsAdapter(
 
   override fun current(): List<MongoCollectionStats> = cachedStats ?: refresh()
 
-  @Scheduled(every = "15s", delayed = "12s")
+  // Collection sizes change slowly; refreshing every 15s issued one collStats per collection each time and caused
+  // roughly 4x more MongoDB commands than all real queries combined.
+  @Scheduled(every = "5m", delayed = "12s")
   fun scheduledRefresh() {
     refresh()
   }
@@ -36,12 +39,11 @@ class MongoStatsAdapter(
   fun refresh(): List<MongoCollectionStats> {
     val database = mongoClient.getDatabase(databaseName)
     return try {
-      val stats = database.listCollectionNames()
-        .toList()
+      val stats = mongoQueryMetrics.timed("mongodb.listCollections") { database.listCollectionNames().toList() }
         .sorted()
         .mapNotNull { collectionName ->
           try {
-            val collStats = database.runCommand(Document("collStats", collectionName))
+            val collStats = mongoQueryMetrics.timed("mongodb.collStats") { database.runCommand(Document("collStats", collectionName)) }
             MongoCollectionStats(
               name = collectionName,
               documentCount = (collStats["count"] as? Number)?.toLong() ?: 0L,
