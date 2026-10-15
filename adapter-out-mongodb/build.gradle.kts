@@ -11,6 +11,7 @@ dependencies {
   implementation("io.quarkus:quarkus-micrometer")
   implementation("io.quarkus:quarkus-mongodb-panache-kotlin")
   implementation("io.quarkus:quarkus-scheduler")
+  implementation("io.quarkus:quarkus-smallrye-health")
 }
 
 allOpen {

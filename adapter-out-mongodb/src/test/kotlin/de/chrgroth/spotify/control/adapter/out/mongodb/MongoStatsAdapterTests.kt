@@ -5,6 +5,7 @@ import com.mongodb.client.ListCollectionNamesIterable
 import com.mongodb.client.MongoClient
 import com.mongodb.client.MongoCursor
 import com.mongodb.client.MongoDatabase
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -17,7 +18,11 @@ class MongoStatsAdapterTests {
 
   private val mongoClient: MongoClient = mockk()
   private val database: MongoDatabase = mockk()
-  private val adapter = MongoStatsAdapter(mongoClient = mongoClient, databaseName = "test-db")
+  private val adapter = MongoStatsAdapter(
+    mongoClient = mongoClient,
+    databaseName = "test-db",
+    mongoQueryMetrics = MongoQueryMetrics(SimpleMeterRegistry(), SLOW_QUERY_THRESHOLD_MS),
+  )
 
   init {
     every { mongoClient.getDatabase("test-db") } returns database
@@ -78,5 +83,9 @@ class MongoStatsAdapterTests {
     every { cursor.next() } answers { remaining.removeAt(0) }
     every { iterable.iterator() } returns cursor
     return iterable
+  }
+
+  companion object {
+    private const val SLOW_QUERY_THRESHOLD_MS = 100L
   }
 }
