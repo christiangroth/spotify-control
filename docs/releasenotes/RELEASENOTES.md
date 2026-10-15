@@ -1,3 +1,13 @@
+# 0.133.6 (2026.10.15)
+
+## Bugfixes / Chore
+* Database health checks and statistics are now included in the database monitoring.
+* Reduced database load caused by collection statistics.
+
+
+
+---
+
 # 0.133.5 (2026.10.15)
 
 ## Bugfixes / Chore
