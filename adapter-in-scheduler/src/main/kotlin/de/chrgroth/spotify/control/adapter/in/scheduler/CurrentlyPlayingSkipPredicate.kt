@@ -32,6 +32,7 @@ class CurrentlyPlayingSkipPredicate @Inject constructor(
 
   companion object {
     private val FAST_INTERVAL: Duration = 20.seconds
-    private val SLOW_INTERVAL: Duration = 5.minutes
+    // Only delays detecting that playback started; fully played tracks are still picked up via recently-played.
+    private val SLOW_INTERVAL: Duration = 10.minutes
   }
 }
