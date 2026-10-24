@@ -11,9 +11,10 @@ internal class SpotifyResponseExceptionMapper : ResponseExceptionMapper<RuntimeE
 
   override fun toThrowable(response: Response): RuntimeException = when (response.status) {
     HTTP_NO_CONTENT -> SpotifyNoContentException()
-    HTTP_RATE_LIMITED -> SpotifyRateLimitException(
-      response.getHeaderString("Retry-After")?.toLongOrNull() ?: DEFAULT_RETRY_AFTER_SECONDS
-    )
+    HTTP_RATE_LIMITED -> SpotifyRateLimitException(retryAfterSeconds(response.getHeaderString("Retry-After")))
     else -> SpotifyApiException(response.status, response.readEntity(String::class.java))
   }
 }
+
+internal fun retryAfterSeconds(retryAfterHeader: String?): Long =
+  (retryAfterHeader?.toLongOrNull() ?: DEFAULT_RETRY_AFTER_SECONDS).coerceAtLeast(MIN_RETRY_AFTER_SECONDS)
