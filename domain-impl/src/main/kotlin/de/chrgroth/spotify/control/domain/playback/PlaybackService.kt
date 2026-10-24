@@ -31,9 +31,12 @@ import jakarta.enterprise.context.ApplicationScoped
 import java.time.ZoneOffset
 import java.time.LocalDate as JLocalDate
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Instant
 import kotlin.time.toJavaInstant
 import kotlinx.datetime.toKotlinLocalDate
@@ -61,6 +64,8 @@ class PlaybackService(
 
   private val minimumProgressMs = minimumProgressSeconds * MS_PER_SECOND
   private val lastFetchSuccessTimestamps = ConcurrentHashMap<String, AtomicLong>()
+  private val lastRecentlyPlayedFetchAt = AtomicReference(Instant.DISTANT_PAST)
+  private val partialPlaysAwaitingDeduplication = AtomicBoolean(false)
 
   // --- Combined Playback Detection ---
 
@@ -72,7 +77,13 @@ class PlaybackService(
   override fun fetchPlaybackData(): Either<DomainError, Unit> {
     currentUserResolver.userId() ?: return Unit.right()
     val currentlyPlayingResult = fetchCurrentlyPlaying()
-    val recentlyPlayedResult = fetchRecentlyPlayed()
+    // recently-played is a cursor-based history (up to 50 items), so polling it on every currently-playing poll (every
+    // 20s during playback) only doubled the Spotify request count. It is fetched every RECENTLY_PLAYED_INTERVAL, and
+    // right after a track change produced a provisional partial play, so that a fully played track is deduplicated
+    // against its partial play as quickly as before.
+    val recentlyPlayedDue = partialPlaysAwaitingDeduplication.get() ||
+      Clock.System.now() >= lastRecentlyPlayedFetchAt.get() + RECENTLY_PLAYED_INTERVAL
+    val recentlyPlayedResult = if (recentlyPlayedDue) fetchRecentlyPlayed() else Unit.right()
     return currentlyPlayingResult.flatMap { recentlyPlayedResult }
   }
 
@@ -134,6 +145,7 @@ class PlaybackService(
       if (newPartial.isNotEmpty()) {
         recentlyPartialPlayedRepository.saveAll(newPartial)
         recordEventsIngested("partial_played", newPartial.size)
+        partialPlaysAwaitingDeduplication.set(true)
       }
       newPartial.isNotEmpty()
     } else {
@@ -165,6 +177,8 @@ class PlaybackService(
         outboxPort.enqueue(DomainOutboxEvent.AppendPlaybackData())
       }
       recordFetchSuccess("recently_played")
+      lastRecentlyPlayedFetchAt.set(Clock.System.now())
+      partialPlaysAwaitingDeduplication.set(false)
       Unit.right()
     }
   }
@@ -344,5 +358,6 @@ class PlaybackService(
     private const val MS_PER_SECOND = 1_000L
     private const val PARTIAL_DUPLICATE_TOLERANCE_SECONDS = 8L
     private const val RESTART_THRESHOLD_MS = 10_000L
+    private val RECENTLY_PLAYED_INTERVAL = 5.minutes
   }
 }
