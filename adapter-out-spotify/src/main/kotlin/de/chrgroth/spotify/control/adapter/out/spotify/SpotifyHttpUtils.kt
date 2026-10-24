@@ -7,6 +7,10 @@ internal const val HTTP_BAD_REQUEST = 400
 internal const val HTTP_RATE_LIMITED = 429
 internal const val DEFAULT_RETRY_AFTER_SECONDS = 60L
 
+// Spotify sometimes answers 429 with "Retry-After: 0" right when a long ban expires; taking that literally paused the
+// partition until "now", resumed it immediately and looped pause/resume (plus Slack notifications) within a second.
+internal const val MIN_RETRY_AFTER_SECONDS = 30L
+
 internal fun String.queryParamInt(name: String): Int? =
   substringAfter('?', "").split('&')
     .firstOrNull { it.startsWith("$name=") }
