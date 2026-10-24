@@ -1,3 +1,13 @@
+# 0.133.9 (2026.10.24)
+
+## Bugfixes / Chore
+* Playback tracking sends fewer requests to Spotify.
+* Fixed repeated "partition paused" notifications when Spotify lifts a rate limit.
+
+
+
+---
+
 # 0.133.8 (2026.10.15)
 
 ## Bugfixes / Chore
