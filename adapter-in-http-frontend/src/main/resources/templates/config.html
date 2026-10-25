@@ -48,6 +48,91 @@
             </div>
         </div>
 
+        <div id="api-tokens-section" class="mb-4">
+            <h2 class="fs-5 fw-semibold mb-3">{config:configApiTokensSectionHeading()}</h2>
+
+            <div id="api-tokens-status-banner" class="alert d-none mb-3" role="alert"></div>
+
+            <p class="text-secondary small mb-1">{config:configApiTokensDescription()}</p>
+            <p class="text-secondary small mb-3">{config:configApiTokensScopesDescription()}</p>
+
+            <div id="api-token-created-notice" class="alert alert-warning d-none mb-3" data-testid="api-token-created-notice">
+                <div class="small mb-1">{config:configApiTokenCreatedNotice()}</div>
+                <code id="api-token-created-value" style="word-break:break-all;"></code>
+            </div>
+
+            <div class="card h-100 app-card mb-3">
+                <div class="card-body">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-auto">
+                            <label for="api-token-name-input" class="form-label text-secondary small mb-1">{config:configApiTokenNameLabel()}</label>
+                            <input type="text" id="api-token-name-input" class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   style="width:220px" maxlength="100" data-testid="api-token-name-input">
+                        </div>
+                        <div class="col-auto">
+                            {#for scope in apiTokenScopes}
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input api-token-create-scope" type="checkbox" id="api-token-create-scope-{scope}" value="{scope}"{#if scope_isFirst} checked{/if}>
+                                <label class="form-check-label small" for="api-token-create-scope-{scope}">{scope}</label>
+                            </div>
+                            {/for}
+                        </div>
+                        <div class="col-auto">
+                            <button id="api-token-create-btn" class="btn btn-spotify btn-sm" data-testid="api-token-create-btn">{config:configApiTokenCreateButton()}</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card h-100 app-card">
+                <div class="card-body">
+                    {#if apiTokens.isEmpty}
+                    <p class="text-secondary small mb-0" data-testid="api-tokens-empty">{config:configApiTokensEmpty()}</p>
+                    {#else}
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0 app-table align-middle" data-testid="api-tokens-table">
+                            <thead>
+                                <tr>
+                                    <th>{config:configApiTokenNameHeader()}</th>
+                                    <th>{config:configApiTokenPrefixHeader()}</th>
+                                    <th>{config:configApiTokenScopesHeader()}</th>
+                                    <th>{config:configApiTokenActiveHeader()}</th>
+                                    <th>{config:configApiTokenCreatedHeader()}</th>
+                                    <th>{config:configApiTokenLastUsedHeader()}</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {#for token in apiTokens}
+                                <tr data-token-id="{token.id}" data-testid="api-token-row">
+                                    <td>{token.name}</td>
+                                    <td><code>{token.tokenPrefix}&hellip;</code></td>
+                                    <td>
+                                        {#for scope in token.scopes}
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input api-token-scope" type="checkbox" id="api-token-{token.id}-scope-{scope.name}" value="{scope.name}"{#if scope.checked} checked{/if}>
+                                            <label class="form-check-label small" for="api-token-{token.id}-scope-{scope.name}">{scope.name}</label>
+                                        </div>
+                                        {/for}
+                                    </td>
+                                    <td>
+                                        <div class="form-check form-switch mb-0">
+                                            <input class="form-check-input api-token-active" type="checkbox" role="switch" aria-label="{config:configApiTokenActiveHeader()}"{#if token.active} checked{/if} data-testid="api-token-active-toggle">
+                                        </div>
+                                    </td>
+                                    <td class="small">{token.createdAt}</td>
+                                    <td class="small">{#if token.lastUsedAt}{token.lastUsedAt}{#else}{config:configApiTokenNeverUsed()}{/if}</td>
+                                    <td><button class="btn btn-outline-danger btn-sm api-token-delete-btn" data-testid="api-token-delete-btn">{config:configApiTokenDeleteButton()}</button></td>
+                                </tr>
+                                {/for}
+                            </tbody>
+                        </table>
+                    </div>
+                    {/if}
+                </div>
+            </div>
+        </div>
+
         <div id="config-section">
             <div class="row g-3 mb-4">
                 <div class="col-12">
@@ -151,6 +236,71 @@
             const input = document.getElementById('throttle-interval-input');
             input.value = defaultThrottleIntervalSeconds;
             doThrottleRequest(defaultThrottleIntervalSeconds, THROTTLE_RESET_MSG_TEMPLATE.replace('%SECONDS%', defaultThrottleIntervalSeconds), this, null);
+        });
+        const API_TOKENS_BANNER_ID = 'api-tokens-status-banner';
+
+        function apiTokenRequest(method, url, body, onSuccess, onError) {
+            fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: body === null ? undefined : JSON.stringify(body)
+            })
+            .then(function(response) {
+                return response.json().then(function(data) { return { ok: response.ok, data: data }; });
+            })
+            .then(function(result) {
+                if (result.ok) {
+                    onSuccess(result.data);
+                } else {
+                    var unknownError = (typeof SPCTL_I18N !== 'undefined' && SPCTL_I18N.unknownError) || 'Unknown error';
+                    showBanner('{config:configApiTokenRequestFailedPrefix()} ' + (result.data.error || unknownError), 'danger', API_TOKENS_BANNER_ID);
+                    if (onError) onError();
+                }
+            })
+            .catch(function(err) {
+                var requestFailed = (typeof SPCTL_I18N !== 'undefined' && SPCTL_I18N.requestFailed) || 'Request failed';
+                showBanner(requestFailed + ': ' + err.message, 'danger', API_TOKENS_BANNER_ID);
+                if (onError) onError();
+            });
+        }
+
+        document.getElementById('api-token-create-btn').addEventListener('click', function() {
+            const btn = this;
+            const nameInput = document.getElementById('api-token-name-input');
+            const scopes = Array.from(document.querySelectorAll('.api-token-create-scope:checked')).map(function(el) { return el.value; });
+            btn.disabled = true;
+            apiTokenRequest('POST', '/settings/api-tokens', { name: nameInput.value, scopes: scopes }, function(data) {
+                // Shown once: the plain token is not stored and is gone after the next page load.
+                document.getElementById('api-token-created-value').textContent = data.token;
+                document.getElementById('api-token-created-notice').classList.remove('d-none');
+                nameInput.value = '';
+                btn.disabled = false;
+            }, function() { btn.disabled = false; });
+        });
+
+        document.querySelectorAll('tr[data-token-id]').forEach(function(row) {
+            const baseUrl = '/settings/api-tokens/' + encodeURIComponent(row.getAttribute('data-token-id'));
+
+            row.querySelector('.api-token-active').addEventListener('change', function() {
+                const toggle = this;
+                apiTokenRequest('PUT', baseUrl + '/active', { active: toggle.checked }, function() {
+                    showBanner('{config:configApiTokenUpdatedSuccess()}', 'success', API_TOKENS_BANNER_ID);
+                }, function() { toggle.checked = !toggle.checked; });
+            });
+
+            row.querySelectorAll('.api-token-scope').forEach(function(checkbox) {
+                checkbox.addEventListener('change', function() {
+                    const scopes = Array.from(row.querySelectorAll('.api-token-scope:checked')).map(function(el) { return el.value; });
+                    apiTokenRequest('PUT', baseUrl + '/scopes', { scopes: scopes }, function() {
+                        showBanner('{config:configApiTokenUpdatedSuccess()}', 'success', API_TOKENS_BANNER_ID);
+                    }, function() { checkbox.checked = !checkbox.checked; });
+                });
+            });
+
+            row.querySelector('.api-token-delete-btn').addEventListener('click', function() {
+                if (!confirm('{config:configApiTokenDeleteConfirm()}')) return;
+                apiTokenRequest('DELETE', baseUrl, null, function() { row.remove(); });
+            });
         });
     </script>
     {/content}

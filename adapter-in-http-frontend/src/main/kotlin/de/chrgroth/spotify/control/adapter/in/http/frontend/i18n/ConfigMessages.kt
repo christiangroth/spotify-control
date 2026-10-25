@@ -73,4 +73,71 @@ interface ConfigMessages {
 
   @Message
   fun configTableValueHeader(): String
+
+  // api tokens section
+  @Message
+  fun configApiTokensSectionHeading(): String
+
+  @Message
+  fun configApiTokensDescription(): String
+
+  @Message
+  fun configApiTokensScopesDescription(): String
+
+  @Message
+  fun configApiTokensEmpty(): String
+
+  @Message
+  fun configApiTokenNameHeader(): String
+
+  @Message
+  fun configApiTokenPrefixHeader(): String
+
+  @Message
+  fun configApiTokenScopesHeader(): String
+
+  @Message
+  fun configApiTokenActiveHeader(): String
+
+  @Message
+  fun configApiTokenCreatedHeader(): String
+
+  @Message
+  fun configApiTokenLastUsedHeader(): String
+
+  @Message
+  fun configApiTokenNeverUsed(): String
+
+  @Message
+  fun configApiTokenNameLabel(): String
+
+  @Message
+  fun configApiTokenCreateButton(): String
+
+  @Message
+  fun configApiTokenDeleteButton(): String
+
+  @Message
+  fun configApiTokenDeleteConfirm(): String
+
+  @Message
+  fun configApiTokenCreatedNotice(): String
+
+  @Message
+  fun configApiTokenUpdatedSuccess(): String
+
+  @Message
+  fun configApiTokenRequestFailedPrefix(): String
+
+  @Message
+  fun configApiTokenInvalidScopeError(): String
+
+  @Message
+  fun configApiTokenNotFoundError(): String
+
+  @Message
+  fun configApiTokenNameRequiredError(): String
+
+  @Message
+  fun configApiTokenScopeRequiredError(): String
 }

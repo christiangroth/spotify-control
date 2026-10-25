@@ -13,6 +13,13 @@ enum class AuthError(override val code: String) : DomainError {
   ;
 }
 
+enum class ApiTokenError(override val code: String) : DomainError {
+  TOKEN_NOT_FOUND("APITOKEN-001"),
+  NAME_BLANK("APITOKEN-002"),
+  NO_SCOPES("APITOKEN-003"),
+  ;
+}
+
 enum class OAuthError(override val code: String) : DomainError {
   SPOTIFY_DENIED("OAUTH-001"),
   INVALID_REQUEST("OAUTH-002"),
