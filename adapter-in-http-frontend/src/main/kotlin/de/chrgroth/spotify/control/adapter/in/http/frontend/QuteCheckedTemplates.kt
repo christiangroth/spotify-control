@@ -99,7 +99,12 @@ object Templates {
   external fun `catalog-sync$snippet_rows`(entries: List<CatalogSyncTimelineEntry>): TemplateInstance
 
   @JvmStatic
-  external fun config(stats: ConfigurationStats, runtimeConfig: RuntimeConfig): TemplateInstance
+  external fun config(
+    stats: ConfigurationStats,
+    runtimeConfig: RuntimeConfig,
+    apiTokens: List<ApiTokenSettingsResource.ApiTokenRow>,
+    apiTokenScopes: List<String>,
+  ): TemplateInstance
 
   @JvmStatic
   external fun login(errorMessage: String?, appBuildVersion: String): TemplateInstance

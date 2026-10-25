@@ -73,6 +73,8 @@ import kotlinx.datetime.LocalDate
 @TemplateData(target = CatalogStats::class)
 @TemplateData(target = PlaylistCheckStats::class)
 @TemplateData(target = RuntimeConfig::class)
+@TemplateData(target = ApiTokenSettingsResource.ApiTokenRow::class)
+@TemplateData(target = ApiTokenSettingsResource.ApiTokenScopeOption::class)
 @TemplateData(target = ConfigurationStats::class)
 @TemplateData(target = ConfigEntry::class)
 @TemplateData(target = PlaybackAggregation::class)

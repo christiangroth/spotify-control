@@ -1,5 +1,6 @@
 package de.chrgroth.spotify.control.adapter.`in`.http.frontend
 
+import de.chrgroth.spotify.control.domain.port.`in`.user.ApiTokenPort
 import de.chrgroth.spotify.control.domain.port.`in`.user.RuntimeConfigPort
 import de.chrgroth.spotify.control.domain.port.out.infra.ConfigurationInfoPort
 import de.chrgroth.spotify.control.domain.port.out.infra.ResponseTimingPort
@@ -22,6 +23,7 @@ import kotlin.coroutines.CoroutineContext
 class ConfigResource(
   private val configurationInfo: ConfigurationInfoPort,
   private val runtimeConfig: RuntimeConfigPort,
+  private val apiTokens: ApiTokenPort,
   private val httpResponseMetrics: ResponseTimingPort,
 ) {
 
@@ -35,7 +37,8 @@ class ConfigResource(
       val runtimeConfigAsync = async(dispatcher) { runtimeConfig.getRuntimeConfig() }
       val stats = details.detailSuspend("config.view.stats") { statsAsync.await() }
       val runtimeConfigResult = details.detailSuspend("config.view.runtime-config") { runtimeConfigAsync.await() }
-      Templates.config(stats, runtimeConfigResult)
+      val tokenRows = details.detail("config.view.api-tokens") { apiTokens.listTokens().map { ApiTokenSettingsResource.toRow(it) } }
+      Templates.config(stats, runtimeConfigResult, tokenRows, ApiTokenSettingsResource.allScopeNames())
     }
   }
 }

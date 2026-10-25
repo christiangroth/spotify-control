@@ -501,6 +501,13 @@ Layer 5 applies to adapter modules where the logic is pure (e.g. `adapter-in-sta
 - A CSRF `state` parameter is generated per authorization request and validated in the callback.
 - Token refresh is handled by `adapter-out-spotify` before each Spotify API call; the refreshed token is persisted back to MongoDB.
 
+### API Tokens (CLI / Agent Access)
+
+- Personal access tokens are managed in the API Tokens section of the config page and stored in the `app_api_token` collection. Only the SHA-256 hash of the secret is persisted; the plain token (`spctl_...`) is shown once after creation.
+- `ApiTokenAuthMechanism` authenticates `Authorization: Bearer <token>` ahead of the session cookie mechanism. Inactive or unknown tokens yield `401`; tokens can be deactivated and reactivated without rotation.
+- Token scopes become roles: `READ` (health, outbox, catalog, playback, stats, playlist checks), `SPOTIFY_READ` (read-only Spotify Web API calls, consumes rate limit) and `WRITE` (enqueue syncs, polls, checks and outbox requeues).
+- Default deny: `ApiTokenAccessFilter` rejects token requests outside `/api/`. The `/api/v1` resources declare their scope with `@RolesAllowed`; session cookies carry no roles and cannot use them. Destructive operations (wipes, rebuilds, playlist fixes, settings changes), the MongoDB and logs viewers and token management itself are not reachable with a token.
+
 ## Error Handling
 
 All domain failures are represented as typed `DomainError` values wrapped in Arrow's `Either<DomainError, T>`.
