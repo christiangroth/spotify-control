@@ -1,3 +1,12 @@
+# 0.134.2 (2026.10.26)
+
+## Bugfixes / Chore
+* Redirects behind the reverse proxy keep https instead of falling back to http.
+
+
+
+---
+
 # 0.134.1 (2026.10.26)
 
 ## Bugfixes / Chore
