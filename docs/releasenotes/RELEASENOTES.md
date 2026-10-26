@@ -1,3 +1,12 @@
+# 0.134.1 (2026.10.26)
+
+## Bugfixes / Chore
+* Health and metrics endpoints are no longer reachable from the internet; they are only available inside the deployment.
+
+
+
+---
+
 # 0.134.0 (2026.10.25)
 
 ## New Features
