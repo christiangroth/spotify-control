@@ -1,7 +1,7 @@
 package de.chrgroth.spotify.control.application.quarkus
 
 import io.quarkus.test.junit.QuarkusTest
-import io.restassured.RestAssured.given
+import io.restassured.RestAssured
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -10,7 +10,7 @@ class MetricsTests {
 
   @Test
   fun `check top-level metrics groups`() {
-    val metrics = given()
+    val metrics = ManagementInterface.given()
       .`when`()
       .get("/q/metrics")
       .then()
@@ -32,7 +32,7 @@ class MetricsTests {
 
   @Test
   fun `check overview dashboard gauges are exposed`() {
-    val metrics = given()
+    val metrics = ManagementInterface.given()
       .`when`()
       .get("/q/metrics")
       .then()
@@ -47,7 +47,7 @@ class MetricsTests {
 
   @Test
   fun `check domain metrics dashboard gauges are exposed`() {
-    val metrics = given()
+    val metrics = ManagementInterface.given()
       .`when`()
       .get("/q/metrics")
       .then()
@@ -63,7 +63,7 @@ class MetricsTests {
 
   @Test
   fun `check outbox pending gauges are exposed`() {
-    val metrics = given()
+    val metrics = ManagementInterface.given()
       .`when`()
       .get("/q/metrics")
       .then()
@@ -77,7 +77,7 @@ class MetricsTests {
 
   @Test
   fun `check mongodb collection size gauges are exposed`() {
-    val metrics = given()
+    val metrics = ManagementInterface.given()
       .`when`()
       .get("/q/metrics")
       .then()
@@ -86,5 +86,14 @@ class MetricsTests {
       .asString()
 
     assertThat(metrics).contains("mongodb_collection_size_bytes")
+  }
+
+  @Test
+  fun `metrics are not served on the application port`() {
+    RestAssured.given()
+      .`when`()
+      .get("/q/metrics")
+      .then()
+      .statusCode(404)
   }
 }

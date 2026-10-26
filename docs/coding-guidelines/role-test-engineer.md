@@ -30,6 +30,8 @@ This project follows the *Test Your Boundaries* principle mapped to the hexagona
 
 **Priority order:** L1 > Contract tests > L2 > L3 > L4 > L5
 
+Health/metrics (`/q/*`) live on the Quarkus management interface, not on the application port: call them via `ManagementInterface.given()` (reads `quarkus.management.test-port`, default 9001) in `application-quarkus` tests, never via plain `given()`.
+
 Layer 5 applies only to adapter modules with non-trivial pure logic that does not require a Quarkus context (e.g. `adapter-in-starter` starters, `adapter-out-scheduler` info providers).
 
 ## Layer 1 – Domain Logic Tests

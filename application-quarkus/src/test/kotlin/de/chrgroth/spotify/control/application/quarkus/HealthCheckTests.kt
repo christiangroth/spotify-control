@@ -1,7 +1,6 @@
 package de.chrgroth.spotify.control.application.quarkus
 
 import io.quarkus.test.junit.QuarkusTest
-import io.restassured.RestAssured.given
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -40,7 +39,7 @@ class HealthCheckTests {
   }
 
   private fun check(type: String) =
-    given()
+    ManagementInterface.given()
       .`when`()
       .get("/q/health/$type")
       .then()
