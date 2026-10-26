@@ -1,8 +1,9 @@
 // Grafana Alloy config (River syntax)
 
 // ── Metrics ──────────────────────────────────────────────────────────────────
+// Metrics live on the Quarkus management interface (port 9000), which Traefik does not route.
 prometheus.scrape "spotify_control" {
-  targets = [{ "__address__" = "quarkus:8080", "__metrics_path__" = "/q/metrics" }]
+  targets = [{ "__address__" = "quarkus:9000", "__metrics_path__" = "/q/metrics" }]
   scrape_interval = "30s"
   forward_to = [prometheus.remote_write.grafana_cloud.receiver]
 }

@@ -426,8 +426,11 @@ when historical data changes (e.g. an artist's sync status flips).
 
 spotify-control runs as a single Docker Swarm service on an existing VPS, reachable only through
 Traefik as the ingress (routing, TLS termination via Let's Encrypt). A dedicated Alloy container runs
-alongside it on the same VPS, scraping `adapter-in-http-metrics` and collecting container logs, and
-forwarding both to Grafana Cloud. MongoDB is not self-hosted – both the production and development
+alongside it on the same VPS, scraping `/q/metrics` and collecting container logs, and
+forwarding both to Grafana Cloud. All Quarkus non-application endpoints (`/q/health`, `/q/metrics`, …)
+are served on the separate management interface (port 9000, `quarkus.management.enabled`). Traefik only
+routes the application port 8080, so `/q/*` is not reachable from the internet; Alloy scrapes port 9000
+inside the stack network, and the port is never published. MongoDB is not self-hosted – both the production and development
 databases live in MongoDB Atlas. The GitHub Actions workflow builds the Quarkus native Docker image
 and, on release, connects to the VPS via SSH as a dedicated deploy user to roll out the updated Docker
 Swarm stack. Secrets (Spotify credentials, MongoDB connection string, token encryption key, Slack
@@ -454,7 +457,7 @@ flowchart LR
     Browser --> Traefik
     Traefik --> App
     App <--> MongoDBAtlas
-    AlloyC -->|"scrapes metrics"| App
+    AlloyC -->|"scrapes /q/metrics (port 9000)"| App
     AlloyC -->|"push metrics + logs"| GrafanaCloud
 ```
 
