@@ -33,6 +33,16 @@ This applies whenever a single command execution is time-limited (e.g. the Claud
 
 This supersedes the general "run `./gradlew build` before pushing" rule above only in these time-limited contexts; a normal local developer session with no such execution ceiling should still run the full build.
 
+## Agent Briefing (local Windows sessions)
+
+Facts agents otherwise spend many tool calls rediscovering — read this instead of searching:
+
+- **Run Gradle via `./scripts/gradle-scoped.ps1 <tasks...>`** (e.g. `./scripts/gradle-scoped.ps1 :domain-impl:test`). It sets `JAVA_HOME` to the Temurin 25 JDK in `~/.jdks`, takes the GitHub Packages credentials (`GITHUB_ACTOR`/`GHCR_PAT`) from `gh auth token`, and prints one line on success or only the failures (full log in a temp file). Plain `./gradlew` fails locally without those variables.
+- **Modules:** `domain-api`, `domain-impl`, `adapter-in-http-frontend` (JAX-RS resources, Qute templates under `src/main/resources/templates`, texts in `src/main/resources/messages/*_en.properties`), `adapter-in-http-metrics`, `adapter-in-outbox`, `adapter-in-scheduler`, `adapter-in-starter`, `adapter-out-config`, `adapter-out-mongodb`, `adapter-out-outbox`, `adapter-out-scheduler`, `adapter-out-slack`, `adapter-out-spotify`, `application-quarkus`.
+- **Native image:** classes bound untyped to Qute templates must be listed in `QuteTemplateDataConfig.kt` (`@TemplateData(target = ...)` in `adapter-in-http-frontend`), otherwise properties are only "not found" in native mode. Explicit enum `.name` navigation in templates needs `EnumTemplateExtensions.kt` in the same module.
+- **Line endings:** working copies are checked out with CRLF (`core.autocrlf`), commits are normalized to LF. Edit files with the Edit tool instead of string-replace scripts that assume `\n`.
+- **Output size:** read files with an offset/limit or `grep -n` instead of whole, and filter command output (e.g. `gh pr checks` instead of full run logs).
+
 ## Formatting
 
 All code must follow the formatting rules in `.editorconfig`. The most important rules for Kotlin:
