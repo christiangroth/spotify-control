@@ -1,3 +1,12 @@
+# 0.134.3 (2026.11.13)
+
+## Bugfixes / Chore
+* Internal developer tooling for local agent sessions added.
+
+
+
+---
+
 # 0.134.2 (2026.10.26)
 
 ## Bugfixes / Chore
